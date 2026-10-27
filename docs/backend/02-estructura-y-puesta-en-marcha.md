@@ -255,7 +255,7 @@ services:
   db:
     image: postgres:18
     environment: { POSTGRES_USER: libroya, POSTGRES_PASSWORD: libroya, POSTGRES_DB: libroya }
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]   # puerto 5433 en tu máquina (5432 dentro del contenedor)
     volumes:
       - pgdata:/var/lib/postgresql   # desde la v18 el volumen va aquí, no en /var/lib/postgresql/data
     healthcheck:                     # permite `docker compose up --wait`
@@ -282,7 +282,7 @@ pnpm run start:dev
 **`.env`**
 
 ```env
-DATABASE_URL=postgresql://libroya:libroya@localhost:5432/libroya
+DATABASE_URL=postgresql://libroya:libroya@localhost:5433/libroya
 PORT=3000
 PAYMENT_PROVIDER=fake            # fake | external
 PAYMENT_API_URL=

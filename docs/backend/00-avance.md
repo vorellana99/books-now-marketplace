@@ -156,6 +156,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 1 | Se agregó `apps/main-api/pnpm-workspace.yaml` con la lista de scripts de instalación permitidos (`prisma`, `@prisma/engines`, `esbuild`) | pnpm más nuevo que el 10.28 falla con `ERR_PNPM_IGNORED_BUILDS` en `pnpm install`; en pnpm 10.28 solo avisaba |
 | 2026-10-27 | 1 | `GET /health/ready` devuelve el detalle de terminus (`{ status, info, error, details }`) | Es lo que produce `HealthCheckService`; la guía solo pedía 200/503 |
 | 2026-10-27 | 1 | `shared-kernel/domain.errors.ts` se creó en el corte 1 | Lo necesita `DomainExceptionFilter` |
+| 2026-10-27 | 1 | PostgreSQL con Docker se publica en el puerto **5433** (`ports: ["5433:5432"]`), no en el 5432 de la guía original | Decisión del equipo: no chocar con un PostgreSQL local. Cambian `docker-compose.yml`, `.env.example` y la guía |
 
 ## Problemas abiertos
 

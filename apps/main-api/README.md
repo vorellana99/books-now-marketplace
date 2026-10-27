@@ -67,10 +67,10 @@ Elige una de las dos opciones.
 pnpm run db:up
 ```
 
-Levanta PostgreSQL 18 y espera a que esté listo. Crea el usuario `libroya`, con contraseña `libroya`, y la base `libroya` en el puerto `5432`. Coinciden con el `DATABASE_URL` de `.env.example`, así que no hay que cambiar nada:
+Levanta PostgreSQL 18 y espera a que esté listo. Crea el usuario `libroya`, con contraseña `libroya`, y la base `libroya`. La base queda publicada en el puerto **`5433`** de tu máquina (no en el 5432 habitual, para no chocar con un PostgreSQL local). Coinciden con el `DATABASE_URL` de `.env.example`, así que no hay que cambiar nada:
 
 ```env
-DATABASE_URL=postgresql://libroya:libroya@localhost:5432/libroya
+DATABASE_URL=postgresql://libroya:libroya@localhost:5433/libroya
 ```
 
 Los datos quedan en un volumen de Docker y sobreviven a los reinicios.
@@ -97,7 +97,7 @@ DATABASE_URL=postgresql://libroya:tu_contraseña@localhost:5432/libroya
 
 - **`CREATEDB` es obligatorio:** `prisma migrate dev` crea una base temporal ("shadow") para comparar migraciones.
 - **Si ya tienes un usuario y una base**, úsalos: basta con que el usuario tenga `CREATEDB` y permiso para crear schemas en esa base (lo más simple es que sea su dueño).
-- **Si tu PostgreSQL usa otro puerto**, cámbialo en la URL.
+- **El puerto es el de tu instalación** (por defecto `5432`; el `5433` es el de Docker). Ajústalo en la URL.
 - **No hay que crear schemas ni tablas a mano:** la migración crea `sales`, `catalog`, `inventory` y `messaging`.
 
 Comprueba que las credenciales funcionan antes de seguir:
@@ -117,7 +117,7 @@ CREATE DATABASE libroya_test OWNER libroya;
 ```
 
 ```bash
-export DATABASE_URL=postgresql://libroya:libroya@localhost:5432/libroya_test
+export DATABASE_URL=postgresql://libroya:libroya@localhost:5433/libroya_test   # puerto de Docker; con tu PostgreSQL local, el tuyo
 pnpm run db:deploy        # aplica las migraciones en la base de pruebas
 pnpm run test:e2e
 ```
@@ -216,8 +216,8 @@ Antes de subir cambios conviene que pasen `pnpm lint`, `pnpm test`, `pnpm run te
 | `P3014: Prisma Migrate could not create the shadow database` | El usuario no tiene `CREATEDB`: `ALTER ROLE libroya CREATEDB;` |
 | `permission denied for schema public` al migrar | El usuario no es dueño de la base: `ALTER DATABASE libroya OWNER TO libroya;` |
 | `P1000: Authentication failed` | Usuario o contraseña de `DATABASE_URL` incorrectos, o con caracteres sin codificar |
-| `/health/ready` responde 503, o `ECONNREFUSED` | La base no está levantada, o `DATABASE_URL` no apunta a ella |
-| `port is already allocated` al hacer `db:up` | Ya hay un PostgreSQL en el puerto 5432. Detenlo, o usa el tuyo (opción B) |
+| `/health/ready` responde 503, o `ECONNREFUSED` | La base no está levantada, o `DATABASE_URL` no apunta a ella (con Docker, el puerto es 5433) |
+| `port is already allocated` al hacer `db:up` | Algo ya usa el puerto 5433. Detenlo, o cambia el primer número de `ports` en `docker-compose.yml` y el puerto de `DATABASE_URL` |
 | `EADDRINUSE` al arrancar la API | El puerto 3000 está ocupado: cambia `PORT` en `.env` |
 | `Cannot find module './generated/client.js'` | Falta generar el cliente: `pnpm run prisma:generate` |
 | `Cannot resolve environment variable: DATABASE_URL` | Falta el archivo `.env` (cópialo de `.env.example`) |
