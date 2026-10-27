@@ -8,7 +8,7 @@
 
 LibroYa es una **librería online propia**: la tienda compra sus libros, los publica en su catálogo y los vende directamente al público. Una persona entra, busca un libro, lo agrega al carrito y paga con tarjeta. La tienda confirma la compra por email y aparta las unidades vendidas para enviarlas.
 
-No es un marketplace: no hay vendedores externos ni comisiones. Hay **un solo vendedor (LibroYa)**, un solo catálogo y un solo almacén. Los precios están en soles (`PEN`), y el diseño ya admite dólares (`USD`).
+No es un marketplace: no hay vendedores externos ni comisiones. Hay **un solo vendedor (LibroYa)**, un solo catálogo y un solo almacén. Los libros pueden tener precio en soles (`PEN`) o en dólares (`USD`); cada pedido usa una sola moneda.
 
 ### Para qué existe
 
@@ -53,10 +53,10 @@ Para el comprador, todo ocurre en una sola acción: o la compra sale completa (p
 |---|---|
 | **Precio del libro** | Lo define el catálogo. Al comprar, el título y el precio **se copian en el pedido**: si después el precio cambia, el pedido conserva el que pagó el cliente |
 | **Descuento premium** | 10 % sobre el subtotal |
-| **Costo de envío** | S/ 10.00 |
-| **Envío gratis** | Si el subtotal (antes del descuento) es **de S/ 150.00 o más**, o si el cliente es premium |
+| **Costo de envío** | S/ 10.00 en soles · 3.00 USD en dólares |
+| **Envío gratis** | Si el subtotal (antes del descuento) es **de S/ 150.00 o más** (**40.00 USD o más** en pedidos en dólares), o si el cliente es premium |
 | **Máximo por libro** | 10 unidades del mismo libro por pedido |
-| **Una sola moneda** | Todos los libros de un pedido deben tener la misma moneda |
+| **Una sola moneda** | Todos los libros de un pedido deben tener la misma moneda. El mínimo de envío gratis y el costo de envío tienen un valor propio por moneda; no se convierten. El descuento premium, al ser un porcentaje, es igual en ambas |
 | **Redondeo** | El total se calcula con todos los decimales y se redondea **una sola vez**, a 2 decimales y con la mitad hacia arriba, justo antes de cobrar |
 | **Libros desactivados** | Un libro no se borra: se desactiva. Ya no se puede comprar, pero los pedidos antiguos lo siguen mostrando |
 
@@ -68,6 +68,15 @@ Para el comprador, todo ocurre en una sola acción: o la compra sale completa (p
 | Normal | S/ 160.00 | — | Gratis (≥ S/ 150) | **S/ 160.00** |
 | Premium | S/ 100.00 | −S/ 10.00 | Gratis (premium) | **S/ 90.00** |
 | Premium | S/ 200.00 | −S/ 20.00 | Gratis | **S/ 180.00** |
+
+**Ejemplos en dólares:**
+
+| Cliente | Subtotal | Descuento | Envío | Total |
+|---|---|---|---|---|
+| Normal | 20.00 USD | — | 3.00 USD | **23.00 USD** |
+| Normal | 50.00 USD | — | Gratis (≥ 40 USD) | **50.00 USD** |
+| Premium | 20.00 USD | −2.00 USD | Gratis (premium) | **18.00 USD** |
+| Premium | 100.00 USD | −10.00 USD | Gratis | **90.00 USD** |
 
 ### Qué hace hoy y qué viene después
 

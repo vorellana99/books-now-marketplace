@@ -104,6 +104,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ✅ |
 | 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ✅ |
 | 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ✅ |
+| 10 | Reglas de precio por moneda | Una tabla con el mínimo de envío gratis y el costo de envío de cada moneda | Que un pedido en dólares se cobre bien, con sus propios valores (40.00 USD y 3.00 USD) | ✅ |
 
 - [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
 - [x] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
@@ -115,6 +116,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] `test/fakes/`
 - [x] Tests: `money.vo`, `order.aggregate`, `pricing.service` (ejemplos de la tabla de totales del producto)
 - [x] Regla de dependencias comprobada (`domain/` sin Nest ni Prisma)
+- [x] Reglas de precio por moneda: `PEN` (150.00 y 10.00) y `USD` (40.00 y 3.00)
 
 ---
 
@@ -208,6 +210,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 2 | Los siete puertos viven donde indica la estructura (`order/`, `customer/`, `payment/`). Cada puerto declara sus tipos de apoyo: `CheckoutRecord` y `CheckoutStatus`, `PaymentResult`, `CartItem` y `StockLine`. `Customer` expone `email`, no `currentEmail`: se corrige el consumidor de email de la guía | Mantener cada tipo junto al puerto que lo usa. `PricedCartItem` sigue en `order.factory.ts` y `CatalogPricing` lo importa |
 | 2026-10-27 | 2 | Los fakes de `test/fakes/` siguen los nombres de los ejemplos de `06-tests.md` y añaden opciones para los casos de la saga: `FakeStockReservation({ outOfStock })`, `FakePaymentGateway({ approved, reason, timeout, refundFails })`, `InMemoryOrderRepository({ failOnSave, failAfterCommit })`, `InMemoryCheckoutLog` (con `statusOf`, `backdate` y reclamos con bloqueo de 5 min) y `FakeNotifier({ fails })`. Se importan desde `test/fakes/index.ts` | Los fakes imitan la idempotencia de lo real (liberar y reembolsar no repiten) para que los tests del handler no pasen por una comodidad que la implementación real no tiene |
 | 2026-10-27 | 2 | La regla de dependencias es un test (`dependency-rules.spec.ts` con `test/support/architecture.ts`) y es más estricta que la guía: `domain/` solo admite `decimal.js` y `node:*` (una lista de permitidos, no de prohibidos), y `contracts/` solo `@nestjs/cqrs`. Cubre también `shared-kernel/` y los imports entre contextos, y distingue a `app.module` y `main.ts`, que sí ensamblan los contextos | Una lista de permitidos obliga a autorizar conscientemente cada librería nueva. El verificador se prueba con archivos de ejemplo que rompen las reglas, para que no pase en vacío si una ruta cambia |
+| 2026-10-27 | 2 | Los importes de envío tienen valores propios por moneda en `pricing-rules.ts` (`PRICING_RULES`): `PEN` 150.00 de mínimo y 10.00 de envío, `USD` 40.00 y 3.00. No hay conversión. `FreeShippingSpec` y `PricingService` leen la regla de la moneda del pedido, y una moneda sin reglas falla con `UNSUPPORTED_CURRENCY`. Se eliminan las constantes `FREE_SHIPPING_MINIMUM` y `SHIPPING_COST` | Decisión de negocio: los valores en USD (40.00 y 3.00) se eligieron por equivalencia aproximada con los de soles, con un cambio de referencia de unos 3.7 S/ por USD; conviene confirmarlos con el negocio. El descuento premium es un porcentaje y no cambia |
 
 ## Problemas abiertos
 
@@ -216,7 +219,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 3 | Docker en el entorno en la nube: el daemon no está activo por defecto. Se levanta con `dockerd` en segundo plano y `postgres:18` se descarga bien. Falta comprobar Testcontainers | Docker ✅ · Testcontainers pendiente (corte 3) |
 | 2026-10-27 | 1 | El entorno en la nube tenía Node 22.22 (en local es 24.21); la guía pide Node 24 LTS (≥ 24.15). `engines` exige `>=24.15` y el workflow de CI usa Node 24 | ✅ Resuelto |
 | 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas. El workflow `.github/workflows/main-api.yml` ya lo hace: levanta `postgres:18`, aplica las migraciones y corre los e2e. Falta ver su primera ejecución en GitHub | Parcial: workflow escrito, sin ejecutar en GitHub |
-| 2026-10-27 | 2 | Los pedidos en **USD** no se pueden valorizar: las reglas (mínimo de envío gratis S/ 150.00 y envío S/ 10.00) están en soles y `PricingService` falla con `CURRENCY_MISMATCH`, que además sería un mensaje engañoso para el comprador. Falta decidir si USD tendrá sus propios valores, una conversión, o si por ahora se rechaza en Catálogo | Abierto: decisión de negocio, antes del corte 5 |
+| 2026-10-27 | 2 | Los pedidos en **USD** no se podían valorizar: las reglas de envío estaban fijas en soles. Se resolvió en la tarea 2.10 con una tabla de reglas por moneda | ✅ Resuelto |
 
 ## Bitácora
 
@@ -239,3 +242,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 7 (2.7): los siete puertos como `abstract class`, sin importar Nest ni Prisma. No llevan tests propios porque no tienen comportamiento: `tsc` comprueba los tipos y los fakes de la tarea 2.8 los ejercitan |
 | 2026-10-27 | Corte 2, tarea 8 (2.8): fakes en memoria de los siete puertos, más `fixedCatalog()`, `customersWithPremium()` y `ISBN`. Sus 27 tests encontraron un defecto en `FixedCatalog` (lanzaba de forma síncrona en vez de rechazar la promesa). Hoy 179 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 9 (2.9): test de la regla de dependencias; 37 tests, de los cuales 5 inyectan imports prohibidos en el código real para comprobar que se detectan. **Corte 2 terminado:** `contracts/` no importa nada de `contexts/`, las invariantes del dominio tienen tests unitarios sin base de datos, `lint`, `test` y `test:e2e` pasan. Hoy 216 unitarios y 7 e2e. Queda abierta la decisión sobre pedidos en USD |
+| 2026-10-27 | Corte 2, tarea 10 (2.10): reglas de precio por moneda. Los pedidos en dólares se cobran con mínimo de envío gratis de 40.00 USD y envío de 3.00 USD; los cuatro ejemplos de `producto.md` tienen su versión en USD. 16 tests nuevos; hoy 232 unitarios y 7 e2e pasan |

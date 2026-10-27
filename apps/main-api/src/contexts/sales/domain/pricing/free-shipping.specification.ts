@@ -1,19 +1,20 @@
-import { Money } from '../shared/money.vo.js';
 import { Specification } from '../shared/specification.js';
 import { MinimumSubtotalSpec } from './minimum-subtotal.specification.js';
 import type { PricingContext } from './pricing-context.js';
+import { pricingRulesFor } from './pricing-rules.js';
 import { PremiumCustomerSpec } from './premium-customer.specification.js';
 
-export const FREE_SHIPPING_MINIMUM = Money.of('150.00');
-
-// Envío gratis: subtotal de S/ 150.00 o más, o cliente premium
+// Envío gratis: subtotal igual o mayor al mínimo de la moneda del pedido, o cliente premium
 export class FreeShippingSpec extends Specification<PricingContext> {
-  private readonly rule = new MinimumSubtotalSpec(FREE_SHIPPING_MINIMUM).or(
-    new PremiumCustomerSpec(),
-  );
+  private readonly premium = new PremiumCustomerSpec();
 
   isSatisfiedBy(context: PricingContext): boolean {
-    return this.rule.isSatisfiedBy(context);
+    const { freeShippingMinimum } = pricingRulesFor(
+      context.order.subtotal().currency,
+    );
+    return new MinimumSubtotalSpec(freeShippingMinimum)
+      .or(this.premium)
+      .isSatisfiedBy(context);
   }
 }
 

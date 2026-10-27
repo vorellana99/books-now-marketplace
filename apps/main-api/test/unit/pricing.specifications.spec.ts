@@ -11,14 +11,18 @@ import { PremiumOfferSpec } from '../../src/contexts/sales/domain/pricing/premiu
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { Specification } from '../../src/contexts/sales/domain/shared/specification.js';
 
-const context = (subtotal: string, premium: boolean): PricingContext => ({
+const context = (
+  subtotal: string,
+  premium: boolean,
+  currency: 'PEN' | 'USD' = 'PEN',
+): PricingContext => ({
   order: OrderFactory.fromCart('o-1', 'c-1', [
     {
       isbn: '9780306406157',
       quantity: 1,
       title: 'Libro',
       price: subtotal,
-      currency: 'PEN',
+      currency,
     },
   ]),
   customer: Customer.create('c-1', 'ana@example.com', premium),
@@ -69,6 +73,26 @@ describe('FreeShippingSpec', () => {
     expect(freeShippingSpec.isSatisfiedBy(context(subtotal, premium))).toBe(
       esperado,
     );
+  });
+
+  it.each([
+    ['cliente normal bajo el mínimo en USD', '39.99', false, false],
+    ['cliente normal justo en el mínimo en USD', '40.00', false, true],
+    ['cliente normal sobre el mínimo en USD', '100.00', false, true],
+    ['cliente premium bajo el mínimo en USD', '10.00', true, true],
+  ])('%s', (_caso, subtotal, premium, esperado) => {
+    expect(
+      freeShippingSpec.isSatisfiedBy(context(subtotal, premium, 'USD')),
+    ).toBe(esperado);
+  });
+
+  it('usa el mínimo de la moneda del pedido: 100 es envío gratis en USD pero no en PEN', () => {
+    expect(
+      freeShippingSpec.isSatisfiedBy(context('100.00', false, 'USD')),
+    ).toBe(true);
+    expect(
+      freeShippingSpec.isSatisfiedBy(context('100.00', false, 'PEN')),
+    ).toBe(false);
   });
 
   it('es una Specification y se puede componer', () => {

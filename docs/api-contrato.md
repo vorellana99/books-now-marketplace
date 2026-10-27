@@ -14,7 +14,7 @@
 | `GET` | `/health/outbox` | `200` si el relay de esta instancia sigue completando vueltas; informa `failed` y `due` (lo usa el monitoreo) | `503` |
 | `GET` | `/docs` | Swagger UI | — |
 
-**Un pedido tiene una sola moneda.** Si el carrito mezcla libros en monedas distintas, `POST /orders` responde `422 CURRENCY_MISMATCH`.
+**Un pedido tiene una sola moneda.** Si el carrito mezcla libros en monedas distintas, `POST /orders` responde `422 CURRENCY_MISMATCH`. El pedido se cobra en esa moneda (`PEN` o `USD`): `charged.currency` la indica, y el costo de envío y el mínimo de envío gratis dependen de ella. Una moneda sin reglas de precio responde `422 UNSUPPORTED_CURRENCY`.
 
 **Reglas del pedido que `POST /orders` responde con `422`:** `INVALID_ISBN` (ISBN mal formado), `INVALID_QUANTITY` (la cantidad no es un entero ≥ 1), `MAX_QUANTITY_EXCEEDED` (más de 10 unidades del mismo libro, sumando líneas repetidas), `EMPTY_ORDER` (carrito sin libros) y `PRICE_MISMATCH` (el mismo libro con dos precios distintos).
 
