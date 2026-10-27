@@ -12,7 +12,7 @@ Los cortes 0 a 2 traen un cuadro de **Tareas** que explica qué es cada una y pa
 |---|---|---|---|---|---|
 | 0 | Scaffold del proyecto | 0 | ✅ | `feature/initial` | — |
 | 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
-| 2 | Dominio de Ventas | 2–3 | 🔄 | `feature/corte-2-dominio-ventas` | — |
+| 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ⬜ | — | — |
 | 4 | Outbox | 6 | ⬜ | — | — |
 | 5 | Compra completa | 7–9 | ⬜ | — | — |
@@ -85,7 +85,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 2: Dominio de Ventas 🔄
+## Corte 2: Dominio de Ventas ✅
 
 **Guía:** [05-piezas-clave](05-piezas-clave.md) · [06-tests](06-tests.md) · [producto](../producto.md) (reglas del negocio)
 
@@ -103,7 +103,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 6 | `PricingService` y las specifications | El cálculo del total | Descuento, envío y total: S/ 110, 160, 90 y 180 de la tabla del producto | ✅ |
 | 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ✅ |
 | 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ✅ |
-| 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ⬜ |
+| 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ✅ |
 
 - [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
 - [x] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
@@ -113,8 +113,8 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] `sales/domain/pricing/`: `PricingService`, `PricingContext` y las specifications
 - [x] Puertos como `abstract class`: `OrderRepository`, `CheckoutLog`, `CatalogPricing`, `StockReservation`, `Notifier`, `PaymentGateway`, `CustomerRepository`
 - [x] `test/fakes/`
-- [ ] Tests: `money.vo`, `order.aggregate`, `pricing.service` (ejemplos de la tabla de totales del producto)
-- [ ] Regla de dependencias comprobada (`domain/` sin Nest ni Prisma)
+- [x] Tests: `money.vo`, `order.aggregate`, `pricing.service` (ejemplos de la tabla de totales del producto)
+- [x] Regla de dependencias comprobada (`domain/` sin Nest ni Prisma)
 
 ---
 
@@ -207,6 +207,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 2 | `FreeShippingSpec` = `MinimumSubtotalSpec(150.00)` o `PremiumCustomerSpec`, y se exporta como `freeShippingSpec`. `PremiumOfferSpec` (¿aplica el descuento?) hoy delega en `PremiumCustomerSpec`. `PricingService.calculateFinalPrice(order, customer, freeShipping)` devuelve el importe **sin redondear** (descuento con `multiply('0.90')`, envío `Money.of('10.00')`) | La guía v5 no incluye el código de las specifications. Se siguen las firmas que usa el handler de la saga y las reglas de `producto.md`. El redondeo lo hace el handler una sola vez con `toFinal()` |
 | 2026-10-27 | 2 | Los siete puertos viven donde indica la estructura (`order/`, `customer/`, `payment/`). Cada puerto declara sus tipos de apoyo: `CheckoutRecord` y `CheckoutStatus`, `PaymentResult`, `CartItem` y `StockLine`. `Customer` expone `email`, no `currentEmail`: se corrige el consumidor de email de la guía | Mantener cada tipo junto al puerto que lo usa. `PricedCartItem` sigue en `order.factory.ts` y `CatalogPricing` lo importa |
 | 2026-10-27 | 2 | Los fakes de `test/fakes/` siguen los nombres de los ejemplos de `06-tests.md` y añaden opciones para los casos de la saga: `FakeStockReservation({ outOfStock })`, `FakePaymentGateway({ approved, reason, timeout, refundFails })`, `InMemoryOrderRepository({ failOnSave, failAfterCommit })`, `InMemoryCheckoutLog` (con `statusOf`, `backdate` y reclamos con bloqueo de 5 min) y `FakeNotifier({ fails })`. Se importan desde `test/fakes/index.ts` | Los fakes imitan la idempotencia de lo real (liberar y reembolsar no repiten) para que los tests del handler no pasen por una comodidad que la implementación real no tiene |
+| 2026-10-27 | 2 | La regla de dependencias es un test (`dependency-rules.spec.ts` con `test/support/architecture.ts`) y es más estricta que la guía: `domain/` solo admite `decimal.js` y `node:*` (una lista de permitidos, no de prohibidos), y `contracts/` solo `@nestjs/cqrs`. Cubre también `shared-kernel/` y los imports entre contextos, y distingue a `app.module` y `main.ts`, que sí ensamblan los contextos | Una lista de permitidos obliga a autorizar conscientemente cada librería nueva. El verificador se prueba con archivos de ejemplo que rompen las reglas, para que no pase en vacío si una ruta cambia |
 
 ## Problemas abiertos
 
@@ -237,3 +238,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 6: `PricingContext`, las cuatro specifications (`MinimumSubtotal`, `PremiumCustomer`, `PremiumOffer`, `FreeShipping`) y `PricingService`. Los cuatro ejemplos de `producto.md` dan S/ 110, 160, 90 y 180. 25 tests nuevos; hoy 152 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 7 (2.7): los siete puertos como `abstract class`, sin importar Nest ni Prisma. No llevan tests propios porque no tienen comportamiento: `tsc` comprueba los tipos y los fakes de la tarea 2.8 los ejercitan |
 | 2026-10-27 | Corte 2, tarea 8 (2.8): fakes en memoria de los siete puertos, más `fixedCatalog()`, `customersWithPremium()` y `ISBN`. Sus 27 tests encontraron un defecto en `FixedCatalog` (lanzaba de forma síncrona en vez de rechazar la promesa). Hoy 179 unitarios y 7 e2e pasan |
+| 2026-10-27 | Corte 2, tarea 9 (2.9): test de la regla de dependencias; 37 tests, de los cuales 5 inyectan imports prohibidos en el código real para comprobar que se detectan. **Corte 2 terminado:** `contracts/` no importa nada de `contexts/`, las invariantes del dominio tienen tests unitarios sin base de datos, `lint`, `test` y `test:e2e` pasan. Hoy 216 unitarios y 7 e2e. Queda abierta la decisión sobre pedidos en USD |

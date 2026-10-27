@@ -168,16 +168,22 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       └── identity/                                       (fase 15) usuarios, roles y guards
 │
 └── test/
-    ├── fakes/
-    │   ├── in-memory-order.repository.ts
+    ├── fakes/                                              ✅ hecho (corte 2); se importan desde index.ts
+    │   ├── in-memory-order-repository.ts
     │   ├── in-memory-checkout-log.ts
+    │   ├── in-memory-customer-repository.ts
     │   ├── fake-stock-reservation.ts
+    │   ├── fake-payment-gateway.ts
+    │   ├── fake-notifier.ts
     │   ├── fixed-catalog.ts
-    │   └── customers.ts
+    │   └── fixtures.ts                                     ISBN, fixedCatalog(), customersWithPremium()
+    ├── support/
+    │   └── architecture.ts                                 reglas de dependencias entre capas
     ├── unit/
     │   ├── money.vo.spec.ts
     │   ├── order.aggregate.spec.ts
     │   ├── pricing.service.spec.ts
+    │   ├── dependency-rules.spec.ts                        domain/ sin Nest ni Prisma; contracts/ sin contexts/
     │   └── place-order.handler.spec.ts
     ├── integration/                                        PostgreSQL 18 con Testcontainers
     │   ├── outbox.relay.spec.ts
