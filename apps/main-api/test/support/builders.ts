@@ -59,3 +59,23 @@ export async function insertStock(
     [isbn, available, reserved],
   );
 }
+
+// Lecturas con SQL directo, para comprobar el efecto de un handler sin usar su mismo cliente
+export async function stockOf(
+  isbn: string,
+): Promise<{ available: number; reserved: number } | undefined> {
+  const [row] = await query<{ available: number; reserved: number }>(
+    'SELECT available, reserved FROM inventory.stock_items WHERE isbn = $1',
+    [isbn],
+  );
+  return row;
+}
+
+export async function reservationsOf(
+  orderId: string,
+): Promise<{ isbn: string; quantity: number; status: string }[]> {
+  return query(
+    'SELECT isbn, quantity, status::text AS status FROM inventory.reservations WHERE order_id = $1 ORDER BY isbn',
+    [orderId],
+  );
+}

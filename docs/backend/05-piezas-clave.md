@@ -179,8 +179,7 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
     await this.prisma.$transaction(async (tx) => {
       // Siempre en orden de ISBN: si dos pedidos con los libros {A, B} y {B, A} reservan a la vez,
       // ambos bloquean primero A y luego B, y no se produce un interbloqueo (deadlock)
-      const sorted = [...lines].sort((a, b) => a.isbn.localeCompare(b.isbn));
-      for (const { isbn, quantity } of sorted) {
+      for (const { isbn, quantity } of sortByIsbn(lines)) {    // lock-order.ts: comparación de texto simple, no depende del idioma del sistema
         // Solo descuenta si alcanza: nunca queda en negativo, aunque haya pedidos simultáneos
         const { count } = await tx.stockItem.updateMany({
           where: { isbn, available: { gte: quantity } },
@@ -198,7 +197,8 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
 }
 ```
 
-- **Las líneas llegan sin ISBN repetidos:** el agregado `Order` ya suma en una sola línea las unidades del mismo libro.
+- **Las líneas llegan sin ISBN repetidos:** el agregado `Order` ya suma en una sola línea las unidades del mismo libro. El handler lo exige antes de abrir la transacción: sin líneas (`EMPTY_RESERVATION`), un ISBN repetido (`DUPLICATE_RESERVATION_LINE`) o una cantidad que no sea un entero ≥ 1 (`INVALID_QUANTITY`) son errores de dominio, no el error de la base.
+- **Un pedido solo reserva una vez:** si ya tiene reservas, el handler lanza `ConflictError` (`ORDER_ALREADY_RESERVED`). Lo detecta una comprobación previa y, si dos peticiones del mismo pedido llegan a la vez, la clave primaria de `reservations` (`P2002`), que se traduce al mismo error. La saga no debería llegar ahí, porque el checkout con su `Idempotency-Key` lo impide.
 - **Toda transacción que toca `stock_items` bloquea las filas en orden de ISBN** (reservar y liberar). Es la regla que evita interbloqueos entre pedidos simultáneos; cualquier operación nueva sobre stock debe seguirla.
 - **`StockItemNotFoundError`** (422, `STOCK_ITEM_NOT_FOUND`) indica un libro del catálogo sin registro de stock: además de rechazar la compra, se registra como error para corregir el dato.
 
