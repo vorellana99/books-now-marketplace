@@ -1,0 +1,19 @@
+# Scripts de instalación (pnpm ≥ 10 los bloquea por defecto y, según la versión, falla con ERR_PNPM_IGNORED_BUILDS).
+# `onlyBuiltDependencies` lo leen pnpm 10; `allowBuilds`, pnpm 11. Se declaran las dos para que funcione con cualquiera.
+onlyBuiltDependencies:
+  - "@prisma/engines"
+  - esbuild
+  - prisma
+allowBuilds:
+  "@prisma/engines": true
+  esbuild: true
+  prisma: true
+  "@scarf/scarf": false
+  cpu-features: false
+  protobufjs: false
+  ssh2: false
+
+# multer < 2.5.0 tiene una vulnerabilidad de denegación de servicio (GHSA-q7qp-rjg7-q26m).
+# Llega por @nestjs/platform-express; quitar este override cuando una versión suya ya exija ≥ 2.5.0.
+overrides:
+  multer: ">=2.5.0 <3"

@@ -1,0 +1,89 @@
+name: main-api
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ["apps/main-api/**", ".github/workflows/main-api.yml"]
+  pull_request:
+    paths: ["apps/main-api/**", ".github/workflows/main-api.yml"]
+
+concurrency:
+  group: main-api-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: apps/main-api
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    # PostgreSQL 18 como en desarrollo: el Outbox usa uuidv7(), que no existe antes
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: libroya
+          POSTGRES_PASSWORD: libroya
+          POSTGRES_DB: libroya
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U libroya -d libroya"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_USER: libroya
+      DB_PASSWORD: libroya
+      DB_NAME: libroya
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0 # la misma que genera pnpm-lock.yaml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24 # package.json exige >=24.15
+          cache: pnpm
+          cache-dependency-path: apps/main-api/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile
+
+      # El cliente de Prisma se genera en src/: lo necesitan el lint con tipos y la compilación
+      - run: pnpm run prisma:generate
+
+      - run: pnpm run lint
+      - run: pnpm run format:check
+      - run: pnpm run build
+      - run: pnpm test
+
+      - run: pnpm run db:deploy
+      - run: pnpm run test:e2e
+
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # Falla solo con vulnerabilidades altas o críticas en dependencias de producción
+      - run: pnpm audit --prod --audit-level=high

@@ -1,0 +1,179 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/platform/prisma/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["sales", "catalog", "inventory", "messaging"]
+}
+
+// ── sales ──────────────────────────────────────────────
+model Customer {
+  id      String  @id @db.Uuid
+  email   String  @unique
+  premium Boolean @default(false)
+  orders  Order[]
+
+  @@map("customers")
+  @@schema("sales")
+}
+
+enum OrderStatus {
+  PLACED
+
+  @@schema("sales")
+}
+
+enum Currency {
+  PEN
+  USD
+
+  @@schema("sales")
+}
+
+model Order {
+  id            String      @id @db.Uuid
+  customerId    String      @map("customer_id") @db.Uuid
+  customer      Customer    @relation(fields: [customerId], references: [id]) // FK: mismo contexto
+  status        OrderStatus
+  chargedAmount Decimal     @map("charged_amount") @db.Decimal(19, 2) // importe final: 2 decimales
+  currency      Currency    @default(PEN)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  lines         OrderLine[]
+
+  @@map("orders")
+  @@schema("sales")
+}
+
+enum CheckoutStatus {
+  PENDING
+  COMPLETED
+  ABORTED
+
+  @@schema("sales")
+}
+
+// Estado de la saga: un registro por intento de compra (y la memoria de su Idempotency-Key)
+model Checkout {
+  orderId        String         @id @map("order_id") @db.Uuid
+  idempotencyKey String         @unique @map("idempotency_key") @db.Uuid // dos peticiones con la misma clave: solo una entra
+  requestHash    String         @map("request_hash") // detecta la misma clave con otro carrito
+  requestId      String?        @map("request_id") // correlación: el job de recuperación lo reutiliza en sus logs
+  chargedAmount  Decimal?       @map("charged_amount") @db.Decimal(19, 2) // se guarda al completar, para responder reintentos
+  currency       Currency? // junto con el monto: sin ella, un reintento no sabe la moneda
+  status         CheckoutStatus @default(PENDING)
+  startedAt      DateTime       @default(now()) @map("started_at")
+  lockedUntil    DateTime?      @map("locked_until") // evita que dos jobs recuperen el mismo checkout
+
+  @@index([status, startedAt])
+  @@map("checkouts")
+  @@schema("sales")
+}
+
+model OrderLine {
+  orderId   String   @map("order_id") @db.Uuid
+  isbn      String   @db.VarChar(13) // referencia lógica a catalog (sin FK)
+  title     String // snapshot al comprar
+  unitPrice Decimal  @map("unit_price") @db.Decimal(19, 6) // snapshot; valor intermedio (luego, el valor unitario de SUNAT)
+  currency  Currency @default(PEN)
+  quantity  Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@id([orderId, isbn])
+  @@map("order_lines")
+  @@schema("sales")
+}
+
+// ── catalog ────────────────────────────────────────────
+// Catálogo tiene su propio enum de moneda: usar el de `sales` crearía una dependencia entre schemas (regla 4)
+enum CatalogCurrency {
+  PEN
+  USD
+
+  @@map("Currency")
+  @@schema("catalog")
+}
+
+model Book {
+  isbn     String          @id @db.VarChar(13)
+  title    String
+  author   String
+  price    Decimal         @db.Decimal(19, 2) // precio final de venta
+  currency CatalogCurrency @default(PEN)
+  active   Boolean         @default(true) // los libros se desactivan, no se borran
+
+  @@map("books")
+  @@schema("catalog")
+}
+
+// ── inventory ──────────────────────────────────────────
+model StockItem {
+  isbn      String @id @db.VarChar(13)
+  available Int
+  reserved  Int    @default(0)
+
+  @@map("stock_items")
+  @@schema("inventory")
+}
+
+enum ReservationStatus {
+  HELD
+  CONFIRMED
+
+  @@schema("inventory")
+}
+
+model Reservation {
+  orderId   String            @map("order_id") @db.Uuid
+  isbn      String            @db.VarChar(13)
+  quantity  Int
+  status    ReservationStatus @default(HELD)
+  createdAt DateTime          @default(now()) @map("created_at")
+
+  @@id([orderId, isbn])
+  @@index([status, createdAt])
+  @@map("reservations")
+  @@schema("inventory")
+}
+
+// ── messaging (solo lo usa platform/outbox) ────────────
+model OutboxMessage {
+  id            String     @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  eventName     String     @map("event_name")
+  eventVersion  Int        @map("event_version")
+  aggregateId   String     @map("aggregate_id") // texto: UUID de un pedido o ISBN de un libro; índice para el orden por agregado del relay
+  payload       Json
+  occurredOn    DateTime   @map("occurred_on")
+  correlationId String?    @map("correlation_id") // requestId de la petición que generó el evento
+  deliveries    Delivery[]
+
+  @@index([aggregateId])
+  @@map("outbox")
+  @@schema("messaging")
+}
+
+enum DeliveryStatus {
+  PENDING
+  DONE
+  FAILED
+
+  @@schema("messaging")
+}
+
+model Delivery {
+  eventId       String         @map("event_id") @db.Uuid
+  consumer      String
+  status        DeliveryStatus @default(PENDING)
+  attempts      Int            @default(0)
+  nextAttemptAt DateTime       @default(now()) @map("next_attempt_at")
+  lockedUntil   DateTime?      @map("locked_until")
+  lastError     String?        @map("last_error")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  event         OutboxMessage  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, consumer])
+  @@index([status, nextAttemptAt])
+  @@map("deliveries")
+  @@schema("messaging")
+}

@@ -1,0 +1,338 @@
+# Backend: estructura y puesta en marcha
+
+> Secciones 3 y 4 de la guía.
+
+## 3. Estructura de carpetas
+
+Parte de la estructura v5 (contexto → capa → módulo → archivo), con los ajustes de la tabla de abajo.
+
+Los archivos sin marca son de las fases 0–9. Los marcados con **(fase N)** se agregan en [07-fases-y-roadmap.md](07-fases-y-roadmap.md). Los marcados con **✅ existe** ya están en `apps/main-api/` (scaffold del CLI); ya se ajustaron o se crearon en el corte 1.
+
+```text
+apps/main-api/                        ← "libroya-api" en el resto de la guía
+├── package.json                      ✅ hecho: dependencias y scripts (corte 1)
+├── tsconfig.json                     ✅ existe: sin cambios
+├── tsconfig.build.json               ✅ existe: excluye test/ y *spec.ts
+├── nest-cli.json                     ✅ existe: sin cambios
+├── .oxlintrc.json · .prettierrc      ✅ existen: lint y formato
+├── vitest.config.ts                  ✅ hecho: include `test/unit/**/*.spec.ts`
+├── vitest.config.e2e.ts              ✅ hecho: include `test/{integration,e2e}/**/*.spec.ts`
+├── docker-compose.yml                PostgreSQL 18
+├── .env                              no se sube al repositorio (ya ignorado)
+├── .gitignore                        ✅ hecho: incluye src/platform/prisma/generated/
+├── prisma.config.ts
+├── prisma/
+│   ├── schema.prisma
+│   ├── seed.ts
+│   └── migrations/
+├── src/
+│   ├── main.ts                       ✅ hecho (corte 1)
+│   ├── app.module.ts                 ✅ hecho (corte 1); se amplía en cada corte
+│   │
+│   ├── shared-kernel/
+│   │   ├── isbn.vo.ts
+│   │   ├── domain-event.ts           eventName, eventVersion, aggregateId, occurredOn
+│   │   └── domain.errors.ts          DomainError, NotFoundError, ConflictError
+│   │
+│   ├── contracts/                    ← Published Language
+│   │   ├── sales/
+│   │   │   └── order-placed.event.ts
+│   │   ├── catalog/
+│   │   │   ├── get-book-price.query.ts
+│   │   │   └── book-created.event.ts                       (fase 12)
+│   │   └── inventory/
+│   │       ├── reserve-stock.command.ts
+│   │       ├── release-stock.command.ts
+│   │       └── stock.errors.ts       OutOfStockError, StockItemNotFoundError
+│   │
+│   ├── platform/
+│   │   ├── config/
+│   │   │   └── env.schema.ts
+│   │   ├── prisma/
+│   │   │   ├── prisma.module.ts
+│   │   │   ├── prisma.service.ts
+│   │   │   └── generated/            lo crea `prisma generate` (no se sube)
+│   │   ├── outbox/
+│   │   │   ├── outbox.module.ts
+│   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer
+│   │   │   ├── outbox-handler.decorator.ts
+│   │   │   ├── outbox.registry.ts
+│   │   │   ├── outbox.writer.ts
+│   │   │   ├── outbox.relay.ts
+│   │   │   └── outbox.health.ts
+│   │   ├── observability/
+│   │   │   ├── request-context.ts
+│   │   │   ├── request-id.middleware.ts
+│   │   │   ├── request-context.interceptor.ts
+│   │   │   └── request-aware.logger.ts
+│   │   ├── http/
+│   │   │   ├── configure-app.ts
+│   │   │   ├── domain-exception.filter.ts
+│   │   │   └── admin-api-enabled.guard.ts                  (fase 12)
+│   │   └── health/
+│   │       ├── health.module.ts
+│   │       ├── health.controller.ts
+│   │       └── db.health.ts
+│   │
+│   └── contexts/
+│       ├── sales/
+│       │   ├── sales.module.ts
+│       │   ├── domain/
+│       │   │   ├── order/
+│       │   │   │   ├── order.aggregate.ts
+│       │   │   │   ├── order-line.entity.ts
+│       │   │   │   ├── order.factory.ts
+│       │   │   │   ├── shipping-address.vo.ts              (fase 11)
+│       │   │   │   ├── order.repository.ts
+│       │   │   │   ├── checkout-log.port.ts
+│       │   │   │   ├── catalog-pricing.port.ts
+│       │   │   │   ├── stock-reservation.port.ts
+│       │   │   │   └── notifier.port.ts
+│       │   │   ├── customer/
+│       │   │   │   ├── customer.aggregate.ts
+│       │   │   │   ├── email.vo.ts
+│       │   │   │   └── customer.repository.ts
+│       │   │   ├── pricing/
+│       │   │   │   ├── pricing.service.ts
+│       │   │   │   ├── pricing-context.ts
+│       │   │   │   ├── free-shipping.specification.ts
+│       │   │   │   ├── minimum-subtotal.specification.ts
+│       │   │   │   ├── premium-customer.specification.ts
+│       │   │   │   └── premium-offer.specification.ts
+│       │   │   ├── payment/
+│       │   │   │   └── payment-gateway.port.ts
+│       │   │   └── shared/
+│       │   │       ├── money.vo.ts   decimal.js
+│       │   │       └── specification.ts
+│       │   ├── application/order/
+│       │   │   ├── place-order.command.ts
+│       │   │   ├── place-order.handler.ts
+│       │   │   ├── get-order.query.ts
+│       │   │   ├── list-customer-orders.query.ts           (fase 14)
+│       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias
+│       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox
+│       │   └── infrastructure/
+│       │       ├── order/
+│       │       │   ├── order.controller.ts
+│       │       │   ├── place-order.dto.ts
+│       │       │   ├── shipping-address.dto.ts             (fase 11)
+│       │       │   ├── list-customer-orders.dto.ts         (fase 14)
+│       │       │   ├── get-order.handler.ts
+│       │       │   ├── list-customer-orders.handler.ts     (fase 14)
+│       │       │   ├── prisma-order.repository.ts
+│       │       │   ├── order.mapper.ts
+│       │       │   ├── prisma-checkout-log.adapter.ts
+│       │       │   ├── catalog-in-process.adapter.ts
+│       │       │   ├── inventory-in-process.adapter.ts
+│       │       │   └── console-notifier.adapter.ts
+│       │       ├── customer/
+│       │       │   └── prisma-customer.repository.ts
+│       │       └── payment/
+│       │           ├── fake-payment-gateway.adapter.ts
+│       │           └── external-payment.adapter.ts
+│       │
+│       ├── catalog/
+│       │   ├── catalog.module.ts
+│       │   ├── application/book/
+│       │   │   ├── search-books.query.ts                   (fase 10)
+│       │   │   ├── create-book.command.ts                  (fase 12)
+│       │   │   ├── update-book.command.ts                  (fase 12)
+│       │   │   └── deactivate-book.command.ts              (fase 12)
+│       │   └── infrastructure/book/                        todos usan Prisma directo
+│       │       ├── book.controller.ts
+│       │       ├── get-book-price.handler.ts
+│       │       ├── search-books.dto.ts                     (fase 10)
+│       │       ├── search-books.handler.ts                 (fase 10)
+│       │       ├── admin-book.controller.ts                (fase 12) guard en la clase
+│       │       ├── create-book.dto.ts                      (fase 12)
+│       │       ├── update-book.dto.ts                      (fase 12)
+│       │       ├── create-book.handler.ts                  (fase 12) libro + evento en 1 transacción
+│       │       ├── update-book.handler.ts                  (fase 12)
+│       │       └── deactivate-book.handler.ts              (fase 12)
+│       │
+│       ├── inventory/
+│       │   ├── inventory.module.ts
+│       │   ├── domain/stock/
+│       │   │   └── stock-item.aggregate.ts
+│       │   ├── application/stock/
+│       │   │   └── add-stock.command.ts                    (fase 13)
+│       │   └── infrastructure/stock/                       todos usan Prisma directo
+│       │       ├── reserve-stock.handler.ts
+│       │       ├── release-stock.handler.ts
+│       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox
+│       │       ├── create-stock-item.consumer.ts           (fase 12) consumidor `db`
+│       │       ├── admin-stock.controller.ts               (fase 13) guard en la clase
+│       │       ├── add-stock.dto.ts                        (fase 13)
+│       │       └── add-stock.handler.ts                    (fase 13)
+│       │
+│       └── identity/                                       (fase 15) usuarios, roles y guards
+│
+└── test/
+    ├── fakes/                                              ✅ hecho (corte 2); se importan desde index.ts
+    │   ├── in-memory-order-repository.ts
+    │   ├── in-memory-checkout-log.ts
+    │   ├── in-memory-customer-repository.ts
+    │   ├── fake-stock-reservation.ts
+    │   ├── fake-payment-gateway.ts
+    │   ├── fake-notifier.ts
+    │   ├── fixed-catalog.ts
+    │   └── fixtures.ts                                     ISBN, fixedCatalog(), customersWithPremium()
+    ├── support/
+    │   └── architecture.ts                                 reglas de dependencias entre capas
+    ├── unit/
+    │   ├── money.vo.spec.ts
+    │   ├── order.aggregate.spec.ts
+    │   ├── pricing.service.spec.ts
+    │   ├── dependency-rules.spec.ts                        domain/ sin Nest ni Prisma; contracts/ sin contexts/
+    │   └── place-order.handler.spec.ts
+    ├── integration/                                        PostgreSQL 18 con Testcontainers
+    │   ├── outbox.relay.spec.ts
+    │   ├── recover-checkouts.job.spec.ts
+    │   └── stock.handlers.spec.ts
+    └── e2e/
+        └── orders.e2e.spec.ts
+```
+
+Los tests unitarios van en `test/unit/`, no junto al código.
+
+Las **specifications** del dominio usan el sufijo `.specification.ts` (en la guía v5 era `.spec.ts`). Con `.spec.ts`, Vitest las tomaría por archivos de test. Las clases no cambian de nombre (`MinimumSubtotalSpec`, `freeShippingSpec`).
+
+| Cambio respecto a la guía v5 | Por qué |
+|---|---|
+| **Puertos como `abstract class`**, no `interface` | Sirven como token de inyección de Nest sin poner decoradores en el dominio |
+| **`contracts/` para comandos, queries y eventos públicos** | Un contexto usa a otro sin importar su código interno |
+| **Ventas → Inventario por `CommandBus`** (puerto `StockReservation`) | La reserva es sincrónica porque el pedido depende de ella |
+| **Handlers de queries en `infrastructure/`** (`GetOrderHandler`, `GetBookPriceHandler`) | Las lecturas no pasan por el dominio: leen directo con Prisma (lado de lectura de CQRS) |
+| **Relay propio en vez del EventBus de Nest** | El EventBus no espera a los handlers ni propaga sus errores; el relay sí lo hace |
+| **Sufijo `.consumer.ts`** | Distingue una reacción del Outbox de un handler de comando |
+| **Saga mínima, sin `@Saga()` de Nest** | Las compensaciones ocurren en el handler; el checkout persistido y su job cubren las caídas |
+| **Inventario sin repositorio por ahora** | La reserva es un `UPDATE` atómico; un repositorio con bloqueo optimista no aportaría nada todavía. Por eso sus handlers usan Prisma directo y viven en `infrastructure/` (regla 3 de la arquitectura) |
+| **Transacciones explícitas con `prisma.$transaction(tx => …)`** | Cada operación atómica vive en un solo lugar (nunca hay transacciones entre contextos), así que basta con pasar `tx`; sin librerías extra en un punto crítico |
+| **Consumidores que escriben en BD van en `infrastructure/`** | Reciben el `tx` de Prisma; los que solo llaman a servicios externos quedan en `application/` |
+| **`Money` con decimal.js** (en vez de céntimos `number`) | Exactitud con más de 2 decimales en valores intermedios (por ejemplo, el valor unitario sin IGV que exige SUNAT) y redondeo explícito al final |
+| **Imports relativos con `.js`** | Proyecto ESM: `import { Order } from './order.aggregate.js'` |
+
+---
+
+## 4. Puesta en marcha
+
+> [!note] El scaffold ya está creado
+> `nest new` ya se ejecutó: el proyecto está en `apps/main-api/` con ESM, Vitest, oxlint y Prettier. No lo repitas. Empieza por instalar lo que falta.
+
+```bash
+cd apps/main-api
+
+pnpm add -E @nestjs/cqrs @nestjs/config @nestjs/swagger @nestjs/schedule @nestjs/terminus \
+      class-validator class-transformer zod dotenv \
+      @prisma/client@^7 @prisma/adapter-pg@^7 pg decimal.js
+pnpm add -E -D prisma@^7 tsx @types/pg @testcontainers/postgresql
+```
+
+`supertest` y `@types/supertest` ya están en `devDependencies`, así que no se vuelven a instalar. pnpm bloquea por defecto los scripts de instalación de algunas dependencias. Según la versión, solo avisa (pnpm 10) o **falla con `ERR_PNPM_IGNORED_BUILDS`** (versiones más nuevas). Por eso el repositorio trae `apps/main-api/pnpm-workspace.yaml`, que permite los scripts de `prisma`, `@prisma/engines` y `esbuild` (el que usa `tsx`) y rechaza el resto (`ssh2`, `cpu-features`, `protobufjs`, `@scarf/scarf`). Si agregas una dependencia con scripts de instalación, apruébala con `pnpm approve-builds`. Al pasar un rango (`prisma@^7`), pnpm deja el `^` aunque uses `-E`: fija la versión exacta en `package.json`.
+
+- **`pg`** es el driver que usa `@prisma/adapter-pg`. Si tu versión del adaptador ya lo trae como dependencia, instalarlo explícitamente no causa problemas y fija su versión.
+- **`tsx`** lo necesita el seed (`prisma.config.ts` lo ejecuta con `tsx prisma/seed.ts`).
+
+**Scripts en `package.json`:** el scaffold ya trae `build`, `start`, `start:dev`, `start:debug`, `start:prod`, `format`, `lint`, `test`, `test:watch`, `test:cov`, `test:debug` y `test:e2e`. Agrega estos y cambia `test:e2e`:
+
+```json
+{
+  "scripts": {
+    "db:up": "docker compose up -d --wait",
+    "db:migrate": "prisma migrate dev",
+    "db:deploy": "prisma migrate deploy",
+    "db:seed": "prisma db seed",
+    "prisma:generate": "prisma generate",
+    "prebuild": "prisma generate",
+    "pretest": "prisma generate",
+    "test:e2e": "prisma generate && vitest run --config ./vitest.config.e2e.ts"
+  }
+}
+```
+
+El único script que ya existía y cambió es `test:e2e`, que ahora ejecuta `prisma generate` antes de Vitest.
+
+El cliente generado debe estar en `.gitignore` (ya está: `/src/platform/prisma/generated/`), así que **`prisma generate` debe correr antes de compilar o testear**, en local y en CI (de eso se encargan `prebuild` y `pretest`).
+
+**`docker-compose.yml`**
+
+```yaml
+services:
+  db:
+    image: postgres:18
+    environment: { POSTGRES_USER: libroya, POSTGRES_PASSWORD: libroya, POSTGRES_DB: libroya }
+    ports: ["5433:5432"]   # puerto 5433 en tu máquina (5432 dentro del contenedor)
+    volumes:
+      - pgdata:/var/lib/postgresql   # desde la v18 el volumen va aquí, no en /var/lib/postgresql/data
+    healthcheck:                     # permite `docker compose up --wait`
+      test: ["CMD-SHELL", "pg_isready -U libroya -d libroya"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+volumes:
+  pgdata:
+```
+
+**Primer arranque:**
+
+```bash
+pnpm run db:up                         # espera a que PostgreSQL esté listo
+pnpm exec prisma migrate dev --name init   # crea los schemas sales, catalog, inventory y messaging, y sus tablas
+pnpm run db:seed                       # clientes, libros y stock de ejemplo
+pnpm run start:dev
+```
+
+> [!important] PostgreSQL 18 en todos lados
+> El outbox usa `uuidv7()`, que solo existe desde PostgreSQL 18. La misma versión debe usarse en `docker-compose.yml`, en Testcontainers (`postgres:18`) y en CI; con una versión anterior, la migración falla.
+
+**`.env`**
+
+```env
+DB_HOST=localhost
+DB_PORT=5433
+DB_USER=libroya
+DB_PASSWORD=libroya
+DB_NAME=libroya
+PORT=3000
+PAYMENT_PROVIDER=fake            # fake | external
+PAYMENT_API_URL=
+OUTBOX_MAX_ATTEMPTS=8
+CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
+ADMIN_API_ENABLED=false          # endpoints /admin solo en desarrollo, hasta tener autenticación (ver [07-fases-y-roadmap.md](07-fases-y-roadmap.md))
+```
+
+**`platform/config/env.schema.ts`**: todo lo que llega de `.env` es texto; el schema lo convierte y valida al arrancar.
+
+```ts
+import { z } from 'zod';
+
+const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.url().optional()); // `PAYMENT_API_URL=` vacío
+
+export const envSchema = z
+  .looseObject({                                    // deja pasar el resto de variables del proceso (Zod 3: z.object({…}).passthrough())
+    DB_HOST: z.string().min(1),
+    DB_PORT: z.coerce.number().int().default(5432),
+    DB_USER: z.string().min(1),
+    DB_PASSWORD: z.string().min(1),
+    DB_NAME: z.string().min(1),
+    PORT: z.coerce.number().int().default(3000),
+    PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
+    PAYMENT_API_URL: optionalUrl,
+    OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
+    CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    ADMIN_API_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
+  })
+  .refine((e) => !(e.NODE_ENV === 'production' && e.ADMIN_API_ENABLED), {
+    path: ['ADMIN_API_ENABLED'],
+    message: 'Los endpoints /admin no pueden habilitarse en producción sin autenticación',
+  })
+  .refine((e) => e.PAYMENT_PROVIDER !== 'external' || Boolean(e.PAYMENT_API_URL), {
+    path: ['PAYMENT_API_URL'],
+    message: 'PAYMENT_API_URL es obligatoria con PAYMENT_PROVIDER=external',
+  });
+
+export type Env = z.infer<typeof envSchema>;
+```
+
+`ConfigModule` guarda el objeto que devuelve `validate` (ver `AppModule`), así que `config.get('PORT')` ya es un número. `ConfigService.get<number>` por sí solo **no** convierte: el tipo genérico solo le indica a TypeScript qué esperar. Si una variable es inválida, la app no arranca y el error dice cuál.

@@ -1,0 +1,40 @@
+import { ArgumentsHost } from '@nestjs/common';
+import { DomainExceptionFilter } from '../../src/platform/http/domain-exception.filter.js';
+import {
+  ConflictError,
+  DomainError,
+  NotFoundError,
+} from '../../src/shared-kernel/domain.errors.js';
+
+function respond(error: DomainError) {
+  const json = vi.fn();
+  const status = vi.fn().mockReturnValue({ json });
+  const host = {
+    switchToHttp: () => ({ getResponse: () => ({ status }) }),
+  } as unknown as ArgumentsHost;
+  new DomainExceptionFilter().catch(error, host);
+  return { status: status.mock.calls[0][0], body: json.mock.calls[0][0] };
+}
+
+describe('DomainExceptionFilter', () => {
+  it('DomainError → 422', () => {
+    expect(respond(new DomainError('OUT_OF_STOCK', 'sin stock'))).toEqual({
+      status: 422,
+      body: {
+        statusCode: 422,
+        errorCode: 'OUT_OF_STOCK',
+        message: 'sin stock',
+      },
+    });
+  });
+
+  it('NotFoundError → 404', () => {
+    expect(respond(new NotFoundError('Book', '123')).status).toBe(404);
+  });
+
+  it('ConflictError → 409', () => {
+    expect(
+      respond(new ConflictError('CHECKOUT_IN_PROGRESS', 'en curso')).status,
+    ).toBe(409);
+  });
+});
