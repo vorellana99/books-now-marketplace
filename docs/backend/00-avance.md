@@ -10,7 +10,7 @@
 |---|---|---|---|---|---|
 | 0 | Scaffold del proyecto | 0 | ✅ | `feature/initial` | — |
 | 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
-| 2 | Dominio de Ventas | 2–3 | ⬜ | — | — |
+| 2 | Dominio de Ventas | 2–3 | 🔄 | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ⬜ | — | — |
 | 4 | Outbox | 6 | ⬜ | — | — |
 | 5 | Compra completa | 7–9 | ⬜ | — | — |
@@ -60,13 +60,13 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 2: Dominio de Ventas ⬜
+## Corte 2: Dominio de Ventas 🔄
 
 **Guía:** [05-piezas-clave](05-piezas-clave.md) · [06-tests](06-tests.md) · [producto](../producto.md) (reglas del negocio)
 
 **Listo cuando:** `contracts/` no importa nada de `contexts/`, y las invariantes del dominio tienen tests unitarios que pasan, sin base de datos.
 
-- [ ] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
+- [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
 - [ ] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
 - [ ] `sales/domain/shared/`: `money.vo.ts` (decimal.js) y `specification.ts`
 - [ ] `sales/domain/order/`: agregado `Order`, `OrderLine`, `OrderFactory`
@@ -181,3 +181,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Se fija `"engines": { "node": ">=24.15" }` en `package.json` y el README pasa de "Node 22 o superior" a Node 24 LTS (≥ 24.15), como pide la guía |
 | 2026-10-27 | Se añade el workflow de CI `.github/workflows/main-api.yml` (Node 24, pnpm 12.15, `postgres:18`): `prisma generate`, lint, formato, build, tests unitarios, `migrate deploy` y e2e, más un job `pnpm audit --prod` que falla con vulnerabilidades altas. Nuevo script `format:check`. Sus pasos se ejecutaron en local sobre una copia limpia con una base nueva y pasan; la primera ejecución real en GitHub sigue pendiente |
 | 2026-10-27 | Tests nuevos del corte 1: `/health/ready` responde 503 con la BD caída (y `live` sigue en 200), el logger en modo texto antepone el `requestId`, el interceptor abre el contexto con el `requestId` y el banner de arranque. Se comprobó que cada uno falla al romper el código que protege. Hoy: 20 tests unitarios y 7 e2e pasan |
+| 2026-10-27 | Corte 2, tarea 1: `shared-kernel/isbn.vo.ts` (`Isbn.create` normaliza guiones y espacios, y valida 13 dígitos y el dígito de control; error `INVALID_ISBN`) y `domain-event.ts`. 11 tests nuevos; hoy 31 unitarios y 7 e2e pasan |
