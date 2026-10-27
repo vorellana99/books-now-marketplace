@@ -6,29 +6,28 @@
 
 Parte de la estructura v5 (contexto → capa → módulo → archivo), con los ajustes de la tabla de abajo.
 
-Los archivos sin marca son de las fases 0–9. Los marcados con **(fase N)** se agregan en [07-fases-y-roadmap.md](07-fases-y-roadmap.md). Los marcados con **✅ existe** ya están en `apps/main-api/` (scaffold del CLI); hay que ajustarlos, no crearlos.
+Los archivos sin marca son de las fases 0–9. Los marcados con **(fase N)** se agregan en [07-fases-y-roadmap.md](07-fases-y-roadmap.md). Los marcados con **✅ existe** ya están en `apps/main-api/` (scaffold del CLI); ya se ajustaron o se crearon en el corte 1.
 
 ```text
 apps/main-api/                        ← "libroya-api" en el resto de la guía
-├── package.json                      ✅ existe: agregar dependencias y scripts (más abajo, sección 4)
+├── package.json                      ✅ hecho: dependencias y scripts (corte 1)
 ├── tsconfig.json                     ✅ existe: sin cambios
 ├── tsconfig.build.json               ✅ existe: excluye test/ y *spec.ts
 ├── nest-cli.json                     ✅ existe: sin cambios
 ├── .oxlintrc.json · .prettierrc      ✅ existen: lint y formato
-├── vitest.config.ts                  ✅ existe: pasar el include a test/unit/**/*.spec.ts (hoy: **/*.spec.ts)
-├── vitest.config.e2e.ts              ✅ existe: pasar el include a test/{integration,e2e}/**/*.spec.ts (hoy: **/*.e2e-spec.ts)
+├── vitest.config.ts                  ✅ hecho: include `test/unit/**/*.spec.ts`
+├── vitest.config.e2e.ts              ✅ hecho: include `test/{integration,e2e}/**/*.spec.ts`
 ├── docker-compose.yml                PostgreSQL 18
 ├── .env                              no se sube al repositorio (ya ignorado)
-├── .gitignore                        ✅ existe: agregar src/platform/prisma/generated/
+├── .gitignore                        ✅ hecho: incluye src/platform/prisma/generated/
 ├── prisma.config.ts
 ├── prisma/
 │   ├── schema.prisma
 │   ├── seed.ts
 │   └── migrations/
 ├── src/
-│   ├── main.ts                       ✅ existe (mínimo): reemplazar por el de [05-piezas-clave.md](05-piezas-clave.md)
-│   ├── app.module.ts                 ✅ existe (vacío): reemplazar por el de [05-piezas-clave.md](05-piezas-clave.md)
-│   ├── app.controller.ts · app.service.ts   ✅ existen ("Hello World"): eliminar con el primer endpoint real
+│   ├── main.ts                       ✅ hecho (corte 1)
+│   ├── app.module.ts                 ✅ hecho (corte 1); se amplía en cada corte
 │   │
 │   ├── shared-kernel/
 │   │   ├── isbn.vo.ts
@@ -169,7 +168,6 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       └── identity/                                       (fase 15) usuarios, roles y guards
 │
 └── test/
-    ├── app.e2e-spec.ts               ✅ existe (scaffold): reemplazar por e2e/orders.e2e.spec.ts
     ├── fakes/
     │   ├── in-memory-order.repository.ts
     │   ├── in-memory-checkout-log.ts
@@ -189,7 +187,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
         └── orders.e2e.spec.ts
 ```
 
-Los tests unitarios van en `test/unit/`, no junto al código: el scaffold dejó `src/app.controller.spec.ts` junto a su clase, y se elimina con ella.
+Los tests unitarios van en `test/unit/`, no junto al código.
 
 Las **specifications** del dominio usan el sufijo `.specification.ts` (en la guía v5 era `.spec.ts`). Con `.spec.ts`, Vitest las tomaría por archivos de test. Las clases no cambian de nombre (`MinimumSubtotalSpec`, `freeShippingSpec`).
 
@@ -224,7 +222,7 @@ pnpm add -E @nestjs/cqrs @nestjs/config @nestjs/swagger @nestjs/schedule @nestjs
 pnpm add -E -D prisma@^7 tsx @types/pg @testcontainers/postgresql
 ```
 
-`supertest` y `@types/supertest` ya están en `devDependencies`, así que no se vuelven a instalar. Si pnpm bloquea los scripts de instalación de Prisma, aprueba la lista con `pnpm approve-builds`.
+`supertest` y `@types/supertest` ya están en `devDependencies`, así que no se vuelven a instalar. pnpm avisa que ignora los scripts de instalación de algunas dependencias (`prisma`, `esbuild`…); no hace falta aprobarlos, porque `prisma generate` y `prisma migrate` funcionan igual. Al pasar un rango (`prisma@^7`), pnpm deja el `^` aunque uses `-E`: fija la versión exacta en `package.json`.
 
 - **`pg`** es el driver que usa `@prisma/adapter-pg`. Si tu versión del adaptador ya lo trae como dependencia, instalarlo explícitamente no causa problemas y fija su versión.
 - **`tsx`** lo necesita el seed (`prisma.config.ts` lo ejecuta con `tsx prisma/seed.ts`).
@@ -246,9 +244,9 @@ pnpm add -E -D prisma@^7 tsx @types/pg @testcontainers/postgresql
 }
 ```
 
-El único cambio sobre un script existente es `test:e2e`, que hoy ejecuta solo `vitest run --config ./vitest.config.e2e.ts`, sin `prisma generate`.
+El único script que ya existía y cambió es `test:e2e`, que ahora ejecuta `prisma generate` antes de Vitest.
 
-El cliente generado debe estar en `.gitignore` (hoy **falta** esa línea: agrega `/src/platform/prisma/generated/`), así que **`prisma generate` debe correr antes de compilar o testear**, en local y en CI (de eso se encargan `prebuild` y `pretest`).
+El cliente generado debe estar en `.gitignore` (ya está: `/src/platform/prisma/generated/`), así que **`prisma generate` debe correr antes de compilar o testear**, en local y en CI (de eso se encargan `prebuild` y `pretest`).
 
 **`docker-compose.yml`**
 
@@ -298,11 +296,11 @@ ADMIN_API_ENABLED=false          # endpoints /admin solo en desarrollo, hasta te
 ```ts
 import { z } from 'zod';
 
-const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.string().url().optional()); // `PAYMENT_API_URL=` vacío
+const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.url().optional()); // `PAYMENT_API_URL=` vacío
 
 export const envSchema = z
   .looseObject({                                    // deja pasar el resto de variables del proceso (Zod 3: z.object({…}).passthrough())
-    DATABASE_URL: z.string().url(),
+    DATABASE_URL: z.url(),
     PORT: z.coerce.number().int().default(3000),
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,

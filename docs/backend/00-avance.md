@@ -9,7 +9,7 @@
 | # | Corte | Fases de la guía | Estado | Rama | PR |
 |---|---|---|---|---|---|
 | 0 | Scaffold del proyecto | 0 | ✅ | `feature/initial` | — |
-| 1 | Fundaciones | 1 | ⬜ | — | — |
+| 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
 | 2 | Dominio de Ventas | 2–3 | ⬜ | — | — |
 | 3 | Catálogo e Inventario | 4–5 | ⬜ | — | — |
 | 4 | Outbox | 6 | ⬜ | — | — |
@@ -31,32 +31,32 @@ Los cortes 1 y 2 son independientes y pueden ir en paralelo. Del 3 en adelante, 
 - [x] `supertest` y `@types/supertest`
 - [x] Gestor de paquetes: pnpm
 
-**Pendiente heredado:** el "Hello World" (`AppController`, `AppService`, `src/app.controller.spec.ts`, `test/app.e2e-spec.ts`) se elimina en el corte 1, al existir el primer endpoint real.
+El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eliminó en el corte 1.
 
 ---
 
-## Corte 1: Fundaciones ⬜
+## Corte 1: Fundaciones ✅
 
 **Guía:** [01-decisiones-y-stack](01-decisiones-y-stack.md) · [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) · [03-base-de-datos](03-base-de-datos.md) · [05-piezas-clave](05-piezas-clave.md)
 
 **Listo cuando:** `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden con el header `X-Request-Id`, y los logs JSON incluyen el `requestId`.
 
-- [ ] Instalar las dependencias de la guía (`pnpm add -E …`, Prisma fijado en `^7`)
-- [ ] `docker-compose.yml` con PostgreSQL 18 y `healthcheck`
-- [ ] `.env` y `.env.example`; agregar `/src/platform/prisma/generated/` al `.gitignore`
-- [ ] Scripts: `db:*`, `prisma:generate`, `prebuild`, `pretest`; `test:e2e` con `prisma generate`
-- [ ] `platform/config/env.schema.ts` y `ConfigModule` con validación Zod
-- [ ] `prisma.config.ts` y `prisma/schema.prisma` completo (schemas `sales`, `catalog`, `inventory`, `messaging`)
-- [ ] Migración `init` con los `CHECK` a mano (`charged_amount >= 0`, `price > 0`…) y `uuidv7()`
-- [ ] `PrismaModule` y `PrismaService` (cliente importado desde la carpeta generada)
-- [ ] `shared-kernel/domain.errors.ts` (lo necesita el filtro HTTP; se adelanta desde el corte 2)
-- [ ] `platform/observability/`: `request-context`, middleware, interceptor y `RequestAwareLogger`
-- [ ] `platform/http/`: `configure-app` y `DomainExceptionFilter`
-- [ ] `platform/health/`: `live` y `ready` (`/health/outbox` llega en el corte 4)
-- [ ] Swagger en `/docs`, nuevo `main.ts` (puerto desde `ConfigService`) y nuevo `AppModule`
-- [ ] Eliminar el "Hello World" del scaffold
-- [ ] Tests: validación de `env.schema` y e2e de `X-Request-Id`
-- [ ] Verificar que TypeScript 6, Vitest 4 y Prisma 7 funcionan juntos
+- [x] Instalar las dependencias de la guía (`pnpm add -E …`, Prisma fijado en `^7`)
+- [x] `docker-compose.yml` con PostgreSQL 18 y `healthcheck`
+- [x] `.env` y `.env.example`; agregar `/src/platform/prisma/generated/` al `.gitignore`
+- [x] Scripts: `db:*`, `prisma:generate`, `prebuild`, `pretest`; `test:e2e` con `prisma generate`
+- [x] `platform/config/env.schema.ts` y `ConfigModule` con validación Zod
+- [x] `prisma.config.ts` y `prisma/schema.prisma` completo (schemas `sales`, `catalog`, `inventory`, `messaging`)
+- [x] Migración `init` con los `CHECK` a mano (`charged_amount >= 0`, `price > 0`…) y `uuidv7()`
+- [x] `PrismaModule` y `PrismaService` (cliente importado desde la carpeta generada)
+- [x] `shared-kernel/domain.errors.ts` (lo necesita el filtro HTTP; se adelanta desde el corte 2)
+- [x] `platform/observability/`: `request-context`, middleware, interceptor y `RequestAwareLogger`
+- [x] `platform/http/`: `configure-app` y `DomainExceptionFilter`
+- [x] `platform/health/`: `live` y `ready` (`/health/outbox` llega en el corte 4)
+- [x] Swagger en `/docs`, nuevo `main.ts` (puerto desde `ConfigService`) y nuevo `AppModule`
+- [x] Eliminar el "Hello World" del scaffold
+- [x] Tests: validación de `env.schema` y e2e de `X-Request-Id`
+- [x] Verificar que TypeScript 6, Vitest 4 y Prisma 7 funcionan juntos
 
 ---
 
@@ -151,16 +151,23 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 
 | Fecha | Corte | Qué cambió | Por qué |
 |---|---|---|---|
-| — | — | — | — |
+| 2026-10-27 | 1 | `env.schema.ts` usa `z.url()` en vez de `z.string().url()` | Zod 4 (`4.6.7`) marca la forma antigua como obsoleta |
+| 2026-10-27 | 1 | Prisma queda fijado en `7.10.1` exacto (`prisma`, `@prisma/client`, `@prisma/adapter-pg`) | La guía pide `-E`, pero con un rango `^7` pnpm deja el `^` |
+| 2026-10-27 | 1 | `pnpm approve-builds` no fue necesario | `prisma generate` y `prisma migrate` funcionan aunque pnpm ignore los scripts de instalación |
+| 2026-10-27 | 1 | `GET /health/ready` devuelve el detalle de terminus (`{ status, info, error, details }`) | Es lo que produce `HealthCheckService`; la guía solo pedía 200/503 |
+| 2026-10-27 | 1 | `shared-kernel/domain.errors.ts` se creó en el corte 1 | Lo necesita `DomainExceptionFilter` |
 
 ## Problemas abiertos
 
 | Fecha | Corte | Problema | Estado |
 |---|---|---|---|
-| 2026-10-27 | 3 | No se ha comprobado si el entorno en la nube permite Docker y Testcontainers (PostgreSQL 18). Si no, los tests de integración y e2e correrán en local o en CI | Pendiente de verificar en el corte 1 |
+| 2026-10-27 | 3 | Docker en el entorno en la nube: el daemon no está activo por defecto. Se levanta con `dockerd` en segundo plano y `postgres:18` se descarga bien. Falta comprobar Testcontainers | Docker ✅ · Testcontainers pendiente (corte 3) |
+| 2026-10-27 | 1 | El entorno en la nube tiene Node 22.22; la guía pide Node 24 LTS (≥ 24.15). Todo funciona en 22, pero conviene fijar `engines` y la versión de CI en 24 | Abierto |
+| 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y `DATABASE_URL` definida; no hay aún workflow de CI | Abierto |
 
 ## Bitácora
 
 | Fecha | Qué se hizo |
 |---|---|
 | 2026-10-27 | Guía adaptada al estado de `apps/main-api` y dividida en `docs/` y `docs/backend/`. Se define este plan de cortes |
+| 2026-10-27 | **Corte 1 terminado.** Dependencias, `docker-compose.yml` (PostgreSQL 18), schema Prisma con migración `init` (4 schemas, 9 tablas, `uuidv7()` y `CHECK`), config con Zod, `PrismaService`, observabilidad (`X-Request-Id`), filtro de dominio, health `live`/`ready`, Swagger en `/docs`. Se elimina el "Hello World". `pnpm lint`, `pnpm test` (11 tests) y `pnpm run test:e2e` (5 tests, contra PostgreSQL 18) pasan; la app arranca y responde |

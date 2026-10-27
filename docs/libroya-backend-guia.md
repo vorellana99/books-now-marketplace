@@ -3,22 +3,20 @@
 API REST de LibroYa construida con DDD, CQRS y arquitectura hexagonal. Los conceptos y el código del dominio son los de la guía DDD v5. Esta guía solo cubre lo necesario para construir el backend. Este archivo es el índice: el contenido está repartido en los documentos de abajo. El producto se explica en [producto.md](producto.md), para cualquier lector; el resto de la guía es técnica.
 
 > [!caution] Estado de esta guía
-> El diseño está revisado, pero **el código no se ha ejecutado**. La validación pendiente son los tests de integración y e2e contra PostgreSQL 18 real (ver [backend/06-tests.md](backend/06-tests.md)). Hasta que pasen, considérala una base para implementar, no una implementación lista para producción.
+> El diseño está revisado, pero **el código se está ejecutando por cortes** (ver el estado más abajo). Hasta ahora está validada la base: migración, configuración, observabilidad y health contra PostgreSQL 18 real. La validación pendiente son los tests de integración y e2e del resto (ver [backend/06-tests.md](backend/06-tests.md)). Hasta que pasen, considérala una base para implementar, no una implementación lista para producción.
 
 ## Estado en este repositorio
 
-El backend vive en **`apps/main-api/`** (monorepo `books-now-marketplace`). En la guía, `libroya-api/` equivale a esa carpeta, y todos los comandos se ejecutan desde ella. Hoy solo existe el esqueleto que genera el CLI de Nest 12; **de la lógica de LibroYa no hay nada implementado todavía**.
+El backend vive en **`apps/main-api/`** (monorepo `books-now-marketplace`). En la guía, `libroya-api/` equivale a esa carpeta, y todos los comandos se ejecutan desde ella. El detalle de lo hecho y lo pendiente está en [backend/00-avance.md](backend/00-avance.md).
 
-| Ya está hecho (no repetir) | Falta (lo que cubre esta guía) |
+| Corte | Estado |
 |---|---|
-| ✅ Proyecto Nest 12 en ESM (`"type": "module"`, imports relativos con `.js`) | Dependencias de [la puesta en marcha](backend/02-estructura-y-puesta-en-marcha.md): CQRS, config, Swagger, schedule, terminus, class-validator, Prisma 7, decimal.js, Testcontainers |
-| ✅ TypeScript 6, Vitest 4 y Vite 8 configurados (`vitest.config.ts`, `vitest.config.e2e.ts`) | Ajustar los `include` de Vitest a la estructura `test/unit` y `test/{integration,e2e}` (ver [backend/06-tests.md](backend/06-tests.md)) |
-| ✅ Lint con oxlint (`--type-aware`) y formato con Prettier (comillas simples, coma final) | Scripts `db:*`, `prisma:generate`, `prebuild` y `pretest` |
-| ✅ `supertest` y `@types/supertest` instalados | `docker-compose.yml` con PostgreSQL 18, `.env`, `prisma/` y `prisma.config.ts` |
-| ✅ `.gitignore` con `.env` y `/dist` | Agregar `src/platform/prisma/generated/` al `.gitignore` |
-| ✅ Gestor de paquetes: **pnpm** (`pnpm-lock.yaml`) | Todo `src/`: `platform/`, `shared-kernel/`, `contracts/` y `contexts/` |
-| ✅ `src/main.ts` y `src/app.module.ts` mínimos | Reemplazar `main.ts` y `app.module.ts` por los de [piezas clave](backend/05-piezas-clave.md) |
-| ⚠️ `AppController`, `AppService` y `test/app.e2e-spec.ts` (el "Hello World" del scaffold) | Eliminarlos al tener `HealthController` y los primeros endpoints reales |
+| 0. Scaffold (Nest 12, ESM, Vitest, oxlint, Prettier) | ✅ |
+| 1. Fundaciones: Docker con PostgreSQL 18, schema y migración de Prisma, config, observabilidad, health y Swagger | ✅ |
+| 2. Dominio de Ventas | ⬜ |
+| 3. Catálogo e Inventario | ⬜ |
+| 4. Outbox | ⬜ |
+| 5. Compra completa | ⬜ |
 
 Donde la documentación diga `npm`/`npx`, en este repositorio se usa **`pnpm`** (`pnpm add`, `pnpm exec`, `pnpm run`).
 
