@@ -216,6 +216,14 @@ describe('ReserveStockHandler (PostgreSQL real, por el CommandBus)', () => {
   });
 
   describe('entradas inválidas (error de dominio, no el de la base)', () => {
+    it('un orderId que no es un UUID', async () => {
+      const isbn = await bookWithStock(10);
+      expect(
+        await codeOf(reserve('no-es-un-uuid', [{ isbn, quantity: 1 }])),
+      ).toBe('INVALID_ORDER_ID');
+      expect(await stockOf(isbn)).toEqual({ available: 10, reserved: 0 });
+    });
+
     it('sin líneas', async () => {
       expect(await codeOf(reserve(randomUUID(), []))).toBe('EMPTY_RESERVATION');
     });

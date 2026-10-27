@@ -246,6 +246,9 @@ export class ConfirmReservationConsumer implements DbOutboxConsumer<OrderPlacedE
 }
 ```
 
+- **La liberación es idempotente por construcción:** el `DELETE … RETURNING` devuelve cada reserva una sola vez, así que liberar dos veces, o dos liberaciones simultáneas, devuelven el stock una sola vez. Solo toca reservas `HELD`: una `CONFIRMED` ya es definitiva. Es todo o nada: si una línea no se puede devolver (por ejemplo, falta su registro de stock), la transacción se revierte y la reserva se conserva para reintentar.
+- **El `orderId` debe ser un UUID** en la reserva y en la liberación; si no, `INVALID_ORDER_ID` en lugar de un error crudo de la base.
+
 Las reservas `HELD` sin pedido ya no necesitan un job propio en Inventario: las libera `RecoverCheckoutsJob` de Ventas, a través del mismo `ReleaseStockCommand`. Confirmar la reserva sirve para que Inventario distinga las reservas definitivas, que Envíos descontará más adelante.
 
 ### Ventas: guardar el pedido y su evento juntos

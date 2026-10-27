@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { ReserveStockHandler } from '../../src/contexts/inventory/infrastructure/stock/reserve-stock.handler.js';
 import { ReserveStockCommand } from '../../src/contracts/inventory/reserve-stock.command.js';
 import { Prisma } from '../../src/platform/prisma/generated/client.js';
@@ -17,7 +18,7 @@ function handlerWhereCreateFails(error: Error): ReserveStockHandler {
   return new ReserveStockHandler(prisma as unknown as PrismaService);
 }
 
-const command = new ReserveStockCommand('o-1', [
+const command = new ReserveStockCommand(randomUUID(), [
   { isbn: '9780306406157', quantity: 1 },
 ]);
 

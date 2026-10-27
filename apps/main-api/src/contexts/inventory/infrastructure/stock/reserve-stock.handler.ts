@@ -11,6 +11,7 @@ import {
   DomainError,
 } from '../../../../shared-kernel/domain.errors.js';
 import { sortByIsbn } from './lock-order.js';
+import { assertOrderId } from './order-id.js';
 
 type Line = ReserveStockCommand['lines'][number];
 
@@ -21,6 +22,7 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
 
   async execute({ orderId, lines }: ReserveStockCommand): Promise<void> {
     // Antes de abrir la transacción: una entrada inválida es un error de dominio, no el de la base
+    assertOrderId(orderId);
     assertValid(lines);
 
     await this.prisma.$transaction(async (tx) => {
