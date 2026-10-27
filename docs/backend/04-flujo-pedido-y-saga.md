@@ -1,0 +1,252 @@
+# Backend: flujo de un pedido y saga
+
+> Sección 6 de la guía, más el código de la saga (handler y job de recuperación) que estaba en [05-piezas-clave.md](05-piezas-clave.md).
+
+## 6. El flujo de un pedido
+
+```mermaid
+sequenceDiagram
+    actor C as Cliente
+    participant H as PlaceOrderHandler
+    participant INV as Inventario (CommandBus)
+    participant PG as Pasarela
+    participant DB as PostgreSQL
+    participant RL as OutboxRelay
+    participant M as Email
+    participant K as Confirmar reserva
+
+    C->>H: POST /orders
+    H->>DB: checkout PENDING
+    H->>INV: ReserveStock(orderId, líneas)
+    alt sin stock
+        H->>DB: checkout ABORTED
+        H-->>C: 422 OUT_OF_STOCK (no se cobró)
+    end
+    H->>PG: charge(monto, orderId)
+    alt pago rechazado
+        H->>INV: ReleaseStock(orderId)
+        H->>DB: checkout ABORTED
+        H-->>C: 422 PAYMENT_DECLINED
+    end
+    H->>DB: 🔒 pedido + checkout COMPLETED + outbox + entregas (1 transacción)
+    alt falla al guardar
+        H->>PG: refund(orderId)
+        H->>INV: ReleaseStock(orderId)
+        H->>DB: checkout ABORTED
+        H-->>C: 500
+    end
+    H-->>C: 201 { orderId, charged }
+    RL->>DB: reclama entregas (SKIP LOCKED)
+    RL->>M: enviar confirmación (await)
+    RL->>K: reserva HELD → CONFIRMED (await)
+    RL->>DB: entregas → DONE
+```
+
+### La saga mínima: qué pasa si el proceso se cae
+
+```mermaid
+stateDiagram-v2
+    [*] --> PENDING: inicio de POST /orders
+    PENDING --> COMPLETED: pedido guardado (misma transacción)
+    PENDING --> ABORTED: compensación en el handler
+    PENDING --> ABORTED: RecoverCheckoutsJob<br/>(PENDING con más de 10 min)
+    COMPLETED --> [*]
+    ABORTED --> [*]
+```
+
+| Se cae… | Queda | Se resuelve con |
+|---|---|---|
+| Después de reservar, antes de cobrar | Checkout `PENDING`, reserva sin pedido | `RecoverCheckoutsJob`: reembolso (no hay cobro: no hace nada) y liberación |
+| Después de cobrar, antes de guardar | Checkout `PENDING`, cobro y reserva sin pedido | `RecoverCheckoutsJob`: reembolsa y libera |
+| El cobro excede el tiempo de espera (no se sabe si cobró) | Posible cobro sin pedido | El handler **reembolsa siempre** que se intentó cobrar (idempotente) |
+| `save` confirmó en la BD, pero la respuesta se perdió | Pedido válido; el handler cree que falló | El handler ve el checkout `COMPLETED` y **no compensa** |
+| … y además falla la revisión del checkout | Pedido válido (`COMPLETED`); el cliente recibe 500 | Nada que compensar. El cliente reintenta con la misma `Idempotency-Key` y recibe el pedido |
+| La respuesta 201 se pierde en la red | El cliente no sabe si compró | El reintento con la misma `Idempotency-Key` devuelve el mismo pedido, **sin cobrar otra vez** |
+| Durante una compensación (por ejemplo, falla el reembolso) | Checkout `PENDING` | `RecoverCheckoutsJob` la reintenta en cada vuelta |
+| Después de guardar | Checkout `COMPLETED`; entregas pendientes | El relay las procesa al volver |
+| A mitad de una entrega | Entrega bloqueada | El bloqueo vence a los 2 min y otra vuelta la retoma |
+
+> [!warning] Requisito para la pasarela real
+> El job reembolsa conociendo solo el `orderId`, incluso cuando no sabe si el cobro llegó a hacerse. La pasarela debe aceptar el `orderId` como **referencia o clave de idempotencia**, y permitir **anular o reembolsar por referencia** (sin efecto si no hubo cobro). Idealmente, también **consultar el estado de un cobro por referencia**, para resolver los timeouts sin adivinar. La pasarela simulada ya lo hace. Verifícalo antes de elegir la real.
+
+## La saga en código
+
+### Application: el handler con compensaciones (la saga)
+
+```ts
+// sales/application/order/place-order.handler.ts
+@CommandHandler(PlaceOrderCommand)
+export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
+  private readonly logger = new Logger(PlaceOrderHandler.name);
+
+  constructor(
+    private readonly orders: OrderRepository,
+    private readonly customers: CustomerRepository,
+    private readonly catalog: CatalogPricing,
+    private readonly stock: StockReservation,
+    private readonly checkouts: CheckoutLog,
+    private readonly pricing: PricingService,
+    private readonly payments: PaymentGateway,
+  ) {}
+
+  async execute(cmd: PlaceOrderCommand) {
+    // 0. Idempotencia: un reintento con la misma clave nunca crea otro pedido ni cobra otra vez
+    const requestHash = hashRequest(cmd.customerId, cmd.items);
+    const previous = await this.checkouts.findByKey(cmd.idempotencyKey);
+    if (previous) return this.replay(previous, requestHash);
+
+    // 1. Sin efectos: validar, pedir precios, armar el pedido y calcular el total
+    const customer = await this.customers.findById(cmd.customerId);
+    if (!customer) throw new NotFoundError('Customer', cmd.customerId);
+    const order = OrderFactory.fromCart(this.orders.nextId(), customer.id, await this.catalog.priceCart(cmd.items));
+    const finalPrice = this.pricing.calculateFinalPrice(order, customer, freeShippingSpec.isSatisfiedBy({ order, customer })).toFinal();
+    const lines = order.getLines().map((l) => ({ isbn: l.isbn.value, quantity: l.quantity }));
+
+    // 2. Efectos, en orden; si algo falla, se deshace lo hecho
+    if (!(await this.checkouts.start(order.id, cmd.idempotencyKey, requestHash))) {
+      // Otra petición con la misma clave entró justo antes (la clave es única en la BD)
+      return this.replay((await this.checkouts.findByKey(cmd.idempotencyKey))!, requestHash);
+    }
+    // Desde aquí, si el proceso cae, el job recupera el checkout
+    let chargeAttempted = false;
+    try {
+      await this.stock.reserve(order.id, lines);                     // sin stock → no reservó nada; release no hace nada
+      chargeAttempted = true;
+      const payment = await this.payments.charge(finalPrice, cmd.cardToken, order.id);
+      if (!payment.approved) throw new DomainError('PAYMENT_DECLINED', `Pago rechazado: ${payment.reason}`);
+      order.place();
+      await this.orders.save(order, finalPrice);                      // pedido + checkout COMPLETED + outbox
+    } catch (e) {
+      if (await this.checkouts.isCompleted(order.id)) {               // el commit sí ocurrió: no compensar
+        return { orderId: order.id, charged: finalPrice };
+      }
+      try {
+        if (chargeAttempted) await this.payments.refund(order.id);   // idempotente: cubre rechazos y timeouts
+        await this.stock.release(order.id);
+        await this.checkouts.abort(order.id);                         // solo si TODAS las compensaciones terminaron
+      } catch (compensationError) {
+        // No se marca ABORTED: queda PENDING y RecoverCheckoutsJob reintenta las compensaciones
+        this.logger.error(`Compensación incompleta para ${order.id}: ${String(compensationError)}`);
+      }
+      throw e;                                                        // el cliente recibe el error original
+    }
+    return { orderId: order.id, charged: finalPrice };
+  }
+
+  // Responde un reintento según cómo terminó el intento original
+  private replay(c: CheckoutRecord, requestHash: string) {
+    if (c.requestHash !== requestHash) {
+      throw new DomainError('IDEMPOTENCY_KEY_REUSED', 'Esta Idempotency-Key ya se usó con otro carrito');
+    }
+    if (c.status === 'COMPLETED') return { orderId: c.orderId, charged: c.charged! };
+    if (c.status === 'PENDING') throw new ConflictError('CHECKOUT_IN_PROGRESS', 'Esta compra todavía se está procesando');
+    throw new DomainError('PREVIOUS_ATTEMPT_FAILED', 'El intento anterior con esta clave falló; usa una clave nueva');
+  }
+}
+
+// Mismo cliente y mismo carrito → mismo hash. Fusiona las cantidades del mismo ISBN (como hace el agregado)
+// y ordena, así {A:1, A:2} y {A:2, A:1} producen el mismo hash que {A:3}
+function hashRequest(customerId: string, items: CartItem[]): string {
+  const merged = new Map<string, number>();
+  for (const i of items) merged.set(i.isbn, (merged.get(i.isbn) ?? 0) + i.quantity);
+  const lines = [...merged].sort(([a], [b]) => a.localeCompare(b)).map(([isbn, q]) => `${isbn}:${q}`).join(',');
+  return createHash('sha256').update(`${customerId}|${lines}`).digest('hex');
+}
+```
+
+**Cómo responde un reintento** con la misma `Idempotency-Key`:
+
+```mermaid
+flowchart TB
+    R["POST /orders<br/>con una Idempotency-Key ya usada"] --> H{"¿Mismo carrito?"}
+    H -- No --> E1["422 IDEMPOTENCY_KEY_REUSED"]
+    H -- Sí --> S{"¿Cómo terminó el intento original?"}
+    S -- COMPLETED --> OK["201 con el mismo orderId y monto<br/>(no se cobra otra vez)"]
+    S -- PENDING --> E2["409 CHECKOUT_IN_PROGRESS<br/>(reintentar más tarde)"]
+    S -- ABORTED --> E3["422 PREVIOUS_ATTEMPT_FAILED<br/>(usar una clave nueva)"]
+```
+
+- **El cliente genera la clave** (un UUID) **una vez por intento de compra** y la reutiliza en todos los reintentos de ese intento.
+- **Dos peticiones simultáneas con la misma clave:** el índice único deja entrar solo a una; la otra recibe 409 mientras la primera termina.
+
+- **`charged` es un `Money` ya redondeado** (`toFinal()`). Se serializa con `toJSON()` como `{ amount: "90.00", currency: "PEN" }`, igual en el primer 201, en un reintento y en `GET /orders/:id`.
+- **Se reembolsa siempre que se intentó cobrar.** Si el cobro excedió el tiempo de espera, no se sabe si la pasarela cobró. Como el reembolso por referencia es idempotente y no hace nada si no hubo cobro, llamarlo siempre es lo seguro.
+- **Antes de compensar se revisa el checkout.** Si `save` confirmó en la BD pero la respuesta se perdió (commit ambiguo), el checkout ya está `COMPLETED` y el pedido es válido: no se toca.
+- **Si esa revisión también falla** (por ejemplo, cayó la BD), el error sube sin compensar. Hay dos casos:
+  - **`save` no llegó a confirmar:** el checkout sigue `PENDING`, y el job reembolsa y libera después.
+  - **`save` sí confirmó:** el checkout está `COMPLETED` y el pedido es válido. No hay nada que compensar (el job nunca toca un `COMPLETED`), aunque el cliente recibió un error. Si reintenta con la misma `Idempotency-Key`, recibe el pedido ya creado (ver más abajo).
+- **`ABORTED` solo se marca cuando todas las compensaciones terminaron.** Si el reembolso o la liberación fallan, el checkout queda `PENDING` (recuperable), se registra el error y el cliente recibe el error original, no el de la compensación.
+- **Toda llamada externa lleva timeout:** `fetch(url, { …, signal: AbortSignal.timeout(10_000) })` en `ExternalPaymentAdapter`. Sin él, una pasarela colgada retendría la petición indefinidamente.
+
+### Application: el job de recuperación
+
+```ts
+// sales/application/order/recover-checkouts.job.ts
+@Injectable()
+export class RecoverCheckoutsJob {
+  private readonly logger = new Logger(RecoverCheckoutsJob.name);
+
+  constructor(
+    private readonly checkouts: CheckoutLog,
+    private readonly payments: PaymentGateway,
+    private readonly stock: StockReservation,
+    private readonly config: ConfigService,
+  ) {}
+
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async run(): Promise<number> {
+    const stale = await this.checkouts.claimStale(this.config.get<number>('CHECKOUT_RECOVERY_MINUTES', 10));
+    for (const { orderId, requestId } of stale) {
+      // Los logs de la recuperación llevan el mismo requestId que la compra original
+      await RequestContext.run(requestId ?? `recovery-${orderId}`, async () => {
+        try {
+          await this.payments.refund(orderId);     // idempotente: sin cobro previo, no hace nada
+          await this.stock.release(orderId);       // idempotente
+          await this.checkouts.abort(orderId);
+          this.logger.warn(`Checkout ${orderId} recuperado: reembolsado y liberado`);
+        } catch (e) {
+          this.logger.error(`No se pudo recuperar ${orderId}; se reintenta en la próxima vuelta: ${e}`);
+        }
+      });
+    }
+    return stale.length;
+  }
+}
+```
+
+- **El umbral (10 min) debe superar la duración máxima del handler**, no solo la de la petición HTTP: aunque el cliente se desconecte, el handler sigue ejecutándose. Esa duración está acotada por los timeouts de cada paso (BD 5 s, pasarela 10 s); en el peor caso, con compensaciones, es menos de 1 minuto.
+- **Con varias instancias, cada job reclama checkouts distintos** (`SKIP LOCKED` y un bloqueo de 2 min). Aun así, los tres pasos son idempotentes y `abort` solo cambia filas `PENDING`.
+- **Misma regla que el relay: lote × duración máxima por checkout < bloqueo** (5 × 15 s = 75 s < 120 s). Si el lote tardara más, otra instancia retomaría checkouts que este job todavía no procesó, y se reembolsarían dos veces en la pasarela (sin error de datos, pero con llamadas duplicadas). Los checkouts que no entren en una vuelta se toman en la siguiente, 5 min después.
+
+```ts
+// sales/infrastructure/order/prisma-checkout-log.adapter.ts (fragmento)
+async start(orderId: string, idempotencyKey: string, requestHash: string): Promise<boolean> {
+  try {
+    await this.prisma.checkout.create({
+      data: { orderId, idempotencyKey, requestHash, requestId: RequestContext.requestId() ?? null },
+    });
+    return true;
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') return false; // clave repetida
+    throw e;
+  }
+}
+
+async claimStale(olderThanMinutes: number): Promise<{ orderId: string; requestId: string | null }[]> {
+  const rows = await this.prisma.$queryRaw<{ order_id: string; request_id: string | null }[]>`
+    UPDATE sales.checkouts SET locked_until = now() + interval '2 minutes'
+    WHERE order_id IN (
+      SELECT order_id FROM sales.checkouts
+      WHERE status = 'PENDING'
+        AND started_at < now() - (${olderThanMinutes} * interval '1 minute')
+        AND (locked_until IS NULL OR locked_until < now())
+      LIMIT 5                -- 5 × ~15 s (reembolso 10 s + liberación 5 s) = 75 s < bloqueo de 2 min
+      FOR UPDATE SKIP LOCKED)
+    RETURNING order_id, request_id`;
+  return rows.map((r) => ({ orderId: r.order_id, requestId: r.request_id }));
+}
+
+abort(orderId: string) {
+  return this.prisma.checkout.updateMany({ where: { orderId, status: 'PENDING' }, data: { status: 'ABORTED' } });
+}
+```
