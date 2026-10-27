@@ -1,7 +1,7 @@
 import { ConsoleLogger } from '@nestjs/common';
 import { RequestContext } from './request-context.js';
 
-// Agrega el requestId a cada línea del log JSON
+// Agrega el requestId a cada línea del log: como campo en JSON, o como prefijo en texto
 export class RequestAwareLogger extends ConsoleLogger {
   override log(message: unknown, ...rest: unknown[]) {
     super.log(this.tag(message), ...rest);
@@ -15,6 +15,10 @@ export class RequestAwareLogger extends ConsoleLogger {
 
   private tag(message: unknown) {
     const requestId = RequestContext.requestId();
-    return requestId ? { requestId, message } : message;
+    if (!requestId) return message;
+    if (!this.options.json && typeof message === 'string') {
+      return `[${requestId}] ${message}`;
+    }
+    return { requestId, message };
   }
 }
