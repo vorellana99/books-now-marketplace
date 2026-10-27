@@ -222,7 +222,7 @@ pnpm add -E @nestjs/cqrs @nestjs/config @nestjs/swagger @nestjs/schedule @nestjs
 pnpm add -E -D prisma@^7 tsx @types/pg @testcontainers/postgresql
 ```
 
-`supertest` y `@types/supertest` ya están en `devDependencies`, así que no se vuelven a instalar. pnpm avisa que ignora los scripts de instalación de algunas dependencias (`prisma`, `esbuild`…); no hace falta aprobarlos, porque `prisma generate` y `prisma migrate` funcionan igual. Al pasar un rango (`prisma@^7`), pnpm deja el `^` aunque uses `-E`: fija la versión exacta en `package.json`.
+`supertest` y `@types/supertest` ya están en `devDependencies`, así que no se vuelven a instalar. pnpm bloquea por defecto los scripts de instalación de algunas dependencias. Según la versión, solo avisa (pnpm 10) o **falla con `ERR_PNPM_IGNORED_BUILDS`** (versiones más nuevas). Por eso el repositorio trae `apps/main-api/pnpm-workspace.yaml`, que permite los scripts de `prisma`, `@prisma/engines` y `esbuild` (el que usa `tsx`) y rechaza el resto (`ssh2`, `cpu-features`, `protobufjs`, `@scarf/scarf`). Si agregas una dependencia con scripts de instalación, apruébala con `pnpm approve-builds`. Al pasar un rango (`prisma@^7`), pnpm deja el `^` aunque uses `-E`: fija la versión exacta en `package.json`.
 
 - **`pg`** es el driver que usa `@prisma/adapter-pg`. Si tu versión del adaptador ya lo trae como dependencia, instalarlo explícitamente no causa problemas y fija su versión.
 - **`tsx`** lo necesita el seed (`prisma.config.ts` lo ejecuta con `tsx prisma/seed.ts`).

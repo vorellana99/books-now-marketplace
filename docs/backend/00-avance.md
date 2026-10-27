@@ -153,7 +153,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 |---|---|---|---|
 | 2026-10-27 | 1 | `env.schema.ts` usa `z.url()` en vez de `z.string().url()` | Zod 4 (`4.6.7`) marca la forma antigua como obsoleta |
 | 2026-10-27 | 1 | Prisma queda fijado en `7.10.1` exacto (`prisma`, `@prisma/client`, `@prisma/adapter-pg`) | La guía pide `-E`, pero con un rango `^7` pnpm deja el `^` |
-| 2026-10-27 | 1 | `pnpm approve-builds` no fue necesario | `prisma generate` y `prisma migrate` funcionan aunque pnpm ignore los scripts de instalación |
+| 2026-10-27 | 1 | Se agregó `apps/main-api/pnpm-workspace.yaml` con la lista de scripts de instalación permitidos (`prisma`, `@prisma/engines`, `esbuild`) | pnpm más nuevo que el 10.28 falla con `ERR_PNPM_IGNORED_BUILDS` en `pnpm install`; en pnpm 10.28 solo avisaba |
 | 2026-10-27 | 1 | `GET /health/ready` devuelve el detalle de terminus (`{ status, info, error, details }`) | Es lo que produce `HealthCheckService`; la guía solo pedía 200/503 |
 | 2026-10-27 | 1 | `shared-kernel/domain.errors.ts` se creó en el corte 1 | Lo necesita `DomainExceptionFilter` |
 
@@ -170,4 +170,5 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | Fecha | Qué se hizo |
 |---|---|
 | 2026-10-27 | Guía adaptada al estado de `apps/main-api` y dividida en `docs/` y `docs/backend/`. Se define este plan de cortes |
+| 2026-10-27 | Arreglo tras probar en local: `pnpm install` fallaba con `ERR_PNPM_IGNORED_BUILDS` (se agrega `pnpm-workspace.yaml`) y el `pnpm-lock.yaml` estaba desactualizado respecto a las versiones fijadas de Prisma (regenerado) |
 | 2026-10-27 | **Corte 1 terminado.** Dependencias, `docker-compose.yml` (PostgreSQL 18), schema Prisma con migración `init` (4 schemas, 9 tablas, `uuidv7()` y `CHECK`), config con Zod, `PrismaService`, observabilidad (`X-Request-Id`), filtro de dominio, health `live`/`ready`, Swagger en `/docs`. Se elimina el "Hello World". `pnpm lint`, `pnpm test` (11 tests) y `pnpm run test:e2e` (5 tests, contra PostgreSQL 18) pasan; la app arranca y responde |
