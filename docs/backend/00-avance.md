@@ -102,7 +102,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 5 | `Customer` y `Email` | El cliente y su correo | Saber si el cliente es premium | ✅ |
 | 6 | `PricingService` y las specifications | El cálculo del total | Descuento, envío y total: S/ 110, 160, 90 y 180 de la tabla del producto | ✅ |
 | 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ✅ |
-| 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ⬜ |
+| 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ✅ |
 | 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ⬜ |
 
 - [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
@@ -112,7 +112,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] `sales/domain/customer/`: agregado `Customer`, `email.vo.ts`
 - [x] `sales/domain/pricing/`: `PricingService`, `PricingContext` y las specifications
 - [x] Puertos como `abstract class`: `OrderRepository`, `CheckoutLog`, `CatalogPricing`, `StockReservation`, `Notifier`, `PaymentGateway`, `CustomerRepository`
-- [ ] `test/fakes/`
+- [x] `test/fakes/`
 - [ ] Tests: `money.vo`, `order.aggregate`, `pricing.service` (ejemplos de la tabla de totales del producto)
 - [ ] Regla de dependencias comprobada (`domain/` sin Nest ni Prisma)
 
@@ -206,6 +206,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 2 | `Customer` se crea con `Customer.create(id, email, premium = false)` y `isPremium` es de solo lectura: no hay operación para volverlo premium. `Email` normaliza (sin espacios, en minúsculas) y valida con `INVALID_EMAIL` | `producto.md` dice que premium "se marca en la BD; aún no hay forma de suscribirse", así que añadir un método sería código sin uso. La misma `create` sirve para reconstruir el cliente desde la BD en el corte 5 |
 | 2026-10-27 | 2 | `FreeShippingSpec` = `MinimumSubtotalSpec(150.00)` o `PremiumCustomerSpec`, y se exporta como `freeShippingSpec`. `PremiumOfferSpec` (¿aplica el descuento?) hoy delega en `PremiumCustomerSpec`. `PricingService.calculateFinalPrice(order, customer, freeShipping)` devuelve el importe **sin redondear** (descuento con `multiply('0.90')`, envío `Money.of('10.00')`) | La guía v5 no incluye el código de las specifications. Se siguen las firmas que usa el handler de la saga y las reglas de `producto.md`. El redondeo lo hace el handler una sola vez con `toFinal()` |
 | 2026-10-27 | 2 | Los siete puertos viven donde indica la estructura (`order/`, `customer/`, `payment/`). Cada puerto declara sus tipos de apoyo: `CheckoutRecord` y `CheckoutStatus`, `PaymentResult`, `CartItem` y `StockLine`. `Customer` expone `email`, no `currentEmail`: se corrige el consumidor de email de la guía | Mantener cada tipo junto al puerto que lo usa. `PricedCartItem` sigue en `order.factory.ts` y `CatalogPricing` lo importa |
+| 2026-10-27 | 2 | Los fakes de `test/fakes/` siguen los nombres de los ejemplos de `06-tests.md` y añaden opciones para los casos de la saga: `FakeStockReservation({ outOfStock })`, `FakePaymentGateway({ approved, reason, timeout, refundFails })`, `InMemoryOrderRepository({ failOnSave, failAfterCommit })`, `InMemoryCheckoutLog` (con `statusOf`, `backdate` y reclamos con bloqueo de 5 min) y `FakeNotifier({ fails })`. Se importan desde `test/fakes/index.ts` | Los fakes imitan la idempotencia de lo real (liberar y reembolsar no repiten) para que los tests del handler no pasen por una comodidad que la implementación real no tiene |
 
 ## Problemas abiertos
 
@@ -235,3 +236,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 5: `Email` (normalizado, error `INVALID_EMAIL`) y `Customer` (`isPremium` de solo lectura). 21 tests nuevos; hoy 127 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 6: `PricingContext`, las cuatro specifications (`MinimumSubtotal`, `PremiumCustomer`, `PremiumOffer`, `FreeShipping`) y `PricingService`. Los cuatro ejemplos de `producto.md` dan S/ 110, 160, 90 y 180. 25 tests nuevos; hoy 152 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 7 (2.7): los siete puertos como `abstract class`, sin importar Nest ni Prisma. No llevan tests propios porque no tienen comportamiento: `tsc` comprueba los tipos y los fakes de la tarea 2.8 los ejercitan |
+| 2026-10-27 | Corte 2, tarea 8 (2.8): fakes en memoria de los siete puertos, más `fixedCatalog()`, `customersWithPremium()` y `ISBN`. Sus 27 tests encontraron un defecto en `FixedCatalog` (lanzaba de forma síncrona en vez de rechazar la promesa). Hoy 179 unitarios y 7 e2e pasan |
