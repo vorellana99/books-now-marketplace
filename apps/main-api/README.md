@@ -2,7 +2,7 @@
 
 API de LibroYa (NestJS 12 + Prisma 7 + PostgreSQL 18). La documentación de diseño está en [`/docs`](../../docs/libroya-backend-guia.md).
 
-Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [Variables de entorno](#variables-de-entorno) · [Base de datos](#base-de-datos) · [Migraciones](#migraciones) · [Levantar la API](#levantar-la-api) · [Pruebas](#pruebas) · [Calidad de código](#calidad-de-código) · [Comandos](#comandos) · [Problemas frecuentes](#problemas-frecuentes)
+Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [Variables de entorno](#variables-de-entorno) · [Base de datos](#base-de-datos) · [Migraciones](#migraciones) · [Datos de ejemplo](#datos-de-ejemplo) · [Levantar la API](#levantar-la-api) · [Pruebas](#pruebas) · [Calidad de código](#calidad-de-código) · [Comandos](#comandos) · [Problemas frecuentes](#problemas-frecuentes)
 
 ## Requisitos
 
@@ -21,6 +21,7 @@ pnpm install                       # 1. dependencias
 cp .env.example .env               # 2. variables de entorno (ajusta DB_PORT y las credenciales si no usas Docker)
 pnpm run db:up                     # 3. base de datos (solo con Docker; si usas la tuya, ver "Base de datos")
 pnpm exec prisma migrate dev       # 4. crea las tablas y genera el cliente de Prisma
+pnpm run db:seed                   # (opcional) clientes, libros y stock de ejemplo
 pnpm run start:dev                 # 5. API en http://localhost:3000
 ```
 
@@ -135,6 +136,28 @@ Al cambiar `prisma/schema.prisma`: `pnpm exec prisma migrate dev --name descripc
 
 > Los datos de ejemplo (`pnpm run db:seed`) llegan con el corte 3 del [plan de avance](../../docs/backend/00-avance.md). Hoy la base queda vacía.
 
+## Datos de ejemplo
+
+```bash
+pnpm run db:seed
+```
+
+Carga clientes, libros y stock para probar la API a mano (usa las variables `DB_*` de tu `.env`). **Se puede ejecutar las veces que quieras**: no duplica filas y restaura los datos de los clientes y del catálogo, pero no pisa el stock que ya exista, así que no pierdes las reservas que hayas hecho al probar. Los títulos y autores son reales; los precios y el stock, inventados. Los datos están en `prisma/seed-data.ts`.
+
+| ISBN | Libro | Precio | Stock | Para probar |
+|---|---|---|---|---|
+| `9780132350884` | Clean Code | 45.00 PEN | 25 | Compra normal en soles |
+| `9780321125217` | Domain-Driven Design | 120.00 PEN | 8 | Con dos unidades se supera el mínimo de envío gratis (150 PEN) |
+| `9780135957059` | The Pragmatic Programmer | 15.00 USD | 40 | Compra en dólares |
+| `9780134757599` | Refactoring | 22.50 USD | 0 | Agotado: reservarlo da `OUT_OF_STOCK` |
+| `9780201633610` | Design Patterns | 95.00 PEN | 5 | Inactivo: el catálogo lo trata como inexistente |
+| `9780735619678` | Code Complete | 85.00 PEN | sin registro | Reservarlo da `STOCK_ITEM_NOT_FOUND` |
+
+| Cliente | `customerId` | Tipo |
+|---|---|---|
+| ana@example.com | `11111111-1111-4111-8111-111111111111` | Normal |
+| luis@example.com | `22222222-2222-4222-8222-222222222222` | Premium (10 % de descuento y envío gratis) |
+
 ## Levantar la API
 
 ```bash
@@ -211,7 +234,7 @@ El workflow [`.github/workflows/main-api.yml`](../../.github/workflows/main-api.
 | `pnpm run db:up` | Levanta PostgreSQL 18 con Docker |
 | `pnpm exec prisma migrate dev` | Migraciones en desarrollo |
 | `pnpm run db:deploy` | Aplica las migraciones sin crear nuevas |
-| `pnpm run db:seed` | Datos de ejemplo (pendiente, corte 3) |
+| `pnpm run db:seed` | Carga los [datos de ejemplo](#datos-de-ejemplo) (se puede repetir) |
 | `pnpm run prisma:generate` | Regenera el cliente de Prisma (también se hace en `build`, `test` y `test:e2e`) |
 | `pnpm exec prisma studio` | Explorador visual de la base de datos |
 
