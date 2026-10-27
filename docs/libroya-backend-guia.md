@@ -5,6 +5,23 @@ API REST de LibroYa construida con DDD, CQRS y arquitectura hexagonal. Los conce
 > [!caution] Estado de esta guía
 > El diseño está revisado, pero **el código no se ha ejecutado**. La validación pendiente son los tests de integración y e2e contra PostgreSQL 18 real (sección 9). Hasta que pasen, considérala una base para implementar, no una implementación lista para producción.
 
+## Estado en este repositorio
+
+El backend vive en **`apps/main-api/`** (monorepo `books-now-marketplace`). En la guía, `libroya-api/` equivale a esa carpeta, y todos los comandos se ejecutan desde ella. Hoy solo existe el esqueleto que genera el CLI de Nest 12; **de la lógica de LibroYa no hay nada implementado todavía**.
+
+| Ya está hecho (no repetir) | Falta (lo que cubre esta guía) |
+|---|---|
+| ✅ Proyecto Nest 12 en ESM (`"type": "module"`, imports relativos con `.js`) | Dependencias de la sección 4: CQRS, config, Swagger, schedule, terminus, class-validator, Prisma 7, decimal.js, Testcontainers |
+| ✅ TypeScript 6, Vitest 4 y Vite 8 configurados (`vitest.config.ts`, `vitest.config.e2e.ts`) | Ajustar los `include` de Vitest a la estructura `test/unit` y `test/{integration,e2e}` (sección 9) |
+| ✅ Lint con oxlint (`--type-aware`) y formato con Prettier (comillas simples, coma final) | Scripts `db:*`, `prisma:generate`, `prebuild` y `pretest` |
+| ✅ `supertest` y `@types/supertest` instalados | `docker-compose.yml` con PostgreSQL 18, `.env`, `prisma/` y `prisma.config.ts` |
+| ✅ `.gitignore` con `.env` y `/dist` | Agregar `src/platform/prisma/generated/` al `.gitignore` |
+| ✅ Gestor de paquetes: **pnpm** (`pnpm-lock.yaml`) | Todo `src/`: `platform/`, `shared-kernel/`, `contracts/` y `contexts/` |
+| ✅ `src/main.ts` y `src/app.module.ts` mínimos | Reemplazar `main.ts` y `app.module.ts` por los de la sección 7 |
+| ⚠️ `AppController`, `AppService` y `test/app.e2e-spec.ts` (el "Hello World" del scaffold) | Eliminarlos al tener `HealthController` y los primeros endpoints reales |
+
+Dónde dice `npm`/`npx` más abajo, en este repositorio se usa **`pnpm`** (`pnpm add`, `pnpm exec`, `pnpm run`).
+
 ---
 
 ## 0. El producto
@@ -127,23 +144,25 @@ Cada área es dueña de sus datos y solo se comunica con las demás por su API p
 
 | Pieza | Versión | Para qué |
 |---|---|---|
-| Node.js | 24 LTS (≥ 24.15) | Runtime y CLI de Nest |
-| NestJS | 12.x | Framework (ESM por defecto) |
-| TypeScript | 6.x | El CLI de Nest 12 aún no soporta TS 7 |
+| Node.js | 24 LTS (≥ 24.15) | Runtime y CLI de Nest (`@types/node` ^24 ya instalado) |
+| pnpm | el del repositorio (`pnpm-lock.yaml`) | Gestor de paquetes |
+| NestJS | 12.x ✅ (`^12.0.1` instalado) | Framework (ESM por defecto) |
+| TypeScript | 6.x ✅ (`^6.0.2` instalado) | El CLI de Nest 12 aún no soporta TS 7 |
 | `@nestjs/cqrs` | compatible con Nest 12 | CommandBus y QueryBus |
 | `@nestjs/config` | compatible con Nest 12 | Variables de entorno validadas con Zod |
 | `@nestjs/swagger` | compatible con Nest 12 | OpenAPI en `/docs` |
 | `@nestjs/schedule` | compatible con Nest 12 | Relay del Outbox y recuperación de checkouts |
 | `@nestjs/terminus` | compatible con Nest 12 | `GET /health/live`, `GET /health/ready` (BD, para el balanceador) y `GET /health/outbox` (monitoreo) |
 | Prisma ORM | **7.x (fijado)** | ORM con `@prisma/adapter-pg` |
-| Vitest | 4.x (viene con `nest new`) | Tests unitarios, de integración y e2e |
+| Vitest | 4.x ✅ (`^4.1.2` instalado, con Vite 8 y `@vitest/coverage-v8`) | Tests unitarios, de integración y e2e |
+| oxlint y Prettier | ✅ ya configurados (`pnpm lint`, `pnpm format`) | Lint con reglas que usan tipos y formato del código |
 | Testcontainers | `@testcontainers/postgresql` | PostgreSQL 18 real en los tests |
 
 > [!warning] Fija Prisma en la versión 7
-> Desde agosto de 2026, `npm install prisma` instala **Prisma 8 RC**, que cambia por completo la API. Instala siempre `prisma@^7`, `@prisma/client@^7` y `@prisma/adapter-pg@^7`.
+> Desde agosto de 2026, instalar `prisma` sin versión (`pnpm add prisma`) instala **Prisma 8 RC**, que cambia por completo la API. Instala siempre `prisma@^7`, `@prisma/client@^7` y `@prisma/adapter-pg@^7`.
 
 > [!tip] Versiones reproducibles
-> Instala con `-E` (versión exacta), sube el `package-lock.json` y valida el conjunto en CI. Confirma que TypeScript 6 y Vitest 4 son las versiones que instala el CLI de Nest 12 y que funcionan con Prisma 7 antes de empezar.
+> Instala las dependencias nuevas con `-E` (versión exacta), sube el `pnpm-lock.yaml` y valida el conjunto en CI. Ya está confirmado que el CLI de Nest 12 instaló TypeScript 6 y Vitest 4 (con rangos `^`, que el scaffold dejó así); falta comprobar que funcionan con Prisma 7 al terminar la fase 1.
 
 ---
 
@@ -212,26 +231,29 @@ flowchart TB
 
 Parte de la estructura v5 (contexto → capa → módulo → archivo), con los ajustes de la tabla de abajo.
 
-Los archivos sin marca son de las fases 0–9. Los marcados con **(fase N)** se agregan en la sección 11.
+Los archivos sin marca son de las fases 0–9. Los marcados con **(fase N)** se agregan en la sección 11. Los marcados con **✅ existe** ya están en `apps/main-api/` (scaffold del CLI); hay que ajustarlos, no crearlos.
 
 ```text
-libroya-api/
-├── package.json
-├── tsconfig.json
-├── nest-cli.json
-├── vitest.config.ts                  tests unitarios: test/unit/**/*.spec.ts
-├── vitest.config.e2e.ts              integración y e2e: test/{integration,e2e}/**/*.spec.ts
+apps/main-api/                        ← "libroya-api" en el resto de la guía
+├── package.json                      ✅ existe: agregar dependencias y scripts (sección 4)
+├── tsconfig.json                     ✅ existe: sin cambios
+├── tsconfig.build.json               ✅ existe: excluye test/ y *spec.ts
+├── nest-cli.json                     ✅ existe: sin cambios
+├── .oxlintrc.json · .prettierrc      ✅ existen: lint y formato
+├── vitest.config.ts                  ✅ existe: pasar el include a test/unit/**/*.spec.ts (hoy: **/*.spec.ts)
+├── vitest.config.e2e.ts              ✅ existe: pasar el include a test/{integration,e2e}/**/*.spec.ts (hoy: **/*.e2e-spec.ts)
 ├── docker-compose.yml                PostgreSQL 18
-├── .env                              no se sube al repositorio
-├── .gitignore                        incluye .env y src/platform/prisma/generated/
+├── .env                              no se sube al repositorio (ya ignorado)
+├── .gitignore                        ✅ existe: agregar src/platform/prisma/generated/
 ├── prisma.config.ts
 ├── prisma/
 │   ├── schema.prisma
 │   ├── seed.ts
 │   └── migrations/
 ├── src/
-│   ├── main.ts
-│   ├── app.module.ts
+│   ├── main.ts                       ✅ existe (mínimo): reemplazar por el de la sección 7
+│   ├── app.module.ts                 ✅ existe (vacío): reemplazar por el de la sección 7
+│   ├── app.controller.ts · app.service.ts   ✅ existen ("Hello World"): eliminar con el primer endpoint real
 │   │
 │   ├── shared-kernel/
 │   │   ├── isbn.vo.ts
@@ -372,6 +394,7 @@ libroya-api/
 │       └── identity/                                       (fase 15) usuarios, roles y guards
 │
 └── test/
+    ├── app.e2e-spec.ts               ✅ existe (scaffold): reemplazar por e2e/orders.e2e.spec.ts
     ├── fakes/
     │   ├── in-memory-order.repository.ts
     │   ├── in-memory-checkout-log.ts
@@ -390,6 +413,8 @@ libroya-api/
     └── e2e/
         └── orders.e2e.spec.ts
 ```
+
+Los tests unitarios van en `test/unit/`, no junto al código: el scaffold dejó `src/app.controller.spec.ts` junto a su clase, y se elimina con ella.
 
 Las **specifications** del dominio usan el sufijo `.specification.ts` (en la guía v5 era `.spec.ts`). Con `.spec.ts`, Vitest las tomaría por archivos de test. Las clases no cambian de nombre (`MinimumSubtotalSpec`, `freeShippingSpec`).
 
@@ -412,20 +437,24 @@ Las **specifications** del dominio usan el sufijo `.specification.ts` (en la gu�
 
 ## 4. Puesta en marcha
 
-```bash
-npx @nestjs/cli@12 new libroya-api            # elegir ESM (trae Vitest y oxlint)
-cd libroya-api
+> [!note] El scaffold ya está creado
+> `nest new` ya se ejecutó: el proyecto está en `apps/main-api/` con ESM, Vitest, oxlint y Prettier. No lo repitas. Empieza por instalar lo que falta.
 
-npm i -E @nestjs/cqrs @nestjs/config @nestjs/swagger @nestjs/schedule @nestjs/terminus \
+```bash
+cd apps/main-api
+
+pnpm add -E @nestjs/cqrs @nestjs/config @nestjs/swagger @nestjs/schedule @nestjs/terminus \
       class-validator class-transformer zod dotenv \
       @prisma/client@^7 @prisma/adapter-pg@^7 pg decimal.js
-npm i -E -D prisma@^7 tsx @types/pg @testcontainers/postgresql supertest @types/supertest
+pnpm add -E -D prisma@^7 tsx @types/pg @testcontainers/postgresql
 ```
+
+`supertest` y `@types/supertest` ya están en `devDependencies`, así que no se vuelven a instalar. Si pnpm bloquea los scripts de instalación de Prisma, aprueba la lista con `pnpm approve-builds`.
 
 - **`pg`** es el driver que usa `@prisma/adapter-pg`. Si tu versión del adaptador ya lo trae como dependencia, instalarlo explícitamente no causa problemas y fija su versión.
 - **`tsx`** lo necesita el seed (`prisma.config.ts` lo ejecuta con `tsx prisma/seed.ts`).
 
-**Scripts en `package.json`:**
+**Scripts en `package.json`:** el scaffold ya trae `build`, `start`, `start:dev`, `start:debug`, `start:prod`, `format`, `lint`, `test`, `test:watch`, `test:cov`, `test:debug` y `test:e2e`. Agrega estos y cambia `test:e2e`:
 
 ```json
 {
@@ -437,12 +466,14 @@ npm i -E -D prisma@^7 tsx @types/pg @testcontainers/postgresql supertest @types/
     "prisma:generate": "prisma generate",
     "prebuild": "prisma generate",
     "pretest": "prisma generate",
-    "test:e2e": "prisma generate && vitest run --config vitest.config.e2e.ts"
+    "test:e2e": "prisma generate && vitest run --config ./vitest.config.e2e.ts"
   }
 }
 ```
 
-El cliente generado está en `.gitignore`, así que **`prisma generate` debe correr antes de compilar o testear**, en local y en CI (de eso se encargan `prebuild` y `pretest`).
+El único cambio sobre un script existente es `test:e2e`, que hoy ejecuta solo `vitest run --config ./vitest.config.e2e.ts`, sin `prisma generate`.
+
+El cliente generado debe estar en `.gitignore` (hoy **falta** esa línea: agrega `/src/platform/prisma/generated/`), así que **`prisma generate` debe correr antes de compilar o testear**, en local y en CI (de eso se encargan `prebuild` y `pretest`).
 
 **`docker-compose.yml`**
 
@@ -466,10 +497,10 @@ volumes:
 **Primer arranque:**
 
 ```bash
-npm run db:up                          # espera a que PostgreSQL esté listo
-npx prisma migrate dev --name init     # crea los schemas sales, catalog, inventory y messaging, y sus tablas
-npm run db:seed                        # clientes, libros y stock de ejemplo
-npm run start:dev
+pnpm run db:up                         # espera a que PostgreSQL esté listo
+pnpm exec prisma migrate dev --name init   # crea los schemas sales, catalog, inventory y messaging, y sus tablas
+pnpm run db:seed                       # clientes, libros y stock de ejemplo
+pnpm run start:dev
 ```
 
 > [!important] PostgreSQL 18 en todos lados
@@ -1909,6 +1940,8 @@ SwaggerModule.setup('docs', app, () => SwaggerModule.createDocument(app, doc));
 await app.listen(app.get(ConfigService).getOrThrow<number>('PORT'));
 ```
 
+El `main.ts` actual (`NestFactory.create(AppModule)` y `app.listen(process.env.PORT ?? 3000)`) ya usa ESM con `await` de nivel superior, y se mantiene ese estilo. Cambia en dos puntos: el logger propio y el puerto, que pasa de `process.env.PORT` a `ConfigService`, ya validado por Zod.
+
 Los consumidores del Outbox se registran en los `providers` del módulo de su contexto (por ejemplo, `ConfirmReservationConsumer` en `InventoryModule`). El registro los descubre por el decorador, sin importar en qué módulo estén.
 
 ---
@@ -2016,7 +2049,7 @@ it('caída después de cobrar: el job reembolsa, libera y marca ABORTED', async 
 
 **Todos los tests de integración y e2e corren contra PostgreSQL 18 real** (Testcontainers): `SKIP LOCKED`, los bloqueos de fila, `DELETE … RETURNING` y `uuidv7()` no se pueden validar con fakes ni con otra base de datos.
 
-En e2e se llama a `app.get(OutboxRelay).runOnce()` directamente, en vez de esperar al intervalo. Usa `import request from 'supertest'` (import por defecto). Agrega `vitest.config.e2e.ts` con `include: ['test/{integration,e2e}/**/*.spec.ts']`, y deja `vitest.config.ts` solo con `include: ['test/unit/**/*.spec.ts']`, para que `npm test` no necesite Docker.
+En e2e se llama a `app.get(OutboxRelay).runOnce()` directamente, en vez de esperar al intervalo. Usa `import request from 'supertest'` (import por defecto, como ya hace `test/app.e2e-spec.ts`). Los dos archivos de configuración ya existen: cambia en `vitest.config.e2e.ts` el `include` de `['**/*.e2e-spec.ts']` a `['test/{integration,e2e}/**/*.spec.ts']`, y en `vitest.config.ts` el de `['**/*.spec.ts']` a `['test/unit/**/*.spec.ts']`, para que `pnpm test` no necesite Docker. Con el segundo cambio, `pnpm test` ya no ve `src/app.controller.spec.ts`; ese test se elimina junto con `AppController`.
 
 ---
 
@@ -2024,7 +2057,7 @@ En e2e se llama a `app.get(OutboxRelay).runOnce()` directamente, en vez de esper
 
 ```mermaid
 flowchart LR
-    F0["0. Scaffold"] --> F1["1. Platform<br/>config, Prisma, filtro,<br/>Swagger, health, requestId"]
+    F0["0. Scaffold ✅"] --> F1["1. Platform<br/>config, Prisma, filtro,<br/>Swagger, health, requestId"]
     F1 --> F2["2. Shared kernel<br/>y contracts"]
     F2 --> F3["3. Dominio Ventas<br/>+ unitarios"]
     F3 --> F4["4. Catálogo"]
@@ -2037,7 +2070,8 @@ flowchart LR
 
 | Fase | Listo cuando… |
 |---|---|
-| 0–1 | `docker compose up` y `npm run start:dev` levantan; `/health/ready` y `/docs` responden, con el header `X-Request-Id`, y los logs JSON incluyen el `requestId` |
+| 0 ✅ | **Hecha**: `apps/main-api` compila y responde `Hello World!` en `GET /` |
+| 1 | `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden, con el header `X-Request-Id`, y los logs JSON incluyen el `requestId` |
 | 2–3 | `contracts/` no importa nada de `contexts/`; las invariantes tienen tests y pasan |
 | 4–5 | `GET /books/:isbn` responde; reservar sin stock lanza `OutOfStockError` y no cambia nada |
 | 6 | Los tests de integración del Outbox pasan, incluido el del `correlationId` |
