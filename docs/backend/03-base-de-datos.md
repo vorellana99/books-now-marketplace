@@ -262,12 +262,13 @@ model Delivery {
 
 ```ts
 import 'dotenv/config';
-import { defineConfig, env } from 'prisma/config';
+import { defineConfig } from 'prisma/config';
+import { buildDatabaseUrl } from './src/platform/config/database-url.js';
 
 export default defineConfig({
   schema: 'prisma/schema.prisma',
   migrations: { path: 'prisma/migrations', seed: 'tsx prisma/seed.ts' },
-  datasource: { url: env('DATABASE_URL') },
+  datasource: { url: buildDatabaseUrl(process.env) },
 });
 ```
 
@@ -277,12 +278,17 @@ export default defineConfig({
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { buildDatabaseUrl } from '../config/database-url.js';
 import { PrismaClient } from './generated/client.js';   // NO desde '@prisma/client'
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor(config: ConfigService) {
-    super({ adapter: new PrismaPg({ connectionString: config.getOrThrow('DATABASE_URL') }) });
+    super({ adapter: new PrismaPg({ connectionString: buildDatabaseUrl({
+      DB_HOST: config.getOrThrow('DB_HOST'), DB_PORT: config.getOrThrow('DB_PORT'),
+      DB_USER: config.getOrThrow('DB_USER'), DB_PASSWORD: config.getOrThrow('DB_PASSWORD'),
+      DB_NAME: config.getOrThrow('DB_NAME'),
+    }) }) });
   }
   onModuleInit() { return this.$connect(); }
   onModuleDestroy() { return this.$disconnect(); }
@@ -296,7 +302,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 > import { Prisma } from '../../platform/prisma/generated/client.js';
 > ```
 >
-> `env('DATABASE_URL')` en `prisma.config.ts` exige la variable **también para `prisma generate`**, aunque no se conecte. En CI defínela siempre (para el paso de `generate` basta un valor de ejemplo, como `postgresql://u:p@localhost:5432/db`).
+> `prisma.config.ts` exige las variables `DB_*` **también para `prisma generate`**, aunque no se conecte. En CI defínelas siempre (para el paso de `generate` bastan valores de ejemplo, como `DB_HOST=localhost`, `DB_USER=u`, `DB_PASSWORD=p`, `DB_NAME=db`).
 
 **Transacciones:** cada operación atómica abre su propia transacción interactiva y pasa `tx` a quien deba participar. No hay transacciones implícitas: lo que no recibe `tx` está fuera.
 

@@ -164,7 +164,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 |---|---|---|---|
 | 2026-10-27 | 3 | Docker en el entorno en la nube: el daemon no está activo por defecto. Se levanta con `dockerd` en segundo plano y `postgres:18` se descarga bien. Falta comprobar Testcontainers | Docker ✅ · Testcontainers pendiente (corte 3) |
 | 2026-10-27 | 1 | El entorno en la nube tiene Node 22.22; la guía pide Node 24 LTS (≥ 24.15). Todo funciona en 22, pero conviene fijar `engines` y la versión de CI en 24 | Abierto |
-| 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y `DATABASE_URL` definida; no hay aún workflow de CI | Abierto |
+| 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas; no hay aún workflow de CI | Abierto |
 
 ## Bitácora
 

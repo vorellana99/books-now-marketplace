@@ -282,7 +282,11 @@ pnpm run start:dev
 **`.env`**
 
 ```env
-DATABASE_URL=postgresql://libroya:libroya@localhost:5433/libroya
+DB_HOST=localhost
+DB_PORT=5433
+DB_USER=libroya
+DB_PASSWORD=libroya
+DB_NAME=libroya
 PORT=3000
 PAYMENT_PROVIDER=fake            # fake | external
 PAYMENT_API_URL=
@@ -300,7 +304,11 @@ const optionalUrl = z.preprocess((v) => (v === '' ? undefined : v), z.url().opti
 
 export const envSchema = z
   .looseObject({                                    // deja pasar el resto de variables del proceso (Zod 3: z.object({…}).passthrough())
-    DATABASE_URL: z.url(),
+    DB_HOST: z.string().min(1),
+    DB_PORT: z.coerce.number().int().default(5432),
+    DB_USER: z.string().min(1),
+    DB_PASSWORD: z.string().min(1),
+    DB_NAME: z.string().min(1),
     PORT: z.coerce.number().int().default(3000),
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,
