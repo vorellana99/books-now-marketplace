@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CatalogModule } from './contexts/catalog/catalog.module.js';
 import { envSchema } from './platform/config/env.schema.js';
 import { HealthModule } from './platform/health/health.module.js';
 import { PrismaModule } from './platform/prisma/prisma.module.js';
@@ -16,6 +17,7 @@ import { PrismaModule } from './platform/prisma/prisma.module.js';
     ScheduleModule.forRoot(), // @Interval del relay y @Cron del job de recuperación
     PrismaModule, // @Global: exporta PrismaService
     HealthModule,
+    CatalogModule,
   ],
 })
 export class AppModule {}

@@ -67,6 +67,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   └── request-aware.logger.ts
 │   │   ├── http/
 │   │   │   ├── configure-app.ts
+│   │   │   ├── configure-swagger.ts
 │   │   │   ├── domain-exception.filter.ts
 │   │   │   └── admin-api-enabled.guard.ts                  (fase 12)
 │   │   └── health/
@@ -140,6 +141,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   └── deactivate-book.command.ts              (fase 12)
 │       │   └── infrastructure/book/                        todos usan Prisma directo
 │       │       ├── book.controller.ts
+│       │       ├── book-price.response.ts                  esquema de la respuesta, solo para Swagger
 │       │       ├── get-book-price.handler.ts
 │       │       ├── search-books.dto.ts                     (fase 10)
 │       │       ├── search-books.handler.ts                 (fase 10)
