@@ -101,7 +101,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 4 | `Order`, `OrderLine` y `OrderFactory` | El pedido y sus líneas | Reglas de pedido: máximo 10 por libro, una sola moneda, líneas repetidas sumadas | ✅ |
 | 5 | `Customer` y `Email` | El cliente y su correo | Saber si el cliente es premium | ✅ |
 | 6 | `PricingService` y las specifications | El cálculo del total | Descuento, envío y total: S/ 110, 160, 90 y 180 de la tabla del producto | ✅ |
-| 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ⬜ |
+| 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ✅ |
 | 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ⬜ |
 | 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ⬜ |
 
@@ -111,7 +111,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] `sales/domain/order/`: agregado `Order`, `OrderLine`, `OrderFactory`
 - [x] `sales/domain/customer/`: agregado `Customer`, `email.vo.ts`
 - [x] `sales/domain/pricing/`: `PricingService`, `PricingContext` y las specifications
-- [ ] Puertos como `abstract class`: `OrderRepository`, `CheckoutLog`, `CatalogPricing`, `StockReservation`, `Notifier`, `PaymentGateway`, `CustomerRepository`
+- [x] Puertos como `abstract class`: `OrderRepository`, `CheckoutLog`, `CatalogPricing`, `StockReservation`, `Notifier`, `PaymentGateway`, `CustomerRepository`
 - [ ] `test/fakes/`
 - [ ] Tests: `money.vo`, `order.aggregate`, `pricing.service` (ejemplos de la tabla de totales del producto)
 - [ ] Regla de dependencias comprobada (`domain/` sin Nest ni Prisma)
@@ -205,6 +205,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 2 | El pedido nace en estado `DRAFT` y pasa a `PLACED` con `place()`. Reglas con código propio: `INVALID_QUANTITY`, `MAX_QUANTITY_EXCEEDED` (10 por libro, sumando líneas repetidas), `CURRENCY_MISMATCH`, `EMPTY_ORDER`, `ORDER_ALREADY_PLACED` y `PRICE_MISMATCH`. `PricedCartItem` vive en `order.factory.ts` | La guía v5 no incluye el código del agregado. `PRICE_MISMATCH` es una regla añadida: el mismo libro con dos precios en un carrito (por ejemplo, si el precio cambia entre dos consultas al catálogo) falla en vez de cobrar con un precio arbitrario. Los códigos se listan en `api-contrato.md` |
 | 2026-10-27 | 2 | `Customer` se crea con `Customer.create(id, email, premium = false)` y `isPremium` es de solo lectura: no hay operación para volverlo premium. `Email` normaliza (sin espacios, en minúsculas) y valida con `INVALID_EMAIL` | `producto.md` dice que premium "se marca en la BD; aún no hay forma de suscribirse", así que añadir un método sería código sin uso. La misma `create` sirve para reconstruir el cliente desde la BD en el corte 5 |
 | 2026-10-27 | 2 | `FreeShippingSpec` = `MinimumSubtotalSpec(150.00)` o `PremiumCustomerSpec`, y se exporta como `freeShippingSpec`. `PremiumOfferSpec` (¿aplica el descuento?) hoy delega en `PremiumCustomerSpec`. `PricingService.calculateFinalPrice(order, customer, freeShipping)` devuelve el importe **sin redondear** (descuento con `multiply('0.90')`, envío `Money.of('10.00')`) | La guía v5 no incluye el código de las specifications. Se siguen las firmas que usa el handler de la saga y las reglas de `producto.md`. El redondeo lo hace el handler una sola vez con `toFinal()` |
+| 2026-10-27 | 2 | Los siete puertos viven donde indica la estructura (`order/`, `customer/`, `payment/`). Cada puerto declara sus tipos de apoyo: `CheckoutRecord` y `CheckoutStatus`, `PaymentResult`, `CartItem` y `StockLine`. `Customer` expone `email`, no `currentEmail`: se corrige el consumidor de email de la guía | Mantener cada tipo junto al puerto que lo usa. `PricedCartItem` sigue en `order.factory.ts` y `CatalogPricing` lo importa |
 
 ## Problemas abiertos
 
@@ -233,3 +234,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 4: `Order` (`addBook`, `subtotal`, `place`, `pullEvents`), `OrderLine` y `OrderFactory.fromCart`. Validan antes de modificar, así que un rechazo deja el pedido intacto; el subtotal conserva toda la precisión y `place()` lo redondea una vez en el evento. 34 tests nuevos; hoy 106 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 5: `Email` (normalizado, error `INVALID_EMAIL`) y `Customer` (`isPremium` de solo lectura). 21 tests nuevos; hoy 127 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 6: `PricingContext`, las cuatro specifications (`MinimumSubtotal`, `PremiumCustomer`, `PremiumOffer`, `FreeShipping`) y `PricingService`. Los cuatro ejemplos de `producto.md` dan S/ 110, 160, 90 y 180. 25 tests nuevos; hoy 152 unitarios y 7 e2e pasan |
+| 2026-10-27 | Corte 2, tarea 7 (2.7): los siete puertos como `abstract class`, sin importar Nest ni Prisma. No llevan tests propios porque no tienen comportamiento: `tsc` comprueba los tipos y los fakes de la tarea 2.8 los ejercitan |

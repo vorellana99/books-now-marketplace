@@ -296,7 +296,7 @@ export class SendOrderConfirmationConsumer implements ExternalOutboxConsumer<Ord
     const customer = await this.customers.findById(e.customerId);
     if (!customer) return;
     // Servicio externo: se entrega "al menos una vez", con eventId como clave de idempotencia
-    await this.notifier.send(customer.currentEmail.value, `¡Gracias! Tu pedido ${e.orderId} fue recibido.`, { idempotencyKey: eventId });
+    await this.notifier.send(customer.email.value, `¡Gracias! Tu pedido ${e.orderId} fue recibido.`, { idempotencyKey: eventId });
   }
 }
 ```
