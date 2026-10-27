@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
+import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 
 describe('Platform (e2e, PostgreSQL real)', () => {
   let app: INestApplication;
@@ -54,5 +55,45 @@ describe('Platform (e2e, PostgreSQL real)', () => {
       .get('/no-existe')
       .expect(404);
     expect(res.headers['x-request-id']).toBeDefined();
+  });
+});
+
+describe('Platform (e2e, BD caída)', () => {
+  let app: INestApplication;
+
+  beforeAll(async () => {
+    // Sin conectar a ninguna base: la consulta de salud siempre falla
+    const prisma = {
+      $connect: async () => undefined,
+      $disconnect: async () => undefined,
+      $queryRaw: async () => {
+        throw new Error('conexión rechazada');
+      },
+    };
+    const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
+      .overrideProvider(PrismaService)
+      .useValue(prisma)
+      .compile();
+    app = moduleRef.createNestApplication();
+    configureApp(app);
+    await app.init();
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it('GET /health/ready responde 503 si la BD no responde', async () => {
+    const res = await request(app.getHttpServer())
+      .get('/health/ready')
+      .expect(503);
+    expect(res.body.details.database.status).toBe('down');
+    expect(res.headers['x-request-id']).toBeDefined();
+  });
+
+  it('GET /health/live sigue en 200 aunque la BD esté caída', async () => {
+    await request(app.getHttpServer())
+      .get('/health/live')
+      .expect(200, { status: 'ok' });
   });
 });
