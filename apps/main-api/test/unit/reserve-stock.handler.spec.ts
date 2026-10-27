@@ -8,6 +8,7 @@ import { ConflictError } from '../../src/shared-kernel/domain.errors.js';
 // Base simulada: solo para provocar el error de clave duplicada que, en la práctica, depende de la carrera entre dos peticiones
 function handlerWhereCreateFails(error: Error): ReserveStockHandler {
   const tx = {
+    $executeRaw: vi.fn().mockResolvedValue(1), // el bloqueo por pedido
     reservation: {
       count: vi.fn().mockResolvedValue(0), // la comprobación previa no ve nada
       createMany: vi.fn().mockRejectedValue(error),

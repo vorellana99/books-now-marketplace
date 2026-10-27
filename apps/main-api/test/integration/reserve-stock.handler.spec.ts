@@ -17,7 +17,11 @@ import {
   reservationsOf,
   stockOf,
 } from '../support/builders.js';
-import { query, resetDatabase } from '../support/database.js';
+import {
+  query,
+  resetDatabase,
+  slowDownStockUpdates,
+} from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 
 describe('ReserveStockHandler (PostgreSQL real, por el CommandBus)', () => {
@@ -212,6 +216,69 @@ describe('ReserveStockHandler (PostgreSQL real, por el CommandBus)', () => {
       );
       expect(rejected[0].reason).toBeInstanceOf(ConflictError);
       expect(await stockOf(isbn)).toEqual({ available: 8, reserved: 2 });
+    });
+  });
+
+  describe('el mismo pedido a la vez, con libros distintos', () => {
+    // Con ISBN distintos las dos reservas tocan filas de stock distintas y claves primarias distintas:
+    // ni el bloqueo de filas ni la clave primaria las serializan. El retardo hace que se crucen siempre
+    it('una se crea y la otra da ConflictError: el pedido reserva una sola vez', async () => {
+      const a = await bookWithStock(10);
+      const b = await bookWithStock(10);
+      const orderId = randomUUID();
+      const removeDelay = await slowDownStockUpdates(200);
+
+      let results: PromiseSettledResult<unknown>[];
+      try {
+        results = await Promise.allSettled([
+          reserve(orderId, [{ isbn: a, quantity: 1 }]),
+          reserve(orderId, [{ isbn: b, quantity: 1 }]),
+        ]);
+      } finally {
+        await removeDelay();
+      }
+
+      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const rejected = results.filter(
+        (r): r is PromiseRejectedResult => r.status === 'rejected',
+      );
+      expect(rejected).toHaveLength(1);
+      expect(rejected[0].reason).toBeInstanceOf(ConflictError);
+      expect((rejected[0].reason as ConflictError).code).toBe(
+        'ORDER_ALREADY_RESERVED',
+      );
+
+      // Una sola reserva y un solo libro descontado: el que perdió no deja rastro
+      expect(await reservationsOf(orderId)).toHaveLength(1);
+      const [stockA, stockB] = [await stockOf(a), await stockOf(b)];
+      expect(
+        [stockA!.reserved, stockB!.reserved].sort((x, y) => x - y),
+      ).toEqual([0, 1]);
+      expect(stockA!.available + stockA!.reserved).toBe(10);
+      expect(stockB!.available + stockB!.reserved).toBe(10);
+    });
+
+    it('pedidos distintos con libros distintos siguen reservando a la vez, sin esperarse', async () => {
+      const a = await bookWithStock(10);
+      const b = await bookWithStock(10);
+      const DELAY_MS = 500; // cada actualización de stock tarda esto
+      const removeDelay = await slowDownStockUpdates(DELAY_MS);
+
+      let results: PromiseSettledResult<unknown>[];
+      const start = performance.now();
+      try {
+        results = await Promise.allSettled([
+          reserve(randomUUID(), [{ isbn: a, quantity: 1 }]),
+          reserve(randomUUID(), [{ isbn: b, quantity: 1 }]),
+        ]);
+      } finally {
+        await removeDelay();
+      }
+      const elapsed = performance.now() - start;
+
+      expect(results.map((r) => r.status)).toEqual(['fulfilled', 'fulfilled']);
+      // A la vez tardan cerca de 1 × DELAY_MS; si el bloqueo las serializara, cerca de 2 × DELAY_MS
+      expect(elapsed).toBeLessThan(DELAY_MS * 1.8);
     });
   });
 

@@ -26,6 +26,11 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
     assertValid(lines);
 
     await this.prisma.$transaction(async (tx) => {
+      // Serializa las reservas del MISMO pedido. Con libros distintos no compiten por ninguna fila de stock ni
+      // chocan en la clave primaria, y sin esto dos llamadas a la vez pasarían la comprobación de abajo.
+      // Pedidos distintos no se esperan. El bloqueo se libera solo al terminar la transacción
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('inventory.reserve-stock'), hashtext(${orderId}))`;
+
       if ((await tx.reservation.count({ where: { orderId } })) > 0) {
         throw alreadyReserved(orderId);
       }
