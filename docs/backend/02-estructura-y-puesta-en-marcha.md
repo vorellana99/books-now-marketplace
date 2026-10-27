@@ -180,7 +180,9 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
     ├── support/
     │   ├── architecture.ts                                 reglas de dependencias entre capas
     │   ├── global-setup.ts                                 postgres:18 con Testcontainers para integration/ y e2e/
-    │   └── database.ts                                     query(), resetDatabase() y su guardián
+    │   ├── database.ts                                     query(), resetDatabase() y su guardián
+    │   ├── builders.ts                                     insertBook(), insertStock() con SQL directo
+    │   └── nest.ts                                         createTestApp(): bus CQRS y módulos elegidos sobre la base de pruebas
     ├── unit/
     │   ├── money.vo.spec.ts
     │   ├── order.aggregate.spec.ts
