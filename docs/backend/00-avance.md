@@ -39,7 +39,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Guía:** [01-decisiones-y-stack](01-decisiones-y-stack.md) · [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) · [03-base-de-datos](03-base-de-datos.md) · [05-piezas-clave](05-piezas-clave.md)
 
-**Listo cuando:** `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden con el header `X-Request-Id`, y los logs JSON incluyen el `requestId`.
+**Listo cuando:** `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden con el header `X-Request-Id`, y los logs incluyen el `requestId` (campo en JSON en producción, prefijo en texto en desarrollo).
 
 - [x] Instalar las dependencias de la guía (`pnpm add -E …`, Prisma fijado en `^7`)
 - [x] `docker-compose.yml` con PostgreSQL 18 y `healthcheck`
@@ -157,13 +157,17 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 1 | `GET /health/ready` devuelve el detalle de terminus (`{ status, info, error, details }`) | Es lo que produce `HealthCheckService`; la guía solo pedía 200/503 |
 | 2026-10-27 | 1 | `shared-kernel/domain.errors.ts` se creó en el corte 1 | Lo necesita `DomainExceptionFilter` |
 | 2026-10-27 | 1 | PostgreSQL con Docker se publica en el puerto **5433** (`ports: ["5433:5432"]`), no en el 5432 de la guía original | Decisión del equipo: no chocar con un PostgreSQL local. Cambian `docker-compose.yml`, `.env.example` y la guía |
+| 2026-10-27 | 1 | `DATABASE_URL` se sustituye por cinco variables (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`). La URL se arma en `platform/config/database-url.ts`, que usan `PrismaService` y `prisma.config.ts` | Una URL con una contraseña larga era difícil de leer y editar; así la contraseña se codifica sola y `docker-compose.yml` lee las mismas variables |
+| 2026-10-27 | 1 | `RequestAwareLogger` escribe JSON solo con `NODE_ENV=production`; en desarrollo usa texto con colores y el `requestId` como prefijo `[id]` | Los logs JSON eran difíciles de leer en el terminal. En producción siguen siendo JSON para las herramientas de logs |
+| 2026-10-27 | 1 | Al arrancar fuera de producción se imprime un banner con las URLs (API, `/docs`, `/health/ready`), el entorno y la base (`startup-banner.ts`). En producción se emite un log JSON equivalente | Ver de un vistazo dónde quedó escuchando la API y con qué configuración |
+| 2026-10-27 | 1 | `pnpm-workspace.yaml` fuerza `multer` a `>=2.5.0 <3` con `overrides` | `pnpm audit` marcaba una vulnerabilidad alta (GHSA-q7qp-rjg7-q26m). `@nestjs/platform-express` 12.3.2 ya exige 2.5.0, pero salió hoy y pnpm bloquea versiones tan recientes. Quitar el override cuando se pueda actualizar |
 
 ## Problemas abiertos
 
 | Fecha | Corte | Problema | Estado |
 |---|---|---|---|
 | 2026-10-27 | 3 | Docker en el entorno en la nube: el daemon no está activo por defecto. Se levanta con `dockerd` en segundo plano y `postgres:18` se descarga bien. Falta comprobar Testcontainers | Docker ✅ · Testcontainers pendiente (corte 3) |
-| 2026-10-27 | 1 | El entorno en la nube tiene Node 22.22; la guía pide Node 24 LTS (≥ 24.15). Todo funciona en 22, pero conviene fijar `engines` y la versión de CI en 24 | Abierto |
+| 2026-10-27 | 1 | El entorno en la nube tenía Node 22.22 (en local es 24.21); la guía pide Node 24 LTS (≥ 24.15). Falta fijar `engines` en `package.json` y la versión de CI en 24 | Abierto |
 | 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas; no hay aún workflow de CI | Abierto |
 
 ## Bitácora
@@ -173,3 +177,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Guía adaptada al estado de `apps/main-api` y dividida en `docs/` y `docs/backend/`. Se define este plan de cortes |
 | 2026-10-27 | Arreglo tras probar en local: `pnpm install` fallaba con `ERR_PNPM_IGNORED_BUILDS` (se agrega `pnpm-workspace.yaml`) y el `pnpm-lock.yaml` estaba desactualizado respecto a las versiones fijadas de Prisma (regenerado) |
 | 2026-10-27 | **Corte 1 terminado.** Dependencias, `docker-compose.yml` (PostgreSQL 18), schema Prisma con migración `init` (4 schemas, 9 tablas, `uuidv7()` y `CHECK`), config con Zod, `PrismaService`, observabilidad (`X-Request-Id`), filtro de dominio, health `live`/`ready`, Swagger en `/docs`. Se elimina el "Hello World". `pnpm lint`, `pnpm test` (11 tests) y `pnpm run test:e2e` (5 tests, contra PostgreSQL 18) pasan; la app arranca y responde |
+| 2026-10-27 | Las variables `DB_*` reemplazan a `DATABASE_URL` (`database-url.ts` con tests, `docker-compose.yml` y READMEs). Banner de arranque y logs en texto con colores fuera de producción. Se corrigen la vulnerabilidad de `multer` (override en `pnpm-workspace.yaml`; `pnpm audit --prod` queda limpio) y el formato de `domain-exception.filter.ts`. Hoy: `pnpm lint` y `pnpm test` (16 tests) y `pnpm run test:e2e` (5 tests) pasan |

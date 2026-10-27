@@ -670,7 +670,7 @@ export class RequestContextInterceptor implements NestInterceptor {
 ```
 
 ```ts
-// platform/observability/request-aware.logger.ts: agrega el requestId a cada línea del log JSON
+// platform/observability/request-aware.logger.ts: agrega el requestId a cada línea del log (campo en JSON, prefijo `[id]` en texto)
 export class RequestAwareLogger extends ConsoleLogger {
   override log(message: unknown, ...rest: unknown[]) { super.log(this.tag(message), ...rest); }
   override warn(message: unknown, ...rest: unknown[]) { super.warn(this.tag(message), ...rest); }
@@ -678,7 +678,9 @@ export class RequestAwareLogger extends ConsoleLogger {
 
   private tag(message: unknown) {
     const requestId = RequestContext.requestId();
-    return requestId ? { requestId, message } : message;
+    if (!requestId) return message;
+    if (!this.options.json && typeof message === 'string') return `[${requestId}] ${message}`;
+    return { requestId, message };
   }
 }
 ```
@@ -812,7 +814,10 @@ export class HealthModule {}
 
 ```ts
 // main.ts
-const app = await NestFactory.create(AppModule, { logger: new RequestAwareLogger({ json: true }) });
+// JSON en producción (lo leen herramientas); en desarrollo, texto con colores
+const app = await NestFactory.create(AppModule, {
+  logger: new RequestAwareLogger({ json: process.env.NODE_ENV === 'production' }),
+});
 configureApp(app);
 
 const doc = new DocumentBuilder()

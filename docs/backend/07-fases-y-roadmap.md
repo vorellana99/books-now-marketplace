@@ -20,7 +20,7 @@ flowchart LR
 | Fase | Listo cuando… |
 |---|---|
 | 0 ✅ | **Hecha**: `apps/main-api` compila y responde `Hello World!` en `GET /` |
-| 1 | `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden, con el header `X-Request-Id`, y los logs JSON incluyen el `requestId` |
+| 1 | `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden, con el header `X-Request-Id`, y los logs incluyen el `requestId` (campo en JSON en producción, prefijo en texto en desarrollo) |
 | 2–3 | `contracts/` no importa nada de `contexts/`; las invariantes tienen tests y pasan |
 | 4–5 | `GET /books/:isbn` responde; reservar sin stock lanza `OutOfStockError` y no cambia nada |
 | 6 | Los tests de integración del Outbox pasan, incluido el del `correlationId` |
