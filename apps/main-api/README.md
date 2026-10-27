@@ -6,7 +6,7 @@ Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [
 
 ## Requisitos
 
-- Node.js 22 o superior (la guía recomienda 24 LTS)
+- Node.js 24 LTS (≥ 24.15), fijado en `engines` de `package.json`
 - pnpm
 - PostgreSQL **18**, con Docker o instalado en tu máquina. No sirve una versión anterior: el Outbox usa `uuidv7()`.
 - Docker (solo si eliges esa opción de base de datos)
