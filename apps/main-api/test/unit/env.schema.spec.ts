@@ -1,6 +1,11 @@
 import { envSchema } from '../../src/platform/config/env.schema.js';
 
-const base = { DATABASE_URL: 'postgresql://u:p@localhost:5432/db' };
+const base = {
+  DB_HOST: 'localhost',
+  DB_USER: 'u',
+  DB_PASSWORD: 'p',
+  DB_NAME: 'db',
+};
 
 describe('envSchema', () => {
   it('aplica los valores por defecto y convierte los tipos', () => {
@@ -34,8 +39,13 @@ describe('envSchema', () => {
     ).toThrow(/ADMIN_API_ENABLED/);
   });
 
-  it('falla sin DATABASE_URL', () => {
-    expect(() => envSchema.parse({})).toThrow(/DATABASE_URL/);
+  it('falla sin las variables de base de datos', () => {
+    expect(() => envSchema.parse({})).toThrow(/DB_HOST/);
+  });
+
+  it('usa el puerto 5432 por defecto y convierte DB_PORT', () => {
+    expect(envSchema.parse(base).DB_PORT).toBe(5432);
+    expect(envSchema.parse({ ...base, DB_PORT: '5433' }).DB_PORT).toBe(5433);
   });
 
   it('exige que CHECKOUT_RECOVERY_MINUTES sea al menos 2', () => {
