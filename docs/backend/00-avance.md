@@ -13,7 +13,7 @@ Los cortes 0 a 3 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 0 | Scaffold del proyecto | 0 | ✅ | `feature/initial` | — |
 | 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
-| 3 | Catálogo e Inventario | 4–5 | ⬜ | `feature/corte-3-catalogo-inventario` | — |
+| 3 | Catálogo e Inventario | 4–5 | 🔄 | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ⬜ | — | — |
 | 5 | Compra completa | 7–9 | ⬜ | — | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
@@ -120,7 +120,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 3: Catálogo e Inventario ⬜
+## Corte 3: Catálogo e Inventario 🔄
 
 **Guía:** [05-piezas-clave](05-piezas-clave.md) · [03-base-de-datos](03-base-de-datos.md) · [06-tests](06-tests.md)
 
@@ -130,7 +130,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
-| 1 | Entorno de integración con Testcontainers | Un `globalSetup` que levanta `postgres:18`, aplica las migraciones y entrega las variables `DB_*`; los archivos de integración se ejecutan uno tras otro porque comparten la base; limpieza de tablas entre tests y tiempos de espera mayores | Probar contra PostgreSQL real sin que los tests se pisen entre sí | ⬜ |
+| 1 | Entorno de integración con Testcontainers | Un `globalSetup` que levanta `postgres:18`, aplica las migraciones y entrega las variables `DB_*`; los archivos de integración se ejecutan uno tras otro porque comparten la base; limpieza de tablas entre tests y tiempos de espera mayores | Probar contra PostgreSQL real sin que los tests se pisen entre sí | ✅ |
 | 2 | CI y documentación de pruebas | El workflow sin el servicio `postgres` ni `db:deploy`, y el README (Requisitos, Pruebas y "Base de datos aparte para las pruebas") | Que el repositorio quede coherente justo después de cambiar cómo se prueba | ⬜ |
 | 3 | Seed | `prisma/seed.ts` con clientes (normal y premium), libros (en PEN, en USD, uno inactivo y uno sin registro de stock) y stock (uno en cero) | Poder probar la API a mano con `pnpm run db:seed`, incluidos los tres casos de stock | ⬜ |
 | 4 | Catálogo: `GetBookPriceHandler` | El handler de la query de precio, con Prisma directo, y las ayudas para crear libros y stock en los tests | Que Ventas pueda pedir título y precio de un libro por el contrato | ⬜ |
@@ -150,7 +150,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Riesgos:** Docker es obligatorio para `test:e2e` (se avisa con un mensaje claro y `pnpm test` sigue sin Docker); las pruebas de concurrencia pueden ser inestables, así que se repiten en rondas y se comprueba que fallan si se rompe el código a propósito; el arranque del contenedor necesita tiempos de espera mayores en Vitest; los pasos del CI no se pueden ejecutar fuera de GitHub, así que se simulan en local sobre una copia limpia, como en el corte 1.
 
-- [ ] 3.1 Testcontainers con `postgres:18` y `vitest.config.e2e.ts` (`test/{integration,e2e}/**/*.spec.ts`): `globalSetup`, migraciones, archivos en serie y limpieza entre tests. Se comprueba: los 7 e2e actuales pasan sobre el contenedor sin `db:up`; dos archivos que escriben en las mismas tablas no se pisan; falla con un mensaje claro si Docker no está activo
+- [x] 3.1 Testcontainers con `postgres:18` y `vitest.config.e2e.ts` (`test/{integration,e2e}/**/*.spec.ts`): `globalSetup`, migraciones, archivos en serie y limpieza entre tests. Se comprueba: los 7 e2e actuales pasan sobre el contenedor sin `db:up`; dos archivos que escriben en las mismas tablas no se pisan; falla con un mensaje claro si Docker no está activo
 - [x] `vitest.config.ts` solo con `test/unit/**/*.spec.ts` (ya estaba hecho desde el corte 1)
 - [ ] 3.2 Workflow de CI sin el servicio `postgres` y README al día. Se comprueba: los pasos del workflow, ejecutados en local sobre una copia limpia, pasan, y los comandos del README funcionan tal como están escritos
 - [ ] 3.3 `prisma/seed.ts`: clientes, libros y stock de ejemplo. Se comprueba: ejecutarlo dos veces no duplica nada; los ISBN son válidos, cumplen los `CHECK` y hay un libro de cada caso (con stock, sin stock y sin registro de stock)
@@ -239,12 +239,13 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 2 | Los fakes de `test/fakes/` siguen los nombres de los ejemplos de `06-tests.md` y añaden opciones para los casos de la saga: `FakeStockReservation({ outOfStock })`, `FakePaymentGateway({ approved, reason, timeout, refundFails })`, `InMemoryOrderRepository({ failOnSave, failAfterCommit })`, `InMemoryCheckoutLog` (con `statusOf`, `backdate` y reclamos con bloqueo de 5 min) y `FakeNotifier({ fails })`. Se importan desde `test/fakes/index.ts` | Los fakes imitan la idempotencia de lo real (liberar y reembolsar no repiten) para que los tests del handler no pasen por una comodidad que la implementación real no tiene |
 | 2026-10-27 | 2 | La regla de dependencias es un test (`dependency-rules.spec.ts` con `test/support/architecture.ts`) y es más estricta que la guía: `domain/` solo admite `decimal.js` y `node:*` (una lista de permitidos, no de prohibidos), y `contracts/` solo `@nestjs/cqrs`. Cubre también `shared-kernel/` y los imports entre contextos, y distingue a `app.module` y `main.ts`, que sí ensamblan los contextos | Una lista de permitidos obliga a autorizar conscientemente cada librería nueva. El verificador se prueba con archivos de ejemplo que rompen las reglas, para que no pase en vacío si una ruta cambia |
 | 2026-10-27 | 2 | Los importes de envío tienen valores propios por moneda en `pricing-rules.ts` (`PRICING_RULES`): `PEN` 150.00 de mínimo y 10.00 de envío, `USD` 40.00 y 3.00. No hay conversión. `FreeShippingSpec` y `PricingService` leen la regla de la moneda del pedido, y una moneda sin reglas falla con `UNSUPPORTED_CURRENCY`. Se eliminan las constantes `FREE_SHIPPING_MINIMUM` y `SHIPPING_COST` | Decisión de negocio: los valores en USD (40.00 y 3.00) se eligieron por equivalencia aproximada con los de soles, con un cambio de referencia de unos 3.7 S/ por USD; conviene confirmarlos con el negocio. El descuento premium es un porcentaje y no cambia |
+| 2026-10-27 | 3 | `test:e2e` ya no usa la base de desarrollo: `globalSetup` levanta `postgres:18` con Testcontainers, aplica `prisma migrate deploy` y define `DB_*` (tienen prioridad sobre `.env`). Los archivos corren uno tras otro (`fileParallelism: false`). `resetDatabase()` solo opera si el `globalSetup` marcó la base como suya (`INTEGRATION_DB_CONTAINER`) | Los tests de integración vacían tablas y no deben poder llegar a los datos de desarrollo. El README y el CI se ajustan en la tarea 3.2 |
 
 ## Problemas abiertos
 
 | Fecha | Corte | Problema | Estado |
 |---|---|---|---|
-| 2026-10-27 | 3 | Docker en el entorno en la nube: el daemon no está activo por defecto. Se levanta con `dockerd` en segundo plano y `postgres:18` se descarga bien. Falta comprobar Testcontainers | Docker ✅ · Testcontainers pendiente (corte 3) |
+| 2026-10-27 | 3 | Docker en el entorno en la nube: el daemon no está activo por defecto. Se levanta con `dockerd` en segundo plano y `postgres:18` se descarga bien. Falta comprobar Testcontainers | Docker ✅ · Testcontainers ✅ verificado en local (3.1); en el entorno en la nube sigue sin probarse |
 | 2026-10-27 | 1 | El entorno en la nube tenía Node 22.22 (en local es 24.21); la guía pide Node 24 LTS (≥ 24.15). `engines` exige `>=24.15` y el workflow de CI usa Node 24 | ✅ Resuelto |
 | 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas. El workflow `.github/workflows/main-api.yml` ya lo hace: levanta `postgres:18`, aplica las migraciones y corre los e2e. Falta ver su primera ejecución en GitHub | Parcial: workflow escrito, sin ejecutar en GitHub |
 | 2026-10-27 | 2 | Los pedidos en **USD** no se podían valorizar: las reglas de envío estaban fijas en soles. Se resolvió en la tarea 2.10 con una tabla de reglas por moneda | ✅ Resuelto |
@@ -273,3 +274,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 10 (2.10): reglas de precio por moneda. Los pedidos en dólares se cobran con mínimo de envío gratis de 40.00 USD y envío de 3.00 USD; los cuatro ejemplos de `producto.md` tienen su versión en USD. 16 tests nuevos; hoy 232 unitarios y 7 e2e pasan |
 | 2026-10-27 | Plan del corte 3 (3.0): 8 tareas (3.1–3.8) con su cuadro, sus comprobaciones, 4 decisiones por confirmar y los riesgos. Rama `feature/corte-3-catalogo-inventario`, abierta desde la del corte 2. Docker 29.8 y `postgres:18` están disponibles en local; falta probar Testcontainers en la tarea 3.1 |
 | 2026-10-27 | Revisión del plan del corte 3 (3.0): se pasa de 8 a 9 tareas. Faltaban el aislamiento entre archivos de test (Vitest los ejecuta en paralelo y comparten una base), mover el CI y el README a la tarea 2 para que el repositorio no quede incoherente tras cambiar a Testcontainers, la validación de entradas de `ReserveStockHandler`, un libro del seed sin registro de stock y las ayudas para datos de prueba |
+| 2026-10-27 | Corte 3, tarea 1 (3.1): entorno de integración con Testcontainers. Los 7 e2e pasan sobre un contenedor propio, incluso con `DB_*` apuntando a un host inexistente; sin Docker, `test:e2e` falla con un mensaje que explica qué hacer y `pnpm test` sigue funcionando. 13 tests nuevos (5 del `globalSetup` con mocks, 3 del guardián, 5 de integración del entorno, 2 de aislamiento entre archivos). Hoy 240 unitarios y 16 de integración y e2e pasan |
