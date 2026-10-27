@@ -10,7 +10,7 @@ El código del dominio es el de la guía v5. Abajo solo va lo nuevo o lo que cam
 
 ```ts
 // sales/domain/shared/money.vo.ts: decimal.js, NUNCA Prisma.Decimal (regla 3 de la arquitectura)
-import Decimal from 'decimal.js';
+import { Decimal } from 'decimal.js';   // con nombre: el import por defecto no tiene tipos con `module: nodenext`
 
 export type Currency = 'PEN' | 'USD';
 
@@ -19,14 +19,14 @@ export class Money {
 
   // Sin `number`: un float como 1.005 ya llega mal representado
   static of(value: string | Decimal, currency: Currency = 'PEN'): Money {
-    const d = new Decimal(value);
+    const d = Money.parse(value);                                    // INVALID_AMOUNT si no es un número finito
     if (d.isNegative()) throw new DomainError('NEGATIVE_AMOUNT', 'El monto no puede ser negativo');
     return new Money(d, currency);
   }
   static zero(currency: Currency = 'PEN'): Money { return new Money(new Decimal(0), currency); }
 
-  add(o: Money): Money { this.assertSame(o); return new Money(this.amount.plus(o.amount), this.currency); }
-  multiply(factor: string | Decimal): Money { return new Money(this.amount.times(factor), this.currency); }
+  add(o: Money): Money { this.assertSame(o); return Money.of(this.amount.plus(o.amount), this.currency); }
+  multiply(factor: string | Decimal): Money { return Money.of(this.amount.times(factor), this.currency); }   // un factor negativo falla
 
   // Importe final: 2 decimales, mitad hacia arriba. Explícito en cada uso, nunca con Decimal.set() global
   toFinal(): Money { return new Money(this.amount.toDecimalPlaces(2, Decimal.ROUND_HALF_UP), this.currency); }
