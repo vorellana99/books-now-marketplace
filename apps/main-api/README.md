@@ -18,7 +18,7 @@ Resumen de lo que hay que hacer la primera vez, en orden. Cada paso se explica m
 ```bash
 cd apps/main-api
 pnpm install                       # 1. dependencias
-cp .env.example .env               # 2. variables de entorno (ajusta DATABASE_URL si no usas Docker)
+cp .env.example .env               # 2. variables de entorno (ajusta DB_PORT y las credenciales si no usas Docker)
 pnpm run db:up                     # 3. base de datos (solo con Docker; si usas la tuya, ver "Base de datos")
 pnpm exec prisma migrate dev       # 4. crea las tablas y genera el cliente de Prisma
 pnpm run start:dev                 # 5. API en http://localhost:3000
@@ -31,14 +31,18 @@ Compruébalo en <http://localhost:3000/health/ready> (debe responder 200) y en <
 Se leen del archivo `.env` (no se sube al repositorio; la plantilla es `.env.example`). Una variable definida en el terminal tiene prioridad sobre `.env`:
 
 ```bash
-DATABASE_URL=postgresql://... pnpm run test:e2e
+DB_NAME=libroya_test pnpm run test:e2e
 ```
 
 La app valida las variables al arrancar y, si alguna es inválida, no inicia y dice cuál.
 
 | Variable | Por defecto | Para qué |
 |---|---|---|
-| `DATABASE_URL` | — (obligatoria) | Conexión a PostgreSQL, ver [Base de datos](#base-de-datos) |
+| `DB_HOST` | — (obligatoria) | Servidor de PostgreSQL, ver [Base de datos](#base-de-datos) |
+| `DB_PORT` | `5432` | Puerto de PostgreSQL (con Docker, `5433`) |
+| `DB_USER` | — (obligatoria) | Usuario de PostgreSQL |
+| `DB_PASSWORD` | — (obligatoria) | Contraseña. Puede llevar cualquier carácter: el código la codifica al armar la URL |
+| `DB_NAME` | — (obligatoria) | Nombre de la base de datos |
 | `PORT` | `3000` | Puerto de la API |
 | `NODE_ENV` | `development` | `development`, `test` o `production` |
 | `ADMIN_API_ENABLED` | `false` | Endpoints `/admin`, solo para desarrollo. Con `NODE_ENV=production` no se permite `true` |
@@ -51,13 +55,7 @@ Las cuatro últimas ya se validan, pero se usan a medida que se implementan los 
 
 ## Base de datos
 
-`DATABASE_URL` tiene este formato:
-
-```text
-postgresql://USUARIO:CONTRASEÑA@HOST:PUERTO/NOMBRE_BD
-```
-
-Si la contraseña tiene caracteres especiales (`@`, `:`, `/`, `#`, `%`, espacios…), hay que codificarlos en la URL: `@` → `%40`, `:` → `%3A`, `/` → `%2F`, `#` → `%23`, `%` → `%25`.
+La conexión se define con cinco variables separadas (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`). El código arma con ellas la URL `postgresql://USUARIO:CONTRASEÑA@HOST:PUERTO/NOMBRE_BD` en un solo lugar (`src/platform/config/database-url.ts`), que usan tanto la API como `prisma.config.ts`. La contraseña se codifica sola, así que no hay que escapar `@`, `:`, `/`, `#` ni `%`.
 
 Elige una de las dos opciones.
 
@@ -67,11 +65,18 @@ Elige una de las dos opciones.
 pnpm run db:up
 ```
 
-Levanta PostgreSQL 18 y espera a que esté listo. Crea el usuario `libroya`, con contraseña `libroya`, y la base `libroya`. La base queda publicada en el puerto **`5433`** de tu máquina (no en el 5432 habitual, para no chocar con un PostgreSQL local). Coinciden con el `DATABASE_URL` de `.env.example`, así que no hay que cambiar nada:
+Levanta PostgreSQL 18 y espera a que esté listo. Crea el usuario `libroya`, con contraseña `libroya`, y la base `libroya`. La base queda publicada en el puerto **`5433`** de tu máquina (no en el 5432 habitual, para no chocar con un PostgreSQL local). `docker-compose.yml` lee las mismas variables `DB_*` de `.env`, y los valores de `.env.example` coinciden con los que usa, así que no hay que cambiar nada:
 
 ```env
-DATABASE_URL=postgresql://libroya:libroya@localhost:5433/libroya
+DB_HOST=localhost
+DB_PORT=5433
+DB_USER=libroya
+DB_PASSWORD=libroya
+DB_NAME=libroya
 ```
+
+> [!warning]
+> Postgres solo aplica `DB_USER`, `DB_PASSWORD` y `DB_NAME` la primera vez que crea el volumen. Si los cambias después, la base conserva los anteriores: recréala con `docker compose down -v` (borra los datos) o cambia la contraseña con `ALTER ROLE`.
 
 Los datos quedan en un volumen de Docker y sobreviven a los reinicios.
 
@@ -92,12 +97,16 @@ CREATE DATABASE libroya OWNER libroya;
 Luego pon tus credenciales en `.env`:
 
 ```env
-DATABASE_URL=postgresql://libroya:tu_contraseña@localhost:5432/libroya
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=libroya
+DB_PASSWORD=tu_contraseña
+DB_NAME=libroya
 ```
 
 - **`CREATEDB` es obligatorio:** `prisma migrate dev` crea una base temporal ("shadow") para comparar migraciones.
 - **Si ya tienes un usuario y una base**, úsalos: basta con que el usuario tenga `CREATEDB` y permiso para crear schemas en esa base (lo más simple es que sea su dueño).
-- **El puerto es el de tu instalación** (por defecto `5432`; el `5433` es el de Docker). Ajústalo en la URL.
+- **El puerto es el de tu instalación** (por defecto `5432`; el `5433` es el de Docker). Ajusta `DB_PORT`.
 - **No hay que crear schemas ni tablas a mano:** la migración crea `sales`, `catalog`, `inventory` y `messaging`.
 
 Comprueba que las credenciales funcionan antes de seguir:
@@ -110,14 +119,14 @@ Debe mostrar `PostgreSQL 18.x`. Si muestra otra versión, esa no sirve.
 
 ### Base de datos aparte para las pruebas
 
-Los tests e2e usan `DATABASE_URL`. Hoy solo leen, pero conviene tener una base de pruebas separada para no mezclar datos con los de desarrollo:
+Los tests e2e usan las variables `DB_*`. Hoy solo leen, pero conviene tener una base de pruebas separada para no mezclar datos con los de desarrollo:
 
 ```sql
 CREATE DATABASE libroya_test OWNER libroya;
 ```
 
 ```bash
-export DATABASE_URL=postgresql://libroya:libroya@localhost:5433/libroya_test   # puerto de Docker; con tu PostgreSQL local, el tuyo
+export DB_NAME=libroya_test   # el resto de variables salen de .env
 pnpm run db:deploy        # aplica las migraciones en la base de pruebas
 pnpm run test:e2e
 ```
@@ -167,7 +176,7 @@ Hay dos tipos, y solo uno necesita base de datos:
 | Comando | Qué prueba | ¿Necesita la BD? |
 |---|---|---|
 | `pnpm test` | Unitarios: configuración, contexto de petición, filtro de errores (`test/unit/`) | No |
-| `pnpm run test:e2e` | e2e e integración: arranca la app completa contra PostgreSQL real (`test/e2e/`, `test/integration/`) | **Sí**: base levantada, migraciones aplicadas y `DATABASE_URL` definida |
+| `pnpm run test:e2e` | e2e e integración: arranca la app completa contra PostgreSQL real (`test/e2e/`, `test/integration/`) | **Sí**: base levantada, migraciones aplicadas y variables `DB_*` definidas |
 
 ```bash
 pnpm test                                        # unitarios
@@ -215,12 +224,12 @@ Antes de subir cambios conviene que pasen `pnpm lint`, `pnpm test`, `pnpm run te
 | `function uuidv7() does not exist` al migrar | La base no es PostgreSQL 18 |
 | `P3014: Prisma Migrate could not create the shadow database` | El usuario no tiene `CREATEDB`: `ALTER ROLE libroya CREATEDB;` |
 | `permission denied for schema public` al migrar | El usuario no es dueño de la base: `ALTER DATABASE libroya OWNER TO libroya;` |
-| `P1000: Authentication failed` | Usuario o contraseña de `DATABASE_URL` incorrectos, o con caracteres sin codificar |
-| `/health/ready` responde 503, o `ECONNREFUSED` | La base no está levantada, o `DATABASE_URL` no apunta a ella (con Docker, el puerto es 5433) |
-| `port is already allocated` al hacer `db:up` | Algo ya usa el puerto 5433. Detenlo, o cambia el primer número de `ports` en `docker-compose.yml` y el puerto de `DATABASE_URL` |
+| `P1000: Authentication failed` | Usuario o contraseña de `DB_USER` / `DB_PASSWORD` incorrectos (o la base se creó con otros: ver el aviso de Docker) |
+| `/health/ready` responde 503, o `ECONNREFUSED` | La base no está levantada, o las variables `DB_*` no apuntan a ella (con Docker, `DB_PORT=5433`) |
+| `port is already allocated` al hacer `db:up` | Algo ya usa el puerto 5433. Detenlo, o cambia el primer número de `ports` en `docker-compose.yml` y `DB_PORT` en `.env` |
 | `EADDRINUSE` al arrancar la API | El puerto 3000 está ocupado: cambia `PORT` en `.env` |
 | `Cannot find module './generated/client.js'` | Falta generar el cliente: `pnpm run prisma:generate` |
-| `Cannot resolve environment variable: DATABASE_URL` | Falta el archivo `.env` (cópialo de `.env.example`) |
+| `Faltan variables de base de datos: …` | Falta el archivo `.env` (cópialo de `.env.example`) o alguna variable `DB_*` |
 | Los tests e2e fallan con 503 | La base no está levantada, o falta aplicar las migraciones en ella |
 | `ERR_PNPM_IGNORED_BUILDS` al instalar | Actualiza el repo (`git pull`): `pnpm-workspace.yaml` ya permite los scripts necesarios |
 | Un cambio de `schema.prisma` no se refleja | Falta `pnpm exec prisma migrate dev` |
