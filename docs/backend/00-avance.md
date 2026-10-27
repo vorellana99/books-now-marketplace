@@ -4,6 +4,8 @@
 
 **Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado
 
+Los cortes 0 a 2 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea del corte 2, se marca en las dos.
+
 ## Resumen
 
 | # | Corte | Fases de la guía | Estado | Rama | PR |
@@ -25,6 +27,16 @@ Los cortes 1 y 2 son independientes y pueden ir en paralelo. Del 3 en adelante, 
 
 ## Corte 0: Scaffold ✅
 
+### Tareas
+
+| # | Tarea | Qué es | Objetivo principal | Estado |
+|---|---|---|---|---|
+| 1 | Proyecto Nest 12 en ESM | El esqueleto de la API en `apps/main-api` | Tener una app que compila y arranca | ✅ |
+| 2 | TypeScript 6, Vitest 4 y Vite 8 | El compilador y las herramientas de pruebas | Poder escribir y ejecutar tests | ✅ |
+| 3 | oxlint y Prettier | El análisis de código y el formato | Detectar errores y mantener un estilo único | ✅ |
+| 4 | `supertest` | Librería para hacer peticiones HTTP en los tests | Probar la API completa (e2e) | ✅ |
+| 5 | pnpm | El gestor de paquetes | Instalaciones reproducibles con un lockfile | ✅ |
+
 - [x] Proyecto Nest 12 en ESM (`apps/main-api`)
 - [x] TypeScript 6, Vitest 4, Vite 8
 - [x] oxlint (`--type-aware`) y Prettier
@@ -40,6 +52,19 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 **Guía:** [01-decisiones-y-stack](01-decisiones-y-stack.md) · [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) · [03-base-de-datos](03-base-de-datos.md) · [05-piezas-clave](05-piezas-clave.md)
 
 **Listo cuando:** `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden con el header `X-Request-Id`, y los logs incluyen el `requestId` (campo en JSON en producción, prefijo en texto en desarrollo).
+
+### Tareas
+
+| # | Tarea | Qué es | Objetivo principal | Estado |
+|---|---|---|---|---|
+| 1 | Dependencias, entorno y scripts | Las librerías de la guía, `.env` / `.env.example`, `.gitignore` y los scripts `db:*`, `prisma:generate` y `test:e2e` | Poder instalar, configurar y arrancar el proyecto con comandos cortos | ✅ |
+| 2 | Base de datos local | `docker-compose.yml` con PostgreSQL 18 y `healthcheck` | Tener la misma base en todas las máquinas con `pnpm run db:up` | ✅ |
+| 3 | Configuración validada | `env.schema.ts` con Zod y el `ConfigModule` | Que la app no arranque con variables faltantes o inválidas, y que diga cuál | ✅ |
+| 4 | Prisma y esquema | `prisma.config.ts`, `schema.prisma` (4 schemas), la migración `init` con los `CHECK` y `uuidv7()`, `PrismaModule` y `PrismaService` | Tener las tablas creadas y un cliente de base de datos listo para usar | ✅ |
+| 5 | Errores de dominio y filtro HTTP | `domain.errors.ts`, `DomainExceptionFilter` y `configure-app` | Que un error de negocio responda 404, 409 o 422 en lugar de un 500 | ✅ |
+| 6 | Observabilidad | `request-context`, middleware de `X-Request-Id`, interceptor y `RequestAwareLogger` | Seguir una petición por todos sus logs con un solo identificador | ✅ |
+| 7 | Salud y documentación de la API | `/health/live`, `/health/ready`, Swagger en `/docs`, nuevo `main.ts` y `AppModule`; se elimina el "Hello World" | Saber si la API y la base están vivas, y poder explorar los endpoints | ✅ |
+| 8 | Verificación | Tests de `env.schema` y e2e de `X-Request-Id`; comprobar que TypeScript 6, Vitest 4 y Prisma 7 funcionan juntos | Confirmar que los cimientos funcionan antes de construir encima | ✅ |
 
 - [x] Instalar las dependencias de la guía (`pnpm add -E …`, Prisma fijado en `^7`)
 - [x] `docker-compose.yml` con PostgreSQL 18 y `healthcheck`
@@ -65,6 +90,20 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 **Guía:** [05-piezas-clave](05-piezas-clave.md) · [06-tests](06-tests.md) · [producto](../producto.md) (reglas del negocio)
 
 **Listo cuando:** `contracts/` no importa nada de `contexts/`, y las invariantes del dominio tienen tests unitarios que pasan, sin base de datos.
+
+### Tareas
+
+| # | Tarea | Qué es | Objetivo principal | Estado |
+|---|---|---|---|---|
+| 1 | `Isbn` y `DomainEvent` | El identificador del libro y la forma base de un evento | Que un ISBN inválido no pueda existir en el sistema | ✅ |
+| 2 | `contracts/` | Los mensajes públicos que se envían entre Ventas, Catálogo e Inventario | Que los contextos hablen sin importar el código interno del otro | ✅ |
+| 3 | `Money` y `Specification` | El dinero exacto (decimal.js) y la base de las reglas combinables | Que los totales no tengan errores de redondeo | ✅ |
+| 4 | `Order`, `OrderLine` y `OrderFactory` | El pedido y sus líneas | Reglas de pedido: máximo 10 por libro, una sola moneda, líneas repetidas sumadas | ⬜ |
+| 5 | `Customer` y `Email` | El cliente y su correo | Saber si el cliente es premium | ⬜ |
+| 6 | `PricingService` y las specifications | El cálculo del total | Descuento, envío y total: S/ 110, 160, 90 y 180 de la tabla del producto | ⬜ |
+| 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ⬜ |
+| 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ⬜ |
+| 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ⬜ |
 
 - [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
 - [x] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
@@ -186,3 +225,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 1: `shared-kernel/isbn.vo.ts` (`Isbn.create` normaliza guiones y espacios, y valida 13 dígitos y el dígito de control; error `INVALID_ISBN`) y `domain-event.ts`. 11 tests nuevos; hoy 31 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 2: `contracts/` con `OrderPlacedEvent` (v1, `aggregateId` real y montos en texto), `GetBookPriceQuery`, `ReserveStockCommand`, `ReleaseStockCommand` y `OutOfStockError` / `StockItemNotFoundError`. Solo dependen de `shared-kernel` y `@nestjs/cqrs`. 8 tests nuevos; hoy 39 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 3: `Money` (decimal.js; `toFinal` redondea mitad hacia arriba, `Money.of('1.005').toFinal()` da `"1.01"`) y la base `Specification` con `and` / `or` / `not`. 33 tests nuevos; hoy 72 unitarios y 7 e2e pasan |
+| 2026-10-27 | Se añade a los cortes 0, 1 y 2 un cuadro de tareas con "qué es" y "objetivo principal" |
