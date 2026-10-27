@@ -1,4 +1,8 @@
-import { query, resetDatabase } from '../support/database.js';
+import {
+  query,
+  resetDatabase,
+  slowDownStockUpdates,
+} from '../support/database.js';
 
 describe('entorno de integración (PostgreSQL real en un contenedor)', () => {
   beforeEach(resetDatabase);
@@ -45,6 +49,49 @@ describe('entorno de integración (PostgreSQL real en un contenedor)', () => {
          VALUES ('9780306406157', 'Libro', 'Autor', 0, 'PEN', true)`,
       ),
     ).rejects.toThrow(/books_price_check/);
+  });
+
+  describe('slowDownStockUpdates (ayuda para probar interbloqueos)', () => {
+    const timeOf = async (sql: string, params: unknown[]) => {
+      const start = performance.now();
+      await query(sql, params);
+      return performance.now() - start;
+    };
+    const isbn = '9780306406157';
+    const setup = async () => {
+      await query(
+        `INSERT INTO catalog.books (isbn, title, author, price, currency, active) VALUES ($1, 'L', 'A', 10, 'PEN', true)`,
+        [isbn],
+      );
+      await query(
+        'INSERT INTO inventory.stock_items (isbn, available) VALUES ($1, 5)',
+        [isbn],
+      );
+    };
+    const update = () =>
+      timeOf(
+        'UPDATE inventory.stock_items SET available = available - 1 WHERE isbn = $1',
+        [isbn],
+      );
+
+    it('retrasa cada actualización de stock y se puede quitar', async () => {
+      await setup();
+      const remove = await slowDownStockUpdates(150);
+
+      expect(await update()).toBeGreaterThanOrEqual(140);
+      await remove();
+      expect(await update()).toBeLessThan(100);
+    });
+
+    it('resetDatabase quita un retardo que un test dejó puesto', async () => {
+      await setup();
+      await slowDownStockUpdates(150);
+
+      await resetDatabase();
+      await setup();
+
+      expect(await update()).toBeLessThan(100);
+    });
   });
 
   describe('resetDatabase', () => {

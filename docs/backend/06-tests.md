@@ -75,6 +75,8 @@ it('caída después de cobrar: el job reembolsa, libera y marca ABORTED', async 
 });
 ```
 
+**Cómo se prueba un interbloqueo (`test/integration/stock.handlers.spec.ts`).** Con operaciones de milisegundos, dos pedidos en orden inverso casi nunca se cruzan, y una prueba así pasaría aunque el código estuviera mal. Por eso `slowDownStockUpdates(ms)` instala en la base de pruebas un disparador que hace que cada actualización de una fila de `stock_items` tarde 40 ms. Con ese retardo, si las transacciones no bloquearan en el mismo orden, se cruzarían siempre y PostgreSQL abortaría una por interbloqueo (`40P01`). Se comprobó quitando el orden de `reserve`, de `release` y de `lock-order.ts`, y haciendo que cada uno ordene distinto: en todos los casos el test falla. El disparador solo existe durante esos tests: se quita al terminar, y `resetDatabase()` lo elimina si un test falló antes de limpiar.
+
 **Todos los tests de integración y e2e corren contra PostgreSQL 18 real** (Testcontainers): `SKIP LOCKED`, los bloqueos de fila, `DELETE … RETURNING` y `uuidv7()` no se pueden validar con fakes ni con otra base de datos.
 
 En e2e se llama a `app.get(OutboxRelay).runOnce()` directamente, en vez de esperar al intervalo. Usa `import request from 'supertest'` (import por defecto, como ya hace `test/app.e2e-spec.ts`). Los dos archivos de configuración ya están hechos: `vitest.config.ts` incluye solo `test/unit/**/*.spec.ts`, así que `pnpm test` no necesita Docker, y `vitest.config.e2e.ts` incluye `test/{integration,e2e}/**/*.spec.ts` y añade tres cosas:
