@@ -77,4 +77,8 @@ it('caída después de cobrar: el job reembolsa, libera y marca ABORTED', async 
 
 **Todos los tests de integración y e2e corren contra PostgreSQL 18 real** (Testcontainers): `SKIP LOCKED`, los bloqueos de fila, `DELETE … RETURNING` y `uuidv7()` no se pueden validar con fakes ni con otra base de datos.
 
-En e2e se llama a `app.get(OutboxRelay).runOnce()` directamente, en vez de esperar al intervalo. Usa `import request from 'supertest'` (import por defecto, como ya hace `test/app.e2e-spec.ts`). Los dos archivos de configuración ya existen: cambia en `vitest.config.e2e.ts` el `include` de `['**/*.e2e-spec.ts']` a `['test/{integration,e2e}/**/*.spec.ts']`, y en `vitest.config.ts` el de `['**/*.spec.ts']` a `['test/unit/**/*.spec.ts']`, para que `pnpm test` no necesite Docker. Con el segundo cambio, `pnpm test` ya no ve `src/app.controller.spec.ts`; ese test se elimina junto con `AppController`.
+En e2e se llama a `app.get(OutboxRelay).runOnce()` directamente, en vez de esperar al intervalo. Usa `import request from 'supertest'` (import por defecto, como ya hace `test/app.e2e-spec.ts`). Los dos archivos de configuración ya están hechos: `vitest.config.ts` incluye solo `test/unit/**/*.spec.ts`, así que `pnpm test` no necesita Docker, y `vitest.config.e2e.ts` incluye `test/{integration,e2e}/**/*.spec.ts` y añade tres cosas:
+
+- **`globalSetup`** (`test/support/global-setup.ts`): levanta `postgres:18` con Testcontainers, aplica `prisma migrate deploy` y define `DB_*`, que tienen prioridad sobre `.env`. Así los tests no dependen de la base de desarrollo.
+- **`fileParallelism: false`:** todos los archivos comparten ese contenedor y vacían las tablas antes de sus tests (`resetDatabase()`), así que no pueden correr a la vez.
+- **Guardián:** `resetDatabase()` solo opera si el `globalSetup` marcó la base como suya (`INTEGRATION_DB_CONTAINER`); no puede vaciar la base de desarrollo.

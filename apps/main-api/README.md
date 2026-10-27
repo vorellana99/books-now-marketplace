@@ -9,7 +9,7 @@ Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [
 - Node.js 24 LTS (≥ 24.15), fijado en `engines` de `package.json`
 - pnpm
 - PostgreSQL **18**, con Docker o instalado en tu máquina. No sirve una versión anterior: el Outbox usa `uuidv7()`.
-- Docker (solo si eliges esa opción de base de datos)
+- Docker: para la base de desarrollo si eliges esa opción, y siempre para `pnpm run test:e2e` (levanta su propio PostgreSQL)
 
 ## Primer arranque
 
@@ -31,7 +31,7 @@ Compruébalo en <http://localhost:3000/health/ready> (debe responder 200) y en <
 Se leen del archivo `.env` (no se sube al repositorio; la plantilla es `.env.example`). Una variable definida en el terminal tiene prioridad sobre `.env`:
 
 ```bash
-DB_NAME=libroya_test pnpm run test:e2e
+PORT=4000 pnpm run start:dev
 ```
 
 La app valida las variables al arrancar y, si alguna es inválida, no inicia y dice cuál.
@@ -117,21 +117,9 @@ psql "postgresql://libroya:tu_contraseña@localhost:5432/libroya" -c "select ver
 
 Debe mostrar `PostgreSQL 18.x`. Si muestra otra versión, esa no sirve.
 
-### Base de datos aparte para las pruebas
+### Base de datos para las pruebas
 
-Los tests e2e usan las variables `DB_*`. Hoy solo leen, pero conviene tener una base de pruebas separada para no mezclar datos con los de desarrollo:
-
-```sql
-CREATE DATABASE libroya_test OWNER libroya;
-```
-
-```bash
-export DB_NAME=libroya_test   # el resto de variables salen de .env
-pnpm run db:deploy        # aplica las migraciones en la base de pruebas
-pnpm run test:e2e
-```
-
-Con Docker, la base se crea con `docker compose exec db psql -U libroya -d libroya -c "CREATE DATABASE libroya_test OWNER libroya"`.
+No tienes que preparar nada: `pnpm run test:e2e` levanta su propio PostgreSQL 18 en un contenedor (Testcontainers), aplica las migraciones y lo elimina al terminar. **No toca tu base de desarrollo**, ni siquiera si `.env` apunta a ella. Solo necesita Docker en marcha.
 
 ## Migraciones
 
@@ -176,11 +164,11 @@ Hay dos tipos, y solo uno necesita base de datos:
 | Comando | Qué prueba | ¿Necesita la BD? |
 |---|---|---|
 | `pnpm test` | Unitarios: configuración, contexto de petición, filtro de errores (`test/unit/`) | No |
-| `pnpm run test:e2e` | e2e e integración: arranca la app completa contra PostgreSQL real (`test/e2e/`, `test/integration/`) | **Sí**: base levantada, migraciones aplicadas y variables `DB_*` definidas |
+| `pnpm run test:e2e` | e2e e integración: arranca la app completa contra PostgreSQL real (`test/e2e/`, `test/integration/`) | No usa la tuya: levanta su propio PostgreSQL 18 en un contenedor, así que **necesita Docker en marcha** |
 
 ```bash
 pnpm test                                        # unitarios
-pnpm run test:e2e                                # e2e (levanta antes la base: pnpm run db:up)
+pnpm run test:e2e                                # e2e e integración (levantan su propio PostgreSQL; requiere Docker)
 pnpm run test:watch                              # unitarios en modo observación
 pnpm run test:cov                                # unitarios con cobertura
 pnpm exec vitest run test/unit/env.schema.spec.ts   # un solo archivo
@@ -189,7 +177,8 @@ pnpm exec vitest run -t "texto del test"             # un test por nombre
 
 - Los dos comandos generan el cliente de Prisma antes de ejecutarse.
 - Los tests viven en `test/`, no junto al código: `unit/` para los unitarios, y `integration/` y `e2e/` para los que usan la base de datos.
-- Los tests de integración de los siguientes cortes arrancarán su propio PostgreSQL con Testcontainers (necesitan Docker en marcha).
+- Los archivos de `integration/` y `e2e/` se ejecutan uno tras otro, porque comparten el contenedor. Cada archivo vacía las tablas antes de sus tests con `resetDatabase()` (`test/support/database.ts`), que solo funciona sobre ese contenedor.
+- La primera ejecución descarga la imagen `postgres:18` si no la tienes.
 
 ## Calidad de código
 
@@ -200,7 +189,7 @@ pnpm run format:check     # comprueba el formato sin modificar nada
 pnpm run build            # compila con tipos estrictos
 ```
 
-Antes de subir cambios, con la base levantada (`pnpm run db:up`), conviene correr todo de una vez:
+Antes de subir cambios, con Docker en marcha, conviene correr todo de una vez:
 
 ```bash
 pnpm lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:e2e
@@ -230,6 +219,7 @@ El workflow [`.github/workflows/main-api.yml`](../../.github/workflows/main-api.
 
 | Síntoma | Causa y solución |
 |---|---|
+| `No se pudo iniciar PostgreSQL en un contenedor` al correr `test:e2e` | Docker no está en marcha. Compruébalo con `docker info`. `pnpm test` (unitarios) funciona sin Docker |
 | `function uuidv7() does not exist` al migrar | La base no es PostgreSQL 18 |
 | `P3014: Prisma Migrate could not create the shadow database` | El usuario no tiene `CREATEDB`: `ALTER ROLE libroya CREATEDB;` |
 | `permission denied for schema public` al migrar | El usuario no es dueño de la base: `ALTER DATABASE libroya OWNER TO libroya;` |

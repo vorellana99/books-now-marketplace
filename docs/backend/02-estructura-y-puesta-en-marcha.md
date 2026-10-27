@@ -178,7 +178,9 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
     │   ├── fixed-catalog.ts
     │   └── fixtures.ts                                     ISBN, fixedCatalog(), customersWithPremium()
     ├── support/
-    │   └── architecture.ts                                 reglas de dependencias entre capas
+    │   ├── architecture.ts                                 reglas de dependencias entre capas
+    │   ├── global-setup.ts                                 postgres:18 con Testcontainers para integration/ y e2e/
+    │   └── database.ts                                     query(), resetDatabase() y su guardián
     ├── unit/
     │   ├── money.vo.spec.ts
     │   ├── order.aggregate.spec.ts
