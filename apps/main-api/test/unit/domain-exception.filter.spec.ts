@@ -1,4 +1,8 @@
 import { ArgumentsHost } from '@nestjs/common';
+import {
+  OutOfStockError,
+  StockItemNotFoundError,
+} from '../../src/contracts/inventory/stock.errors.js';
 import { DomainExceptionFilter } from '../../src/platform/http/domain-exception.filter.js';
 import {
   ConflictError,
@@ -36,5 +40,20 @@ describe('DomainExceptionFilter', () => {
     expect(
       respond(new ConflictError('CHECKOUT_IN_PROGRESS', 'en curso')).status,
     ).toBe(409);
+  });
+
+  it('OutOfStockError (de Inventario) → 422 OUT_OF_STOCK', () => {
+    const { status, body } = respond(new OutOfStockError('9780306406157'));
+    expect(status).toBe(422);
+    expect(body).toMatchObject({ errorCode: 'OUT_OF_STOCK' });
+    expect(body.message).toContain('9780306406157');
+  });
+
+  it('StockItemNotFoundError → 422 (no 404: el libro existe en Catálogo)', () => {
+    const { status, body } = respond(
+      new StockItemNotFoundError('9780306406157'),
+    );
+    expect(status).toBe(422);
+    expect(body.errorCode).toBe('STOCK_ITEM_NOT_FOUND');
   });
 });

@@ -159,8 +159,10 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   ├── application/stock/
 │       │   │   └── add-stock.command.ts                    (fase 13)
 │       │   └── infrastructure/stock/                       todos usan Prisma directo
-│       │       ├── reserve-stock.handler.ts
-│       │       ├── release-stock.handler.ts
+│       │       ├── reserve-stock.handler.ts                ✅ hecho (corte 3)
+│       │       ├── release-stock.handler.ts                ✅ hecho (corte 3)
+│       │       ├── lock-order.ts                           sortByIsbn: el orden de bloqueo de reservar y liberar
+│       │       ├── order-id.ts                             assertOrderId: el orderId debe ser un UUID
 │       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox
 │       │       ├── create-stock-item.consumer.ts           (fase 12) consumidor `db`
 │       │       ├── admin-stock.controller.ts               (fase 13) guard en la clase

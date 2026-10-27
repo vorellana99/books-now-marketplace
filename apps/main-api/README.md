@@ -158,6 +158,19 @@ Carga clientes, libros y stock para probar la API a mano (usa las variables `DB_
 | ana@example.com | `11111111-1111-4111-8111-111111111111` | Normal |
 | luis@example.com | `22222222-2222-4222-8222-222222222222` | Premium (10 % de descuento y envío gratis) |
 
+### Probar el catálogo
+
+Con la API en marcha (`pnpm run start:dev`) y los datos de ejemplo cargados:
+
+```bash
+curl http://localhost:3000/books/9780132350884       # 200: { isbn, title, author, price: { amount, currency } }
+curl http://localhost:3000/books/978-0-13-235088-4   # el ISBN también se acepta con guiones
+curl http://localhost:3000/books/9780201633610       # 404 NOT_FOUND: libro inactivo
+curl http://localhost:3000/books/123                 # 422 INVALID_ISBN
+```
+
+La reserva y la liberación de stock aún no tienen endpoint: las usará Ventas por dentro cuando exista (corte 5).
+
 ## Levantar la API
 
 ```bash

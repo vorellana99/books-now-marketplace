@@ -4,6 +4,7 @@ import { posix } from 'node:path';
 //  - sales/domain:  solo decimal.js y node:*; puede usar shared-kernel, contracts y su propio domain
 //  - contracts:     solo @nestjs/cqrs y node:*; puede usar shared-kernel y otros contracts
 //  - shared-kernel: solo node:*; no depende de nada del proyecto
+//  - application/: puede usar Nest, pero no Prisma; las operaciones con la transacción van en infrastructure/
 //  - un contexto no importa el código de otro: se hablan por contracts/
 
 const DOMAIN_LIBRARIES = ['decimal.js'];
@@ -63,6 +64,12 @@ function reasonToReject(
 ): string | undefined {
   if (isBare(spec)) {
     if (
+      layer === 'application' &&
+      (spec === 'prisma' || spec.startsWith('@prisma/'))
+    ) {
+      return 'application no puede usar Prisma; ponlo en infrastructure/';
+    }
+    if (
       layer === 'domain' &&
       !isNode(spec) &&
       !DOMAIN_LIBRARIES.includes(spec)
@@ -84,6 +91,10 @@ function reasonToReject(
 
   const target = posix.normalize(posix.join(posix.dirname(file), spec));
   const targetZone = zoneOf(target);
+
+  if (layer === 'application' && target.startsWith('src/platform/prisma/')) {
+    return 'application no puede usar Prisma; ponlo en infrastructure/';
+  }
 
   if (layer === 'domain') {
     const allowed = ['shared-kernel', 'contracts', `${context}/domain`];

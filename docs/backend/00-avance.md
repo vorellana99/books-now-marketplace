@@ -13,7 +13,7 @@ Los cortes 0 a 3 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 0 | Scaffold del proyecto | 0 | ✅ | `feature/initial` | — |
 | 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
-| 3 | Catálogo e Inventario | 4–5 | 🔄 | `feature/corte-3-catalogo-inventario` | — |
+| 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ⬜ | — | — |
 | 5 | Compra completa | 7–9 | ⬜ | — | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
@@ -120,7 +120,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 3: Catálogo e Inventario 🔄
+## Corte 3: Catálogo e Inventario ✅
 
 **Guía:** [05-piezas-clave](05-piezas-clave.md) · [03-base-de-datos](03-base-de-datos.md) · [06-tests](06-tests.md)
 
@@ -138,9 +138,9 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 6 | Inventario: `ReserveStockHandler` | Reservar todas las líneas o ninguna, con una actualización condicional, y rechazo de entradas inválidas | Que el stock nunca quede en negativo | ✅ |
 | 7 | Inventario: `ReleaseStockHandler` | Devolver el stock de un pedido, de forma idempotente | Que compensar la saga no devuelva stock de más | ✅ |
 | 8 | Concurrencia sin interbloqueo | Tests con pedidos simultáneos que reservan los mismos libros en orden inverso | Demostrar que el bloqueo por orden de ISBN evita los interbloqueos | ✅ |
-| 9 | Cableado y cierre | `InventoryModule` en `AppModule`, prueba a través del `CommandBus` y el `QueryBus`, regla de dependencias para `application/` y guía al día | Cerrar el corte con los criterios "listo cuando" cumplidos de verdad | ⬜ |
+| 9 | Cableado y cierre | `InventoryModule` en `AppModule`, prueba a través del `CommandBus` y el `QueryBus`, regla de dependencias para `application/` y guía al día | Cerrar el corte con los criterios "listo cuando" cumplidos de verdad | ✅ |
 
-**Decisiones por confirmar** (con la opción propuesta; ninguna bloquea el inicio):
+**Decisiones** (se aplicó la opción propuesta en las cinco; si alguna no convence, cambiarla es una tarea pequeña):
 
 1. **Base de los tests de integración:** Testcontainers (como pide la guía), no la base de desarrollo. El servicio `postgres` del workflow pasa a sobrar y se quita en la tarea 2.
 2. **Aislamiento entre archivos de test:** un solo contenedor con los archivos de integración ejecutados uno tras otro (simple y suficiente con pocos archivos). La alternativa, una base por archivo, es más rápida pero más compleja.
@@ -159,7 +159,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] 3.6 `ReserveStockHandler`. Se comprueba: reserva correcta; sin stock da `OutOfStockError` y no cambia nada, ni las líneas anteriores; un libro sin registro da `StockItemNotFoundError`; sin líneas, ISBN repetido o cantidad menor a 1 dan un error de dominio y no el de la base
 - [x] 3.7 `ReleaseStockHandler`. Se comprueba: liberar dos veces (también en simultáneo) devuelve el stock una sola vez; un pedido sin reserva no hace nada
 - [x] 3.8 Tests de `stock.handlers`: dos pedidos con los mismos libros en orden inverso reservan a la vez sin interbloqueo. Se comprueba: muchas rondas sin error, y quitar el orden de ISBN hace fallar el test
-- [ ] 3.9 `InventoryModule` y `CatalogModule` en `AppModule`, prueba por el bus, regla de dependencias de `application/` sin Prisma (hoy sin código que revisar: se prueba con archivos de ejemplo) y guía al día. Se comprueba: `GET /books/:isbn` responde y reservar sin stock lanza `OutOfStockError`
+- [x] 3.9 `InventoryModule` y `CatalogModule` en `AppModule`, prueba por el bus, regla de dependencias de `application/` sin Prisma (hoy sin código que revisar: se prueba con archivos de ejemplo) y guía al día. Se comprueba: `GET /books/:isbn` responde y reservar sin stock lanza `OutOfStockError`
 
 ---
 
@@ -246,6 +246,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 3 | `ReserveStockHandler` valida las entradas antes de abrir la transacción (`EMPTY_RESERVATION`, `DUPLICATE_RESERVATION_LINE`, `INVALID_QUANTITY`) y rechaza reservar dos veces el mismo pedido con `ConflictError` `ORDER_ALREADY_RESERVED` (decisión 4), tanto por una comprobación previa como al traducir la clave duplicada `P2002`. El orden de bloqueo vive en `lock-order.ts` (`sortByIsbn`) y compara texto simple en vez de `localeCompare` | Los errores crudos de la base (`CHECK`, clave duplicada) no deben llegar al cliente. Un orden que dependiera del idioma del sistema podría diferir entre instancias y reintroducir interbloqueos. Queda sin cubrir la carrera de dos reservas del mismo pedido con ISBN distintos a la vez |
 | 2026-10-27 | 3 | La reserva y la liberación validan que el `orderId` sea un UUID (`INVALID_ORDER_ID`). La liberación solo toca reservas `HELD`, devuelve el stock con `DELETE … RETURNING` en una transacción y, si una línea no se puede devolver, no libera ninguna | Un texto cualquiera en una columna `uuid` llegaba como error crudo de la base; la validación se añadió también al reservar de la 3.6. Dejar una reserva sin liberar es mejor que liberarla a medias: la recuperación de checkouts puede reintentarla |
 | 2026-10-27 | 3 | Los tests de interbloqueo usan `slowDownStockUpdates(ms)` (`test/support/database.ts`): un disparador de prueba que retrasa cada actualización de stock para que dos transacciones en orden distinto se crucen siempre. `resetDatabase()` lo quita si un test lo dejó puesto | Sin el retardo, operaciones de milisegundos casi nunca coinciden y la prueba pasaría aunque el orden de bloqueo estuviera mal. Con él, quitar el orden de `reserve`, de `release` o del helper compartido hace fallar los tests con interbloqueos reales de PostgreSQL |
+| 2026-10-27 | 3 | `InventoryModule` y `CatalogModule` están en `AppModule`; antes los comandos de Inventario no tenían quién los atendiera en la aplicación real. La regla de dependencias suma que `application/` no usa Prisma (`@prisma/*` ni `platform/prisma`), aunque hoy ningún contexto tiene código ahí | Cierra el corte 3. La regla se probó añadiendo archivos de prueba con imports prohibidos en los contextos reales |
 
 ## Problemas abiertos
 
@@ -288,3 +289,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 3, tarea 6 (3.6): `ReserveStockHandler` e `InventoryModule`. Reserva todas las líneas o ninguna; sin stock da `OutOfStockError` sin cambiar nada, un libro sin registro da `StockItemNotFoundError`. 23 tests nuevos (21 de integración por el `CommandBus`, con pedidos simultáneos, y 2 unitarios de la carrera `P2002`). Hoy 254 unitarios y 62 de integración y e2e pasan |
 | 2026-10-27 | Corte 3, tarea 7 (3.7): `ReleaseStockHandler`. Liberar dos veces, también en simultáneo, devuelve el stock una sola vez; un pedido sin reserva no hace nada; no toca reservas `CONFIRMED`. 13 tests nuevos de integración y validación del `orderId` también al reservar. Al añadir esa validación fallaron 2 tests unitarios de la 3.6 (usaban `'o-1'` como `orderId`) y se corrigieron. Hoy 254 unitarios y 75 de integración y e2e pasan |
 | 2026-10-27 | Corte 3, tarea 8 (3.8): tests de `stock.handlers`. Dos pedidos con los mismos libros en orden inverso reservan a la vez, varias rondas de pedidos cruzados, liberaciones cruzadas, reservar y liberar a la vez, y conservación del stock total. 7 tests nuevos. Se comprobó que fallan, con interbloqueos reales, si se quita el orden de bloqueo en `reserve`, en `release` o en el helper, o si cada uno ordena distinto; y que son estables (6 ejecuciones seguidas sin fallos). Hoy 254 unitarios y 82 de integración y e2e pasan |
+| 2026-10-27 | Corte 3, tarea 9 (3.9): cableado y cierre. 7 tests e2e por los buses con la aplicación completa, 4 de la regla de `application/` y 2 del filtro HTTP con los errores de stock. **Corte 3 terminado:** `GET /books/:isbn` responde (e2e y `curl` real); reservar sin stock lanza `OutOfStockError` y no cambia nada; los tests contra PostgreSQL real pasan (Testcontainers); la simulación completa del CI en una copia limpia pasa (lint, formato, build, 261 unitarios, 89 de integración y e2e, auditoría). Hoy 261 unitarios y 89 de integración y e2e |
