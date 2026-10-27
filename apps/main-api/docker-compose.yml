@@ -1,12 +1,15 @@
 services:
   db:
     image: postgres:18
-    environment: { POSTGRES_USER: libroya, POSTGRES_PASSWORD: libroya, POSTGRES_DB: libroya }
-    ports: ["5433:5432"]   # puerto 5433 en tu máquina (5432 dentro del contenedor)
+    environment:
+      POSTGRES_USER: ${DB_USER:-libroya}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en .env}
+      POSTGRES_DB: ${DB_NAME:-libroya}
+    ports: ["${DB_PORT:-5433}:5432"]   # puerto 5433 en tu máquina (5432 dentro del contenedor)
     volumes:
       - pgdata:/var/lib/postgresql   # desde la v18 el volumen va aquí, no en /var/lib/postgresql/data
     healthcheck:                     # permite `docker compose up --wait`
-      test: ["CMD-SHELL", "pg_isready -U libroya -d libroya"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 2s
       timeout: 3s
       retries: 15
