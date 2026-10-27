@@ -98,7 +98,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 1 | `Isbn` y `DomainEvent` | El identificador del libro y la forma base de un evento | Que un ISBN inválido no pueda existir en el sistema | ✅ |
 | 2 | `contracts/` | Los mensajes públicos que se envían entre Ventas, Catálogo e Inventario | Que los contextos hablen sin importar el código interno del otro | ✅ |
 | 3 | `Money` y `Specification` | El dinero exacto (decimal.js) y la base de las reglas combinables | Que los totales no tengan errores de redondeo | ✅ |
-| 4 | `Order`, `OrderLine` y `OrderFactory` | El pedido y sus líneas | Reglas de pedido: máximo 10 por libro, una sola moneda, líneas repetidas sumadas | ⬜ |
+| 4 | `Order`, `OrderLine` y `OrderFactory` | El pedido y sus líneas | Reglas de pedido: máximo 10 por libro, una sola moneda, líneas repetidas sumadas | ✅ |
 | 5 | `Customer` y `Email` | El cliente y su correo | Saber si el cliente es premium | ⬜ |
 | 6 | `PricingService` y las specifications | El cálculo del total | Descuento, envío y total: S/ 110, 160, 90 y 180 de la tabla del producto | ⬜ |
 | 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ⬜ |
@@ -108,7 +108,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
 - [x] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
 - [x] `sales/domain/shared/`: `money.vo.ts` (decimal.js) y `specification.ts`
-- [ ] `sales/domain/order/`: agregado `Order`, `OrderLine`, `OrderFactory`
+- [x] `sales/domain/order/`: agregado `Order`, `OrderLine`, `OrderFactory`
 - [ ] `sales/domain/customer/`: agregado `Customer`, `email.vo.ts`
 - [ ] `sales/domain/pricing/`: `PricingService`, `PricingContext` y las specifications
 - [ ] Puertos como `abstract class`: `OrderRepository`, `CheckoutLog`, `CatalogPricing`, `StockReservation`, `Notifier`, `PaymentGateway`, `CustomerRepository`
@@ -202,6 +202,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 1 | `pnpm-workspace.yaml` fuerza `multer` a `>=2.5.0 <3` con `overrides` | `pnpm audit` marcaba una vulnerabilidad alta (GHSA-q7qp-rjg7-q26m). `@nestjs/platform-express` 12.3.2 ya exige 2.5.0, pero salió hoy y pnpm bloquea versiones tan recientes. Quitar el override cuando se pueda actualizar |
 | 2026-10-27 | 2 | Los comandos y la query de `contracts/` extienden `Command<T>` y `Query<T>` de `@nestjs/cqrs`, y `GetBookPriceQuery` declara su propio `CurrencyCode` en vez de importar `Currency` de Ventas | Así el bus infiere el tipo de la respuesta, y un contrato no puede depender del código interno de ningún contexto |
 | 2026-10-27 | 2 | `money.vo.ts` importa `{ Decimal }` de `decimal.js` (con nombre) en vez de `import Decimal from …`. Además `Money.of` rechaza textos que no son un número finito (`INVALID_AMOUNT`) y `add` / `multiply` pasan por `Money.of`, así que un resultado negativo falla | Con `module: nodenext` el import por defecto no tiene tipos y `tsc` falla. Los otros dos cambios mantienen la invariante "un `Money` nunca es negativo ni inválido" |
+| 2026-10-27 | 2 | El pedido nace en estado `DRAFT` y pasa a `PLACED` con `place()`. Reglas con código propio: `INVALID_QUANTITY`, `MAX_QUANTITY_EXCEEDED` (10 por libro, sumando líneas repetidas), `CURRENCY_MISMATCH`, `EMPTY_ORDER`, `ORDER_ALREADY_PLACED` y `PRICE_MISMATCH`. `PricedCartItem` vive en `order.factory.ts` | La guía v5 no incluye el código del agregado. `PRICE_MISMATCH` es una regla añadida: el mismo libro con dos precios en un carrito (por ejemplo, si el precio cambia entre dos consultas al catálogo) falla en vez de cobrar con un precio arbitrario. Los códigos se listan en `api-contrato.md` |
 
 ## Problemas abiertos
 
@@ -226,3 +227,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 2: `contracts/` con `OrderPlacedEvent` (v1, `aggregateId` real y montos en texto), `GetBookPriceQuery`, `ReserveStockCommand`, `ReleaseStockCommand` y `OutOfStockError` / `StockItemNotFoundError`. Solo dependen de `shared-kernel` y `@nestjs/cqrs`. 8 tests nuevos; hoy 39 unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 3: `Money` (decimal.js; `toFinal` redondea mitad hacia arriba, `Money.of('1.005').toFinal()` da `"1.01"`) y la base `Specification` con `and` / `or` / `not`. 33 tests nuevos; hoy 72 unitarios y 7 e2e pasan |
 | 2026-10-27 | Se añade a los cortes 0, 1 y 2 un cuadro de tareas con "qué es" y "objetivo principal" |
+| 2026-10-27 | Corte 2, tarea 4: `Order` (`addBook`, `subtotal`, `place`, `pullEvents`), `OrderLine` y `OrderFactory.fromCart`. Validan antes de modificar, así que un rechazo deja el pedido intacto; el subtotal conserva toda la precisión y `place()` lo redondea una vez en el evento. 34 tests nuevos; hoy 106 unitarios y 7 e2e pasan |

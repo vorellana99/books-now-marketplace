@@ -16,6 +16,8 @@
 
 **Un pedido tiene una sola moneda.** Si el carrito mezcla libros en monedas distintas, `POST /orders` responde `422 CURRENCY_MISMATCH`.
 
+**Reglas del pedido que `POST /orders` responde con `422`:** `INVALID_ISBN` (ISBN mal formado), `INVALID_QUANTITY` (la cantidad no es un entero ≥ 1), `MAX_QUANTITY_EXCEEDED` (más de 10 unidades del mismo libro, sumando líneas repetidas), `EMPTY_ORDER` (carrito sin libros) y `PRICE_MISMATCH` (el mismo libro con dos precios distintos).
+
 **Todas las respuestas incluyen el header `X-Request-Id`.** Si la petición lo trae (con formato válido), se devuelve el mismo; si no, uno generado.
 
 **Formato de los montos:** todo monto en la API es un objeto con **texto de 2 decimales y moneda**: `{ "amount": "45.00", "currency": "PEN" }`. Vale para `charged`, `unitPrice` y `price`, así que un libro se ve igual en `GET /books/:isbn` y en la línea del pedido. Punto como separador decimal, sin separador de miles. En `GET /orders/:id`, `unitPrice` (escala 6 en la BD) se muestra con 2 decimales; el valor completo queda en la BD para la facturación.
