@@ -67,7 +67,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 **Listo cuando:** `contracts/` no importa nada de `contexts/`, y las invariantes del dominio tienen tests unitarios que pasan, sin base de datos.
 
 - [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
-- [ ] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
+- [x] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
 - [ ] `sales/domain/shared/`: `money.vo.ts` (decimal.js) y `specification.ts`
 - [ ] `sales/domain/order/`: agregado `Order`, `OrderLine`, `OrderFactory`
 - [ ] `sales/domain/customer/`: agregado `Customer`, `email.vo.ts`
@@ -161,6 +161,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 1 | `RequestAwareLogger` escribe JSON solo con `NODE_ENV=production`; en desarrollo usa texto con colores y el `requestId` como prefijo `[id]` | Los logs JSON eran difíciles de leer en el terminal. En producción siguen siendo JSON para las herramientas de logs |
 | 2026-10-27 | 1 | Al arrancar fuera de producción se imprime un banner con las URLs (API, `/docs`, `/health/ready`), el entorno y la base (`startup-banner.ts`). En producción se emite un log JSON equivalente | Ver de un vistazo dónde quedó escuchando la API y con qué configuración |
 | 2026-10-27 | 1 | `pnpm-workspace.yaml` fuerza `multer` a `>=2.5.0 <3` con `overrides` | `pnpm audit` marcaba una vulnerabilidad alta (GHSA-q7qp-rjg7-q26m). `@nestjs/platform-express` 12.3.2 ya exige 2.5.0, pero salió hoy y pnpm bloquea versiones tan recientes. Quitar el override cuando se pueda actualizar |
+| 2026-10-27 | 2 | Los comandos y la query de `contracts/` extienden `Command<T>` y `Query<T>` de `@nestjs/cqrs`, y `GetBookPriceQuery` declara su propio `CurrencyCode` en vez de importar `Currency` de Ventas | Así el bus infiere el tipo de la respuesta, y un contrato no puede depender del código interno de ningún contexto |
 
 ## Problemas abiertos
 
@@ -182,3 +183,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Se añade el workflow de CI `.github/workflows/main-api.yml` (Node 24, pnpm 12.15, `postgres:18`): `prisma generate`, lint, formato, build, tests unitarios, `migrate deploy` y e2e, más un job `pnpm audit --prod` que falla con vulnerabilidades altas. Nuevo script `format:check`. Sus pasos se ejecutaron en local sobre una copia limpia con una base nueva y pasan; la primera ejecución real en GitHub sigue pendiente |
 | 2026-10-27 | Tests nuevos del corte 1: `/health/ready` responde 503 con la BD caída (y `live` sigue en 200), el logger en modo texto antepone el `requestId`, el interceptor abre el contexto con el `requestId` y el banner de arranque. Se comprobó que cada uno falla al romper el código que protege. Hoy: 20 tests unitarios y 7 e2e pasan |
 | 2026-10-27 | Corte 2, tarea 1: `shared-kernel/isbn.vo.ts` (`Isbn.create` normaliza guiones y espacios, y valida 13 dígitos y el dígito de control; error `INVALID_ISBN`) y `domain-event.ts`. 11 tests nuevos; hoy 31 unitarios y 7 e2e pasan |
+| 2026-10-27 | Corte 2, tarea 2: `contracts/` con `OrderPlacedEvent` (v1, `aggregateId` real y montos en texto), `GetBookPriceQuery`, `ReserveStockCommand`, `ReleaseStockCommand` y `OutOfStockError` / `StockItemNotFoundError`. Solo dependen de `shared-kernel` y `@nestjs/cqrs`. 8 tests nuevos; hoy 39 unitarios y 7 e2e pasan |
