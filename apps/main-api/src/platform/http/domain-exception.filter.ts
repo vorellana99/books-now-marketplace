@@ -14,14 +14,10 @@ export class DomainExceptionFilter implements ExceptionFilter {
         : error instanceof ConflictError
           ? 409
           : 422;
-    host
-      .switchToHttp()
-      .getResponse()
-      .status(status)
-      .json({
-        statusCode: status,
-        errorCode: error.code,
-        message: error.message,
-      });
+    host.switchToHttp().getResponse().status(status).json({
+      statusCode: status,
+      errorCode: error.code,
+      message: error.message,
+    });
   }
 }
