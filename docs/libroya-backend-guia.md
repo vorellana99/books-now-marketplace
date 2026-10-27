@@ -32,6 +32,7 @@ La guía se divide por audiencia: lo que comparten backend y frontend vive en `d
 |---|---|---|
 | [producto.md](producto.md) | Qué es LibroYa, actores, recorrido de compra, reglas del negocio y glosario | Todos |
 | [api-contrato.md](api-contrato.md) | Endpoints, respuestas, errores y formato de montos | Backend y frontend |
+| [backend/00-avance.md](backend/00-avance.md) | **Control de avance** de la implementación, por cortes, con tareas, desvíos de la guía y bitácora | Backend |
 | [backend/01-decisiones-y-stack.md](backend/01-decisiones-y-stack.md) | Decisiones, stack y versiones · arquitectura, módulos y reglas de dependencia | Backend |
 | [backend/02-estructura-y-puesta-en-marcha.md](backend/02-estructura-y-puesta-en-marcha.md) | Estructura de carpetas · instalación, scripts, Docker y `.env` | Backend |
 | [backend/03-base-de-datos.md](backend/03-base-de-datos.md) | Esquema con Prisma 7, montos, relaciones y transacciones | Backend |
