@@ -167,8 +167,8 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | Fecha | Corte | Problema | Estado |
 |---|---|---|---|
 | 2026-10-27 | 3 | Docker en el entorno en la nube: el daemon no está activo por defecto. Se levanta con `dockerd` en segundo plano y `postgres:18` se descarga bien. Falta comprobar Testcontainers | Docker ✅ · Testcontainers pendiente (corte 3) |
-| 2026-10-27 | 1 | El entorno en la nube tenía Node 22.22 (en local es 24.21); la guía pide Node 24 LTS (≥ 24.15). `engines` ya exige `>=24.15`; falta fijar la versión de CI en 24 cuando exista el workflow | Parcial: `engines` ✅ · CI pendiente |
-| 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas; no hay aún workflow de CI | Abierto |
+| 2026-10-27 | 1 | El entorno en la nube tenía Node 22.22 (en local es 24.21); la guía pide Node 24 LTS (≥ 24.15). `engines` exige `>=24.15` y el workflow de CI usa Node 24 | ✅ Resuelto |
+| 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas. El workflow `.github/workflows/main-api.yml` ya lo hace: levanta `postgres:18`, aplica las migraciones y corre los e2e. Falta ver su primera ejecución en GitHub | Parcial: workflow escrito, sin ejecutar en GitHub |
 
 ## Bitácora
 
@@ -179,3 +179,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | **Corte 1 terminado.** Dependencias, `docker-compose.yml` (PostgreSQL 18), schema Prisma con migración `init` (4 schemas, 9 tablas, `uuidv7()` y `CHECK`), config con Zod, `PrismaService`, observabilidad (`X-Request-Id`), filtro de dominio, health `live`/`ready`, Swagger en `/docs`. Se elimina el "Hello World". `pnpm lint`, `pnpm test` (11 tests) y `pnpm run test:e2e` (5 tests, contra PostgreSQL 18) pasan; la app arranca y responde |
 | 2026-10-27 | Las variables `DB_*` reemplazan a `DATABASE_URL` (`database-url.ts` con tests, `docker-compose.yml` y READMEs). Banner de arranque y logs en texto con colores fuera de producción. Se corrigen la vulnerabilidad de `multer` (override en `pnpm-workspace.yaml`; `pnpm audit --prod` queda limpio) y el formato de `domain-exception.filter.ts`. Hoy: `pnpm lint` y `pnpm test` (16 tests) y `pnpm run test:e2e` (5 tests) pasan |
 | 2026-10-27 | Se fija `"engines": { "node": ">=24.15" }` en `package.json` y el README pasa de "Node 22 o superior" a Node 24 LTS (≥ 24.15), como pide la guía |
+| 2026-10-27 | Se añade el workflow de CI `.github/workflows/main-api.yml` (Node 24, pnpm 12.15, `postgres:18`): `prisma generate`, lint, formato, build, tests unitarios, `migrate deploy` y e2e, más un job `pnpm audit --prod` que falla con vulnerabilidades altas. Nuevo script `format:check`. Sus pasos se ejecutaron en local sobre una copia limpia con una base nueva y pasan; la primera ejecución real en GitHub sigue pendiente |
