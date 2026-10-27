@@ -1,124 +1,90 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# main-api
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API de LibroYa (NestJS 12 + Prisma 7 + PostgreSQL 18). La documentación de diseño está en [`/docs`](../../docs/libroya-backend-guia.md).
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Requisitos
 
-## Description
+- Node.js 22 o superior (la guía recomienda 24 LTS)
+- pnpm
+- PostgreSQL **18** (con Docker o instalado en tu máquina). No sirve una versión anterior: el Outbox usa `uuidv7()`.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Primer arranque
 
 ```bash
-$ pnpm install
+cd apps/main-api
+pnpm install
+cp .env.example .env      # ajusta DATABASE_URL solo si tu base de datos no es la de Docker
 ```
 
-## Compile and run the project
+### 1. Base de datos
+
+Elige una de las dos opciones.
+
+**A. Con Docker** (no necesitas instalar nada más)
 
 ```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+pnpm run db:up            # levanta PostgreSQL 18 y espera a que esté listo
 ```
 
-## Run tests
+Crea el usuario, la contraseña y la base `libroya` (puerto `5432`), que coinciden con el `DATABASE_URL` de `.env.example`. Los datos se guardan en un volumen de Docker.
 
 ```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+docker compose down       # detiene la base y conserva los datos
+docker compose down -v    # detiene la base y BORRA los datos
 ```
 
-## Deployment
+**B. Con PostgreSQL local**
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+Con PostgreSQL 18 ya instalado, crea el usuario y la base:
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+```sql
+CREATE ROLE libroya LOGIN PASSWORD 'libroya' CREATEDB;
+CREATE DATABASE libroya OWNER libroya;
+```
+
+`CREATEDB` es necesario: `prisma migrate dev` crea una base temporal ("shadow") para comparar migraciones. Si usas otro usuario, contraseña, base o puerto, cámbialos en `DATABASE_URL` dentro de `.env`:
+
+```env
+DATABASE_URL=postgresql://USUARIO:CONTRASEÑA@localhost:5432/NOMBRE_BD
+```
+
+No hace falta crear schemas ni tablas a mano: la migración crea los schemas `sales`, `catalog`, `inventory` y `messaging`.
+
+### 2. Migraciones
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+pnpm exec prisma migrate dev     # aplica las migraciones y genera el cliente de Prisma
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Hazlo la primera vez, y cada vez que cambie `prisma/schema.prisma` o llegue una migración nueva (`git pull`). En un servidor (no en desarrollo) se usa `pnpm run db:deploy`, que solo aplica migraciones sin crear nuevas.
 
-## Observability
-
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
-
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
-
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
-
-To add it to this project:
+### 3. Levantar la API
 
 ```bash
-$ pnpm install @nestjs/observe
+pnpm run start:dev
 ```
 
-Then follow the [setup guide](https://docs.nestjs.com/observability/overview) - it takes a single import and an app key.
+- Estado de la API y la base: <http://localhost:3000/health/ready>
+- Documentación Swagger: <http://localhost:3000/docs>
 
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
+## Comandos útiles
 
-## Resources
+| Comando | Para qué |
+|---|---|
+| `pnpm run start:dev` | API en modo desarrollo, con recarga |
+| `pnpm test` | Tests unitarios (no necesitan base de datos) |
+| `pnpm run test:e2e` | Tests e2e y de integración (necesitan la base de datos levantada) |
+| `pnpm lint` · `pnpm format` | Lint y formato |
+| `pnpm run prisma:generate` | Regenera el cliente de Prisma (se hace solo en `build` y `test`) |
+| `pnpm run db:up` | Levanta PostgreSQL con Docker |
 
-Check out a few resources that may come in handy when working with NestJS:
+## Problemas frecuentes
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+| Síntoma | Causa y solución |
+|---|---|
+| `function uuidv7() does not exist` al migrar | La base no es PostgreSQL 18 |
+| `/health/ready` responde 503, o `ECONNREFUSED` | La base no está levantada, o `DATABASE_URL` no coincide con ella |
+| `port is already allocated` al hacer `db:up` | Ya hay un PostgreSQL en el puerto 5432. Detenlo, o usa el local (opción B) |
+| `Cannot find module './generated/client.js'` | Falta generar el cliente: `pnpm run prisma:generate` |
+| `ERR_PNPM_IGNORED_BUILDS` al instalar | Actualiza el repo (`git pull`): `pnpm-workspace.yaml` ya permite los scripts necesarios |
+| `Cannot resolve environment variable: DATABASE_URL` | Falta el archivo `.env` (cópialo de `.env.example`) |
