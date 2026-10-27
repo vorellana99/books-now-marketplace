@@ -4,7 +4,7 @@
 
 **Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado
 
-Los cortes 0 a 3 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea de un corte en curso, se marca en las dos. Los commits de cada tarea llevan su número (`2.7`, `3.1`…).
+Los cortes 0 a 4 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea de un corte en curso, se marca en las dos. Los commits de cada tarea llevan su número (`2.7`, `3.1`…).
 
 ## Resumen
 
@@ -14,7 +14,7 @@ Los cortes 0 a 3 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
-| 4 | Outbox | 6 | ⬜ | — | — |
+| 4 | Outbox | 6 | ⬜ | `feature/corte-4-outbox` | — |
 | 5 | Compra completa | 7–9 | ⬜ | — | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
@@ -171,12 +171,37 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Listo cuando:** los tests de integración del Outbox pasan, incluido el del `correlationId`.
 
-- [ ] `outbox-consumer.ts`, `@OutboxHandler()` y `OutboxRegistry`
-- [ ] `OutboxWriter` (`append(tx, events)`)
-- [ ] `OutboxRelay` (SKIP LOCKED, fencing por `attempts`, orden por agregado)
-- [ ] `OutboxHealthIndicator` y `GET /health/outbox`
-- [ ] `OutboxModule` registrado en `AppModule`
-- [ ] Tests: entrega única con dos relays, `FAILED` tras agotar intentos, bloqueo vencido, consumidor `external` sin transacción, restauración de `correlationId`
+### Tareas
+
+| # | Tarea | Qué es | Objetivo principal | Estado |
+|---|---|---|---|---|
+| 1 | Consumidores y registro | `outbox-consumer.ts` (consumidor `db` y `external`), `@OutboxHandler()` y `OutboxRegistry` | Que el sistema sepa qué consumidores existen y a qué evento responde cada uno | ⬜ |
+| 2 | `OutboxWriter` | `append(tx, events)`: guarda el evento y una entrega por consumidor | Que el evento se guarde en la misma transacción que el pedido | ⬜ |
+| 3 | Relay: reclamar y entregar | `runOnce()`: reclama con `SKIP LOCKED`, entrega y marca `DONE`, con consumidores `db` y `external` | Que cada evento llegue a su consumidor y quede marcado | ⬜ |
+| 4 | Relay: fallos y reintentos | Retroceso exponencial, `last_error` y paso a `FAILED` | Que un consumidor que falla no se pierda ni bloquee a los demás | ⬜ |
+| 5 | Relay: concurrencia | `SKIP LOCKED`, bloqueo vencido y *fencing* por `attempts` | Que dos instancias no entreguen lo mismo y una lenta no pise a otra | ⬜ |
+| 6 | Ciclo de vida del relay | `tick()` con una vuelta a la vez, `isAlive()` y apagado ordenado | Que el relay corra solo, se sepa si está vivo y se detenga sin dejar entregas a medias | ⬜ |
+| 7 | Salud del Outbox | `OutboxHealthIndicator` y `GET /health/outbox` | Que monitoreo sepa si el relay sigue vivo y cuántas entregas fallan | ⬜ |
+| 8 | Cableado y cierre | `OutboxModule` en `AppModule`, prueba con el intervalo real, README operativo, CI y guía | Cerrar el corte con el "listo cuando" cumplido de verdad | ⬜ |
+
+**Decisiones** (se aplica la opción propuesta; si alguna no convence, se cambia antes de llegar a esa tarea):
+
+1. **Reloj de los reintentos:** el de la base de datos (`now()` en SQL), igual que el bloqueo, y no `Date.now()` de la aplicación como en la guía. Evita que un desfase entre relojes adelante o retrase un reintento.
+2. **Apagado ordenado:** al cerrar la app, el relay espera la vuelta en curso (con un tope). La guía no lo prevé; sin él, una entrega a medias queda bloqueada hasta que venza el bloqueo de 2 minutos.
+3. **Orden de entrega por id del evento (uuidv7), como la guía.** Límite conocido: dos transacciones del mismo pedido podrían confirmar en orden distinto al de sus ids. Hoy solo existe `OrderPlaced` (un evento por pedido), así que no afecta; se documenta.
+4. **`ScheduleModule` se queda en `AppModule`,** no dentro de `OutboxModule`, para que los tests construyan el relay sin intervalo y lo manejen a mano con `runOnce()` y `tick()`.
+5. **Un evento `FAILED` no frena los siguientes del mismo pedido y consumidor,** como en la guía.
+
+**Riesgos:** las pruebas de concurrencia pueden ser inestables, así que se hacen sin esperas reales (consumidores que se detienen hasta que el test los libera, y bloqueos vencidos con SQL en vez de esperar 2 minutos), se repiten y se comprueba que fallan si se rompe el código; al registrar el relay, el e2e de "BD caída" lo vería fallar cada segundo y habrá que ajustarlo; una instancia entrega unos 10 eventos por segundo, que sobra para esta tienda y escala con más instancias. Los commits solo se hacen si todos los chequeos pasan.
+
+- [ ] 4.1 `outbox-consumer.ts`, `@OutboxHandler()` y `OutboxRegistry`. Se comprueba: descubre los consumidores decorados; un nombre duplicado impide arrancar; un evento sin consumidores da una lista vacía
+- [ ] 4.2 `OutboxWriter` (`append(tx, events)`). Se comprueba: si se revierte la transacción de quien llama, no queda evento ni entregas; no abre transacción propia; guarda el `correlationId`; ignora los eventos sin consumidores
+- [ ] 4.3 `OutboxRelay` (`runOnce`: `SKIP LOCKED`, orden por agregado). Se comprueba: entrega y marca `DONE`; el efecto `db` y `DONE` se confirman juntos; el consumidor `external` corre sin transacción abierta; restauración de `correlationId`
+- [ ] 4.4 Fallos y reintentos del relay. Se comprueba: reintenta con retroceso y tras agotar los intentos queda `FAILED` con su motivo; el SQL de reprocesar de la guía funciona
+- [ ] 4.5 Concurrencia del relay (bloqueo vencido y *fencing* por `attempts`). Se comprueba: entrega única con dos relays; un bloqueo vencido se retoma; la instancia lenta no pisa el `DONE` de la otra y revierte su efecto `db`
+- [ ] 4.6 `tick()`, `isAlive()` y apagado ordenado del relay. Se comprueba: sin vueltas solapadas; un error no mata el intervalo; `isAlive` con reloj controlado
+- [ ] 4.7 `OutboxHealthIndicator` y `GET /health/outbox`. Se comprueba: 200 con el relay vivo y 503 si está detenido; `failed` y `due` en el detalle; una `FAILED` antigua no lo pone en rojo
+- [ ] 4.8 `OutboxModule` registrado en `AppModule`, README operativo, CI y guía. Se comprueba: un evento escrito con `append` llega solo a su consumidor con el intervalo real, con el `correlationId` en sus logs
 
 ---
 
@@ -294,3 +319,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 3, tarea 8 (3.8): tests de `stock.handlers`. Dos pedidos con los mismos libros en orden inverso reservan a la vez, varias rondas de pedidos cruzados, liberaciones cruzadas, reservar y liberar a la vez, y conservación del stock total. 7 tests nuevos. Se comprobó que fallan, con interbloqueos reales, si se quita el orden de bloqueo en `reserve`, en `release` o en el helper, o si cada uno ordena distinto; y que son estables (6 ejecuciones seguidas sin fallos). Hoy 254 unitarios y 82 de integración y e2e pasan |
 | 2026-10-27 | Corte 3, tarea 9 (3.9): cableado y cierre. 7 tests e2e por los buses con la aplicación completa, 4 de la regla de `application/` y 2 del filtro HTTP con los errores de stock. **Corte 3 terminado:** `GET /books/:isbn` responde (e2e y `curl` real); reservar sin stock lanza `OutOfStockError` y no cambia nada; los tests contra PostgreSQL real pasan (Testcontainers); la simulación completa del CI en una copia limpia pasa (lint, formato, build, 261 unitarios, 89 de integración y e2e, auditoría). Hoy 261 unitarios y 89 de integración y e2e |
 | 2026-10-27 | Corte 3, tarea 10 (3.10): bloqueo por pedido en la reserva. Antes, dos reservas simultáneas del mismo pedido con libros distintos tenían éxito las dos (2 reservas para un pedido); ahora una se crea y la otra da `ORDER_ALREADY_RESERVED`. 2 tests nuevos (uno mide el tiempo para comprobar que pedidos distintos no se esperan); estables en 5 ejecuciones. Se comprobó que fallan sin el bloqueo, con un bloqueo global y con el bloqueo después de la comprobación. Hoy 261 unitarios y 91 de integración y e2e pasan |
+| 2026-10-27 | Plan del corte 4 (4.0): 8 tareas (4.1–4.8) con su cuadro, sus comprobaciones, 5 decisiones y los riesgos. Rama `feature/corte-4-outbox`, abierta desde la del corte 3. Se revisó el diseño de la guía contra el esquema real y las APIs de Nest instaladas, y se anotaron cuatro puntos que la guía no cubre: el orden por id del evento, el reloj de los reintentos, el apagado ordenado y el intervalo real en los e2e |
