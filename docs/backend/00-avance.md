@@ -130,33 +130,36 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
-| 1 | Entorno de integración con Testcontainers | Un `globalSetup` que levanta `postgres:18`, aplica las migraciones y entrega las variables `DB_*`, más una ayuda para vaciar las tablas entre tests | Probar contra PostgreSQL real, aislado de la base de desarrollo | ⬜ |
-| 2 | Seed | `prisma/seed.ts` con clientes (normal y premium), libros (en PEN, en USD y uno inactivo) y stock (uno en cero) | Poder probar la API a mano con `pnpm run db:seed` | ⬜ |
-| 3 | Catálogo: `GetBookPriceHandler` | El handler de la query de precio, con Prisma directo | Que Ventas pueda pedir título y precio de un libro por el contrato | ⬜ |
-| 4 | Catálogo: `GET /books/:isbn` | `BookController`, `CatalogModule` en `AppModule` y Swagger | Que la API publique el libro | ⬜ |
-| 5 | Inventario: `ReserveStockHandler` | Reservar todas las líneas o ninguna, con una actualización condicional | Que el stock nunca quede en negativo | ⬜ |
-| 6 | Inventario: `ReleaseStockHandler` | Devolver el stock de un pedido, de forma idempotente | Que compensar la saga no devuelva stock de más | ⬜ |
-| 7 | Concurrencia sin interbloqueo | Tests con pedidos simultáneos que reservan los mismos libros en orden inverso | Demostrar que el bloqueo por orden de ISBN evita los interbloqueos | ⬜ |
-| 8 | Cableado y cierre | `InventoryModule` en `AppModule`, prueba a través del `CommandBus` y el `QueryBus`, regla de dependencias para `application/`, CI y documentos | Cerrar el corte con los criterios "listo cuando" cumplidos de verdad | ⬜ |
+| 1 | Entorno de integración con Testcontainers | Un `globalSetup` que levanta `postgres:18`, aplica las migraciones y entrega las variables `DB_*`; los archivos de integración se ejecutan uno tras otro porque comparten la base; limpieza de tablas entre tests y tiempos de espera mayores | Probar contra PostgreSQL real sin que los tests se pisen entre sí | ⬜ |
+| 2 | CI y documentación de pruebas | El workflow sin el servicio `postgres` ni `db:deploy`, y el README (Requisitos, Pruebas y "Base de datos aparte para las pruebas") | Que el repositorio quede coherente justo después de cambiar cómo se prueba | ⬜ |
+| 3 | Seed | `prisma/seed.ts` con clientes (normal y premium), libros (en PEN, en USD, uno inactivo y uno sin registro de stock) y stock (uno en cero) | Poder probar la API a mano con `pnpm run db:seed`, incluidos los tres casos de stock | ⬜ |
+| 4 | Catálogo: `GetBookPriceHandler` | El handler de la query de precio, con Prisma directo, y las ayudas para crear libros y stock en los tests | Que Ventas pueda pedir título y precio de un libro por el contrato | ⬜ |
+| 5 | Catálogo: `GET /books/:isbn` | `BookController` (envía `GetBookPriceQuery` por el `QueryBus`), `CatalogModule` en `AppModule` y Swagger | Que la API publique el libro, con un solo camino y un solo formato de error | ⬜ |
+| 6 | Inventario: `ReserveStockHandler` | Reservar todas las líneas o ninguna, con una actualización condicional, y rechazo de entradas inválidas | Que el stock nunca quede en negativo | ⬜ |
+| 7 | Inventario: `ReleaseStockHandler` | Devolver el stock de un pedido, de forma idempotente | Que compensar la saga no devuelva stock de más | ⬜ |
+| 8 | Concurrencia sin interbloqueo | Tests con pedidos simultáneos que reservan los mismos libros en orden inverso | Demostrar que el bloqueo por orden de ISBN evita los interbloqueos | ⬜ |
+| 9 | Cableado y cierre | `InventoryModule` en `AppModule`, prueba a través del `CommandBus` y el `QueryBus`, regla de dependencias para `application/` y guía al día | Cerrar el corte con los criterios "listo cuando" cumplidos de verdad | ⬜ |
 
 **Decisiones por confirmar** (con la opción propuesta; ninguna bloquea el inicio):
 
-1. **Base de los tests de integración:** Testcontainers (como pide la guía), no la base de desarrollo. En CI, el servicio `postgres` del workflow pasa a sobrar.
-2. **ISBN con formato inválido en `GET /books/:isbn`:** `422 INVALID_ISBN`, que amplía el contrato (hoy solo lista `404`).
-3. **Reservar dos veces el mismo pedido:** un `ConflictError` claro en vez del error de clave duplicada de la base. La saga no debería llegar ahí.
-4. **Datos del seed:** títulos y precios de ejemplo inventados (por ejemplo, uno a 45.00 PEN y otro a 15.00 USD).
+1. **Base de los tests de integración:** Testcontainers (como pide la guía), no la base de desarrollo. El servicio `postgres` del workflow pasa a sobrar y se quita en la tarea 2.
+2. **Aislamiento entre archivos de test:** un solo contenedor con los archivos de integración ejecutados uno tras otro (simple y suficiente con pocos archivos). La alternativa, una base por archivo, es más rápida pero más compleja.
+3. **ISBN con formato inválido en `GET /books/:isbn`:** `422 INVALID_ISBN`, que amplía el contrato (hoy solo lista `404`).
+4. **Reservar dos veces el mismo pedido:** un `ConflictError` claro en vez del error de clave duplicada de la base. La saga no debería llegar ahí.
+5. **Datos del seed:** títulos y precios de ejemplo inventados (por ejemplo, uno a 45.00 PEN y otro a 15.00 USD).
 
-**Riesgos:** Docker es obligatorio para `test:e2e` (se avisa con un mensaje claro y `pnpm test` sigue sin Docker); las pruebas de concurrencia pueden ser inestables, así que se repiten en rondas y se comprueba que fallan si se rompe el código a propósito; el arranque del contenedor necesita tiempos de espera mayores en Vitest.
+**Riesgos:** Docker es obligatorio para `test:e2e` (se avisa con un mensaje claro y `pnpm test` sigue sin Docker); las pruebas de concurrencia pueden ser inestables, así que se repiten en rondas y se comprueba que fallan si se rompe el código a propósito; el arranque del contenedor necesita tiempos de espera mayores en Vitest; los pasos del CI no se pueden ejecutar fuera de GitHub, así que se simulan en local sobre una copia limpia, como en el corte 1.
 
-- [ ] 3.1 Testcontainers con `postgres:18` y `vitest.config.e2e.ts` (`test/{integration,e2e}/**/*.spec.ts`): `globalSetup`, migraciones y limpieza entre tests. Se comprueba: los 7 e2e actuales pasan sobre el contenedor sin `db:up`, y falla con un mensaje claro si Docker no está activo
+- [ ] 3.1 Testcontainers con `postgres:18` y `vitest.config.e2e.ts` (`test/{integration,e2e}/**/*.spec.ts`): `globalSetup`, migraciones, archivos en serie y limpieza entre tests. Se comprueba: los 7 e2e actuales pasan sobre el contenedor sin `db:up`; dos archivos que escriben en las mismas tablas no se pisan; falla con un mensaje claro si Docker no está activo
 - [x] `vitest.config.ts` solo con `test/unit/**/*.spec.ts` (ya estaba hecho desde el corte 1)
-- [ ] 3.2 `prisma/seed.ts`: clientes, libros y stock de ejemplo. Se comprueba: ejecutarlo dos veces no duplica nada, y los ISBN son válidos y cumplen los `CHECK`
-- [ ] 3.3 `GetBookPriceHandler` (monto como `{ amount, currency }`). Se comprueba: libro en PEN y en USD con el precio en texto de 2 decimales; inexistente o inactivo da `NotFoundError`
-- [ ] 3.4 `CatalogModule`: `BookController` (`GET /books/:isbn`). Se comprueba: e2e con 200, 404 y `X-Request-Id`, y una petición real con `curl`
-- [ ] 3.5 `ReserveStockHandler`. Se comprueba: reserva correcta; sin stock da `OutOfStockError` y no cambia nada, ni las líneas anteriores; un libro sin registro da `StockItemNotFoundError`
-- [ ] 3.6 `ReleaseStockHandler`. Se comprueba: liberar dos veces (también en simultáneo) devuelve el stock una sola vez; un pedido sin reserva no hace nada
-- [ ] 3.7 Tests de `stock.handlers`: dos pedidos con los mismos libros en orden inverso reservan a la vez sin interbloqueo. Se comprueba: muchas rondas sin error, y quitar el orden de ISBN hace fallar el test
-- [ ] 3.8 `InventoryModule` y `CatalogModule` en `AppModule`, prueba por el bus, regla de dependencias de `application/` sin Prisma, CI sin el servicio `postgres` y guía al día. Se comprueba: `GET /books/:isbn` responde y reservar sin stock lanza `OutOfStockError`
+- [ ] 3.2 Workflow de CI sin el servicio `postgres` y README al día. Se comprueba: los pasos del workflow, ejecutados en local sobre una copia limpia, pasan, y los comandos del README funcionan tal como están escritos
+- [ ] 3.3 `prisma/seed.ts`: clientes, libros y stock de ejemplo. Se comprueba: ejecutarlo dos veces no duplica nada; los ISBN son válidos, cumplen los `CHECK` y hay un libro de cada caso (con stock, sin stock y sin registro de stock)
+- [ ] 3.4 `GetBookPriceHandler` (monto como `{ amount, currency }`) y ayudas para crear datos de prueba. Se comprueba: libro en PEN y en USD con el precio en texto de 2 decimales; inexistente o inactivo da `NotFoundError`
+- [ ] 3.5 `CatalogModule`: `BookController` (`GET /books/:isbn`). Se comprueba: e2e con 200, 404, 422 y `X-Request-Id`, y una petición real con `curl`
+- [ ] 3.6 `ReserveStockHandler`. Se comprueba: reserva correcta; sin stock da `OutOfStockError` y no cambia nada, ni las líneas anteriores; un libro sin registro da `StockItemNotFoundError`; sin líneas, ISBN repetido o cantidad menor a 1 dan un error de dominio y no el de la base
+- [ ] 3.7 `ReleaseStockHandler`. Se comprueba: liberar dos veces (también en simultáneo) devuelve el stock una sola vez; un pedido sin reserva no hace nada
+- [ ] 3.8 Tests de `stock.handlers`: dos pedidos con los mismos libros en orden inverso reservan a la vez sin interbloqueo. Se comprueba: muchas rondas sin error, y quitar el orden de ISBN hace fallar el test
+- [ ] 3.9 `InventoryModule` y `CatalogModule` en `AppModule`, prueba por el bus, regla de dependencias de `application/` sin Prisma (hoy sin código que revisar: se prueba con archivos de ejemplo) y guía al día. Se comprueba: `GET /books/:isbn` responde y reservar sin stock lanza `OutOfStockError`
 
 ---
 
@@ -269,3 +272,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 2, tarea 9 (2.9): test de la regla de dependencias; 37 tests, de los cuales 5 inyectan imports prohibidos en el código real para comprobar que se detectan. **Corte 2 terminado:** `contracts/` no importa nada de `contexts/`, las invariantes del dominio tienen tests unitarios sin base de datos, `lint`, `test` y `test:e2e` pasan. Hoy 216 unitarios y 7 e2e. Queda abierta la decisión sobre pedidos en USD |
 | 2026-10-27 | Corte 2, tarea 10 (2.10): reglas de precio por moneda. Los pedidos en dólares se cobran con mínimo de envío gratis de 40.00 USD y envío de 3.00 USD; los cuatro ejemplos de `producto.md` tienen su versión en USD. 16 tests nuevos; hoy 232 unitarios y 7 e2e pasan |
 | 2026-10-27 | Plan del corte 3 (3.0): 8 tareas (3.1–3.8) con su cuadro, sus comprobaciones, 4 decisiones por confirmar y los riesgos. Rama `feature/corte-3-catalogo-inventario`, abierta desde la del corte 2. Docker 29.8 y `postgres:18` están disponibles en local; falta probar Testcontainers en la tarea 3.1 |
+| 2026-10-27 | Revisión del plan del corte 3 (3.0): se pasa de 8 a 9 tareas. Faltaban el aislamiento entre archivos de test (Vitest los ejecuta en paralelo y comparten una base), mover el CI y el README a la tarea 2 para que el repositorio no quede incoherente tras cambiar a Testcontainers, la validación de entradas de `ReserveStockHandler`, un libro del seed sin registro de stock y las ayudas para datos de prueba |
