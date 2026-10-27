@@ -195,11 +195,20 @@ pnpm exec vitest run -t "texto del test"             # un test por nombre
 
 ```bash
 pnpm lint                 # oxlint, con reglas que usan tipos
-pnpm format               # Prettier, sobre src/ y test/
+pnpm format               # Prettier, sobre src/ y test/ (reescribe los archivos)
+pnpm run format:check     # comprueba el formato sin modificar nada
 pnpm run build            # compila con tipos estrictos
 ```
 
-Antes de subir cambios conviene que pasen `pnpm lint`, `pnpm test`, `pnpm run test:e2e` y `pnpm run build`.
+Antes de subir cambios, con la base levantada (`pnpm run db:up`), conviene correr todo de una vez:
+
+```bash
+pnpm lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:e2e
+```
+
+### Integración continua (CI)
+
+El workflow [`.github/workflows/main-api.yml`](../../.github/workflows/main-api.yml) repite esas comprobaciones en GitHub, en un entorno limpio y con `postgres:18`, y además aplica las migraciones y revisa vulnerabilidades (`pnpm audit --prod`). Corre solo, tras un `push` a `main` o `develop` y en los pull requests que tocan `apps/main-api`; **no se ejecuta en tu máquina**. Sirve para detectar lo que solo funciona en un equipo concreto y para ver en el pull request, antes de fusionar, si el cambio rompe algo.
 
 ## Comandos
 
@@ -209,7 +218,7 @@ Antes de subir cambios conviene que pasen `pnpm lint`, `pnpm test`, `pnpm run te
 | `pnpm run start:debug` | Igual, con el depurador de Node activo |
 | `pnpm run build` · `pnpm run start:prod` | Compilar y ejecutar la versión compilada |
 | `pnpm test` · `pnpm run test:e2e` · `pnpm run test:cov` | Pruebas |
-| `pnpm lint` · `pnpm format` | Lint y formato |
+| `pnpm lint` · `pnpm format` · `pnpm run format:check` | Lint, formato y comprobación de formato |
 | `pnpm run db:up` | Levanta PostgreSQL 18 con Docker |
 | `pnpm exec prisma migrate dev` | Migraciones en desarrollo |
 | `pnpm run db:deploy` | Aplica las migraciones sin crear nuevas |
