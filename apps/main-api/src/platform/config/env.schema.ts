@@ -8,7 +8,11 @@ const optionalUrl = z.preprocess(
 export const envSchema = z
   .looseObject({
     // deja pasar el resto de variables del proceso
-    DATABASE_URL: z.url(),
+    DB_HOST: z.string().min(1),
+    DB_PORT: z.coerce.number().int().default(5432),
+    DB_USER: z.string().min(1),
+    DB_PASSWORD: z.string().min(1),
+    DB_NAME: z.string().min(1),
     PORT: z.coerce.number().int().default(3000),
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,
