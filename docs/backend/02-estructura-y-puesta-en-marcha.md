@@ -59,7 +59,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── outbox.registry.ts                          ✅ hecho (4.1)
 │   │   │   ├── outbox.writer.ts                            ✅ hecho (4.2)
 │   │   │   ├── outbox.relay.ts                             ✅ runOnce hecho (4.3); ciclo de vida en 4.6
-│   │   │   └── outbox.health.ts
+│   │   │   └── outbox.health.ts                            ✅ hecho (4.7); lo provee HealthModule
 │   │   ├── observability/
 │   │   │   ├── request-context.ts
 │   │   │   ├── request-id.middleware.ts
