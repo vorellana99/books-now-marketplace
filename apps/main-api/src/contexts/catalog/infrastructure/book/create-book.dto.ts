@@ -1,6 +1,7 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import {
+  IsBoolean,
   IsDefined,
   IsIn,
   IsNotEmpty,
@@ -8,6 +9,7 @@ import {
   IsString,
   Matches,
   MaxLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { BOOK_LIMITS } from '../../domain/book/new-book.js';
@@ -61,4 +63,59 @@ export class CreateBookDto {
   @ValidateNested()
   @Type(() => PriceDto)
   price!: PriceDto;
+}
+
+// El precio de un cambio: el monto, y la moneda solo si se quiere confirmar la actual. Pedir otra moneda es un error
+// (decisión D5: la moneda de un libro no se cambia)
+export class UpdatePriceDto {
+  @ApiProperty({
+    example: '49.90',
+    description: 'Texto con punto y hasta 2 decimales, nunca un número',
+  })
+  @IsString()
+  @Matches(/^\d{1,12}(\.\d{1,2})?$/)
+  amount!: string;
+
+  @ApiPropertyOptional({
+    enum: ['PEN', 'USD'],
+    description:
+      'Opcional. Si se indica, debe ser la moneda actual del libro: la moneda no se cambia',
+  })
+  @ValidateIf((o: UpdatePriceDto) => o.currency !== undefined)
+  @IsIn(['PEN', 'USD'])
+  currency?: 'PEN' | 'USD';
+}
+
+// Cualquier subconjunto de campos, pero al menos uno. Lo que no se indica no se toca; `null` no vale como "sin cambio"
+export class UpdateBookDto {
+  @ApiPropertyOptional({ maxLength: BOOK_LIMITS.title })
+  @ValidateIf((o: UpdateBookDto) => o.title !== undefined)
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(BOOK_LIMITS.title)
+  title?: string;
+
+  @ApiPropertyOptional({ maxLength: BOOK_LIMITS.author })
+  @ValidateIf((o: UpdateBookDto) => o.author !== undefined)
+  @Transform(trim)
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(BOOK_LIMITS.author)
+  author?: string;
+
+  @ApiPropertyOptional({ type: UpdatePriceDto })
+  @ValidateIf((o: UpdateBookDto) => o.price !== undefined)
+  @IsObject()
+  @ValidateNested()
+  @Type(() => UpdatePriceDto)
+  price?: UpdatePriceDto;
+
+  @ApiPropertyOptional({
+    description:
+      '`false` desactiva el libro (no se borra) y `true` lo reactiva',
+  })
+  @ValidateIf((o: UpdateBookDto) => o.active !== undefined)
+  @IsBoolean()
+  active?: boolean;
 }

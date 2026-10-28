@@ -159,8 +159,13 @@ hashRequest(customerId, items, address);
 | Comando | Qué valida |
 |---|---|
 | `CreateBookCommand` | ISBN válido (`Isbn.create`) y no repetido (`409 BOOK_ALREADY_EXISTS`); precio > 0 |
-| `UpdateBookCommand` | El libro existe (`404`); precio > 0 si cambia |
-| `DeactivateBookCommand` | Pone `active = false`. **Nunca se borra**: otros contextos lo referencian por ISBN |
+| `UpdateBookCommand` | El libro existe (`404`); cualquier subconjunto de `title`, `author`, `price` y `active`, pero al menos uno (`NOTHING_TO_UPDATE`); precio > 0 si cambia; **la moneda no cambia** (`CURRENCY_CANNOT_CHANGE`); todo o nada |
+
+`DeactivateBookCommand` de la guía original se unió a `UpdateBookCommand`: `PATCH /admin/books/:isbn` con `{ "active": false }` desactiva el libro y con `true` lo reactiva (decisión D4). Una sola operación hace atómico un cambio que toca el precio y el estado a la vez. **El libro nunca se borra**: otros contextos lo referencian por ISBN, y un libro desactivado sigue ocupando su ISBN.
+
+- **`PATCH /admin/books/:isbn`:** el cuerpo admite `title`, `author`, `price` (`{ amount, currency? }`) y `active`. La moneda es opcional dentro del precio y solo sirve para confirmar la actual: pedir otra es `422 CURRENCY_CANNOT_CHANGE` (decisión D5: cambiarla sería otro libro, y afectaría a carritos en curso). Un campo con valor `null` es un `400`, no "sin cambio"; un campo de más (`isbn`, `stock`, `currency` fuera del precio) también. Responde `200` con el libro y `active`.
+- **Se escriben solo las columnas que cambian:** dos cambios simultáneos de campos distintos se conservan los dos, y dos del mismo campo dejan uno de los dos sin error.
+- **Qué pasa al desactivar:** desaparece de `GET /books`, de `GET /books/:isbn` y de las compras (`GetBookPriceQuery` falla con `NOT_FOUND`); los pedidos ya hechos se siguen leyendo; el stock no se toca.
 
 - **Forma de la petición (`POST /admin/books`):** `{ isbn, title, author, price: { amount: "45.00", currency: "PEN" } }`. El precio entra con la misma forma con la que sale: el monto en texto (un número se rechaza), con punto y hasta 2 decimales. El DTO valida la forma (`400`); el dominio (`NewBook.create`) valida el contenido (`422`): ISBN válido, título (hasta 200) y autor (hasta 150) recortados, no vacíos y sin caracteres de control (`INVALID_BOOK`), precio mayor que cero y no más de 1 000 000 (`INVALID_PRICE`) y moneda `PEN` o `USD` (`INVALID_CURRENCY`). No se pueden mandar `active` ni `stock`: un campo de más es `400`.
 - **La unicidad la decide la clave primaria, no una consulta previa:** el handler inserta y traduce el error `P2002` de Prisma a `409 BOOK_ALREADY_EXISTS`. Mirar antes de insertar dejaría una carrera entre dos altas simultáneas del mismo ISBN. Un libro desactivado sigue ocupando su ISBN.

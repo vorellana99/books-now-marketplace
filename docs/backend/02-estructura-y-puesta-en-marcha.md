@@ -138,8 +138,12 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   ├── application/book/
 │       │   │   ├── search-books.query.ts                   ✅ hecho (6.1)
 │       │   │   ├── create-book.command.ts                  ✅ hecho (6.5)
-│       │   │   ├── update-book.command.ts                  (fase 12)
-│       │   │   └── deactivate-book.command.ts              (fase 12)
+│       │   │   ├── update-book.command.ts                  ✅ hecho (6.7) también desactiva y reactiva (ver desvíos)
+│       │   │   └── admin-book.ts                           ✅ hecho (6.7) el libro + `active`, como lo ve la administración
+│       │   ├── domain/book/                            ✅ hecho (6.5 y 6.7): reglas de título, autor y precio
+│       │   │   ├── book-rules.ts
+│       │   │   ├── new-book.ts
+│       │   │   └── book-changes.ts
 │       │   └── infrastructure/book/                        todos usan Prisma directo
 │       │       ├── book.controller.ts
 │       │       ├── book-price.response.ts                  esquema de la respuesta, solo para Swagger
@@ -148,10 +152,9 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       ├── search-books.handler.ts                 ✅ hecho (6.1)
 │       │       ├── admin-book.controller.ts                ✅ hecho (6.5) guard en la clase
 │       │       ├── create-book.dto.ts                      ✅ hecho (6.5)
-│       │       ├── update-book.dto.ts                      (fase 12)
+│       │       ├── (UpdateBookDto vive en create-book.dto.ts)
 │       │       ├── create-book.handler.ts                  ✅ hecho (6.5) libro + evento en 1 transacción
-│       │       ├── update-book.handler.ts                  (fase 12)
-│       │       └── deactivate-book.handler.ts              (fase 12)
+│       │       └── update-book.handler.ts                  ✅ hecho (6.7) datos, precio y estado en una transacción
 │       │
 │       ├── inventory/
 │       │   ├── inventory.module.ts

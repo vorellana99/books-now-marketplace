@@ -85,6 +85,7 @@ describe('CreateBookHandler (PostgreSQL real, por el CommandBus)', () => {
         title: 'Clean Code',
         author: 'Robert C. Martin',
         price: { amount: '45.00', currency: 'PEN' },
+        active: true,
       });
     });
 

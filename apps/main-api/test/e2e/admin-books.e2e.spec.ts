@@ -58,11 +58,31 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
         .expect(404);
     });
 
+    it('PATCH también es 404 y no cambia el libro', async () => {
+      await insertBook({ isbn: '9780132350884', title: 'Igual' });
+
+      const res = await request(app.getHttpServer())
+        .patch('/admin/books/9780132350884')
+        .send({ title: 'Distinto', active: false })
+        .expect(404);
+
+      expect(res.body).toEqual({
+        message: 'Cannot PATCH /admin/books/9780132350884',
+        error: 'Not Found',
+        statusCode: 404,
+      });
+      const [row] = await query<{ title: string; active: boolean }>(
+        'SELECT title, active FROM catalog.books',
+      );
+      expect(row).toEqual({ title: 'Igual', active: true });
+    });
+
     it('la documentación no muestra /admin/books', async () => {
       const res = await request(app.getHttpServer())
         .get('/docs-json')
         .expect(200);
       expect(Object.keys(res.body.paths)).not.toContain('/admin/books');
+      expect(Object.keys(res.body.paths)).not.toContain('/admin/books/{isbn}');
       expect(Object.keys(res.body.paths)).toContain('/books');
     });
   });
@@ -86,7 +106,7 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
 
     it('201 con el libro creado', async () => {
       const res = await post().expect(201);
-      expect(res.body).toEqual(BODY);
+      expect(res.body).toEqual({ ...BODY, active: true });
     });
 
     it('el libro queda activo y se puede ver por su ISBN, en la búsqueda y con el precio en texto', async () => {
@@ -252,6 +272,229 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
     it('no crea el stock: no existe hasta que Inventario recibe el evento', async () => {
       await post().expect(201);
       expect(await query('SELECT 1 FROM inventory.stock_items')).toEqual([]);
+    });
+
+    describe('PATCH /admin/books/:isbn', () => {
+      const isbn = '9780132350884';
+      const patch = (body: unknown, path = isbn) =>
+        request(app.getHttpServer())
+          .patch(`/admin/books/${path}`)
+          .send(body as object);
+      const rowOf = async () =>
+        (
+          await query<{
+            title: string;
+            author: string;
+            price: string;
+            currency: string;
+            active: boolean;
+          }>(
+            'SELECT title, author, price::text AS price, currency::text AS currency, active FROM catalog.books WHERE isbn = $1',
+            [isbn],
+          )
+        )[0];
+
+      beforeEach(async () => {
+        await insertBook({
+          isbn,
+          title: 'Clean Code',
+          author: 'Robert C. Martin',
+          price: '45.00',
+          currency: 'PEN',
+        });
+      });
+
+      it('200 con el libro cambiado y si está activo', async () => {
+        const res = await patch({
+          title: '  Código limpio ',
+          price: { amount: '49.9' },
+        }).expect(200);
+
+        expect(res.body).toEqual({
+          isbn,
+          title: 'Código limpio',
+          author: 'Robert C. Martin',
+          price: { amount: '49.90', currency: 'PEN' },
+          active: true,
+        });
+      });
+
+      it('el cambio se ve en las consultas públicas', async () => {
+        await patch({
+          title: 'Código limpio',
+          price: { amount: '49.90' },
+        }).expect(200);
+
+        const one = await request(app.getHttpServer())
+          .get(`/books/${isbn}`)
+          .expect(200);
+        const list = await request(app.getHttpServer())
+          .get('/books?q=limpio')
+          .expect(200);
+
+        expect(one.body).toMatchObject({
+          title: 'Código limpio',
+          price: { amount: '49.90', currency: 'PEN' },
+        });
+        expect(list.body.total).toBe(1);
+      });
+
+      it('acepta el ISBN con guiones en la ruta', async () => {
+        await patch({ title: 'Nuevo' }, '978-0-13-235088-4').expect(200);
+        expect((await rowOf()).title).toBe('Nuevo');
+      });
+
+      it('desactivar: el libro desaparece del catálogo y de la búsqueda, y reactivar lo devuelve', async () => {
+        const off = await patch({ active: false }).expect(200);
+        expect(off.body.active).toBe(false);
+        await request(app.getHttpServer()).get(`/books/${isbn}`).expect(404);
+        expect(
+          (await request(app.getHttpServer()).get('/books?q=clean').expect(200))
+            .body.total,
+        ).toBe(0);
+        expect(await rowOf()).toMatchObject({ active: false }); // no se borra
+
+        const on = await patch({ active: true }).expect(200);
+        expect(on.body.active).toBe(true);
+        await request(app.getHttpServer()).get(`/books/${isbn}`).expect(200);
+      });
+
+      it('repetir el mismo cambio da el mismo resultado', async () => {
+        const first = await patch({ price: { amount: '60' } }).expect(200);
+        const second = await patch({ price: { amount: '60' } }).expect(200);
+        expect(second.body).toEqual(first.body);
+      });
+
+      it('se puede confirmar la moneda actual dentro del precio', async () => {
+        await patch({ price: { amount: '60', currency: 'PEN' } }).expect(200);
+      });
+
+      it('422 CURRENCY_CANNOT_CHANGE si se pide otra moneda, y no cambia nada', async () => {
+        const res = await patch({
+          title: 'Distinto',
+          price: { amount: '60', currency: 'USD' },
+        }).expect(422);
+        expect(res.body.errorCode).toBe('CURRENCY_CANNOT_CHANGE');
+        expect(await rowOf()).toMatchObject({
+          title: 'Clean Code',
+          price: '45.00',
+          currency: 'PEN',
+        });
+      });
+
+      it('404 NOT_FOUND si el libro no existe (con la administración abierta)', async () => {
+        const res = await patch({ title: 'x' }, '9780306406157').expect(404);
+        expect(res.body).toMatchObject({
+          statusCode: 404,
+          errorCode: 'NOT_FOUND',
+        });
+      });
+
+      it('422 INVALID_ISBN con un ISBN mal formado en la ruta', async () => {
+        const res = await patch({ title: 'x' }, '123').expect(422);
+        expect(res.body.errorCode).toBe('INVALID_ISBN');
+      });
+
+      it.each([
+        ['precio cero', { price: { amount: '0.00' } }, 'INVALID_PRICE'],
+        [
+          'precio sobre el máximo',
+          { price: { amount: '1000000.01' } },
+          'INVALID_PRICE',
+        ],
+        ['salto de línea en el título', { title: 'Uno\nDos' }, 'INVALID_BOOK'],
+        ['salto de línea en el autor', { author: 'Uno\nDos' }, 'INVALID_BOOK'],
+      ])('422 %s: %s', async (_caso, body, code) => {
+        const res = await patch(body).expect(422);
+        expect(res.body.errorCode).toBe(code);
+        expect(await rowOf()).toMatchObject({
+          title: 'Clean Code',
+          price: '45.00',
+        });
+      });
+
+      it.each([
+        ['cuerpo vacío', {}],
+        ['todos los campos sin valor', { title: undefined }],
+        ['título vacío', { title: '' }],
+        ['título de espacios', { title: '   ' }],
+        ['título null', { title: null }],
+        ['título no es texto', { title: 42 }],
+        ['título demasiado largo', { title: 'x'.repeat(201) }],
+        ['autor vacío', { author: '' }],
+        ['autor null', { author: null }],
+        ['autor demasiado largo', { author: 'x'.repeat(151) }],
+        ['precio null', { price: null }],
+        ['precio como número', { price: 49.9 }],
+        ['precio sin monto', { price: {} }],
+        ['monto numérico', { price: { amount: 49.9 } }],
+        ['monto negativo', { price: { amount: '-1' } }],
+        ['monto con 3 decimales', { price: { amount: '1.234' } }],
+        ['monto con coma', { price: { amount: '1,5' } }],
+        ['moneda desconocida', { price: { amount: '5', currency: 'EUR' } }],
+        ['moneda en minúsculas', { price: { amount: '5', currency: 'pen' } }],
+        ['moneda null', { price: { amount: '5', currency: null } }],
+        ['campo extra en el precio', { price: { amount: '5', discount: '1' } }],
+        ['active como texto', { active: 'false' }],
+        ['active null', { active: null }],
+        ['active como número', { active: 1 }],
+        ['isbn en el cuerpo', { isbn: '9780306406157' }],
+        ['stock en el cuerpo', { title: 'x', stock: 10 }],
+        ['moneda fuera del precio', { currency: 'USD' }],
+      ])('400 si %s', async (_caso, body) => {
+        await patch(body).expect(400);
+        expect(await rowOf()).toEqual({
+          title: 'Clean Code',
+          author: 'Robert C. Martin',
+          price: '45.00',
+          currency: 'PEN',
+          active: true,
+        });
+      });
+
+      it('400 sin cuerpo y con JSON roto', async () => {
+        await request(app.getHttpServer())
+          .patch(`/admin/books/${isbn}`)
+          .expect(400);
+        await request(app.getHttpServer())
+          .patch(`/admin/books/${isbn}`)
+          .set('Content-Type', 'application/json')
+          .send('{"title":')
+          .expect(400);
+        await request(app.getHttpServer())
+          .patch(`/admin/books/${isbn}`)
+          .set('Content-Type', 'application/json')
+          .send('[]')
+          .expect(400);
+      });
+
+      it('no crea eventos ni toca el stock', async () => {
+        await patch({ title: 'Nuevo', active: false }).expect(200);
+        expect(await outboxRows()).toEqual([]);
+        expect(await query('SELECT 1 FROM inventory.stock_items')).toEqual([]);
+      });
+
+      it('lo documenta con la etiqueta admin, el parámetro isbn y sus respuestas', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/docs-json')
+          .expect(200);
+        const operation = res.body.paths['/admin/books/{isbn}'].patch;
+        expect(operation.tags).toContain('admin');
+        expect(
+          operation.parameters.map((p: { name: string }) => p.name),
+        ).toContain('isbn');
+        expect(Object.keys(operation.responses)).toEqual(
+          expect.arrayContaining(['200', '400', '404', '422']),
+        );
+        const schemas = res.body.components.schemas;
+        expect(
+          Object.keys(schemas.UpdateBookDto.properties).sort((a, b) =>
+            a.localeCompare(b),
+          ),
+        ).toEqual(['active', 'author', 'price', 'title']);
+        expect(schemas.UpdateBookDto.required ?? []).toEqual([]);
+        expect(schemas.AdminBookResponse.properties).toHaveProperty('active');
+      });
     });
 
     it('documenta la operación con la etiqueta admin y sus respuestas', async () => {

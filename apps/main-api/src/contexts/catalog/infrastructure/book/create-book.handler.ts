@@ -5,7 +5,7 @@ import { Prisma } from '../../../../platform/prisma/generated/client.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import { ConflictError } from '../../../../shared-kernel/domain.errors.js';
 import { CreateBookCommand } from '../../application/book/create-book.command.js';
-import type { BookItem } from '../../application/book/search-books.query.js';
+import type { AdminBook } from '../../application/book/admin-book.js';
 import { NewBook } from '../../domain/book/new-book.js';
 
 @CommandHandler(CreateBookCommand)
@@ -15,7 +15,7 @@ export class CreateBookHandler implements ICommandHandler<CreateBookCommand> {
     private readonly outbox: OutboxWriter,
   ) {}
 
-  async execute({ book: data }: CreateBookCommand): Promise<BookItem> {
+  async execute({ book: data }: CreateBookCommand): Promise<AdminBook> {
     const book = NewBook.create(data);
     try {
       // El libro y su evento se confirman juntos: guardados por separado, una caída entre ambos dejaría un libro cuyo
@@ -52,6 +52,7 @@ export class CreateBookHandler implements ICommandHandler<CreateBookCommand> {
       title: book.title,
       author: book.author,
       price: book.price,
+      active: true,
     };
   }
 }

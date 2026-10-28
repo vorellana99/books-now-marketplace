@@ -42,3 +42,10 @@ export class BookPageResponse {
   })
   total!: number;
 }
+
+export class AdminBookResponse extends BookResponse {
+  @ApiProperty({
+    description: 'false: no se muestra en el catálogo ni se puede comprar',
+  })
+  active!: boolean;
+}

@@ -240,6 +240,14 @@ curl -X POST http://localhost:3000/admin/books \
   -d '{"isbn":"9780134494166","title":"Clean Architecture","author":"Robert C. Martin","price":{"amount":"55.00","currency":"PEN"}}'
 
 curl 'http://localhost:3000/books?q=architecture'    # el libro nuevo ya aparece en la búsqueda
+
+# Cambiar el precio (y/o el título, el autor): 200 con el libro. La moneda no se cambia
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+  -H 'Content-Type: application/json' -d '{"price":{"amount":"49.90"}}'
+
+# Desactivar el libro (no se borra): deja de verse en el catálogo y de poder comprarse. Con "active": true se reactiva
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+  -H 'Content-Type: application/json' -d '{"active":false}'
 ```
 
 El precio entra como sale: `{ "amount": "55.00", "currency": "PEN" }`, con el monto en texto.
