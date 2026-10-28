@@ -47,3 +47,42 @@ export class OrderResponse {
   @ApiProperty({ type: [OrderLineResponse] })
   lines!: OrderLineResponse[];
 }
+
+export class ShippingAddressResponse {
+  @ApiProperty({ example: 'María Quispe' }) recipient!: string;
+  @ApiProperty({ example: '+51 987 654 321' }) phone!: string;
+  @ApiProperty({ example: 'Jr. Ucayali 150, Dpto 2' }) line1!: string;
+  @ApiProperty({ example: 'Barranco' }) district!: string;
+  @ApiProperty({ example: 'Lima' }) province!: string;
+  @ApiProperty({ example: 'Lima' }) department!: string;
+  @ApiProperty({ example: 'Casa de rejas verdes', nullable: true }) reference!:
+    string | null;
+}
+
+export class OrderHistoryItemResponse extends OrderResponse {
+  @ApiProperty({
+    example: '2026-10-28T10:00:00.000Z',
+    description: 'ISO 8601, en UTC',
+  })
+  createdAt!: string;
+
+  @ApiProperty({
+    type: ShippingAddressResponse,
+    nullable: true,
+    description:
+      'null en un pedido anterior a que existiera la dirección de envío',
+  })
+  shippingAddress!: ShippingAddressResponse | null;
+}
+
+export class OrderHistoryResponse {
+  @ApiProperty({ type: [OrderHistoryItemResponse] })
+  items!: OrderHistoryItemResponse[];
+
+  @ApiProperty({
+    nullable: true,
+    description:
+      'Cursor de la página siguiente; null en la última. Se pasa tal cual en ?cursor=',
+  })
+  nextCursor!: string | null;
+}

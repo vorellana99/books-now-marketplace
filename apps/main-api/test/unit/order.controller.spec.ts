@@ -1,4 +1,5 @@
 import { Logger, type INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
@@ -8,6 +9,7 @@ import { PlaceOrderCommand } from '../../src/contexts/sales/application/order/pl
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { OrderController } from '../../src/contexts/sales/infrastructure/order/order.controller.js';
 import { OutOfStockError } from '../../src/contracts/inventory/stock.errors.js';
+import { AdminApiEnabledGuard } from '../../src/platform/http/admin-api-enabled.guard.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import {
   ConflictError,
@@ -49,6 +51,10 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       providers: [
         { provide: CommandBus, useValue: commandBus },
         { provide: QueryBus, useValue: queryBus },
+        // El historial lleva el guard de administración, que lee ADMIN_API_ENABLED; aquí está cerrada (lo probado
+        // es POST y GET /orders/:id, que no deben depender de él)
+        AdminApiEnabledGuard,
+        { provide: ConfigService, useValue: { get: () => false } },
       ],
     }).compile();
     app = moduleRef.createNestApplication();

@@ -16,6 +16,7 @@ import { PrismaCustomerRepository } from './infrastructure/customer/prisma-custo
 import { CatalogInProcessAdapter } from './infrastructure/order/catalog-in-process.adapter.js';
 import { ConsoleNotifier } from './infrastructure/order/console-notifier.adapter.js';
 import { GetOrderHandler } from './infrastructure/order/get-order.handler.js';
+import { ListCustomerOrdersHandler } from './infrastructure/order/list-customer-orders.handler.js';
 import { InventoryInProcessAdapter } from './infrastructure/order/inventory-in-process.adapter.js';
 import { OrderController } from './infrastructure/order/order.controller.js';
 import { PrismaCheckoutLog } from './infrastructure/order/prisma-checkout-log.adapter.js';
@@ -30,6 +31,7 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
   providers: [
     PlaceOrderHandler,
     GetOrderHandler,
+    ListCustomerOrdersHandler,
     SendOrderConfirmationConsumer,
     RecoverCheckoutsJob,
     PricingService,

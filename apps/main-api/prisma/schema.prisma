@@ -51,6 +51,8 @@ model Order {
   shipReference  String?     @map("ship_reference") @db.VarChar(200)
   lines          OrderLine[]
 
+  // El historial de un cliente: sus pedidos del más reciente al más antiguo, paginados por (fecha, id)
+  @@index([customerId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("orders")
   @@schema("sales")
 }

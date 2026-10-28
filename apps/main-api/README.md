@@ -251,6 +251,13 @@ curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
 ```
 
 ```bash
+# Historial de pedidos de un cliente, del más reciente al más antiguo, con su dirección de envío
+curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5'
+# Página siguiente: el nextCursor de la respuesta, tal cual (es opaco). Es null en la última página
+curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5&cursor=<nextCursor>'
+```
+
+```bash
 # Cargar stock: SUMA unidades a lo disponible (no fija un valor). 201 { isbn, available, reserved }
 # El libro nuevo tiene su stock en cero un segundo después de crearlo (lo crea Inventario al recibir el evento)
 curl -X POST http://localhost:3000/admin/stock/9780134494166/additions \

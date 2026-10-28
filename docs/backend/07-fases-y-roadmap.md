@@ -215,23 +215,31 @@ export class AddStockHandler implements ICommandHandler<AddStockCommand> {
 export class ListCustomerOrdersHandler implements IQueryHandler<ListCustomerOrdersQuery> {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute({ customerId, cursor, limit }: ListCustomerOrdersQuery) {
+  async execute({ customerId, limit, after }: ListCustomerOrdersQuery): Promise<OrderHistoryPage> {
     const rows = await this.prisma.order.findMany({
-      where: { customerId },
+      where: {
+        customerId,
+        // Lo que viene DESPUÉS del último pedido de la página anterior, en el mismo orden (fecha desc, id desc)
+        ...(after && { OR: [{ createdAt: { lt: after.createdAt } }, { createdAt: after.createdAt, id: { lt: after.id } }] }),
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,                                      // uno de más para saber si hay otra página
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       include: { lines: true },
     });
     const page = rows.slice(0, limit);
-    return { items: page.map(toOrderView), nextCursor: rows.length > limit ? page.at(-1)!.id : null };
+    const last = page.at(-1);
+    return { items: page.map(toHistoryItem), nextCursor: rows.length > limit && last ? OrderCursor.encode({ createdAt: last.createdAt, id: last.id }) : null };
   }
 }
 ```
 
+`GET /orders?customerId=&cursor=&limit=` responde `{ items[…], nextCursor }`. Cada pedido trae lo mismo que `GET /orders/:id` más `createdAt` (ISO, UTC) y **`shippingAddress`** (la dirección de envío; `null` en un pedido anterior a ella): por eso el endpoint es de administración.
+
 - **Paginación por cursor** (no por número de página): el historial solo crece, y con páginas numeradas un pedido nuevo desplazaría a los demás.
-- **Agrega el índice `@@index([customerId, createdAt])`** en `Order`.
-- **Hoy el `customerId` llega como parámetro**, y cualquiera que lo conozca vería los pedidos de ese cliente, con nombre, teléfono y dirección. Por eso, hasta tener autenticación, el método `list` de `OrderController` usa también `AdminApiEnabledGuard`, **en el método y no en la clase**, para que `POST /orders` siga abierto. Con la autenticación, el `customerId` saldrá del token y el endpoint pasará a `GET /me/orders`, sin el guard.
+- **El cursor es la posición (fecha, id), no el cursor de Prisma por id** (la guía usaba `cursor: { id }, skip: 1`): es **opaco** para el cliente (`base64url` de `fecha|id`, que se devuelve tal cual) y sigue valiendo aunque el pedido al que apunta ya no exista, aunque lleguen pedidos nuevos entre una página y otra y con pedidos del mismo instante repartidos entre páginas (el id desempata). `OrderCursor.decode` devuelve `null` con cualquier cosa que no sea un cursor canónico (caracteres que Node ignoraría, fechas que JS normalizaría como el 31 de febrero, un id que no sea UUID) y el controlador lo responde con `400`.
+- **El índice es `@@index([customerId, createdAt(sort: Desc), id(sort: Desc)])`** (la guía decía `[customerId, createdAt]`): coincide con el orden de la consulta. Hay un test que la prueba también sin el índice, donde los empates salen en el orden físico.
+- **`limit`** de 1 a 50 (20 por defecto). Un cliente sin pedidos, o que no existe, recibe una lista vacía y no un `404`. La última página trae `nextCursor: null`, y si el total es múltiplo del límite no hay una página final vacía.
+- **Hoy el `customerId` llega como parámetro**, y cualquiera que lo conozca vería los pedidos de ese cliente, con nombre, teléfono y dirección. Por eso, hasta tener autenticación, el método `list` de `OrderController` usa `@AdminApi()` (el guard de `AdminApiEnabledGuard`), **en el método y no en la clase**, para que `POST /orders` y `GET /orders/:id` sigan abiertos. Con la autenticación, el `customerId` saldrá del token y el endpoint pasará a `GET /me/orders`, sin el guard.
 
 ### Fase 15: Autenticación (fase aparte)
 
