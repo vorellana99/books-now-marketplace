@@ -262,19 +262,27 @@ export class PrismaOrderRepository extends OrderRepository {
   nextId() { return randomUUID(); }
 
   async findById(id: string) {
-    const row = await this.prisma.order.findUnique({ where: { id }, include: { lines: true } });
-    return row ? OrderMapper.toDomain(row) : null;
+    const row = await this.prisma.order.findUnique({
+      where: { id },
+      include: { lines: { orderBy: { isbn: 'asc' } } },       // orden estable, no el físico
+    });
+    return row ? OrderMapper.toDomain(row) : null;           // Order.restore: confirmado y sin eventos
   }
 
   async save(order: Order, charged: Money): Promise<void> {
+    if (order.status !== 'PLACED') throw new DomainError('ORDER_NOT_PLACED', 'Solo se guarda un pedido confirmado');
+    if (charged.currency !== order.currency) throw new DomainError('CURRENCY_MISMATCH', 'El monto cobrado debe estar en la moneda del pedido');
+    const final = charged.toFinal();                          // se redondea una sola vez, aquí
     const events = order.pullEvents();
     await this.prisma.$transaction(async (tx) => {
-      const chargedAmount = charged.toFinal().amount.toString();   // Prisma acepta texto en columnas Decimal
-      await tx.order.create({ data: OrderMapper.toCreate(order, chargedAmount, charged.currency) });
-      await tx.checkout.update({
-        where: { orderId: order.id },
-        data: { status: 'COMPLETED', chargedAmount, currency: charged.currency },   // monto y moneda, para los reintentos
+      // Solo completa un checkout que siga PENDING. Si la recuperación ya lo anuló (reembolsó y liberó), crear el
+      // pedido lo dejaría sin cobro y sin stock: se lanza el error y la transacción se deshace
+      const completed = await tx.checkout.updateMany({
+        where: { orderId: order.id, status: 'PENDING' },
+        data: { status: 'COMPLETED', chargedAmount: final.amount.toFixed(2), currency: final.currency },   // para los reintentos
       });
+      if (completed.count === 0) throw new ConflictError('CHECKOUT_NOT_PENDING', `El checkout del pedido ${order.id} ya no está pendiente`);
+      await tx.order.create({ data: OrderMapper.toCreate(order, final.amount.toFixed(2), final.currency) });
       await this.outbox.append(tx, events);                   // misma transacción: recibe tx
     });
   }

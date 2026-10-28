@@ -124,6 +124,18 @@ export class SharedExternalProbe implements ExternalOutboxConsumer<unknown> {
   }
 }
 
+// Escucha el evento real de Ventas, para comprobar que guardar un pedido guarda también su evento y su entrega
+@OutboxHandler()
+@Injectable()
+export class OrderPlacedProbe implements DbOutboxConsumer<unknown> {
+  readonly kind = 'db' as const;
+  readonly name = 'test.order-placed';
+  readonly event = 'sales.order.placed';
+  async handle(event: unknown, ctx: DbDeliveryContext): Promise<void> {
+    await record(this.name, event, ctx);
+  }
+}
+
 // Levanta la aplicación con el Outbox y solo los consumidores de prueba indicados
 export function appWithProbes(...consumers: Type[]): Promise<INestApplication> {
   class ProbesModule {}

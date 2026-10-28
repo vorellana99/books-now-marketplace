@@ -20,6 +20,44 @@ export class Order {
     readonly customerId: string,
   ) {}
 
+  // Reconstruye un pedido YA confirmado desde la base de datos. No genera eventos (su evento ya se guardó) y no aplica
+  // los límites de compra de hoy (como el máximo de unidades): son reglas del momento de comprar, y un pedido antiguo
+  // debe poder leerse aunque cambien. Solo exige lo estructural: líneas, una moneda, sin libros repetidos, cantidades válidas
+  static restore(data: {
+    id: string;
+    customerId: string;
+    lines: { isbn: Isbn; title: string; unitPrice: Money; quantity: number }[];
+  }): Order {
+    if (data.lines.length === 0) {
+      throw new DomainError('EMPTY_ORDER', 'El pedido no tiene libros');
+    }
+    const order = new Order(data.id, data.customerId);
+    for (const { isbn, title, unitPrice, quantity } of data.lines) {
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        throw new DomainError(
+          'INVALID_QUANTITY',
+          'La cantidad debe ser un entero de al menos 1',
+        );
+      }
+      if (order._currency && unitPrice.currency !== order._currency) {
+        throw new DomainError(
+          'CURRENCY_MISMATCH',
+          'Todos los libros del pedido deben tener la misma moneda',
+        );
+      }
+      if (order.lines.some((l) => l.isbn.equals(isbn))) {
+        throw new DomainError(
+          'DUPLICATE_LINE',
+          `El libro ${isbn.value} aparece más de una vez`,
+        );
+      }
+      order.lines.push(new OrderLine(isbn, title, unitPrice, quantity));
+      order._currency = unitPrice.currency;
+    }
+    order._status = 'PLACED';
+    return order;
+  }
+
   get status(): OrderStatus {
     return this._status;
   }
