@@ -409,6 +409,8 @@ Las entregas se crean al escribir el evento. Un consumidor nuevo solo recibe los
 | **Fencing por `attempts`** en cada actualización | Si el bloqueo venció y otra instancia reclamó la entrega, la instancia lenta no pisa su estado (por ejemplo, devolver a PENDING algo que ya está DONE). En un consumidor `db`, además, revierte el efecto |
 | **Orden por agregado y consumidor** | Un consumidor nunca procesa un evento de un pedido antes que otro anterior del mismo pedido (por ejemplo, `OrderCancelled` antes que `OrderPlaced`). Si un evento queda FAILED, los posteriores de ese mismo pedido y consumidor siguen adelante; si un consumidor necesita orden estricto incluso con fallos, debe incluir `FAILED` en el `NOT EXISTS` |
 
+**Límite conocido del orden:** `NOT EXISTS` compara el identificador del evento (uuidv7, que crece con el tiempo), no el orden de confirmación. Si dos transacciones del mismo pedido corrieran a la vez y la de id menor confirmara después, el relay podría ver primero el evento posterior. Hoy cada pedido genera un solo evento (`OrderPlaced`), así que no ocurre; si algún día hay varios por pedido, hay que revisar este punto.
+
 ```ts
 // platform/outbox/outbox.relay.ts
 const LEASE_MS = 2 * 60_000;   // bloqueo de cada entrega reclamada

@@ -216,6 +216,15 @@ describe('checkRules: detecta las violaciones', () => {
       },
     );
 
+    it('application/ sí puede implementar un consumidor del Outbox (las interfaces viven en platform/outbox)', () => {
+      expect(
+        violations(
+          'src/contexts/sales/application/order/send-order-confirmation.consumer.ts',
+          `import { OutboxHandler } from '../../../../platform/outbox/outbox-handler.decorator.js';\nimport type { ExternalOutboxConsumer } from '../../../../platform/outbox/outbox-consumer.js';`,
+        ),
+      ).toEqual([]);
+    });
+
     it('infrastructure/ sí puede usar Prisma', () => {
       expect(
         violations(

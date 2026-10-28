@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   Module,
   type INestApplication,
   type Type,
@@ -60,6 +61,8 @@ async function record(
     requestId: RequestContext.requestId(),
   };
   probe.calls.push(call);
+  // Este log debe llevar el requestId de la entrega, sin que el consumidor haga nada para ello
+  new Logger('OutboxProbe').log(`consumidor ${consumer} recibió un evento`);
   await probe.behavior?.(call);
 }
 

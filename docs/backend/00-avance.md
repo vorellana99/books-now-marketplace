@@ -14,7 +14,7 @@ Los cortes 0 a 4 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
-| 4 | Outbox | 6 | 🔄 | `feature/corte-4-outbox` | — |
+| 4 | Outbox | 6 | ✅ | `feature/corte-4-outbox` | — |
 | 5 | Compra completa | 7–9 | ⬜ | — | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
@@ -165,7 +165,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 4: Outbox 🔄
+## Corte 4: Outbox ✅
 
 **Guía:** [05-piezas-clave](05-piezas-clave.md) (Platform: el Outbox) · [06-tests](06-tests.md)
 
@@ -182,7 +182,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 5 | Relay: concurrencia | `SKIP LOCKED`, bloqueo vencido y *fencing* por `attempts` | Que dos instancias no entreguen lo mismo y una lenta no pise a otra | ✅ |
 | 6 | Ciclo de vida del relay | `tick()` con una vuelta a la vez, `isAlive()` y apagado ordenado | Que el relay corra solo, se sepa si está vivo y se detenga sin dejar entregas a medias | ✅ |
 | 7 | Salud del Outbox | `OutboxHealthIndicator` y `GET /health/outbox` | Que monitoreo sepa si el relay sigue vivo y cuántas entregas fallan | ✅ |
-| 8 | Cableado y cierre | `OutboxModule` en `AppModule`, prueba con el intervalo real, README operativo, CI y guía | Cerrar el corte con el "listo cuando" cumplido de verdad | ⬜ |
+| 8 | Cableado y cierre | `OutboxModule` en `AppModule`, prueba con el intervalo real, README operativo, CI y guía | Cerrar el corte con el "listo cuando" cumplido de verdad | ✅ |
 
 **Decisiones** (se aplica la opción propuesta; si alguna no convence, se cambia antes de llegar a esa tarea):
 
@@ -201,7 +201,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] 4.5 Concurrencia del relay (bloqueo vencido y *fencing* por `attempts`). Se comprueba: entrega única con dos relays; un bloqueo vencido se retoma; la instancia lenta no pisa el `DONE` de la otra y revierte su efecto `db`
 - [x] 4.6 `tick()`, `isAlive()` y apagado ordenado del relay. Se comprueba: sin vueltas solapadas; un error no mata el intervalo; `isAlive` con reloj controlado
 - [x] 4.7 `OutboxHealthIndicator` y `GET /health/outbox`. Se comprueba: 200 con el relay vivo y 503 si está detenido; `failed` y `due` en el detalle; una `FAILED` antigua no lo pone en rojo
-- [ ] 4.8 `OutboxModule` registrado en `AppModule`, README operativo, CI y guía. Se comprueba: un evento escrito con `append` llega solo a su consumidor con el intervalo real, con el `correlationId` en sus logs
+- [x] 4.8 `OutboxModule` registrado en `AppModule`, README operativo, CI y guía. Se comprueba: un evento escrito con `append` llega solo a su consumidor con el intervalo real, con el `correlationId` en sus logs
 
 ---
 
@@ -285,6 +285,8 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 4 | Apagado ordenado del relay (decisión 2): `stop()` deja de empezar vueltas y espera la que esté en curso hasta 15 s (`STOP_TIMEOUT_MS`); se invoca en `beforeApplicationShutdown`. Para que esa espera sea posible, `PrismaService` pasa de `onModuleDestroy` a `onApplicationShutdown`: Nest cierra en el orden destruir módulos → antes del apagado → cerrar el servidor → apagado, y la conexión debe seguir abierta mientras el relay termina | Si Prisma se desconectara primero, no fallaría la entrega (Prisma se reconecta solo con la siguiente consulta), pero esa reconexión **dejaría una conexión abierta tras el cierre**, y el proceso no terminaría limpio; un test cuenta las conexiones que quedan. Mi primera explicación ("la entrega fallaría") era incorrecta |
 | 2026-10-27 | 4 | `OutboxHealthIndicator` se provee en `HealthModule` (necesita `HealthIndicatorService`, de Terminus), que ahora importa `OutboxModule`. Si la base no responde al contar, el indicador sale `down` con el error en vez de romper la respuesta; la guía lo dejaba propagar | Una caída de la base no debe convertir `/health/outbox` en un error sin forma. Un efecto lateral buscado: al depender de `OutboxModule`, el relay ya forma parte de la aplicación completa (con `ScheduleModule` de `AppModule` corre cada segundo), así que la tarea 4.8 solo lo hace explícito |
 | 2026-10-27 | 4 | Tras arrancar, `/health/outbox` responde 503 hasta que el relay termina su primera vuelta (alrededor de 1 segundo), porque `isAlive()` exige una vuelta terminada. Es esperable para un endpoint de monitoreo; `/health/live` y `/health/ready` no dependen del Outbox y no se ven afectados | Un test comprueba que con el relay detenido solo `/health/outbox` está en 503 |
+| 2026-10-27 | 4 | `AppModule` registra `OutboxModule` por sí mismo (antes llegaba solo porque `HealthModule` lo importa) y mantiene `ScheduleModule`, que es lo que pone en marcha el intervalo. Los tests lo comprueban, y también que `OutboxModule` por sí solo no programa nada | Depender de un efecto lateral de otro módulo es frágil: quitar el endpoint de salud habría apagado el relay sin avisar |
+| 2026-10-27 | 4 | Límite conocido (decisión 3): el orden de entrega por pedido usa el id del evento (uuidv7), no el orden de confirmación. Hoy no afecta, porque cada pedido genera un solo evento. Queda escrito en la guía y en el README | Se revisa si algún día hay varios eventos por pedido |
 
 ## Problemas abiertos
 
@@ -294,6 +296,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 1 | El entorno en la nube tenía Node 22.22 (en local es 24.21); la guía pide Node 24 LTS (≥ 24.15). `engines` exige `>=24.15` y el workflow de CI usa Node 24 | ✅ Resuelto |
 | 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas. El workflow `.github/workflows/main-api.yml` ya lo hace: levanta `postgres:18`, aplica las migraciones y corre los e2e. Falta ver su primera ejecución en GitHub | Parcial: workflow escrito, sin ejecutar en GitHub. Desde la 3.2 los e2e levantan su propio PostgreSQL (no usan el servicio `postgres`) |
 | 2026-10-27 | 2 | Los pedidos en **USD** no se podían valorizar: las reglas de envío estaban fijas en soles. Se resolvió en la tarea 2.10 con una tabla de reglas por moneda | ✅ Resuelto |
+| 2026-10-27 | 1 | En modo JSON (producción), el `requestId` de un log va **dentro de `message`** (`{"message":{"requestId":"…","message":"…"}}`), no como campo de primer nivel; las herramientas de logs suelen esperarlo arriba para filtrar. Es el comportamiento de `RequestAwareLogger` desde el corte 1; se vio al probar los logs del relay | Abierto: decidir si se ajusta el logger para que emita `requestId` en el primer nivel |
 
 ## Bitácora
 
@@ -337,3 +340,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 4, tarea 5 (4.5): concurrencia del relay. Dos instancias se reparten el trabajo sin repetir entregas, conservan el orden por pedido, y una entrega reclamada por una instancia caída se retoma al vencer su bloqueo. La instancia lenta no pisa a la otra: en `db` su transacción se revierte (efecto incluido), en `external` solo avisa de que pudo repetirse, y sus fallos tardíos no cambian el estado ni anuncian un `FAILED`. 10 tests de integración, estables en 6 ejecuciones; las 10 mutaciones se detectan (una sobrevivió hasta añadir un test con máximo de 1 intento). Hoy 261 unitarios y 179 de integración y e2e pasan |
 | 2026-10-27 | Corte 4, tarea 6 (4.6): ciclo de vida del relay. `tick()` (cada segundo con `@Interval`) hace una vuelta a la vez y un error no mata el intervalo; `isAlive()` es verdadero con una vuelta terminada hace menos de 1 minuto o en curso hace menos de 2 (el bloqueo); `lastRunAtIso`; apagado ordenado con tope. 22 tests unitarios con reloj controlado y 2 de integración que cierran la app a mitad de una entrega; 13 mutaciones detectadas (una sobrevivió hasta medir las conexiones abiertas). Hoy 283 unitarios y 181 de integración y e2e pasan |
 | 2026-10-27 | Corte 4, tarea 7 (4.7): `GET /health/outbox`. 200 con el relay vivo y 503 si está detenido (sin vueltas hace más de un minuto); `relayLastRunAt`, `failed` y `due` en el detalle; una entrega `FAILED` antigua o un reintento en espera no lo ponen en rojo. 6 tests unitarios del indicador y 7 de integración con el reloj adelantado; 11 mutaciones detectadas (4 tuvieron que rehacerse por el formato). Hoy 289 unitarios y 188 de integración y e2e pasan |
+| 2026-10-27 | Corte 4, tarea 8 (4.8): cableado y cierre. `AppModule` registra `OutboxModule`; 10 tests e2e con la aplicación completa y el intervalo real (un evento guardado con `append` llega solo a su consumidor, un fallo se reintenta solo con el retroceso real de 2 s, el log del consumidor lleva el `requestId` de origen o `event-<id>`, `/health/outbox` pasa a 200 y sin `ScheduleModule` el relay no corre solo), estables en 3 ejecuciones; 5 mutaciones detectadas. README con una sección operativa del Outbox, y las guías de pruebas y de piezas clave al día. **Corte 4 terminado:** los tests de integración del Outbox pasan, incluido el del `correlationId`. Hoy 290 unitarios y 198 de integración y e2e pasan |

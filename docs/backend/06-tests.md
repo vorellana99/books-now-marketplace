@@ -77,6 +77,16 @@ it('caída después de cobrar: el job reembolsa, libera y marca ABORTED', async 
 
 **Cómo se prueba un interbloqueo (`test/integration/stock.handlers.spec.ts`).** Con operaciones de milisegundos, dos pedidos en orden inverso casi nunca se cruzan, y una prueba así pasaría aunque el código estuviera mal. Por eso `slowDownStockUpdates(ms)` instala en la base de pruebas un disparador que hace que cada actualización de una fila de `stock_items` tarde 40 ms. Con ese retardo, si las transacciones no bloquearan en el mismo orden, se cruzarían siempre y PostgreSQL abortaría una por interbloqueo (`40P01`). Se comprobó quitando el orden de `reserve`, de `release` y de `lock-order.ts`, y haciendo que cada uno ordene distinto: en todos los casos el test falla. El disparador solo existe durante esos tests: se quita al terminar, y `resetDatabase()` lo elimina si un test falló antes de limpiar.
 
+**Cómo se prueba el Outbox (`test/integration/outbox.*.spec.ts` y `test/e2e/outbox.e2e.spec.ts`).** Casi todo depende del tiempo y de la concurrencia, así que se evita esperar y se fuerza cada situación:
+
+- **Consumidores de prueba** (`test/support/outbox-probes.ts`): registran lo que reciben y ejecutan un comportamiento que cada test define (lanzar un error, esperar, comprobar algo). Las instancias del servicio son simplemente varias aplicaciones sobre la misma base.
+- **Instancia lenta:** el consumidor se queda parado en un punto de espera (*latch*) hasta que el test lo suelta, y el bloqueo se vence con SQL (`expireLease`) en vez de esperar 2 minutos. Los reintentos se adelantan igual (`makeDeliveriesDue`).
+- **Orden del lote:** un `ORDER BY` omitido no se nota si la tabla y el índice devuelven las filas en el orden de inserción; el test las desordena a propósito (orden físico y `next_attempt_at`).
+- **Zona horaria:** una prueba pone la base en `America/Lima` para comprobar que los reintentos y los bloqueos no dependen de que sea UTC.
+- **Reloj de la aplicación:** se adelanta `Date` una hora para comprobar que los reintentos usan el de la base.
+- **Intervalo real:** el e2e usa la aplicación completa y espera (con un tope) a que el relay entregue solo; `OutboxModule` no trae `ScheduleModule`, así que los demás tests lo manejan a mano con `runOnce()` y `tick()`.
+- Las pruebas de concurrencia se repiten varias veces y cada garantía se comprobó rompiendo el código a propósito.
+
 **Todos los tests de integración y e2e corren contra PostgreSQL 18 real** (Testcontainers): `SKIP LOCKED`, los bloqueos de fila, `DELETE … RETURNING` y `uuidv7()` no se pueden validar con fakes ni con otra base de datos.
 
 En e2e se llama a `app.get(OutboxRelay).runOnce()` directamente, en vez de esperar al intervalo. Usa `import request from 'supertest'` (import por defecto, como ya hace `test/app.e2e-spec.ts`). Los dos archivos de configuración ya están hechos: `vitest.config.ts` incluye solo `test/unit/**/*.spec.ts`, así que `pnpm test` no necesita Docker, y `vitest.config.e2e.ts` incluye `test/{integration,e2e}/**/*.spec.ts` y añade tres cosas:

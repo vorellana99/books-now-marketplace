@@ -2,7 +2,7 @@
 
 API de LibroYa (NestJS 12 + Prisma 7 + PostgreSQL 18). La documentación de diseño está en [`/docs`](../../docs/libroya-backend-guia.md).
 
-Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [Variables de entorno](#variables-de-entorno) · [Base de datos](#base-de-datos) · [Migraciones](#migraciones) · [Datos de ejemplo](#datos-de-ejemplo) · [Levantar la API](#levantar-la-api) · [Pruebas](#pruebas) · [Calidad de código](#calidad-de-código) · [Comandos](#comandos) · [Problemas frecuentes](#problemas-frecuentes)
+Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [Variables de entorno](#variables-de-entorno) · [Base de datos](#base-de-datos) · [Migraciones](#migraciones) · [Datos de ejemplo](#datos-de-ejemplo) · [Levantar la API](#levantar-la-api) · [Outbox](#outbox-eventos-entre-contextos) · [Pruebas](#pruebas) · [Calidad de código](#calidad-de-código) · [Comandos](#comandos) · [Problemas frecuentes](#problemas-frecuentes)
 
 ## Requisitos
 
@@ -52,7 +52,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 
-Las cuatro últimas ya se validan, pero se usan a medida que se implementan los cortes de [`docs/backend/00-avance.md`](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` ya se usa (corte 4). `PAYMENT_PROVIDER`, `PAYMENT_API_URL` y `CHECKOUT_RECOVERY_MINUTES` se validan desde ya, pero se usarán al implementar la compra (corte 5), y `ADMIN_API_ENABLED`, con los endpoints de administración. El avance está en [`docs/backend/00-avance.md`](../../docs/backend/00-avance.md).
 
 ## Base de datos
 
@@ -215,6 +215,51 @@ pnpm exec vitest run -t "texto del test"             # un test por nombre
 - Los tests viven en `test/`, no junto al código: `unit/` para los unitarios, y `integration/` y `e2e/` para los que usan la base de datos.
 - Los archivos de `integration/` y `e2e/` se ejecutan uno tras otro, porque comparten el contenedor. Cada archivo vacía las tablas antes de sus tests con `resetDatabase()` (`test/support/database.ts`), que solo funciona sobre ese contenedor.
 - La primera ejecución descarga la imagen `postgres:18` si no la tienes.
+
+## Outbox: eventos entre contextos
+
+Cuando algo importante pasa en un contexto (por ejemplo, se crea un pedido), se guarda un **evento** en la misma transacción que el cambio, y otro proceso lo entrega después a quien lo escucha. Así el pedido y su evento se confirman juntos o no se confirma ninguno, y un fallo del proveedor de email no deshace una compra.
+
+**Cómo funciona:** `OutboxWriter.append(tx, events)` guarda cada evento y una entrega por consumidor. El `OutboxRelay` corre cada segundo, reclama un lote (hasta 10 entregas), las entrega y las marca `DONE`. Si un consumidor falla, la entrega se reintenta con esperas de 2, 4, 8… segundos (hasta 5 minutos) y, al agotar `OUTBOX_MAX_ATTEMPTS`, queda `FAILED`.
+
+**Agregar un consumidor** (no hay que registrarlo en ningún sitio; basta el decorador y listarlo en `providers`):
+
+```ts
+@OutboxHandler()
+@Injectable()
+export class SendOrderConfirmationConsumer implements ExternalOutboxConsumer<OrderPlacedEvent> {
+  readonly kind = 'external' as const;   // 'db' si el efecto es en la propia base y debe confirmarse junto con la entrega
+  readonly name = 'sales.send-order-confirmation';   // único
+  readonly event = 'sales.order.placed';
+  async handle(event: OrderPlacedEvent, ctx: DeliveryContext) {
+    await this.notifier.send(/* … */ { idempotencyKey: ctx.eventId });   // el proveedor descarta repeticiones por esa clave
+  }
+}
+```
+
+| Tipo | Garantía | Qué hacer |
+|---|---|---|
+| `db` | El efecto y la marca `DONE` se confirman juntos: **efecto único** | Usa `ctx.tx` para escribir; no abras otra transacción |
+| `external` | **Al menos una vez**: puede repetirse si el proceso cae a mitad | Envía `ctx.eventId` como clave de idempotencia |
+
+Un consumidor nuevo solo recibe los eventos que se guarden **después** de desplegarlo. Un evento que nadie escucha no se guarda.
+
+**Vigilar:** `GET /health/outbox` responde `200` mientras el relay de esa instancia siga dando vueltas, y `503` si está detenido (sin vueltas hace más de un minuto). Trae `relayLastRunAt`, `failed` (entregas `FAILED`) y `due` (entregas vencidas sin entregar). Las dos cantidades son informativas: alerta con tus propios umbrales (por ejemplo, `failed` creció, o `due` lleva varios minutos alto). **No lo uses como comprobación del balanceador**: un proveedor de email lento sacaría de servicio todas las instancias; para eso están `/health/live` y `/health/ready`. Tras arrancar, responde `503` durante aproximadamente un segundo, hasta la primera vuelta.
+
+**Reprocesar entregas `FAILED`** (`FAILED` no borra nada: el evento, su payload y `last_error` quedan en la base; cada paso a `FAILED` se registra como error en el log):
+
+```sql
+SET TIME ZONE 'UTC';   -- las columnas no llevan zona horaria: se escriben en UTC, como hace la aplicación
+UPDATE messaging.deliveries
+SET status = 'PENDING', attempts = 0, next_attempt_at = now(), last_error = NULL
+WHERE status = 'FAILED' AND consumer = 'sales.send-order-confirmation';
+```
+
+**Límites que conviene conocer:**
+- Las entregas de un mismo pedido y consumidor salen en orden, pero el orden es el del identificador del evento, no el de confirmación: dos transacciones simultáneas del mismo pedido podrían confirmar al revés. Hoy hay un solo evento por pedido, así que no afecta.
+- Un evento `FAILED` no frena los siguientes del mismo pedido.
+- Una instancia entrega unos 10 eventos por segundo; para más, se añaden instancias (se reparten el trabajo sin repetir entregas).
+- Al cerrar la aplicación, el relay espera hasta 15 segundos a la entrega en curso.
 
 ## Calidad de código
 
