@@ -4,6 +4,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CatalogModule } from './contexts/catalog/catalog.module.js';
 import { InventoryModule } from './contexts/inventory/inventory.module.js';
+import { SalesModule } from './contexts/sales/sales.module.js';
 import { envSchema } from './platform/config/env.schema.js';
 import { HealthModule } from './platform/health/health.module.js';
 import { OutboxModule } from './platform/outbox/outbox.module.js';
@@ -22,6 +23,7 @@ import { PrismaModule } from './platform/prisma/prisma.module.js';
     HealthModule,
     CatalogModule,
     InventoryModule,
+    SalesModule,
   ],
 })
 export class AppModule {}

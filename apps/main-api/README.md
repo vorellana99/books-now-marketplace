@@ -51,8 +51,9 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
+| `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
 
-`OUTBOX_MAX_ATTEMPTS` ya se usa (corte 4). `PAYMENT_PROVIDER`, `PAYMENT_API_URL` y `CHECKOUT_RECOVERY_MINUTES` se validan desde ya, pero se usarán al implementar la compra (corte 5), y `ADMIN_API_ENABLED`, con los endpoints de administración. El avance está en [`docs/backend/00-avance.md`](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. `ADMIN_API_ENABLED` se valida desde ya y se usará con los endpoints de administración. El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
 
 ## Base de datos
 

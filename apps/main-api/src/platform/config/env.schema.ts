@@ -18,6 +18,7 @@ export const envSchema = z
     PAYMENT_API_URL: optionalUrl,
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
+    DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),

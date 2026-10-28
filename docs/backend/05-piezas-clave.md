@@ -795,6 +795,7 @@ export function configureApp(app: INestApplication): void {
 ```ts
 // contexts/sales/sales.module.ts
 @Module({
+  imports: [OutboxModule],            // PrismaOrderRepository guarda el evento con OutboxWriter (el módulo no es global)
   controllers: [OrderController],
   providers: [
     PlaceOrderHandler, GetOrderHandler, SendOrderConfirmationConsumer, RecoverCheckoutsJob, PricingService,

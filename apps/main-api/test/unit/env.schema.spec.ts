@@ -14,8 +14,25 @@ describe('envSchema', () => {
     expect(env.PAYMENT_PROVIDER).toBe('fake');
     expect(env.OUTBOX_MAX_ATTEMPTS).toBe(8);
     expect(env.CHECKOUT_RECOVERY_MINUTES).toBe(10);
+    expect(env.DB_STATEMENT_TIMEOUT_MS).toBe(5000);
     expect(env.ADMIN_API_ENABLED).toBe(false);
   });
+
+  it('DB_STATEMENT_TIMEOUT_MS se convierte a número', () => {
+    expect(
+      envSchema.parse({ ...base, DB_STATEMENT_TIMEOUT_MS: '8000' })
+        .DB_STATEMENT_TIMEOUT_MS,
+    ).toBe(8000);
+  });
+
+  it.each(['0', '-5', '1.5', 'abc'])(
+    'rechaza DB_STATEMENT_TIMEOUT_MS=%s',
+    (value) => {
+      expect(() =>
+        envSchema.parse({ ...base, DB_STATEMENT_TIMEOUT_MS: value }),
+      ).toThrow(/DB_STATEMENT_TIMEOUT_MS/);
+    },
+  );
 
   it('acepta PAYMENT_API_URL vacía con el proveedor fake', () => {
     expect(
