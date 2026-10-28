@@ -529,16 +529,15 @@ export class OutboxRelay {
       }
       const max = this.config.get<number>('OUTBOX_MAX_ATTEMPTS', 8);
       const failed = d.attempts >= max;
-      const backoffMs = Math.min(2 ** d.attempts * 1000, 5 * 60_000);   // 2 s, 4 s, 8 s… hasta 5 min
-      await this.prisma.delivery.updateMany({
-        where: mine,                                                     // también con fencing
-        data: {
-          status: failed ? 'FAILED' : 'PENDING',
-          nextAttemptAt: new Date(Date.now() + backoffMs),
-          lockedUntil: null,
-          lastError: String(err).slice(0, 1000),
-        },
-      });
+      const backoffSeconds = Math.min(2 ** d.attempts, 5 * 60);   // 2 s, 4 s, 8 s… hasta 5 min
+      // La hora del próximo intento sale del reloj de la base (el mismo del bloqueo), también con fencing por `attempts`
+      await this.prisma.$executeRaw`
+        UPDATE messaging.deliveries
+        SET status = ${failed ? 'FAILED' : 'PENDING'}::messaging."DeliveryStatus",
+            next_attempt_at = now() + make_interval(secs => ${backoffSeconds}),
+            locked_until = NULL, last_error = ${String(err).slice(0, 1000)}
+        WHERE event_id = ${d.eventId}::uuid AND consumer = ${d.consumer}
+          AND attempts = ${d.attempts} AND status = 'PENDING'::messaging."DeliveryStatus"`;
       const msg = `Entrega ${d.consumer} de ${d.eventId}, intento ${d.attempts}: ${String(err)}`;
       failed ? this.logger.error(`FAILED. ${msg}`) : this.logger.warn(msg);
     }
@@ -601,6 +600,7 @@ export class HealthController {
 **Reprocesar entregas fallidas** (sin autenticación no conviene un endpoint; se hace por SQL o con un script):
 
 ```sql
+SET TIME ZONE 'UTC';   -- las columnas no llevan zona horaria: se escriben en UTC, como hace la aplicación
 UPDATE messaging.deliveries
 SET status = 'PENDING', attempts = 0, next_attempt_at = now(), last_error = NULL
 WHERE status = 'FAILED' AND consumer = 'sales.send-order-confirmation';

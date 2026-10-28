@@ -19,6 +19,10 @@ export class PrismaService
           DB_PASSWORD: config.getOrThrow<string>('DB_PASSWORD'),
           DB_NAME: config.getOrThrow<string>('DB_NAME'),
         }),
+        // Las columnas TIMESTAMP no llevan zona horaria. Prisma rellena @default(now()) en UTC desde el cliente y el
+        // relay del Outbox compara con now() de la base: si la sesión usara la zona de la base (UTC−5, por ejemplo),
+        // las entregas nuevas quedarían programadas horas en el futuro. Todas las conexiones de la app trabajan en UTC
+        options: '-c timezone=UTC',
       }),
     });
   }

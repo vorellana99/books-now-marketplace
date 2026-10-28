@@ -26,6 +26,7 @@ export async function query<T extends object = Record<string, unknown>>(
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
+    options: '-c timezone=UTC', // la misma zona que las conexiones de la aplicación, sea cual sea la de la base
   });
   await client.connect();
   try {
@@ -42,6 +43,7 @@ const APP_SCHEMAS = ['sales', 'catalog', 'inventory', 'messaging'];
 export async function resetDatabase(): Promise<void> {
   assertIsolatedDatabase();
   await removeSlowStockUpdates(); // por si un test falló antes de quitar el retardo
+  await resetDatabaseTimeZone(); // por si un test falló antes de restaurar la zona horaria
   const tables = await query<{ name: string }>(
     `SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) AS name
      FROM pg_tables WHERE schemaname = ANY($1)`,
@@ -78,4 +80,23 @@ export async function removeSlowStockUpdates(): Promise<void> {
     'DROP TRIGGER IF EXISTS test_slow_update ON inventory.stock_items',
   );
   await query('DROP FUNCTION IF EXISTS inventory.test_slow_update()');
+}
+
+// Cambia la zona horaria de la sesión por defecto de la base de pruebas, para comprobar que nada depende de que sea UTC.
+// Solo afecta a las conexiones que se abran después. Devuelve la función que la restaura
+export async function useDatabaseTimeZone(
+  timeZone: string,
+): Promise<() => Promise<void>> {
+  assertIsolatedDatabase();
+  if (!/^[A-Za-z_/+-]+$/.test(timeZone))
+    throw new Error('zona horaria inválida');
+  await query(
+    `ALTER DATABASE "${process.env.DB_NAME}" SET timezone TO '${timeZone}'`,
+  );
+  return resetDatabaseTimeZone;
+}
+
+export async function resetDatabaseTimeZone(): Promise<void> {
+  assertIsolatedDatabase();
+  await query(`ALTER DATABASE "${process.env.DB_NAME}" RESET timezone`);
 }

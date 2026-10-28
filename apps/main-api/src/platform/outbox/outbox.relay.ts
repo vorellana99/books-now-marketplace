@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { RequestContext } from '../observability/request-context.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { OutboxRegistry } from './outbox.registry.js';
@@ -17,9 +18,12 @@ type Claimed = {
 
 @Injectable()
 export class OutboxRelay {
+  private readonly logger = new Logger(OutboxRelay.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: OutboxRegistry,
+    private readonly config: ConfigService,
   ) {}
 
   // Una vuelta: reclama un lote acotado y entrega cada elemento. Devuelve cuántas entregas reclamó
@@ -63,6 +67,14 @@ export class OutboxRelay {
   }
 
   private async deliver(d: Claimed): Promise<void> {
+    try {
+      await this.attempt(d);
+    } catch (err) {
+      await this.recordFailure(d, err);
+    }
+  }
+
+  private async attempt(d: Claimed): Promise<void> {
     const consumer = this.registry.get(d.consumer);
     if (!consumer) throw new Error(`Consumidor no registrado: ${d.consumer}`);
 
@@ -97,5 +109,30 @@ export class OutboxRelay {
         data: { status: 'DONE', lockedUntil: null },
       });
     }
+  }
+
+  // Deja la entrega lista para otro intento, o la da por FAILED si ya no quedan.
+  // La hora del próximo intento sale del reloj de la base de datos, el mismo que usa el bloqueo: las columnas son
+  // TIMESTAMP sin zona horaria, y mezclar la hora de la aplicación con `now()` las desfasaría si difieren
+  private async recordFailure(d: Claimed, err: unknown): Promise<void> {
+    const max = this.config.get<number>('OUTBOX_MAX_ATTEMPTS', 8);
+    const failed = d.attempts >= max;
+    const backoffSeconds = Math.min(2 ** d.attempts, 5 * 60); // 2 s, 4 s, 8 s… hasta 5 min
+    const reason = String(err).slice(0, 1000);
+    const status = failed ? 'FAILED' : 'PENDING';
+
+    // También con la comprobación del intento: no pisa lo que haya hecho otra instancia
+    await this.prisma.$executeRaw`
+      UPDATE messaging.deliveries
+      SET status = ${status}::messaging."DeliveryStatus",
+          next_attempt_at = now() + make_interval(secs => ${backoffSeconds}),
+          locked_until = NULL,
+          last_error = ${reason}
+      WHERE event_id = ${d.eventId}::uuid AND consumer = ${d.consumer}
+        AND attempts = ${d.attempts} AND status = 'PENDING'::messaging."DeliveryStatus"`;
+
+    const message = `Entrega ${d.consumer} de ${d.eventId}, intento ${d.attempts}: ${String(err)}`;
+    if (failed) this.logger.error(`FAILED. ${message}`);
+    else this.logger.warn(message);
   }
 }

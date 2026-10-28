@@ -128,3 +128,13 @@ export async function expireLease(eventId: string): Promise<void> {
     [eventId],
   );
 }
+
+// Segundos que faltan para el próximo reintento, medidos con el reloj de la base (el mismo que usa el relay)
+export async function secondsUntilRetry(eventId?: string): Promise<number> {
+  const [row] = await query<{ secs: number }>(
+    `SELECT extract(epoch FROM (next_attempt_at - now()))::float AS secs
+     FROM messaging.deliveries WHERE ($1::uuid IS NULL OR event_id = $1::uuid) ORDER BY event_id LIMIT 1`,
+    [eventId ?? null],
+  );
+  return row.secs;
+}
