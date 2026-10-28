@@ -807,12 +807,28 @@ export function configureApp(app: INestApplication): void {
       useFactory: (config: ConfigService) =>
         config.get('PAYMENT_PROVIDER') === 'external'
           ? new ExternalPaymentAdapter(config.getOrThrow('PAYMENT_API_URL'))
-          : new FakePaymentGateway(),
+          : new SimulatedPaymentGateway(),
     },
   ],
 })
 export class SalesModule {}
 ```
+
+### Pasarelas de pago
+
+`SimulatedPaymentGateway` (la que usa la aplicación con `PAYMENT_PROVIDER=fake`) no hace red: el token de la tarjeta decide el resultado. `tok_declined` rechaza, `tok_error` lanza un error (una pasarela caída) y cualquier otro token aprueba. Es idempotente por `orderId`, expone un libro de cobros y reembolsos (`charges`, `refunds`) y nunca guarda el token. La clase `FakePaymentGateway` de `test/fakes/` sigue siendo el doble de los tests unitarios.
+
+`ExternalPaymentAdapter` habla con un contrato HTTP mínimo, provisional hasta elegir proveedor:
+
+| Operación | Petición | Respuesta |
+|---|---|---|
+| Cobrar | `POST {PAYMENT_API_URL}/charges` con `{ reference, amount: "90.00", currency, token }` | `200 { approved: boolean, reason?: string }`. Un rechazo es un 200 con `approved: false` |
+| Reembolsar | `POST {PAYMENT_API_URL}/refunds` con `{ reference }` | `200`, `204` o `404` (no había cobro): las tres se toman como hecho |
+
+- `reference` es el `orderId`, y también viaja en la cabecera `Idempotency-Key`.
+- Tiempo máximo de 10 s (configurable en el constructor). Si se agota, o si el proveedor responde con otro código o con algo que no cumple el contrato, es un **error**, no un rechazo: el cobro pudo haberse hecho y la saga reembolsa.
+- No sigue redirecciones. El motivo de un rechazo se limita a 200 caracteres porque llega al cliente.
+- El token de la tarjeta solo viaja en el cuerpo del cobro: los errores lanzados no lo incluyen (ni a la petición) y nunca se escribe en un log.
 
 Importa los puertos como **valor**, no con `import type`: Nest necesita la clase en runtime para inyectarla.
 

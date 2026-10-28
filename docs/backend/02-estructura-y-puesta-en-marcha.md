@@ -120,17 +120,17 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       │   ├── list-customer-orders.dto.ts         (fase 14)
 │       │       │   ├── get-order.handler.ts
 │       │       │   ├── list-customer-orders.handler.ts     (fase 14)
-│       │       │   ├── prisma-order.repository.ts
-│       │       │   ├── order.mapper.ts
+│       │       │   ├── prisma-order.repository.ts          ✅ hecho (5.3)
+│       │       │   ├── order.mapper.ts                     ✅ hecho (5.3)
 │       │       │   ├── prisma-checkout-log.adapter.ts      ✅ hecho (5.2)
-│       │       │   ├── catalog-in-process.adapter.ts
-│       │       │   ├── inventory-in-process.adapter.ts
-│       │       │   └── console-notifier.adapter.ts
+│       │       │   ├── catalog-in-process.adapter.ts       ✅ hecho (5.4)
+│       │       │   ├── inventory-in-process.adapter.ts     ✅ hecho (5.4)
+│       │       │   └── console-notifier.adapter.ts         ✅ hecho (5.4)
 │       │       ├── customer/
 │       │       │   └── prisma-customer.repository.ts       ✅ hecho (5.2)
 │       │       └── payment/
-│       │           ├── fake-payment-gateway.adapter.ts
-│       │           └── external-payment.adapter.ts
+│       │           ├── simulated-payment-gateway.adapter.ts   ✅ hecho (5.5); en la guía v5 se llamaba FakePaymentGateway
+│       │           └── external-payment.adapter.ts            ✅ hecho (5.5)
 │       │
 │       ├── catalog/
 │       │   ├── catalog.module.ts
