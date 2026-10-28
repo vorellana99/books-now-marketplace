@@ -15,7 +15,7 @@ Los cortes 0 a 5 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ✅ | `feature/corte-4-outbox` | — |
-| 5 | Compra completa | 7–9 | 🔄 | `feature/corte-5-compra-completa` | — |
+| 5 | Compra completa | 7–9 | ✅ | `feature/corte-5-compra-completa` | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
 
@@ -207,7 +207,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 5: Compra completa 🔄
+## Corte 5: Compra completa ✅
 
 **Guía:** [04-flujo-pedido-y-saga](04-flujo-pedido-y-saga.md) · [05-piezas-clave](05-piezas-clave.md) · [api-contrato](../api-contrato.md) · [06-tests](06-tests.md)
 
@@ -226,7 +226,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 7 | Consumidores del evento | `ConfirmReservationConsumer` (`db`) y `SendOrderConfirmationConsumer` (`external`) | Que la compra confirme la reserva y avise por email | ✅ |
 | 8 | API HTTP | `PlaceOrderDto`, `OrderController`, `GetOrderHandler` y Swagger | Publicar `POST /orders` y `GET /orders/:id` | ✅ |
 | 9 | Cableado | `SalesModule` en `AppModule`, `PAYMENT_PROVIDER` y el límite de tiempo de la base | Que la app real quede conectada | ✅ |
-| 10 | e2e y cierre | Los flujos de `06-tests.md`, README, guías y CI | Cumplir el "listo cuando" del corte | ⬜ |
+| 10 | e2e y cierre | Los flujos de `06-tests.md`, README, guías y CI | Cumplir el "listo cuando" del corte | ✅ |
 
 **Huecos de la lista original que este plan cubre:** falta `PrismaCustomerRepository`; `Order` no se podía reconstruir desde la base (`Order.restore`); el `save` de la guía marcaba `COMPLETED` sin comprobar que el checkout siguiera `PENDING` (si el job de recuperación ya lo había anulado, se creaba un pedido sin cobro y sin stock); la guía no define cómo rechaza pagos la pasarela simulada ni el contrato HTTP de la real; el DTO rechazaba ISBN con guiones y el hash distinguía `978-0-…` de `978…`; el hash usaba `localeCompare`; no había timeouts de base de datos aunque la guía los da por supuestos; `OutboxModule` no es global aquí, así que `SalesModule` lo importa; y se añaden tests de contrato para que el fake de `CheckoutLog` no se desvíe de Prisma, y un test de que `cardToken` no queda en la base ni en los logs.
 
@@ -249,7 +249,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] 5.7 Consumidores: `SendOrderConfirmationConsumer` y `ConfirmReservationConsumer`. Se comprueba: reserva `HELD` a `CONFIRMED` junto con `DONE`; email con `eventId` como clave
 - [x] 5.8 `OrderController`, `PlaceOrderDto` y `GetOrderHandler` (`GET /orders/:id`). Se comprueba: 201, 400, 404, 409, 422 y la forma de la respuesta
 - [x] 5.9 `SalesModule` y conexión en `AppModule`. Se comprueba: arranca con las dos pasarelas y los consumidores quedan registrados
-- [ ] 5.10 e2e de `orders` (incluye dos `POST` simultáneos con la misma clave y el `X-Request-Id`), README, guías y CI. Se comprueba: tras comprar, el email aparece en el log, la reserva queda `CONFIRMED` y `/health/outbox` responde 200
+- [x] 5.10 e2e de `orders` (incluye dos `POST` simultáneos con la misma clave y el `X-Request-Id`), README, guías y CI. Se comprueba: tras comprar, el email aparece en el log, la reserva queda `CONFIRMED` y `/health/outbox` responde 200
 
 ---
 
@@ -333,6 +333,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-28 | 5 | `api-contrato.md` deja de prometer `422 EMPTY_ORDER` e `INVALID_QUANTITY` en `POST /orders`: una lista vacía o una cantidad que no es un entero ≥ 1 las rechaza antes la validación del cuerpo con `400`, como pedía el DTO de la guía. Las reglas siguen en el dominio | El contrato y la guía se contradecían; se sigue la guía (el plan aprobado) y se corrige el contrato. Añadida la sección con la forma del cuerpo |
 | 2026-10-28 | 5 | `SalesModule` importa `OutboxModule` (no es global) y registra `PricingService` como proveedor. Las opciones de conexión salen de `connectionOptions()` (`platform/config/connection-options.ts`), que une `timezone=UTC` con el nuevo `statement_timeout` (`DB_STATEMENT_TIMEOUT_MS`, por defecto 5000 ms, mínimo 1) y rechaza un valor que no sea un entero positivo | Decisión D5. Hace falta el límite para que la duración máxima del handler sea realmente la que supone el umbral de 10 minutos del job |
 | 2026-10-28 | 5 | Los tests de `PAYMENT_PROVIDER` no usan `AppModule` con `withEnv`: `AppModule` valida el entorno una sola vez, al importarse (`ConfigModule.forRoot` en el decorador), así que el cambio no tendría efecto. Arman los mismos módulos con `createTestApp`, que valida en cada llamada | Un primer intento falló por esto: la prueba de la pasarela externa recibió la simulada |
+| 2026-10-28 | 5 | El e2e de `orders` reemplaza la pasarela de `AppModule` por una `SimulatedPaymentGateway` con compuerta (a través de un delegado que se reinicia en cada test), en lugar de usar la que elija el `.env` | Así el test no depende de `PAYMENT_PROVIDER`, y la compuerta deja la primera petición parada dentro del cobro para probar el `409` sin esperas |
 
 ## Problemas abiertos
 
@@ -343,6 +344,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas. El workflow `.github/workflows/main-api.yml` ya lo hace: levanta `postgres:18`, aplica las migraciones y corre los e2e. Falta ver su primera ejecución en GitHub | Parcial: workflow escrito, sin ejecutar en GitHub. Desde la 3.2 los e2e levantan su propio PostgreSQL (no usan el servicio `postgres`) |
 | 2026-10-27 | 2 | Los pedidos en **USD** no se podían valorizar: las reglas de envío estaban fijas en soles. Se resolvió en la tarea 2.10 con una tabla de reglas por moneda | ✅ Resuelto |
 | 2026-10-27 | 1 | En modo JSON (producción), el `requestId` de un log iba **dentro de `message`**, y `message` cambiaba de tipo (texto sin petición, objeto con petición); además `debug`, `verbose` y `fatal` salían sin el id. Se corrigió en la tarea 4.9: el `requestId` es un campo de primer nivel y `message` conserva su tipo | ✅ Resuelto |
+| 2026-10-28 | 5 | Con `PAYMENT_PROVIDER=fake` (el valor por defecto) la pasarela simulada **aprueba cualquier tarjeta**, también con `NODE_ENV=production`; hoy solo el banner de arranque muestra el proveedor y nada lo impide. Propuesta: rechazar `fake` con `NODE_ENV=production` en `env.schema.ts`, igual que ya se hace con `ADMIN_API_ENABLED`. No se aplicó porque no estaba en el plan del corte | ⚠️ Abierto, a decidir |
 
 ## Bitácora
 
@@ -398,3 +400,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-28 | Corte 5, tarea 7 (5.7): `ConfirmReservationConsumer` (`db`, `HELD` a `CONFIRMED` en el `tx` del relay) y `SendOrderConfirmationConsumer` (`external`, `eventId` como clave, sin cliente no falla). 9 tests unitarios y 10 de integración con el relay y PostgreSQL reales (reserva confirmada junto con `DONE`, stock intacto, otros pedidos intactos, repetir la entrega, rollback si la transacción se deshace, correo con la misma clave tras un fallo del proveedor, cliente inexistente, ambos consumidores registrados). 16 mutaciones: 15 detectadas; la restante (quitar el filtro `HELD`) es **equivalente**, porque con solo los estados `HELD` y `CONFIRMED` pasar `CONFIRMED` a `CONFIRMED` no cambia nada, y el filtro queda como defensa ante estados futuros. Hoy 474 unitarios y 284 de integración y e2e pasan |
 | 2026-10-28 | Corte 5, tarea 8 (5.8): `PlaceOrderDto`, `OrderController` (`POST /orders` con `Idempotency-Key` y `GET /orders/:id`), `GetOrderQuery` y `GetOrderHandler`, con Swagger. 44 tests de la capa HTTP con los buses simulados (201, 400 por la clave o por 18 formas de cuerpo inválido, campos extra, 404, 409, 422, 500 sin filtrar mensajes, `X-Request-Id`, token ausente de las respuestas, y el documento de Swagger) y 7 de integración del handler con PostgreSQL real (soles y dólares, 2 decimales, orden por ISBN, pedido inexistente, sin exponer al cliente). 28 mutaciones: 27 detectadas (3 de ellas tras reforzar un test o corregir un ancla) y 1 equivalente (`@IsArray()` es redundante con `@ArrayMinSize`). Hoy 518 unitarios y 291 de integración y e2e pasan |
 | 2026-10-28 | Corte 5, tarea 9 (5.9): `SalesModule` en `AppModule`, pasarela elegida por `PAYMENT_PROVIDER` y `statement_timeout` por `DB_STATEMENT_TIMEOUT_MS`. 12 tests unitarios (opciones de conexión y esquema de entorno), 6 de integración que demuestran el límite sobre PostgreSQL real (`pg_sleep` cancelado en una sentencia y dentro de una transacción) y 8 e2e de cableado con la aplicación completa (un puerto = una implementación real, los dos consumidores registrados, el cron cada 5 minutos, `PlaceOrderCommand` con su handler, rutas publicadas, y las dos pasarelas). 24 mutaciones, todas detectadas por al menos una suite. Hoy 530 unitarios y 305 de integración y e2e pasan |
+| 2026-10-28 | Corte 5, tarea 10 (5.10): e2e de `orders` con la aplicación completa y PostgreSQL real (24 tests: compra premium, normal, con envío gratis y en dólares; sin stock, pago rechazado, error de la pasarela y moneda mezclada; idempotencia; dos `POST` simultáneos con la misma clave; la última copia; `X-Request-Id`; validación; y token ausente en tablas y logs), más README (cómo probar una compra con `curl` y la tabla de tokens), `api-contrato.md` y `06-tests.md`. Estable en tres corridas seguidas. 22 mutaciones sobre piezas de varias capas: 16 detectadas por el e2e a la primera, 2 más tras añadirle una aserción (la clave de idempotencia del correo) y corregir una mutación mal escrita (el log del notificador), y 4 que el e2e no puede ver y cubren otras suites (el reembolso con la pasarela simulada, el `replay` previo al `start`, el redondeo `toFinal` y el fencing de `save`). **Comprobación real:** con la API compilada contra una base temporal (borrada después), 5 compras por `curl` (premium 81.00, normal 100.00, dólares 18.00 USD), `OUT_OF_STOCK`, `STOCK_ITEM_NOT_FOUND`, `PAYMENT_DECLINED`, `tok_error` (500), libro inactivo, reintento con la misma clave (mismo `orderId`), clave reutilizada y sin clave; quedaron 5 pedidos, 4 checkouts `ABORTED`, 5 reservas `CONFIRMED`, 10 entregas `DONE`, el stock cuadrado, el `X-Request-Id` en checkout, evento y correo, y ningún `tok_` en la base ni en el log. Hoy 530 unitarios y 329 de integración y e2e pasan |

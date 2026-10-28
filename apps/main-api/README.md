@@ -170,7 +170,45 @@ curl http://localhost:3000/books/9780201633610       # 404 NOT_FOUND: libro inac
 curl http://localhost:3000/books/123                 # 422 INVALID_ISBN
 ```
 
-La reserva y la liberación de stock aún no tienen endpoint: las usará Ventas por dentro cuando exista (corte 5).
+La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas por dentro al comprar.
+
+### Probar una compra
+
+`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta y las líneas. Con la API en marcha y los datos de ejemplo:
+
+```bash
+# Ana (normal) compra 2 Clean Code: 90.00 + 10.00 de envío → 201 { orderId, charged: { amount: "100.00", currency: "PEN" } }
+curl -X POST http://localhost:3000/orders \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"customerId":"11111111-1111-4111-8111-111111111111","cardToken":"tok_visa","items":[{"isbn":"9780132350884","quantity":2}]}'
+
+# Consultar el pedido
+curl http://localhost:3000/orders/<orderId>
+```
+
+| Prueba | Cómo | Resultado |
+|---|---|---|
+| Cliente premium | `customerId` de Luis (`2222…`), 2 Clean Code | `201`, `81.00 PEN` (10 % de descuento y envío gratis) |
+| Pedido en dólares | Ana, 1 The Pragmatic Programmer | `201`, `18.00 USD` (15.00 + 3.00 de envío) |
+| Reintento | La misma `Idempotency-Key` y el mismo cuerpo | `201` con el mismo `orderId`, sin cobrar otra vez |
+| Clave reutilizada | La misma clave con otro carrito | `422 IDEMPOTENCY_KEY_REUSED` |
+| Sin stock | Refactoring (stock 0) | `422 OUT_OF_STOCK`, no se cobra nada |
+| Sin registro de stock | Code Complete | `422 STOCK_ITEM_NOT_FOUND` |
+| Libro inactivo | Design Patterns | `404 NOT_FOUND` |
+| Sin `Idempotency-Key`, o con una que no es UUID | — | `400` |
+
+**La pasarela de pago simulada** (`PAYMENT_PROVIDER=fake`, la de por defecto) decide por el token de la tarjeta, sin salir a la red:
+
+| `cardToken` | Resultado |
+|---|---|
+| `tok_declined` | `422 PAYMENT_DECLINED`; la reserva se libera y no queda pedido |
+| `tok_error` | `500`: la pasarela "se cae"; se compensa igual (se libera la reserva y el intento queda anulado) |
+| cualquier otro (por ejemplo `tok_visa`) | Aprobado |
+
+El token solo viaja a la pasarela: no se guarda en la base ni se escribe en los logs.
+
+Un segundo después de comprar, el relay del Outbox entrega el evento: la reserva pasa a `CONFIRMED` y el correo de confirmación aparece en el log (`Email a ana@example.com: …`) con el mismo `requestId` de la compra. Si algo se queda a medias (por ejemplo, el proceso se cae tras cobrar), `RecoverCheckoutsJob` lo reembolsa y lo libera pasados `CHECKOUT_RECOVERY_MINUTES` minutos. Con `PAYMENT_PROVIDER=external` se usa un proveedor real por HTTP (contrato en [docs/backend/05-piezas-clave.md](../../docs/backend/05-piezas-clave.md)).
 
 ## Levantar la API
 
