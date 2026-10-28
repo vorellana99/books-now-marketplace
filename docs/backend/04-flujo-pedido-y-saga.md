@@ -42,6 +42,40 @@ sequenceDiagram
     RL->>DB: entregas → DONE
 ```
 
+### Quién paga y en qué punto ocurre el cobro
+
+En una tienda propia **paga el cliente**, no el dueño. El dueño es quien cobra: el dinero llega a su cuenta bancaria. Entre los dos está el **proveedor de pagos** (Stripe, Culqi, Niubiz, etc.), que cobra la tarjeta del cliente por cuenta del dueño y le deposita el importe menos su comisión. La tienda no procesa tarjetas por sí misma: hacerlo exigiría certificación PCI-DSS.
+
+| Quién | Qué hace |
+|---|---|
+| **Cliente** | Elige los libros y paga con su tarjeta. |
+| **Dueño de la tienda** | Vende los libros y recibe el dinero. No hace ningún pago. |
+| **Proveedor de pagos** | Cobra la tarjeta del cliente, abona el importe al dueño y se queda una comisión por venta. |
+
+```mermaid
+sequenceDiagram
+    actor C as Cliente (navegador)
+    participant API as API de la tienda (POST /orders)
+    participant PP as Proveedor de pagos
+    participant D as Dueño (cuenta bancaria)
+
+    C->>PP: 1. Escribe su tarjeta en el formulario del proveedor
+    PP-->>C: 2. Devuelve un token de un solo uso (cardToken)
+    C->>API: 3. Carrito + cardToken (la tarjeta nunca pasa por la API)
+    API->>API: 4. Valida, calcula el total y reserva el stock
+    API->>PP: 5. COBRO: charge(total, cardToken, orderId)
+    PP->>PP: cobra la tarjeta del cliente
+    PP-->>API: aprobado o rechazado
+    PP->>D: abona el importe, menos la comisión
+    API->>API: 6. Guarda el pedido (o libera la reserva si se rechazó)
+    API-->>C: 7. 201 con el pedido, o 422 PAYMENT_DECLINED
+```
+
+- **El cobro es el paso 5**: ocurre después de reservar el stock y antes de guardar el pedido, dentro de `PlaceOrderHandler`. Si se rechaza, se libera la reserva y no queda pedido; si el cobro pasa y algo falla después, la saga reembolsa al cliente.
+- **La API solo ve el token.** El número de la tarjeta lo escribe el cliente en el formulario del proveedor (pasos 1 y 2), así que no se guarda ni se registra en ningún sitio de la tienda.
+- **En desarrollo no hay proveedor.** `SimulatedPaymentGateway` hace el papel del paso 5 sin mover dinero: decide por el texto del token (`tok_declined` rechaza, `tok_error` falla) y tarda 3 s. En producción lo hace el proveedor real, a través de `ExternalPaymentAdapter`, y la API no arranca con la simulada (`PAYMENT_PROVIDER=external`).
+- **Pendiente de elegir proveedor:** el diseño actual supone un cobro síncrono con token. Si el proveedor exige 3-D Secure o una redirección con confirmación por webhook, el cobro quedaría pendiente hasta recibir la confirmación y habría que adaptar la saga, no solo el adaptador.
+
 ### La saga mínima: qué pasa si el proceso se cae
 
 ```mermaid
