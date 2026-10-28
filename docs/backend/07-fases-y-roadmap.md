@@ -128,24 +128,20 @@ model Order {
 ```
 
 - **El dominio la valida con el valor `ShippingAddress`** (`sales/domain/order/shipping-address.vo.ts`): recorta cada campo, exige los seis obligatorios, acota el largo (los mismos tamaños de las columnas), rechaza saltos de línea y otros caracteres de control, y pide un teléfono de al menos 6 dígitos con solo dígitos, espacios, `+`, `-` y paréntesis. `ShippingAddress.create` valida; `ShippingAddress.restore` lee lo que ya está en la base sin validar, para que una regla nueva no impida leer pedidos antiguos. El mapper trata la dirección con todas las columnas en nulo como "pedido anterior" (`null`) y una dirección a medias como un dato roto.
-- **El DTO la valida** como objeto anidado (`@ValidateNested`), con todos los campos obligatorios salvo la referencia.
+- **El DTO valida la forma** como objeto anidado (`@ValidateNested`, `@IsObject`): obligatoria, los seis campos con texto no vacío y su largo máximo, y la referencia opcional; lo que falte es un `400`. **El contenido lo valida el dominio** (teléfono, caracteres de control): un `422 INVALID_SHIPPING_ADDRESS`, igual que un ISBN mal formado.
 - **Forma parte del hash de la `Idempotency-Key`:** un reintento con la misma clave y otra dirección responde `422 IDEMPOTENCY_KEY_REUSED`, igual que si cambiara el carrito. Cambian dos firmas:
 
 ```ts
-// PlaceOrderCommand agrega la dirección
+// PlaceOrderCommand agrega la dirección (sin validar: el handler la normaliza con ShippingAddress.create)
 new PlaceOrderCommand(key, dto.customerId, dto.items, dto.shippingAddress, dto.cardToken);
 
-// hashRequest la incluye, normalizada: sin espacios sobrantes y siempre en el mismo orden de campos
-function hashRequest(customerId: string, items: CartItem[], address: ShippingAddress): string {
-  const merged = new Map<string, number>();
-  for (const i of items) merged.set(i.isbn, (merged.get(i.isbn) ?? 0) + i.quantity);
-  const lines = [...merged].sort(([a], [b]) => a.localeCompare(b)).map(([isbn, q]) => `${isbn}:${q}`).join(',');
-  const fields = ['recipient', 'phone', 'line1', 'district', 'province', 'department', 'reference'] as const;
-  const addr = fields.map((f) => (address[f] ?? '').trim()).join('|');
-  return createHash('sha256').update(`${customerId}|${lines}|${addr}`).digest('hex');
-}
+// hashRequest la recibe ya normalizada (recortada; una referencia vacía es null) y la incluye como lista JSON.
+// El código completo está en 04-flujo-pedido-y-saga.md
+hashRequest(customerId, items, address);
 ```
-- **`OrderPlacedEvent` pasa a `eventVersion = 2`** e incluye la dirección, porque Envíos la necesitará. Los consumidores actuales ignoran el campo nuevo.
+- **`OrderPlacedEvent` pasa a `eventVersion = 2`** e incluye la dirección, porque Envíos la necesitará. Los consumidores actuales ignoran el campo nuevo. Los eventos ya guardados siguen siendo de la versión 1 y los consumidores los leen igual (hay un test que lo comprueba).
+- **`GET /orders/:id` no la devuelve** (decisión D2): el endpoint no tiene autenticación, y la calle y el teléfono son datos personales. La dirección viaja en el evento y, más adelante, en el historial de administración.
+- **Cambiar `hashRequest` invalida las claves de idempotencia en vuelo:** una compra a medias iniciada antes de esta versión, reintentada después, daría `IDEMPOTENCY_KEY_REUSED`. Es aceptable antes de desplegar.
 
 ### Fase 12: Administrar libros y precios
 

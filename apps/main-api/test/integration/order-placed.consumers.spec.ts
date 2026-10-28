@@ -27,6 +27,7 @@ import { createTestApp } from '../support/nest.js';
 import { FakeNotifier } from '../fakes/fake-notifier.js';
 import { InventoryInProcessAdapter } from '../../src/contexts/sales/infrastructure/order/inventory-in-process.adapter.js';
 import { CommandBus } from '@nestjs/cqrs';
+import { ADDRESS_PAYLOAD } from '../fakes/fixtures.js';
 
 // Los dos consumidores de sales.order.placed, recibiendo el evento por el relay real
 describe('Consumidores de sales.order.placed (relay y PostgreSQL reales)', () => {
@@ -75,9 +76,21 @@ describe('Consumidores de sales.order.placed (relay y PostgreSQL reales)', () =>
   const publish = (orderId: string, customerId: string, isbn: string) =>
     prisma.$transaction((tx) =>
       writer.append(tx, [
-        new OrderPlacedEvent(orderId, customerId, '100.00', [
-          { isbn, quantity: 1 },
-        ]),
+        new OrderPlacedEvent(
+          orderId,
+          customerId,
+          '100.00',
+          [{ isbn, quantity: 1 }],
+          {
+            recipient: 'Ana',
+            phone: '999888777',
+            line1: 'Av. Larco 123',
+            district: 'Miraflores',
+            province: 'Lima',
+            department: 'Lima',
+            reference: null,
+          },
+        ),
       ]),
     );
 
@@ -157,7 +170,13 @@ describe('Consumidores de sales.order.placed (relay y PostgreSQL reales)', () =>
       const handle = () =>
         prisma.$transaction((tx) =>
           consumer.handle(
-            new OrderPlacedEvent(orderId, customer.id, '1.00', []),
+            new OrderPlacedEvent(
+              orderId,
+              customer.id,
+              '1.00',
+              [],
+              ADDRESS_PAYLOAD,
+            ),
             {
               tx,
               eventId: randomUUID(),
@@ -183,7 +202,13 @@ describe('Consumidores de sales.order.placed (relay y PostgreSQL reales)', () =>
       await prisma
         .$transaction(async (tx) => {
           await consumer.handle(
-            new OrderPlacedEvent(orderId, customer.id, '1.00', []),
+            new OrderPlacedEvent(
+              orderId,
+              customer.id,
+              '1.00',
+              [],
+              ADDRESS_PAYLOAD,
+            ),
             {
               tx,
               eventId: randomUUID(),
@@ -199,6 +224,40 @@ describe('Consumidores de sales.order.placed (relay y PostgreSQL reales)', () =>
       expect(await reservationsOf(orderId)).toEqual([
         { isbn, quantity: 1, status: 'HELD' },
       ]);
+    });
+  });
+
+  // Un evento guardado antes de la versión 2 no trae dirección: los consumidores actuales deben seguir leyéndolo
+  describe('un evento de la versión 1, sin dirección', () => {
+    const publishV1 = (orderId: string, customerId: string, isbn: string) =>
+      prisma.$transaction((tx) =>
+        writer.append(tx, [
+          {
+            eventName: 'sales.order.placed',
+            eventVersion: 1,
+            occurredOn: new Date(),
+            aggregateId: orderId,
+            orderId,
+            customerId,
+            subtotal: '100.00',
+            lines: [{ isbn, quantity: 1 }],
+          } as never,
+        ]),
+      );
+
+    it('confirma la reserva y envía el correo igual', async () => {
+      const { orderId, isbn, customer } = await reserved(1);
+      await publishV1(orderId, customer.id, isbn);
+      const [event] = await outboxRows();
+
+      await relay.runOnce();
+
+      expect(event.event_version).toBe(1);
+      expect(await reservationsOf(orderId)).toEqual([
+        { isbn, quantity: 1, status: 'CONFIRMED' },
+      ]);
+      expect(notifier.sent).toHaveLength(1);
+      expect(notifier.sent[0].to).toBe('ana@example.com');
     });
   });
 

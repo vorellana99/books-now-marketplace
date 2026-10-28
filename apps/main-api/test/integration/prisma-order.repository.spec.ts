@@ -23,7 +23,7 @@ import { query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 import { OrderPlacedProbe } from '../support/outbox-probes.js';
 import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
-import { ADDRESS_DATA } from '../fakes/fixtures.js';
+import { ADDRESS_DATA, ADDRESS } from '../fakes/fixtures.js';
 import { insertOrder } from '../support/builders.js';
 
 const ISBN_A = '9780306406157';
@@ -63,7 +63,12 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
     options: { checkout?: boolean } = {},
   ) {
     const customer = await insertCustomer();
-    const order = OrderFactory.fromCart(repo.nextId(), customer.id, items);
+    const order = OrderFactory.fromCart(
+      repo.nextId(),
+      customer.id,
+      items,
+      ADDRESS,
+    );
     order.place();
     const key = randomUUID();
     if (options.checkout !== false)
@@ -281,9 +286,12 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
     });
 
     it('si el cliente no existe (clave foránea), nada queda a medias', async () => {
-      const order = OrderFactory.fromCart(repo.nextId(), randomUUID(), [
-        item(),
-      ]);
+      const order = OrderFactory.fromCart(
+        repo.nextId(),
+        randomUUID(),
+        [item()],
+        ADDRESS,
+      );
       order.place();
       await checkouts.start(order.id, randomUUID(), 'hash');
 
@@ -338,7 +346,12 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
 
     it('dos guardados simultáneos del mismo pedido: solo uno se crea', async () => {
       const { order } = await readyOrder();
-      const copy = OrderFactory.fromCart(order.id, order.customerId, [item()]);
+      const copy = OrderFactory.fromCart(
+        order.id,
+        order.customerId,
+        [item()],
+        ADDRESS,
+      );
       copy.place();
 
       const results = await Promise.allSettled([
@@ -358,7 +371,12 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
   describe('save: se niega a guardar lo que no corresponde', () => {
     it('un pedido sin confirmar', async () => {
       const customer = await insertCustomer();
-      const draft = OrderFactory.fromCart(repo.nextId(), customer.id, [item()]);
+      const draft = OrderFactory.fromCart(
+        repo.nextId(),
+        customer.id,
+        [item()],
+        ADDRESS,
+      );
       await checkouts.start(draft.id, randomUUID(), 'hash');
 
       await expect(repo.save(draft, Money.of('90.00'))).rejects.toMatchObject({
@@ -468,7 +486,7 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
   describe('la dirección de envío', () => {
     const address = ShippingAddress.create(ADDRESS_DATA);
 
-    async function orderWithAddress(shipping: ShippingAddress | null) {
+    async function orderWithAddress(shipping: ShippingAddress) {
       const customer = await insertCustomer();
       const order = OrderFactory.fromCart(
         repo.nextId(),
@@ -525,14 +543,38 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
       ).toBeNull();
     });
 
-    it('un pedido sin dirección se guarda con todas las columnas en NULL y se lee con dirección null', async () => {
-      const order = await orderWithAddress(null);
-      await repo.save(order, Money.of('90.00'));
+    it('se niega a guardar un pedido sin dirección (por ejemplo, uno leído de antes de la dirección)', async () => {
+      const customer = await insertCustomer();
+      const legacy = await insertOrder(customer.id);
+      const order = (await repo.findById(legacy.id))!;
+      const copy = OrderFactory.fromCart(
+        randomUUID(),
+        customer.id,
+        [item()],
+        address,
+      );
+      copy.place();
+      // el mismo contenido, pero sin dirección: solo se puede obtener leyendo un pedido antiguo
+      const withoutAddress = Order.restore({
+        id: copy.id,
+        customerId: customer.id,
+        lines: order.getLines(),
+        shippingAddress: null,
+      });
+      await checkouts.start(withoutAddress.id, randomUUID(), 'hash');
 
+      const error = await repo
+        .save(withoutAddress, Money.of('90.00'))
+        .catch((e: DomainError) => e);
+
+      expect((error as DomainError).code).toBe('SHIPPING_ADDRESS_REQUIRED');
+      expect(await checkoutStatus(withoutAddress.id)).toBe('PENDING');
       expect(
-        Object.values(await shipColumns(order.id)).every((v) => v === null),
-      ).toBe(true);
-      expect((await repo.findById(order.id))?.shippingAddress).toBeNull();
+        await query('SELECT 1 FROM sales.orders WHERE id = $1', [
+          withoutAddress.id,
+        ]),
+      ).toEqual([]);
+      expect(await outboxRows()).toEqual([]);
     });
 
     it('un pedido anterior a la dirección, insertado sin ella, se lee con dirección null', async () => {
@@ -545,11 +587,14 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
       expect(found?.getLines()).toHaveLength(1);
     });
 
-    it('el evento no cambia con la dirección (la versión 2 llega en la tarea siguiente)', async () => {
+    it('el evento guardado es la versión 2 y lleva la dirección', async () => {
       const order = await orderWithAddress(address);
       await repo.save(order, Money.of('90.00'));
+
       const [event] = await outboxRows();
-      expect(event.event_version).toBe(1);
+
+      expect(event.event_version).toBe(2);
+      expect(event.payload).toMatchObject({ shippingAddress: ADDRESS_DATA });
     });
   });
 

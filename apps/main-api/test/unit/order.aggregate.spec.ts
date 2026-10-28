@@ -7,7 +7,7 @@ import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { DomainError } from '../../src/shared-kernel/domain.errors.js';
 import { Isbn } from '../../src/shared-kernel/isbn.vo.js';
 import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
-import { ADDRESS_DATA } from '../fakes/fixtures.js';
+import { ADDRESS, ADDRESS_DATA } from '../fakes/fixtures.js';
 
 const ISBN_A = Isbn.create('9780306406157');
 const ISBN_B = Isbn.create('9780306406140');
@@ -20,7 +20,7 @@ const codeOf = (fn: () => unknown): string | undefined => {
   }
 };
 
-const newOrder = () => new Order('o-1', 'c-1');
+const newOrder = () => new Order('o-1', 'c-1', ADDRESS);
 
 describe('Order', () => {
   describe('estado inicial', () => {
@@ -245,5 +245,57 @@ describe('Order: dirección de envío', () => {
     );
     order.place();
     expect(order.shippingAddress).toBe(address);
+  });
+});
+
+describe('Order.place: la dirección es obligatoria', () => {
+  const book = Isbn.create('9780306406157');
+  const draft = (address: ShippingAddress | null) => {
+    const order = new Order('o-1', 'c-1', address);
+    order.addBook(book, 'Clean Code', Money.of('45.00'), 2);
+    return order;
+  };
+
+  it('sin dirección no se puede confirmar: SHIPPING_ADDRESS_REQUIRED', () => {
+    const order = draft(null);
+    expect(codeOf(() => order.place())).toBe('SHIPPING_ADDRESS_REQUIRED');
+  });
+
+  it('el rechazo deja el pedido como estaba: en borrador y sin eventos', () => {
+    const order = draft(null);
+    codeOf(() => order.place());
+    expect(order.status).toBe('DRAFT');
+    expect(order.pullEvents()).toEqual([]);
+  });
+
+  it('un pedido vacío sigue dando EMPTY_ORDER antes que la dirección', () => {
+    const order = new Order('o-1', 'c-1', null);
+    expect(codeOf(() => order.place())).toBe('EMPTY_ORDER');
+  });
+
+  it('con dirección se confirma y el evento (versión 2) la lleva', () => {
+    const order = draft(ShippingAddress.create(ADDRESS_DATA));
+    order.place();
+
+    const [event] = order.pullEvents() as OrderPlacedEvent[];
+
+    expect(event.eventVersion).toBe(2);
+    expect(event.shippingAddress).toEqual(ADDRESS_DATA);
+  });
+
+  it('el evento lleva la dirección tal como quedó después de normalizarla', () => {
+    const order = draft(
+      ShippingAddress.create({
+        ...ADDRESS_DATA,
+        recipient: '  Ana  ',
+        reference: '',
+      }),
+    );
+    order.place();
+    const [event] = order.pullEvents() as OrderPlacedEvent[];
+    expect(event.shippingAddress).toMatchObject({
+      recipient: 'Ana',
+      reference: null,
+    });
   });
 });

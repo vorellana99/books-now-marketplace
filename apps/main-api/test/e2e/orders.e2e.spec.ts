@@ -21,6 +21,15 @@ import {
 import { query, resetDatabase } from '../support/database.js';
 
 const TOKEN = 'tok_secreto_de_prueba_123';
+const ADDRESS_BODY = {
+  recipient: 'María Quispe',
+  phone: '+51 987 654 321',
+  line1: 'Jr. Ucayali 150, Dpto 2',
+  district: 'Barranco',
+  province: 'Lima',
+  department: 'Lima',
+  reference: 'Casa de rejas verdes',
+};
 
 // Una pasarela que puede quedarse parada dentro del cobro hasta que el test la suelte
 class GateableGateway extends SimulatedPaymentGateway {
@@ -103,7 +112,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     customerId: string,
     items: { isbn: string; quantity: number }[],
     cardToken = 'tok_visa',
-  ) => ({ customerId, cardToken, items });
+  ) => ({ customerId, cardToken, items, shippingAddress: ADDRESS_BODY });
 
   async function book(
     price = '100.00',
@@ -518,6 +527,235 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
       const [email] = emailLogs();
       expect(email.requestId).toBe('r-compra-7f3a');
       expect(email.message).toContain('traza@example.com');
+    });
+  });
+
+  // ── dirección de envío ─────────────────────────────────────────────────────────────────────
+  describe('dirección de envío', () => {
+    const shipColumns = async (orderId: string) =>
+      (
+        await query<Record<string, string | null>>(
+          `SELECT ship_recipient, ship_phone, ship_line1, ship_district, ship_province, ship_department, ship_reference
+           FROM sales.orders WHERE id = $1`,
+          [orderId],
+        )
+      )[0];
+    const withAddress = (
+      customerId: string,
+      isbn: string,
+      shippingAddress: unknown,
+    ) => ({ ...cart(customerId, [{ isbn, quantity: 1 }]), shippingAddress });
+
+    it('la compra guarda la dirección en el pedido', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+
+      const res = await post(
+        cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
+      ).expect(201);
+
+      expect(await shipColumns(res.body.orderId)).toEqual({
+        ship_recipient: 'María Quispe',
+        ship_phone: '+51 987 654 321',
+        ship_line1: 'Jr. Ucayali 150, Dpto 2',
+        ship_district: 'Barranco',
+        ship_province: 'Lima',
+        ship_department: 'Lima',
+        ship_reference: 'Casa de rejas verdes',
+      });
+    });
+
+    it('guarda la dirección ya recortada, y sin referencia la deja en NULL', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      const { reference: _omit, ...rest } = ADDRESS_BODY;
+
+      const res = await post(
+        withAddress(customer.id, b.isbn, {
+          ...rest,
+          recipient: '   María Quispe  ',
+        }),
+      ).expect(201);
+
+      const columns = await shipColumns(res.body.orderId);
+      expect(columns.ship_recipient).toBe('María Quispe');
+      expect(columns.ship_reference).toBeNull();
+    });
+
+    it('el evento del pedido es la versión 2 y lleva la dirección', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+
+      const res = await post(
+        cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
+      ).expect(201);
+
+      const [event] = await outboxRows();
+      expect(event.event_version).toBe(2);
+      expect(event.aggregate_id).toBe(res.body.orderId);
+      expect(event.payload).toMatchObject({ shippingAddress: ADDRESS_BODY });
+    });
+
+    it('los consumidores del evento siguen funcionando con la versión 2', async () => {
+      const customer = await insertCustomer({ email: 'v2@example.com' });
+      const b = await book();
+      const res = await post(
+        cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
+      ).expect(201);
+
+      await deliverEvents(2);
+
+      expect(await reservationsOf(res.body.orderId)).toEqual([
+        { isbn: b.isbn, quantity: 1, status: 'CONFIRMED' },
+      ]);
+      expect(emailLogs()).toHaveLength(1);
+    });
+
+    it('sin dirección: 400 y no pasa nada', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      const { shippingAddress: _omit, ...withoutAddress } = cart(customer.id, [
+        { isbn: b.isbn, quantity: 1 },
+      ]);
+
+      await post(withoutAddress).expect(400);
+
+      expect(await count('sales.checkouts')).toBe(0);
+      expect(await stockOf(b.isbn)).toEqual({ available: 10, reserved: 0 });
+    });
+
+    it('con un campo obligatorio vacío: 400', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      await post(
+        withAddress(customer.id, b.isbn, { ...ADDRESS_BODY, district: '' }),
+      ).expect(400);
+      expect(await count('sales.checkouts')).toBe(0);
+    });
+
+    it('un teléfono que no es un teléfono: 422 INVALID_SHIPPING_ADDRESS, sin reservar ni cobrar', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+
+      const res = await post(
+        withAddress(customer.id, b.isbn, {
+          ...ADDRESS_BODY,
+          phone: 'llamar a María',
+        }),
+      ).expect(422);
+
+      expect(res.body.errorCode).toBe('INVALID_SHIPPING_ADDRESS');
+      expect(res.body.message).toContain('phone');
+      expect(gateway.charges).toEqual([]);
+      expect(await count('sales.checkouts')).toBe(0);
+      expect(await stockOf(b.isbn)).toEqual({ available: 10, reserved: 0 });
+    });
+
+    it('un salto de línea en la calle: 422 INVALID_SHIPPING_ADDRESS', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      const res = await post(
+        withAddress(customer.id, b.isbn, {
+          ...ADDRESS_BODY,
+          line1: 'Jr. Ucayali\n150',
+        }),
+      ).expect(422);
+      expect(res.body.errorCode).toBe('INVALID_SHIPPING_ADDRESS');
+    });
+
+    it('la misma clave con otra dirección: 422 IDEMPOTENCY_KEY_REUSED, y no se toca el pedido', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      const key = randomUUID();
+      const first = await post(
+        cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
+        key,
+      ).expect(201);
+
+      const res = await post(
+        withAddress(customer.id, b.isbn, {
+          ...ADDRESS_BODY,
+          line1: 'Otra calle 999',
+        }),
+        key,
+      ).expect(422);
+
+      expect(res.body.errorCode).toBe('IDEMPOTENCY_KEY_REUSED');
+      expect((await shipColumns(first.body.orderId)).ship_line1).toBe(
+        'Jr. Ucayali 150, Dpto 2',
+      );
+      expect(gateway.charges).toHaveLength(1);
+    });
+
+    it('la misma clave con la misma dirección (con espacios de más) devuelve el mismo pedido', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      const key = randomUUID();
+      const first = await post(
+        cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
+        key,
+      ).expect(201);
+
+      const retry = await post(
+        withAddress(customer.id, b.isbn, {
+          ...ADDRESS_BODY,
+          recipient: '  María Quispe ',
+        }),
+        key,
+      ).expect(201);
+
+      expect(retry.body.orderId).toBe(first.body.orderId);
+      expect(gateway.charges).toHaveLength(1);
+    });
+
+    // Decisión D2: GET /orders/:id no tiene autenticación, así que no devuelve datos personales
+    it('GET /orders/:id no devuelve la dirección ni el teléfono', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      const created = await post(
+        cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
+      ).expect(201);
+
+      const res = await request(app.getHttpServer())
+        .get(`/orders/${created.body.orderId}`)
+        .expect(200);
+
+      const text = JSON.stringify(res.body);
+      expect(res.body).not.toHaveProperty('shippingAddress');
+      for (const secret of [
+        'María Quispe',
+        '987 654 321',
+        'Ucayali',
+        'rejas verdes',
+      ]) {
+        expect(text).not.toContain(secret);
+      }
+    });
+
+    it('la dirección no aparece en los logs, ni de la compra ni de los consumidores', async () => {
+      const customer = await insertCustomer();
+      const b = await book();
+      await post(cart(customer.id, [{ isbn: b.isbn, quantity: 1 }])).expect(
+        201,
+      );
+      await post(
+        withAddress(customer.id, b.isbn, {
+          ...ADDRESS_BODY,
+          phone: 'no es un teléfono',
+        }),
+      ).expect(422);
+      await deliverEvents(2);
+
+      const logs = logLines.join('\n');
+      for (const secret of [
+        'María Quispe',
+        '987 654 321',
+        'Ucayali',
+        'rejas verdes',
+        'no es un teléfono',
+      ]) {
+        expect(logs).not.toContain(secret);
+      }
     });
   });
 

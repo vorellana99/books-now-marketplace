@@ -5,7 +5,9 @@ import { PlaceOrderHandler } from '../../src/contexts/sales/application/order/pl
 import { hashRequest } from '../../src/contexts/sales/application/order/request-hash.js';
 import type { CatalogPricing } from '../../src/contexts/sales/domain/order/catalog-pricing.port.js';
 import type { CustomerRepository } from '../../src/contexts/sales/domain/customer/customer.repository.js';
+import type { ShippingAddressData } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
 import { PricingService } from '../../src/contexts/sales/domain/pricing/pricing.service.js';
+import type { OrderPlacedEvent } from '../../src/contracts/sales/order-placed.event.js';
 import { OutOfStockError } from '../../src/contracts/inventory/stock.errors.js';
 import {
   ConflictError,
@@ -23,6 +25,7 @@ import {
   customersWithPremium,
   fixedCatalog,
 } from '../fakes/index.js';
+import { ADDRESS, ADDRESS_DATA } from '../fakes/fixtures.js';
 
 interface Setup {
   customers?: CustomerRepository;
@@ -52,12 +55,18 @@ function setup(options: Setup = {}) {
 const cart = (quantity = 1) => [{ isbn: ISBN, quantity }];
 const command = (
   items = cart(),
-  overrides: { key?: string; customerId?: string; cardToken?: string } = {},
+  overrides: {
+    key?: string;
+    customerId?: string;
+    cardToken?: string;
+    address?: ShippingAddressData;
+  } = {},
 ) =>
   new PlaceOrderCommand(
     overrides.key ?? randomUUID(),
     overrides.customerId ?? 'c-1',
     items,
+    overrides.address ?? ADDRESS_DATA,
     overrides.cardToken ?? 'tok_ok',
   );
 
@@ -507,7 +516,11 @@ describe('PlaceOrderHandler (la saga, con fakes en memoria)', () => {
     it('si la primera todavía está en curso (PENDING) da CHECKOUT_IN_PROGRESS', async () => {
       const s = setup();
       const key = randomUUID();
-      await s.checkouts.start(randomUUID(), key, hashRequest('c-1', cart()));
+      await s.checkouts.start(
+        randomUUID(),
+        key,
+        hashRequest('c-1', cart(), ADDRESS),
+      );
 
       const error = await s.handler
         .execute(command(cart(), { key }))
@@ -547,7 +560,7 @@ describe('PlaceOrderHandler (la saga, con fakes en memoria)', () => {
     it('si otra petición con la misma clave entra justo antes (la clave ya existe), responde según cómo vaya', async () => {
       const s = setup();
       const key = randomUUID();
-      const hash = hashRequest('c-1', cart());
+      const hash = hashRequest('c-1', cart(), ADDRESS);
       await s.checkouts.start(randomUUID(), key, hash); // la otra petición ya empezó
       // pero esta no la vio al principio
       vi.spyOn(s.checkouts, 'findByKey').mockResolvedValueOnce(null);
@@ -559,6 +572,144 @@ describe('PlaceOrderHandler (la saga, con fakes en memoria)', () => {
       expect((error as ConflictError).code).toBe('CHECKOUT_IN_PROGRESS');
       expect(s.stock.reserved).toEqual([]); // y no reservó nada
       expect(s.payments.attempts).toEqual([]);
+    });
+  });
+
+  describe('la dirección de envío', () => {
+    const otherAddress = { ...ADDRESS_DATA, line1: 'Otra calle 456' };
+
+    it('el pedido guardado lleva la dirección, normalizada', async () => {
+      const { handler, orders } = setup();
+
+      const { orderId } = await handler.execute(
+        command(cart(), {
+          address: {
+            ...ADDRESS_DATA,
+            recipient: '  Ana Pérez  ',
+            reference: '',
+          },
+        }),
+      );
+
+      const saved = (await orders.findById(orderId))!;
+      expect(saved.shippingAddress?.toJSON()).toEqual({
+        ...ADDRESS_DATA,
+        recipient: 'Ana Pérez',
+        reference: null,
+      });
+    });
+
+    it('el evento del pedido lleva la dirección', async () => {
+      const { handler, orders } = setup();
+      const { orderId } = await handler.execute(command());
+      const [event] = orders.eventsOf(orderId) as OrderPlacedEvent[];
+      expect(event.eventVersion).toBe(2);
+      expect(event.shippingAddress).toEqual(ADDRESS_DATA);
+    });
+
+    it.each([
+      ['un teléfono inválido', { ...ADDRESS_DATA, phone: 'abc' }],
+      ['un destinatario vacío', { ...ADDRESS_DATA, recipient: '   ' }],
+      [
+        'un salto de línea en la calle',
+        { ...ADDRESS_DATA, line1: 'Av.\nLarco' },
+      ],
+      [
+        'un distrito demasiado largo',
+        { ...ADDRESS_DATA, district: 'x'.repeat(61) },
+      ],
+    ])(
+      'con %s da INVALID_SHIPPING_ADDRESS y no hace ningún efecto',
+      async (_caso, address) => {
+        const s = setup();
+
+        const code = await codeOf(
+          s.handler.execute(command(cart(), { address })),
+        );
+
+        expect(code).toBe('INVALID_SHIPPING_ADDRESS');
+        expect(await s.checkouts.findByKey('cualquiera')).toBeNull();
+        expect(s.stock.reserved).toEqual([]);
+        expect(s.payments.attempts).toEqual([]);
+        expect(s.orders.count()).toBe(0);
+      },
+    );
+
+    it('una dirección inválida no llega a pedir precios a Catálogo', async () => {
+      const priceCart = vi.fn();
+      const catalog = { priceCart } as unknown as CatalogPricing;
+      const s = setup({ catalog });
+      await codeOf(
+        s.handler.execute(
+          command(cart(), { address: { ...ADDRESS_DATA, phone: 'x' } }),
+        ),
+      );
+      expect(priceCart).not.toHaveBeenCalled();
+    });
+
+    it('la misma clave con otra dirección da IDEMPOTENCY_KEY_REUSED y no cobra de nuevo', async () => {
+      const s = setup();
+      const key = randomUUID();
+      await s.handler.execute(command(cart(), { key }));
+
+      const code = await codeOf(
+        s.handler.execute(command(cart(), { key, address: otherAddress })),
+      );
+
+      expect(code).toBe('IDEMPOTENCY_KEY_REUSED');
+      expect(s.payments.charged).toHaveLength(1);
+      expect(s.orders.count()).toBe(1);
+    });
+
+    it('la misma clave con la misma dirección (con espacios de más) repite el resultado sin cobrar otra vez', async () => {
+      const s = setup();
+      const key = randomUUID();
+      const first = await s.handler.execute(command(cart(), { key }));
+
+      const second = await s.handler.execute(
+        command(cart(), {
+          key,
+          address: {
+            ...ADDRESS_DATA,
+            recipient: `  ${ADDRESS_DATA.recipient} `,
+            line1: ` ${ADDRESS_DATA.line1}`,
+          },
+        }),
+      );
+
+      expect(second.orderId).toBe(first.orderId);
+      expect(s.payments.charged).toHaveLength(1);
+    });
+
+    it('una referencia vacía y una referencia ausente son la misma dirección para la clave', async () => {
+      const s = setup();
+      const key = randomUUID();
+      const { reference: _omit, ...withoutReference } = ADDRESS_DATA;
+      const first = await s.handler.execute(
+        command(cart(), { key, address: { ...ADDRESS_DATA, reference: '' } }),
+      );
+
+      const second = await s.handler.execute(
+        command(cart(), { key, address: withoutReference }),
+      );
+
+      expect(second.orderId).toBe(first.orderId);
+    });
+
+    it('con la compra en curso (PENDING), otra dirección también es IDEMPOTENCY_KEY_REUSED y no CHECKOUT_IN_PROGRESS', async () => {
+      const s = setup();
+      const key = randomUUID();
+      await s.checkouts.start(
+        randomUUID(),
+        key,
+        hashRequest('c-1', cart(), ADDRESS),
+      );
+
+      const code = await codeOf(
+        s.handler.execute(command(cart(), { key, address: otherAddress })),
+      );
+
+      expect(code).toBe('IDEMPOTENCY_KEY_REUSED');
     });
   });
 });

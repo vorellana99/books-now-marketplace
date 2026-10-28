@@ -96,9 +96,12 @@ export interface DomainEvent {
 }
 
 // contracts/sales/order-placed.event.ts
+// Versión 2: agrega shippingAddress (la necesitará Envíos). Los consumidores de la versión 1 la ignoran, y los eventos
+// ya guardados siguen siendo de la versión 1, sin dirección
+export interface ShippingAddressPayload { recipient: string; phone: string; line1: string; district: string; province: string; department: string; reference: string | null }
 export class OrderPlacedEvent implements DomainEvent {
   readonly eventName = 'sales.order.placed';
-  readonly eventVersion = 1;
+  readonly eventVersion = 2;
   readonly occurredOn = new Date();
   readonly aggregateId: string;   // propiedad real (no getter), para que también viaje en el payload JSON
   constructor(
@@ -106,6 +109,7 @@ export class OrderPlacedEvent implements DomainEvent {
     readonly customerId: string,
     readonly subtotal: string,                  // "100.00": los montos viajan como texto
     readonly lines: { isbn: string; quantity: number }[],
+    readonly shippingAddress: ShippingAddressPayload,
   ) {
     this.aggregateId = orderId;
   }
@@ -746,7 +750,12 @@ export class PlaceOrderDto {
   @ApiProperty({ type: [CartItemDto] })
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => CartItemDto)
   items!: CartItemDto[];
+  @ApiProperty({ type: ShippingAddressDto })
+  @IsDefined() @IsObject() @ValidateNested() @Type(() => ShippingAddressDto)
+  shippingAddress!: ShippingAddressDto;   // obligatoria; la forma la valida el DTO, el contenido (teléfono, caracteres) el dominio
 }
+// ShippingAddressDto: recipient, phone, line1, district, province, department (@Transform(trim) @IsString @IsNotEmpty
+// @MaxLength(SHIPPING_LIMITS.x)) y reference (@IsOptional, @MaxLength). El cliente nunca manda precios ni totales
 
 // sales/infrastructure/order/order.controller.ts
 @ApiTags('orders')
@@ -760,7 +769,7 @@ export class OrderController {
     if (!key || !isUUID(key)) throw new BadRequestException('Falta el header Idempotency-Key (UUID)');
     // Se copian solo isbn y quantity: el comando lleva objetos planos, no instancias del DTO
     return this.commandBus.execute(
-      new PlaceOrderCommand(key, dto.customerId, dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })), dto.cardToken),
+      new PlaceOrderCommand(key, dto.customerId, dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })), { ...dto.shippingAddress }, dto.cardToken),
     );
   }
 

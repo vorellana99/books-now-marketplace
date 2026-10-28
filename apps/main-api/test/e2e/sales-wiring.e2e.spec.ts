@@ -92,6 +92,14 @@ describe('SalesModule en la aplicación completa', () => {
             randomUUID(),
             randomUUID(),
             [{ isbn: '9780132350884', quantity: 1 }],
+            {
+              recipient: 'Ana',
+              phone: '999888777',
+              line1: 'Av. Larco 123',
+              district: 'Miraflores',
+              province: 'Lima',
+              department: 'Lima',
+            },
             'tok_visa',
           ),
         )

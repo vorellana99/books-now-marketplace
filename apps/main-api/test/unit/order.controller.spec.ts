@@ -20,10 +20,21 @@ const CUSTOMER = '0196a000-0000-7000-8000-0000000000bb';
 const ORDER = '0196a000-0000-7000-8000-0000000000cc';
 const TOKEN = 'tok_secreto_123';
 
+const ADDRESS = {
+  recipient: 'Ana Pérez',
+  phone: '+51 999 888 777',
+  line1: 'Av. Larco 123, Dpto 401',
+  district: 'Miraflores',
+  province: 'Lima',
+  department: 'Lima',
+  reference: 'Frente al parque Kennedy',
+};
+
 const body = (overrides: Record<string, unknown> = {}) => ({
   customerId: CUSTOMER,
   cardToken: TOKEN,
   items: [{ isbn: '9780132350884', quantity: 2 }],
+  shippingAddress: ADDRESS,
   ...overrides,
 });
 
@@ -92,6 +103,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
         customerId: CUSTOMER,
         cardToken: TOKEN,
       });
+      expect(command.shippingAddress).toStrictEqual(ADDRESS); // objeto plano, no el DTO
       // objetos planos, no instancias del DTO
       expect(command.items).toStrictEqual([
         { isbn: '9780132350884', quantity: 2 },
@@ -104,6 +116,69 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       ).expect(201);
       const command = commandBus.execute.mock.calls[0][0] as PlaceOrderCommand;
       expect(command.items[0].isbn).toBe('978-0-13-235088-4');
+    });
+
+    describe('la dirección de envío', () => {
+      it('la referencia es opcional: sin ella, o en null, la compra pasa', async () => {
+        const { reference: _omit, ...withoutReference } = ADDRESS;
+        await place(body({ shippingAddress: withoutReference })).expect(201);
+        await place(
+          body({ shippingAddress: { ...ADDRESS, reference: null } }),
+        ).expect(201);
+        expect(commandBus.execute).toHaveBeenCalledTimes(2);
+      });
+
+      it('recorta los espacios de cada campo antes de armar el comando', async () => {
+        await place(
+          body({
+            shippingAddress: {
+              ...ADDRESS,
+              recipient: '  Ana Pérez  ',
+              district: ' Miraflores ',
+            },
+          }),
+        ).expect(201);
+        const command = commandBus.execute.mock
+          .calls[0][0] as PlaceOrderCommand;
+        expect(command.shippingAddress.recipient).toBe('Ana Pérez');
+        expect(command.shippingAddress.district).toBe('Miraflores');
+      });
+
+      it('el contenido lo valida el dominio: un teléfono con letras llega al comando (da 422 allí, no 400 aquí)', async () => {
+        await place(
+          body({ shippingAddress: { ...ADDRESS, phone: 'llamar a Ana' } }),
+        ).expect(201);
+        expect(commandBus.execute).toHaveBeenCalledTimes(1);
+      });
+
+      it('acepta los campos en su largo máximo', async () => {
+        await place(
+          body({
+            shippingAddress: {
+              recipient: 'x'.repeat(100),
+              phone: '9'.repeat(20),
+              line1: 'x'.repeat(200),
+              district: 'x'.repeat(60),
+              province: 'x'.repeat(60),
+              department: 'x'.repeat(60),
+              reference: 'x'.repeat(200),
+            },
+          }),
+        ).expect(201);
+      });
+
+      it('la respuesta de error por la dirección no repite lo que se envió', async () => {
+        const res = await place(
+          body({
+            shippingAddress: {
+              ...ADDRESS,
+              phone: undefined,
+              recipient: 'Nombre Privado',
+            },
+          }),
+        ).expect(400);
+        expect(JSON.stringify(res.body)).not.toContain('Nombre Privado');
+      });
     });
 
     it('acepta una clave UUID en mayúsculas', async () => {
@@ -124,7 +199,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
     });
 
     describe('validación del cuerpo (400, sin ejecutar nada)', () => {
-      it.each([
+      it.each<[string, unknown]>([
         ['customerId no es UUID', body({ customerId: 'c-1' })],
         ['falta customerId', body({ customerId: undefined })],
         ['falta cardToken', body({ cardToken: undefined })],
@@ -169,6 +244,77 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
           body({ items: [{ isbn: '9780132350884', quantity: '2' }] }),
         ],
         ['cuerpo vacío', {}],
+        ['falta la dirección', body({ shippingAddress: undefined })],
+        ['la dirección es null', body({ shippingAddress: null })],
+        [
+          'la dirección es un texto',
+          body({ shippingAddress: 'Av. Larco 123' }),
+        ],
+        ['la dirección es una lista', body({ shippingAddress: [] })],
+        ['la dirección es un objeto vacío', body({ shippingAddress: {} })],
+        [
+          'un campo extra en la dirección',
+          body({ shippingAddress: { ...ADDRESS, country: 'PE' } }),
+        ],
+        ...(
+          [
+            'recipient',
+            'phone',
+            'line1',
+            'district',
+            'province',
+            'department',
+          ] as const
+        ).flatMap((field) => [
+          [
+            `falta ${field}`,
+            body({ shippingAddress: { ...ADDRESS, [field]: undefined } }),
+          ] as [string, unknown],
+          [
+            `${field} vacío`,
+            body({ shippingAddress: { ...ADDRESS, [field]: '' } }),
+          ] as [string, unknown],
+          [
+            `${field} de espacios`,
+            body({ shippingAddress: { ...ADDRESS, [field]: '   ' } }),
+          ] as [string, unknown],
+          [
+            `${field} no es texto`,
+            body({ shippingAddress: { ...ADDRESS, [field]: 123 } }),
+          ] as [string, unknown],
+        ]),
+        [
+          'recipient demasiado largo',
+          body({ shippingAddress: { ...ADDRESS, recipient: 'x'.repeat(101) } }),
+        ],
+        [
+          'phone demasiado largo',
+          body({ shippingAddress: { ...ADDRESS, phone: '9'.repeat(21) } }),
+        ],
+        [
+          'line1 demasiado larga',
+          body({ shippingAddress: { ...ADDRESS, line1: 'x'.repeat(201) } }),
+        ],
+        [
+          'district demasiado largo',
+          body({ shippingAddress: { ...ADDRESS, district: 'x'.repeat(61) } }),
+        ],
+        [
+          'province demasiado larga',
+          body({ shippingAddress: { ...ADDRESS, province: 'x'.repeat(61) } }),
+        ],
+        [
+          'department demasiado largo',
+          body({ shippingAddress: { ...ADDRESS, department: 'x'.repeat(61) } }),
+        ],
+        [
+          'reference demasiado larga',
+          body({ shippingAddress: { ...ADDRESS, reference: 'x'.repeat(201) } }),
+        ],
+        [
+          'reference no es texto',
+          body({ shippingAddress: { ...ADDRESS, reference: 5 } }),
+        ],
       ])('%s', async (_name, payload) => {
         await place(payload).expect(400);
         expect(commandBus.execute).not.toHaveBeenCalled();
@@ -316,6 +462,40 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       ).toEqual(['200', '400', '404']);
     });
 
+    it('documenta la dirección de envío con sus siete campos, la referencia opcional', () => {
+      const doc = SwaggerModule.createDocument(
+        app,
+        new DocumentBuilder().build(),
+      );
+      const schemas = doc.components!.schemas as Record<
+        string,
+        { properties: Record<string, unknown>; required?: string[] }
+      >;
+      const address = schemas.ShippingAddressDto;
+      expect(
+        Object.keys(address.properties).sort((a, b) => a.localeCompare(b)),
+      ).toEqual([
+        'department',
+        'district',
+        'line1',
+        'phone',
+        'province',
+        'recipient',
+        'reference',
+      ]);
+      expect(address.required).not.toContain('reference');
+      expect(address.required).toEqual(
+        expect.arrayContaining([
+          'recipient',
+          'phone',
+          'line1',
+          'district',
+          'province',
+          'department',
+        ]),
+      );
+    });
+
     it('describe los montos como texto y el cuerpo con sus campos', () => {
       const doc = SwaggerModule.createDocument(
         app,
@@ -329,7 +509,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
         Object.keys(schemas.PlaceOrderDto.properties).sort((a, b) =>
           a.localeCompare(b),
         ),
-      ).toEqual(['cardToken', 'customerId', 'items']);
+      ).toEqual(['cardToken', 'customerId', 'items', 'shippingAddress']);
       expect(schemas.OrderMoneyResponse.properties.amount.type).toBe('string');
     });
   });

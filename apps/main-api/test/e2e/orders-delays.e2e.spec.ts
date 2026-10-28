@@ -101,7 +101,19 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
     request(app.getHttpServer())
       .post('/orders')
       .set('Idempotency-Key', key)
-      .send({ customerId, cardToken, items: [{ isbn, quantity: 1 }] });
+      .send({
+        customerId,
+        cardToken,
+        items: [{ isbn, quantity: 1 }],
+        shippingAddress: {
+          recipient: 'Luis Lento',
+          phone: '999888777',
+          line1: 'Av. Lenta 1',
+          district: 'Miraflores',
+          province: 'Lima',
+          department: 'Lima',
+        },
+      });
 
   async function setup() {
     const customer = await insertCustomer({ email: 'lenta@example.com' });

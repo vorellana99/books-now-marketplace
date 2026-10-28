@@ -178,14 +178,24 @@ La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas p
 
 ### Probar una compra
 
-`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta y las líneas. Con la API en marcha y los datos de ejemplo:
+`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta, las líneas y la dirección de envío. Con la API en marcha y los datos de ejemplo:
 
 ```bash
 # Ana (normal) compra 2 Clean Code: 90.00 + 10.00 de envío → 201 { orderId, charged: { amount: "100.00", currency: "PEN" } }
 curl -X POST http://localhost:3000/orders \
   -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"customerId":"11111111-1111-4111-8111-111111111111","cardToken":"tok_visa","items":[{"isbn":"9780132350884","quantity":2}]}'
+  -d '{
+    "customerId": "11111111-1111-4111-8111-111111111111",
+    "cardToken": "tok_visa",
+    "items": [{ "isbn": "9780132350884", "quantity": 2 }],
+    "shippingAddress": {
+      "recipient": "Ana Pérez", "phone": "+51 999 888 777",
+      "line1": "Av. Larco 123, Dpto 401", "district": "Miraflores",
+      "province": "Lima", "department": "Lima",
+      "reference": "Frente al parque Kennedy"
+    }
+  }'
 
 # Consultar el pedido
 curl http://localhost:3000/orders/<orderId>
@@ -201,6 +211,9 @@ curl http://localhost:3000/orders/<orderId>
 | Sin registro de stock | Code Complete | `422 STOCK_ITEM_NOT_FOUND` |
 | Libro inactivo | Design Patterns | `404 NOT_FOUND` |
 | Sin `Idempotency-Key`, o con una que no es UUID | — | `400` |
+| Sin dirección de envío, o con un campo obligatorio vacío | Quitar `shippingAddress` o dejar `district` en `""` | `400` |
+| Teléfono que no es un teléfono (o un salto de línea en la calle) | `"phone": "llamar a Ana"` | `422 INVALID_SHIPPING_ADDRESS`, sin reservar ni cobrar |
+| Misma clave con otra dirección | Cambiar `line1` y repetir la `Idempotency-Key` | `422 IDEMPOTENCY_KEY_REUSED` |
 
 **La pasarela de pago simulada** (`PAYMENT_PROVIDER=fake`, la de por defecto) decide por el token de la tarjeta, sin salir a la red:
 

@@ -126,12 +126,19 @@ export class Order {
     if (this.lines.length === 0) {
       throw new DomainError('EMPTY_ORDER', 'El pedido no tiene libros');
     }
+    if (!this.shippingAddress) {
+      throw new DomainError(
+        'SHIPPING_ADDRESS_REQUIRED',
+        'El pedido necesita una dirección de envío',
+      );
+    }
     this.events.push(
       new OrderPlacedEvent(
         this.id,
         this.customerId,
         this.subtotal().toFinal().toFixed(),
         this.lines.map((l) => ({ isbn: l.isbn.value, quantity: l.quantity })),
+        this.shippingAddress.toJSON(),
       ),
     );
     this._status = 'PLACED';

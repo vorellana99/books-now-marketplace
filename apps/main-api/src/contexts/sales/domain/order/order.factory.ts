@@ -18,7 +18,7 @@ export class OrderFactory {
     id: string,
     customerId: string,
     items: PricedCartItem[],
-    shippingAddress: ShippingAddress | null = null,
+    shippingAddress: ShippingAddress,
   ): Order {
     if (items.length === 0) {
       throw new DomainError('EMPTY_ORDER', 'El carrito no tiene libros');

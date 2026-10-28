@@ -1,8 +1,9 @@
 import { OrderMapper } from '../../src/contexts/sales/infrastructure/order/order.mapper.js';
+import { Order } from '../../src/contexts/sales/domain/order/order.aggregate.js';
 import { OrderFactory } from '../../src/contexts/sales/domain/order/order.factory.js';
 import { Prisma } from '../../src/platform/prisma/generated/client.js';
 import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
-import { ADDRESS_DATA } from '../fakes/fixtures.js';
+import { ADDRESS_DATA, ADDRESS } from '../fakes/fixtures.js';
 
 const item = (overrides: Record<string, unknown> = {}) => ({
   isbn: '9780306406157',
@@ -16,15 +17,20 @@ const item = (overrides: Record<string, unknown> = {}) => ({
 describe('OrderMapper', () => {
   describe('toCreate: del pedido a las filas de la base', () => {
     it('arma el pedido con el monto cobrado en texto y las líneas anidadas', () => {
-      const order = OrderFactory.fromCart('o-1', 'c-1', [
-        item(),
-        item({
-          isbn: '9780306406140',
-          title: 'Otro',
-          price: '10.00',
-          quantity: 1,
-        }),
-      ]);
+      const order = OrderFactory.fromCart(
+        'o-1',
+        'c-1',
+        [
+          item(),
+          item({
+            isbn: '9780306406140',
+            title: 'Otro',
+            price: '10.00',
+            quantity: 1,
+          }),
+        ],
+        ADDRESS,
+      );
       order.place();
 
       const data = OrderMapper.toCreate(order, '90.00', 'PEN');
@@ -55,9 +61,12 @@ describe('OrderMapper', () => {
     });
 
     it('el precio unitario va como texto, sin pasar por number', () => {
-      const order = OrderFactory.fromCart('o-1', 'c-1', [
-        item({ price: '0.1', quantity: 3 }),
-      ]);
+      const order = OrderFactory.fromCart(
+        'o-1',
+        'c-1',
+        [item({ price: '0.1', quantity: 3 })],
+        ADDRESS,
+      );
       order.place();
 
       const [line] = OrderMapper.toCreate(order, '1.00', 'PEN').lines
@@ -118,7 +127,7 @@ describe('OrderMapper', () => {
 
 describe('OrderMapper: dirección de envío', () => {
   const address = ShippingAddress.create(ADDRESS_DATA);
-  const placed = (shipping: ShippingAddress | null) => {
+  const placed = (shipping: ShippingAddress) => {
     const order = OrderFactory.fromCart('o-1', 'c-1', [item()], shipping);
     order.place();
     return order;
@@ -176,8 +185,14 @@ describe('OrderMapper: dirección de envío', () => {
       expect(data.shipReference).toBeNull();
     });
 
-    it('un pedido sin dirección deja todas las columnas en null', () => {
-      const data = OrderMapper.toCreate(placed(null), '90.00', 'PEN');
+    it('un pedido sin dirección (uno leído de antes) deja todas las columnas en null', () => {
+      const legacy = Order.restore({
+        id: 'o-1',
+        customerId: 'c-1',
+        lines: placed(address).getLines(),
+        shippingAddress: null,
+      });
+      const data = OrderMapper.toCreate(legacy, '90.00', 'PEN');
       expect(data).toMatchObject({
         shipRecipient: null,
         shipPhone: null,

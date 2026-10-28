@@ -67,7 +67,7 @@ export class OrderController {
   })
   @ApiUnprocessableEntityResponse({
     description:
-      'OUT_OF_STOCK, STOCK_ITEM_NOT_FOUND, PAYMENT_DECLINED, IDEMPOTENCY_KEY_REUSED, PREVIOUS_ATTEMPT_FAILED, INVALID_ISBN, MAX_QUANTITY_EXCEEDED, CURRENCY_MISMATCH u otra regla del dominio',
+      'OUT_OF_STOCK, STOCK_ITEM_NOT_FOUND, PAYMENT_DECLINED, IDEMPOTENCY_KEY_REUSED, PREVIOUS_ATTEMPT_FAILED, INVALID_ISBN, INVALID_SHIPPING_ADDRESS, MAX_QUANTITY_EXCEEDED, CURRENCY_MISMATCH u otra regla del dominio',
   })
   place(
     @Headers('idempotency-key') key: string | undefined,
@@ -83,6 +83,16 @@ export class OrderController {
         key,
         dto.customerId,
         dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })),
+        // objeto plano con los campos de la dirección, no la instancia del DTO
+        {
+          recipient: dto.shippingAddress.recipient,
+          phone: dto.shippingAddress.phone,
+          line1: dto.shippingAddress.line1,
+          district: dto.shippingAddress.district,
+          province: dto.shippingAddress.province,
+          department: dto.shippingAddress.department,
+          reference: dto.shippingAddress.reference,
+        },
         dto.cardToken,
       ),
     );

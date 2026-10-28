@@ -1,3 +1,4 @@
+import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
 import { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
 import { FixedCatalog } from './fixed-catalog.js';
 import { InMemoryCustomerRepository } from './in-memory-customer-repository.js';
@@ -29,3 +30,8 @@ export const ADDRESS_DATA = {
   department: 'Lima',
   reference: 'Frente al parque Kennedy',
 } as const;
+
+export const ADDRESS = ShippingAddress.create(ADDRESS_DATA);
+
+// La misma dirección como viaja en el evento OrderPlacedEvent
+export const ADDRESS_PAYLOAD = ADDRESS.toJSON();
