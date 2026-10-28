@@ -37,7 +37,7 @@ export async function query<T extends object = Record<string, unknown>>(
   }
 }
 
-const APP_SCHEMAS = ['sales', 'catalog', 'inventory', 'messaging'];
+const APP_SCHEMAS = ['sales', 'catalog', 'inventory', 'messaging', 'identity'];
 
 // Vacía los datos de los cuatro schemas y conserva las tablas y el historial de migraciones
 export async function resetDatabase(): Promise<void> {

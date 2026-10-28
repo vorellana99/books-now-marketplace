@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["sales", "catalog", "inventory", "messaging"]
+  schemas  = ["sales", "catalog", "inventory", "messaging", "identity"]
 }
 
 // ── sales ──────────────────────────────────────────────
@@ -187,4 +187,25 @@ model Delivery {
   @@index([status, nextAttemptAt])
   @@map("deliveries")
   @@schema("messaging")
+}
+
+// ── identity ───────────────────────────────────────────
+enum UserRole {
+  BUYER
+  ADMIN
+
+  @@schema("identity")
+}
+
+// Quién puede iniciar sesión. Nunca guarda la contraseña, solo su hash (scrypt, con sal propia). El correo va en
+// minúsculas y recortado: una CHECK de la migración lo exige
+model User {
+  id           String   @id @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("users")
+  @@schema("identity")
 }

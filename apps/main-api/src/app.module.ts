@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CatalogModule } from './contexts/catalog/catalog.module.js';
+import { IdentityModule } from './contexts/identity/identity.module.js';
 import { InventoryModule } from './contexts/inventory/inventory.module.js';
 import { SalesModule } from './contexts/sales/sales.module.js';
 import { envSchema } from './platform/config/env.schema.js';
@@ -24,6 +25,7 @@ import { PrismaModule } from './platform/prisma/prisma.module.js';
     CatalogModule,
     InventoryModule,
     SalesModule,
+    IdentityModule,
   ],
 })
 export class AppModule {}

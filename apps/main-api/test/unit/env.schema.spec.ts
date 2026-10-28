@@ -74,6 +74,49 @@ describe('envSchema', () => {
     });
   });
 
+  describe('PASSWORD_HASH_LOG_N: el costo del hash de contraseñas', () => {
+    it('por defecto es 15 (N = 32768), el valor seguro', () => {
+      expect(envSchema.parse(base).PASSWORD_HASH_LOG_N).toBe(15);
+    });
+
+    it('se convierte a número y admite valores bajos fuera de producción, para que los tests no esperen', () => {
+      expect(
+        envSchema.parse({ ...base, PASSWORD_HASH_LOG_N: '4' })
+          .PASSWORD_HASH_LOG_N,
+      ).toBe(4);
+      expect(
+        envSchema.parse({ ...base, NODE_ENV: 'test', PASSWORD_HASH_LOG_N: '4' })
+          .PASSWORD_HASH_LOG_N,
+      ).toBe(4);
+    });
+
+    it.each(['3', '21', '4.5', 'abc', ''])('rechaza %j', (value) => {
+      expect(() =>
+        envSchema.parse({ ...base, PASSWORD_HASH_LOG_N: value }),
+      ).toThrow(/PASSWORD_HASH_LOG_N/);
+    });
+
+    it('en producción no admite menos de 15: un costo bajo debilitaría todos los hashes', () => {
+      const production = {
+        ...base,
+        NODE_ENV: 'production',
+        PAYMENT_PROVIDER: 'external',
+        PAYMENT_API_URL: 'https://pagos.example.com',
+      };
+      expect(() =>
+        envSchema.parse({ ...production, PASSWORD_HASH_LOG_N: '14' }),
+      ).toThrow(/PASSWORD_HASH_LOG_N/);
+      expect(
+        envSchema.parse({ ...production, PASSWORD_HASH_LOG_N: '15' })
+          .PASSWORD_HASH_LOG_N,
+      ).toBe(15);
+      expect(
+        envSchema.parse({ ...production, PASSWORD_HASH_LOG_N: '17' })
+          .PASSWORD_HASH_LOG_N,
+      ).toBe(17);
+    });
+  });
+
   it('acepta PAYMENT_API_URL vacía con el proveedor fake', () => {
     expect(
       envSchema.parse({ ...base, PAYMENT_API_URL: '' }).PAYMENT_API_URL,

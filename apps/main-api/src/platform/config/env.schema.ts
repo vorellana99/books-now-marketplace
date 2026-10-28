@@ -17,6 +17,8 @@ export const envSchema = z
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,
     PAYMENT_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // solo con PAYMENT_PROVIDER=fake
+    // Costo (log2 de N) del hash de contraseñas con scrypt. Los tests lo bajan; en producción no puede ser menor que 15
+    PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15),
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
@@ -43,6 +45,11 @@ export const envSchema = z
         'PAYMENT_PROVIDER=fake aprueba cualquier tarjeta y no puede usarse en producción: configura PAYMENT_PROVIDER=external y PAYMENT_API_URL',
     },
   )
+  // Un costo bajo debilitaría todos los hashes de contraseña: solo es para desarrollo y tests
+  .refine((e) => !(e.NODE_ENV === 'production' && e.PASSWORD_HASH_LOG_N < 15), {
+    path: ['PASSWORD_HASH_LOG_N'],
+    message: 'PASSWORD_HASH_LOG_N no puede ser menor que 15 en producción',
+  })
   .refine(
     (e) => e.PAYMENT_PROVIDER !== 'external' || Boolean(e.PAYMENT_API_URL),
     {

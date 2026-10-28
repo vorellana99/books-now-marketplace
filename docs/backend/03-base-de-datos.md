@@ -308,6 +308,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnAppli
 }
 ```
 
+> [!important] Schema `identity` (corte 7)
+> Un cuarto schema de la aplicación, además de `sales`, `catalog` e `inventory` (y `messaging` para el Outbox). `identity.users` guarda `id`, `email` (único, recortado y en minúsculas: una `CHECK` lo exige), `password_hash`, `role` (`BUYER` o `ADMIN`) y `created_at`. **Nunca guarda la contraseña, solo su hash** (`scrypt$15$8$3$<sal>$<clave>`, con sal propia). `resetDatabase()` de los tests también lo vacía.
+
 > [!important] Las conexiones de la aplicación fuerzan UTC
 > Las columnas `TIMESTAMP(3)` de Prisma **no llevan zona horaria**. Prisma rellena `@default(now())` en el cliente, en UTC, y el relay del Outbox compara contra `now()` de la base, que usa la zona de su sesión. Con la base en UTC−5 y sin `options: '-c timezone=UTC'`, una entrega nueva quedaba programada 5 horas en el futuro y no se entregaba nada. Con la opción, da igual qué zona tenga la base. El SQL que se escribe a mano (por ejemplo, reprocesar entregas `FAILED`) debe ejecutarse con `SET TIME ZONE 'UTC'`.
 
