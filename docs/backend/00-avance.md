@@ -51,7 +51,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Guía:** [01-decisiones-y-stack](01-decisiones-y-stack.md) · [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) · [03-base-de-datos](03-base-de-datos.md) · [05-piezas-clave](05-piezas-clave.md)
 
-**Listo cuando:** `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden con el header `X-Request-Id`, y los logs incluyen el `requestId` (campo en JSON en producción, prefijo en texto en desarrollo).
+**Listo cuando:** `docker compose up` y `pnpm run start:dev` levantan; `/health/ready` y `/docs` responden con el header `X-Request-Id`, y los logs incluyen el `requestId` (campo de primer nivel en JSON en producción, prefijo en texto en desarrollo).
 
 ### Tareas
 
@@ -183,6 +183,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 6 | Ciclo de vida del relay | `tick()` con una vuelta a la vez, `isAlive()` y apagado ordenado | Que el relay corra solo, se sepa si está vivo y se detenga sin dejar entregas a medias | ✅ |
 | 7 | Salud del Outbox | `OutboxHealthIndicator` y `GET /health/outbox` | Que monitoreo sepa si el relay sigue vivo y cuántas entregas fallan | ✅ |
 | 8 | Cableado y cierre | `OutboxModule` en `AppModule`, prueba con el intervalo real, README operativo, CI y guía | Cerrar el corte con el "listo cuando" cumplido de verdad | ✅ |
+| 9 | Logs JSON con el `requestId` de primer nivel | Cambia `RequestAwareLogger` para formatear el JSON con `requestId` aparte y `message` siempre del mismo tipo | Que los indexadores de logs no rechacen líneas y que los seis niveles lleven el id | ✅ |
 
 **Decisiones** (se aplica la opción propuesta; si alguna no convence, se cambia antes de llegar a esa tarea):
 
@@ -202,6 +203,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] 4.6 `tick()`, `isAlive()` y apagado ordenado del relay. Se comprueba: sin vueltas solapadas; un error no mata el intervalo; `isAlive` con reloj controlado
 - [x] 4.7 `OutboxHealthIndicator` y `GET /health/outbox`. Se comprueba: 200 con el relay vivo y 503 si está detenido; `failed` y `due` en el detalle; una `FAILED` antigua no lo pone en rojo
 - [x] 4.8 `OutboxModule` registrado en `AppModule`, README operativo, CI y guía. Se comprueba: un evento escrito con `append` llega solo a su consumidor con el intervalo real, con el `correlationId` en sus logs
+- [x] 4.9 `RequestAwareLogger`: `requestId` como campo de primer nivel en JSON y `message` siempre del mismo tipo, en los seis niveles. Se comprueba: tests sobre la forma real del JSON y del texto, y el log de un consumidor del Outbox leído de punta a punta
 
 ---
 
@@ -287,6 +289,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 4 | Tras arrancar, `/health/outbox` responde 503 hasta que el relay termina su primera vuelta (alrededor de 1 segundo), porque `isAlive()` exige una vuelta terminada. Es esperable para un endpoint de monitoreo; `/health/live` y `/health/ready` no dependen del Outbox y no se ven afectados | Un test comprueba que con el relay detenido solo `/health/outbox` está en 503 |
 | 2026-10-27 | 4 | `AppModule` registra `OutboxModule` por sí mismo (antes llegaba solo porque `HealthModule` lo importa) y mantiene `ScheduleModule`, que es lo que pone en marcha el intervalo. Los tests lo comprueban, y también que `OutboxModule` por sí solo no programa nada | Depender de un efecto lateral de otro módulo es frágil: quitar el endpoint de salud habría apagado el relay sin avisar |
 | 2026-10-27 | 4 | Límite conocido (decisión 3): el orden de entrega por pedido usa el id del evento (uuidv7), no el orden de confirmación. Hoy no afecta, porque cada pedido genera un solo evento. Queda escrito en la guía y en el README | Se revisa si algún día hay varios eventos por pedido |
+| 2026-10-27 | 1 | `RequestAwareLogger` formatea en vez de envolver: sobrescribe `getJsonLogObject` (JSON) y `stringifyMessage` (texto) en lugar de `log`/`warn`/`error`. Depende de dos métodos protegidos de `ConsoleLogger` de Nest; los tests sobre la forma real de la salida fallarían si una versión futura los cambia | Cubre los seis niveles y evita el conflicto de tipos en `message`. Elegida entre cuatro opciones (dejarlo, primer nivel, ambos formatos, o `nestjs-pino`) |
 
 ## Problemas abiertos
 
@@ -296,7 +299,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 1 | El entorno en la nube tenía Node 22.22 (en local es 24.21); la guía pide Node 24 LTS (≥ 24.15). `engines` exige `>=24.15` y el workflow de CI usa Node 24 | ✅ Resuelto |
 | 2026-10-27 | 1 | Los tests e2e necesitan la BD levantada (`pnpm run db:up`) y las variables `DB_*` definidas. El workflow `.github/workflows/main-api.yml` ya lo hace: levanta `postgres:18`, aplica las migraciones y corre los e2e. Falta ver su primera ejecución en GitHub | Parcial: workflow escrito, sin ejecutar en GitHub. Desde la 3.2 los e2e levantan su propio PostgreSQL (no usan el servicio `postgres`) |
 | 2026-10-27 | 2 | Los pedidos en **USD** no se podían valorizar: las reglas de envío estaban fijas en soles. Se resolvió en la tarea 2.10 con una tabla de reglas por moneda | ✅ Resuelto |
-| 2026-10-27 | 1 | En modo JSON (producción), el `requestId` de un log va **dentro de `message`** (`{"message":{"requestId":"…","message":"…"}}`), no como campo de primer nivel; las herramientas de logs suelen esperarlo arriba para filtrar. Es el comportamiento de `RequestAwareLogger` desde el corte 1; se vio al probar los logs del relay | Abierto: decidir si se ajusta el logger para que emita `requestId` en el primer nivel |
+| 2026-10-27 | 1 | En modo JSON (producción), el `requestId` de un log iba **dentro de `message`**, y `message` cambiaba de tipo (texto sin petición, objeto con petición); además `debug`, `verbose` y `fatal` salían sin el id. Se corrigió en la tarea 4.9: el `requestId` es un campo de primer nivel y `message` conserva su tipo | ✅ Resuelto |
 
 ## Bitácora
 
@@ -341,3 +344,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 4, tarea 6 (4.6): ciclo de vida del relay. `tick()` (cada segundo con `@Interval`) hace una vuelta a la vez y un error no mata el intervalo; `isAlive()` es verdadero con una vuelta terminada hace menos de 1 minuto o en curso hace menos de 2 (el bloqueo); `lastRunAtIso`; apagado ordenado con tope. 22 tests unitarios con reloj controlado y 2 de integración que cierran la app a mitad de una entrega; 13 mutaciones detectadas (una sobrevivió hasta medir las conexiones abiertas). Hoy 283 unitarios y 181 de integración y e2e pasan |
 | 2026-10-27 | Corte 4, tarea 7 (4.7): `GET /health/outbox`. 200 con el relay vivo y 503 si está detenido (sin vueltas hace más de un minuto); `relayLastRunAt`, `failed` y `due` en el detalle; una entrega `FAILED` antigua o un reintento en espera no lo ponen en rojo. 6 tests unitarios del indicador y 7 de integración con el reloj adelantado; 11 mutaciones detectadas (4 tuvieron que rehacerse por el formato). Hoy 289 unitarios y 188 de integración y e2e pasan |
 | 2026-10-27 | Corte 4, tarea 8 (4.8): cableado y cierre. `AppModule` registra `OutboxModule`; 10 tests e2e con la aplicación completa y el intervalo real (un evento guardado con `append` llega solo a su consumidor, un fallo se reintenta solo con el retroceso real de 2 s, el log del consumidor lleva el `requestId` de origen o `event-<id>`, `/health/outbox` pasa a 200 y sin `ScheduleModule` el relay no corre solo), estables en 3 ejecuciones; 5 mutaciones detectadas. README con una sección operativa del Outbox, y las guías de pruebas y de piezas clave al día. **Corte 4 terminado:** los tests de integración del Outbox pasan, incluido el del `correlationId`. Hoy 290 unitarios y 198 de integración y e2e pasan |
+| 2026-10-27 | Corte 4, tarea 9 (4.9): logs JSON con el `requestId` de primer nivel y `message` siempre del mismo tipo, en los seis niveles (antes `debug`, `verbose` y `fatal` salían sin id). Es una corrección al logger del corte 1, descubierta al probar los logs del relay. 22 tests nuevos de la forma real del JSON y del texto (incluidas peticiones simultáneas) y los 2 del e2e del Outbox actualizados; 6 mutaciones detectadas. Hoy 312 unitarios y 198 de integración y e2e pasan |
