@@ -18,3 +18,6 @@ export class NotFoundError extends DomainError {
 
 // → 409
 export class ConflictError extends DomainError {}
+
+// → 401. Quien llama no se pudo identificar. Su mensaje es siempre genérico: no revela cuál de las credenciales falló
+export class AuthenticationError extends DomainError {}

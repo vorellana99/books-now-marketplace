@@ -1,14 +1,22 @@
 import { randomBytes } from 'node:crypto';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { OutboxModule } from '../../platform/outbox/outbox.module.js';
 import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
 import { AccessTokenIssuer } from './application/access-token-issuer.js';
 import { PasswordHasher } from './domain/password-hasher.port.js';
+import { AuthController } from './infrastructure/auth.controller.js';
 import { JwtTokenService } from './infrastructure/jwt-token.service.js';
+import { LoginHandler } from './infrastructure/login.handler.js';
+import { RegisterUserHandler } from './infrastructure/register-user.handler.js';
 import { ScryptPasswordHasher } from './infrastructure/scrypt-password-hasher.js';
 
 @Module({
+  imports: [OutboxModule], // RegisterUserHandler guarda el evento del usuario con OutboxWriter
+  controllers: [AuthController],
   providers: [
+    RegisterUserHandler,
+    LoginHandler,
     {
       provide: PasswordHasher,
       inject: [ConfigService],

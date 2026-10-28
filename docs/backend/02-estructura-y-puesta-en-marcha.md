@@ -38,6 +38,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   ├── contracts/                    ← Published Language
 │   │   ├── sales/
 │   │   │   └── order-placed.event.ts
+│   │   ├── identity/
+│   │   │   └── user-registered.event.ts                    ✅ hecho (7.3)
 │   │   ├── catalog/
 │   │   │   ├── get-book-price.query.ts
 │   │   │   └── book-created.event.ts                       ✅ hecho (6.5)
@@ -178,11 +180,14 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │
 │       └── identity/                                       (fase 15) usuarios, roles y guards
 │           ├── identity.module.ts                          ✅ hecho (7.1; 7.2 añade los tokens)
-│           ├── application/access-token-issuer.ts          ✅ hecho (7.2)
+│           ├── application/                                ✅ hecho: access-token-issuer.ts (7.2),
+│           │                                                  register-user.command.ts, login.command.ts (7.3)
 │           ├── domain/                                     ✅ hecho (7.1): email.vo.ts, password-policy.ts,
 │           │                                                  password-hasher.port.ts, user.aggregate.ts
 │           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1),
-│                                                              jwt-token.service.ts (7.2)
+│                                                              jwt-token.service.ts (7.2), register-user.handler.ts,
+│                                                              login.handler.ts, auth.controller.ts, auth.dto.ts,
+│                                                              auth.responses.ts (7.3)
 │
 └── test/
     ├── fakes/                                              ✅ hecho (corte 2); se importan desde index.ts

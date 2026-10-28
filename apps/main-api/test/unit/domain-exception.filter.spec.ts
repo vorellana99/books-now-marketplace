@@ -5,6 +5,7 @@ import {
 } from '../../src/contracts/inventory/stock.errors.js';
 import { DomainExceptionFilter } from '../../src/platform/http/domain-exception.filter.js';
 import {
+  AuthenticationError,
   ConflictError,
   DomainError,
   NotFoundError,
@@ -40,6 +41,19 @@ describe('DomainExceptionFilter', () => {
     expect(
       respond(new ConflictError('CHECKOUT_IN_PROGRESS', 'en curso')).status,
     ).toBe(409);
+  });
+
+  it('AuthenticationError → 401, con su código', () => {
+    expect(
+      respond(new AuthenticationError('INVALID_CREDENTIALS', 'no entra')),
+    ).toEqual({
+      status: 401,
+      body: {
+        statusCode: 401,
+        errorCode: 'INVALID_CREDENTIALS',
+        message: 'no entra',
+      },
+    });
   });
 
   it('OutOfStockError (de Inventario) → 422 OUT_OF_STOCK', () => {
