@@ -58,7 +58,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── outbox-handler.decorator.ts                 ✅ hecho (4.1)
 │   │   │   ├── outbox.registry.ts                          ✅ hecho (4.1)
 │   │   │   ├── outbox.writer.ts                            ✅ hecho (4.2)
-│   │   │   ├── outbox.relay.ts
+│   │   │   ├── outbox.relay.ts                             ✅ runOnce hecho (4.3); ciclo de vida en 4.6
 │   │   │   └── outbox.health.ts
 │   │   ├── observability/
 │   │   │   ├── request-context.ts
