@@ -115,7 +115,6 @@ describe('SalesModule en la aplicación completa', () => {
         .post('/orders')
         .set(auth)
         .send({
-          customerId: randomUUID(),
           cardToken: 'tok_visa',
           items: [{ isbn: '9780132350884', quantity: 1 }],
         })

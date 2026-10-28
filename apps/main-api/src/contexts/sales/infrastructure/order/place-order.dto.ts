@@ -10,7 +10,6 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUUID,
   MaxLength,
   Min,
   ValidateNested,
@@ -105,11 +104,8 @@ export class ShippingAddressDto {
   reference?: string | null;
 }
 
+// El cliente no viene en el cuerpo: es quien tiene la sesión (el `sub` del token). Un `customerId` en el cuerpo es un 400
 export class PlaceOrderDto {
-  @ApiProperty({ format: 'uuid' })
-  @IsUUID()
-  customerId!: string;
-
   @ApiProperty({
     example: 'tok_visa',
     description:

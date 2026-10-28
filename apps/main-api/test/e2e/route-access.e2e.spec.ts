@@ -7,7 +7,7 @@ import { AppModule } from '../../src/app.module.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import { bearer } from '../support/auth.js';
 
-type Access = 'public' | 'authenticated' | 'ADMIN';
+type Access = 'public' | 'authenticated' | 'BUYER' | 'ADMIN';
 
 // Cada ruta de la aplicación y quién puede llamarla. Si se añade una ruta, este test falla hasta que se decida aquí:
 // con el denegado por defecto, olvidarse nunca deja una ruta abierta, pero tampoco pasa inadvertida
@@ -21,7 +21,7 @@ const EXPECTED: Record<string, Access> = {
   'POST /auth/login': 'public',
   'POST /auth/refresh': 'public',
   'POST /auth/logout': 'public',
-  'POST /orders': 'authenticated',
+  'POST /orders': 'BUYER',
   'GET /orders': 'ADMIN',
   'GET /orders/:id': 'authenticated',
   'POST /admin/books': 'ADMIN',
@@ -103,7 +103,7 @@ describe('Acceso a las rutas (e2e, aplicación completa)', () => {
     expect(anonymous.status, route).toBe(401);
     expect(anonymous.body.errorCode).toBe('UNAUTHENTICATED');
 
-    // Un comprador: entra (autenticada) o recibe 403 (solo ADMIN)
+    // Un comprador: entra, salvo en las de administrador (403)
     const buyer = await call(route, await bearer(app, 'BUYER'));
     if (access === 'ADMIN') {
       expect(buyer.status, route).toBe(403);
@@ -113,10 +113,14 @@ describe('Acceso a las rutas (e2e, aplicación completa)', () => {
       expect(buyer.status, route).not.toBe(403);
     }
 
-    // Un administrador entra siempre (la respuesta puede ser un 400 o un 404 por los datos de prueba, nunca 401 ni 403)
+    // Un administrador entra, salvo en las de comprador (403). Lo demás puede ser un 400 o un 404 por los datos de prueba
     const admin = await call(route, await bearer(app, 'ADMIN'));
     expect(admin.status, route).not.toBe(401);
-    expect(admin.status, route).not.toBe(403);
+    if (access === 'BUYER') {
+      expect(admin.status, route).toBe(403);
+    } else {
+      expect(admin.status, route).not.toBe(403);
+    }
   });
 
   it('un token vencido, alterado o de otro tipo no abre ninguna ruta cerrada', async () => {

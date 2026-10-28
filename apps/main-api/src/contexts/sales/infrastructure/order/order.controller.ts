@@ -14,15 +14,23 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiForbiddenResponse,
   ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
+  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { isUUID } from 'class-validator';
+import {
+  CurrentUser,
+  requireUser,
+} from '../../../../platform/auth/current-user.decorator.js';
+import type { AuthenticatedUser } from '../../../../platform/auth/authenticated-user.js';
+import { Roles } from '../../../../platform/auth/roles.decorator.js';
 import { AdminApi } from '../../../../platform/http/admin-api.decorator.js';
 import {
   GetOrderQuery,
@@ -45,7 +53,8 @@ import {
 } from './order.response.js';
 import { PlaceOrderDto } from './place-order.dto.js';
 
-// Exigen sesión (cualquier rol) por el denegado por defecto. El cliente sigue viniendo en el cuerpo hasta la tarea 7.7
+// Comprar es de los compradores, y el cliente es quien tiene la sesión: no viene en el cuerpo. Ver un pedido lo pueden su
+// dueño y los administradores
 @ApiTags('orders')
 @Controller('orders')
 export class OrderController {
@@ -55,10 +64,11 @@ export class OrderController {
   ) {}
 
   @Post()
+  @Roles('BUYER')
   @ApiOperation({
     summary: 'Comprar: reserva el stock, cobra y registra el pedido',
     description:
-      'Idempotente: repetir la misma clave y el mismo carrito devuelve el mismo resultado sin cobrar de nuevo.',
+      'Compra a nombre de quien tiene la sesión (el cliente es el `sub` del token; el cuerpo no lleva `customerId`). Solo compradores. Idempotente: repetir la misma clave y el mismo carrito devuelve el mismo resultado sin cobrar de nuevo.',
   })
   @ApiHeader({
     name: 'Idempotency-Key',
@@ -71,8 +81,15 @@ export class OrderController {
     description:
       'Falta o es inválido el Idempotency-Key, o el cuerpo no cumple el formato',
   })
+  @ApiUnauthorizedResponse({
+    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
+  })
+  @ApiForbiddenResponse({
+    description: 'FORBIDDEN: solo los compradores pueden comprar',
+  })
   @ApiNotFoundResponse({
-    description: 'NOT_FOUND: el cliente o un libro no existe (o está inactivo)',
+    description:
+      'NOT_FOUND: un libro no existe (o está inactivo), o el comprador aún no tiene su cliente en Ventas (se crea en alrededor de un segundo tras registrarse: reintente)',
   })
   @ApiConflictResponse({
     description:
@@ -83,9 +100,11 @@ export class OrderController {
       'OUT_OF_STOCK, STOCK_ITEM_NOT_FOUND, PAYMENT_DECLINED, IDEMPOTENCY_KEY_REUSED, PREVIOUS_ATTEMPT_FAILED, INVALID_ISBN, INVALID_SHIPPING_ADDRESS, MAX_QUANTITY_EXCEEDED, CURRENCY_MISMATCH u otra regla del dominio',
   })
   place(
+    @CurrentUser() user: AuthenticatedUser | undefined,
     @Headers('idempotency-key') key: string | undefined,
     @Body() dto: PlaceOrderDto,
   ): Promise<PlaceOrderResult> {
+    const { userId } = requireUser(user);
     if (!key || !isUUID(key)) {
       throw new BadRequestException(
         'Falta el header Idempotency-Key, o no es un UUID',
@@ -94,7 +113,7 @@ export class OrderController {
     return this.commandBus.execute(
       new PlaceOrderCommand(
         key,
-        dto.customerId,
+        userId,
         dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })),
         // objeto plano con los campos de la dirección, no la instancia del DTO
         {
@@ -141,12 +160,25 @@ export class OrderController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Consultar un pedido' })
+  @ApiOperation({
+    summary: 'Consultar un pedido',
+    description:
+      'Su dueño o un administrador. Para cualquier otro es un 404, igual que un pedido que no existe.',
+  })
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: OrderResponse })
   @ApiBadRequestResponse({ description: 'El id no es un UUID' })
-  @ApiNotFoundResponse({ description: 'NOT_FOUND: el pedido no existe' })
-  get(@Param('id', ParseUUIDPipe) id: string): Promise<OrderView> {
-    return this.queryBus.execute(new GetOrderQuery(id));
+  @ApiUnauthorizedResponse({
+    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
+  })
+  @ApiNotFoundResponse({
+    description: 'NOT_FOUND: el pedido no existe o no es suyo',
+  })
+  get(
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Param('id', ParseUUIDPipe) id: string,
+  ): Promise<OrderView> {
+    const { userId, role } = requireUser(user);
+    return this.queryBus.execute(new GetOrderQuery(id, { userId, role }));
   }
 }

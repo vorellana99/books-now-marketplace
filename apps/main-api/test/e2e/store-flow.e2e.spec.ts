@@ -3,12 +3,14 @@ import { type INestApplication } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
+import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { HealthModule } from '../../src/platform/health/health.module.js';
 import { RequestAwareLogger } from '../../src/platform/observability/request-aware.logger.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { OutboxRelay } from '../../src/platform/outbox/outbox.relay.js';
+import { bearer } from '../support/auth.js';
 import {
   deliveryRows,
   insertCustomer,
@@ -28,6 +30,7 @@ const MODULES = () => [
   CatalogModule,
   InventoryModule,
   SalesModule,
+  IdentityModule, // el guard global: las rutas exigen sesión
 ];
 const ISBN = '9780134494166';
 const BOOK = {
@@ -44,6 +47,18 @@ const ADDRESS = {
   province: 'Lima',
   department: 'Lima',
   reference: 'Casa de rejas verdes',
+};
+
+// Quién llama: el administrador, y cada comprador con su token (el cliente de la compra es el del token)
+let currentApp: INestApplication;
+let adminHeader: { Authorization: string };
+const buyers = new Map<string, { Authorization: string }>();
+const newCustomer = async (
+  overrides: Parameters<typeof insertCustomer>[0] = {},
+) => {
+  const customer = await insertCustomer(overrides);
+  buyers.set(customer.id, await bearer(currentApp, 'BUYER', customer.id));
+  return customer;
 };
 
 async function waitFor(done: () => Promise<boolean>, timeoutMs = 15_000) {
@@ -65,6 +80,8 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
         ADMIN_API_ENABLED: 'true',
         PAYMENT_PROVIDER: 'fake',
       });
+      currentApp = app;
+      adminHeader = await bearer(app, 'ADMIN');
       app.useLogger(new RequestAwareLogger({ json: true }));
       relay = app.get(OutboxRelay);
     });
@@ -85,9 +102,13 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     const createBook = (overrides: Record<string, unknown> = {}) =>
       http()
         .post('/admin/books')
+        .set(adminHeader)
         .send({ ...BOOK, ...overrides });
     const addStock = (quantity: number, isbn = ISBN) =>
-      http().post(`/admin/stock/${isbn}/additions`).send({ quantity });
+      http()
+        .post(`/admin/stock/${isbn}/additions`)
+        .set(adminHeader)
+        .send({ quantity });
     const buy = (
       customerId: string,
       quantity = 1,
@@ -95,9 +116,9 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     ) =>
       http()
         .post('/orders')
+        .set(buyers.get(customerId)!)
         .set('Idempotency-Key', options.key ?? randomUUID())
         .send({
-          customerId,
           cardToken: 'tok_visa',
           items: [{ isbn: options.isbn ?? ISBN, quantity }],
           shippingAddress: ADDRESS,
@@ -105,7 +126,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     const stockReady = () => async () => (await stockOf(ISBN)) !== undefined;
 
     it('alta, stock, búsqueda, compra, historial: el libro nuevo se vende de verdad', async () => {
-      const ana = await insertCustomer({ email: 'ana@example.com' });
+      const ana = await newCustomer({ email: 'ana@example.com' });
 
       // 1. El administrador da de alta el libro
       const created = await createBook().expect(201);
@@ -153,6 +174,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
       // 8. El historial de administración lo muestra, con la dirección; la consulta pública, sin ella
       const history = await http()
         .get(`/orders?customerId=${ana.id}`)
+        .set(adminHeader)
         .expect(200);
       expect(history.body.items).toHaveLength(1);
       expect(history.body.items[0]).toMatchObject({
@@ -162,13 +184,14 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
       });
       const single = await http()
         .get(`/orders/${bought.body.orderId}`)
+        .set(adminHeader)
         .expect(200);
       expect(single.body).not.toHaveProperty('shippingAddress');
       expect(JSON.stringify(single.body)).not.toContain('Quispe');
     });
 
     it('un cambio de precio vale para las compras siguientes y no toca las ya hechas', async () => {
-      const ana = await insertCustomer();
+      const ana = await newCustomer();
       await createBook().expect(201);
       await waitFor(stockReady());
       await addStock(10).expect(201);
@@ -177,12 +200,16 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
 
       await http()
         .patch(`/admin/books/${ISBN}`)
+        .set(adminHeader)
         .send({ price: { amount: '70.00' } })
         .expect(200);
       const second = await buy(ana.id, 1).expect(201);
 
       expect(second.body.charged.amount).toBe('80.00'); // 70.00 + 10.00
-      const old = await http().get(`/orders/${first.body.orderId}`).expect(200);
+      const old = await http()
+        .get(`/orders/${first.body.orderId}`)
+        .set(adminHeader)
+        .expect(200);
       expect(old.body.lines[0].unitPrice).toEqual({
         amount: '55.00',
         currency: 'PEN',
@@ -190,7 +217,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     });
 
     it('desactivar un libro lo saca del catálogo y de las compras sin perder sus pedidos; reactivarlo lo devuelve', async () => {
-      const ana = await insertCustomer();
+      const ana = await newCustomer();
       await createBook().expect(201);
       await waitFor(stockReady());
       await addStock(10).expect(201);
@@ -198,6 +225,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
 
       await http()
         .patch(`/admin/books/${ISBN}`)
+        .set(adminHeader)
         .send({ active: false })
         .expect(200);
 
@@ -207,15 +235,23 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
       ).toBe(0);
       const refused = await buy(ana.id, 1).expect(404);
       expect(refused.body.errorCode).toBe('NOT_FOUND');
-      await http().get(`/orders/${bought.body.orderId}`).expect(200); // el pedido ya hecho se sigue leyendo
+      await http()
+        .get(`/orders/${bought.body.orderId}`)
+        .set(adminHeader)
+        .expect(200); // el pedido ya hecho se sigue leyendo
       expect(
-        (await http().get(`/orders?customerId=${ana.id}`).expect(200)).body
-          .items,
+        (
+          await http()
+            .get(`/orders?customerId=${ana.id}`)
+            .set(adminHeader)
+            .expect(200)
+        ).body.items,
       ).toHaveLength(1);
       expect((await stockOf(ISBN))?.reserved).toBe(1); // el stock no se tocó
 
       await http()
         .patch(`/admin/books/${ISBN}`)
+        .set(adminHeader)
         .send({ active: true })
         .expect(200);
       await http().get(`/books/${ISBN}`).expect(200);
@@ -223,10 +259,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     });
 
     it('la última unidad cargada se la lleva uno solo de dos clientes que compran a la vez', async () => {
-      const [ana, luis] = await Promise.all([
-        insertCustomer(),
-        insertCustomer(),
-      ]);
+      const [ana, luis] = await Promise.all([newCustomer(), newCustomer()]);
       await createBook().expect(201);
       await waitFor(stockReady());
       await addStock(1).expect(201);
@@ -241,7 +274,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
 
     it('cargar stock mientras se compra no pierde ninguna unidad', async () => {
       const customers = await Promise.all(
-        [1, 2, 3, 4].map(() => insertCustomer()),
+        [1, 2, 3, 4].map(() => newCustomer()),
       );
       await createBook().expect(201);
       await waitFor(stockReady());
@@ -259,7 +292,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     });
 
     it('el historial recorre varios pedidos de un cliente por páginas, del más reciente al más antiguo', async () => {
-      const ana = await insertCustomer();
+      const ana = await newCustomer();
       await createBook().expect(201);
       await waitFor(stockReady());
       await addStock(10).expect(201);
@@ -269,11 +302,13 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
 
       const first = await http()
         .get(`/orders?customerId=${ana.id}&limit=2`)
+        .set(adminHeader)
         .expect(200);
       const second = await http()
         .get(
           `/orders?customerId=${ana.id}&limit=2&cursor=${first.body.nextCursor}`,
         )
+        .set(adminHeader)
         .expect(200);
 
       const seen = [...first.body.items, ...second.body.items].map(
@@ -312,7 +347,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     });
 
     it('el relay entrega los eventos de libro y de pedido sin dejar nada en FAILED', async () => {
-      const ana = await insertCustomer();
+      const ana = await newCustomer();
       await createBook().expect(201);
       await waitFor(stockReady());
       await addStock(2).expect(201);
@@ -342,6 +377,8 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
         ADMIN_API_ENABLED: 'false',
         PAYMENT_PROVIDER: 'fake',
       });
+      currentApp = app;
+      adminHeader = await bearer(app, 'ADMIN');
     });
     afterAll(async () => {
       await app.close();
@@ -350,13 +387,20 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     const http = () => request(app.getHttpServer());
 
     it('toda la administración y el historial responden 404, como si no existieran', async () => {
-      const ana = await insertCustomer();
+      const ana = await newCustomer();
       for (const call of [
-        () => http().post('/admin/books').send(BOOK),
-        () => http().patch(`/admin/books/${ISBN}`).send({ active: false }),
+        () => http().post('/admin/books').set(adminHeader).send(BOOK),
         () =>
-          http().post(`/admin/stock/${ISBN}/additions`).send({ quantity: 5 }),
-        () => http().get(`/orders?customerId=${ana.id}`),
+          http()
+            .patch(`/admin/books/${ISBN}`)
+            .set(adminHeader)
+            .send({ active: false }),
+        () =>
+          http()
+            .post(`/admin/stock/${ISBN}/additions`)
+            .set(adminHeader)
+            .send({ quantity: 5 }),
+        () => http().get(`/orders?customerId=${ana.id}`).set(adminHeader),
       ]) {
         const res = await call().expect(404);
         expect(res.body).toMatchObject({ error: 'Not Found', statusCode: 404 });
@@ -370,7 +414,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     });
 
     it('lo público sigue funcionando: catálogo, búsqueda y compra', async () => {
-      const ana = await insertCustomer();
+      const ana = await newCustomer();
       await query(
         "INSERT INTO catalog.books (isbn, title, author, price, currency, active) VALUES ($1, 'Clean Architecture', 'Robert C. Martin', 55.00, 'PEN', true)",
         [ISBN],
@@ -386,9 +430,9 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
       ).toBe(1);
       await http()
         .post('/orders')
+        .set(buyers.get(ana.id)!)
         .set('Idempotency-Key', randomUUID())
         .send({
-          customerId: ana.id,
           cardToken: 'tok_visa',
           items: [{ isbn: ISBN, quantity: 1 }],
           shippingAddress: ADDRESS,

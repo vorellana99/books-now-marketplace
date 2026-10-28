@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { Module, type INestApplication } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
-import { GetOrderQuery } from '../../src/contexts/sales/application/order/get-order.query.js';
+import {
+  GetOrderQuery,
+  type OrderRequester,
+} from '../../src/contexts/sales/application/order/get-order.query.js';
 import { GetOrderHandler } from '../../src/contexts/sales/infrastructure/order/get-order.handler.js';
+import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { NotFoundError } from '../../src/shared-kernel/domain.errors.js';
 import { insertCustomer, insertOrder } from '../support/builders.js';
 import { resetDatabase } from '../support/database.js';
@@ -24,7 +28,11 @@ describe('GetOrderHandler (PostgreSQL real, por el QueryBus)', () => {
   });
   beforeEach(resetDatabase);
 
-  const get = (id: string) => queryBus.execute(new GetOrderQuery(id));
+  // Por defecto pregunta un administrador: estos tests miran la vista, no quién la ve
+  const get = (
+    id: string,
+    requester: OrderRequester = { userId: randomUUID(), role: 'ADMIN' },
+  ) => queryBus.execute(new GetOrderQuery(id, requester));
 
   it('devuelve el pedido con el monto cobrado y las líneas como { amount, currency }', async () => {
     const customer = await insertCustomer();
@@ -127,5 +135,69 @@ describe('GetOrderHandler (PostgreSQL real, por el QueryBus)', () => {
     expect(JSON.stringify(await get(order.id))).not.toContain(
       'secreto@example.com',
     );
+  });
+
+  describe('quién puede verlo', () => {
+    it('su dueño lo ve', async () => {
+      const ana = await insertCustomer();
+      const order = await insertOrder(ana.id);
+
+      const view = await get(order.id, { userId: ana.id, role: 'BUYER' });
+
+      expect(view.id).toBe(order.id);
+    });
+
+    it('otro comprador recibe el mismo NotFoundError que si no existiera', async () => {
+      const [ana, luis] = [
+        await insertCustomer({ email: 'ana@example.com' }),
+        await insertCustomer({ email: 'luis@example.com' }),
+      ];
+      const order = await insertOrder(ana.id);
+
+      const foreign = (await get(order.id, {
+        userId: luis.id,
+        role: 'BUYER',
+      }).catch((e: unknown) => e)) as NotFoundError;
+      const missing = (await get(randomUUID(), {
+        userId: luis.id,
+        role: 'BUYER',
+      }).catch((e: unknown) => e)) as NotFoundError;
+
+      expect(foreign).toBeInstanceOf(NotFoundError);
+      expect(foreign.code).toBe('NOT_FOUND');
+      expect(foreign.message).toBe(
+        missing.message.replace(/\b[0-9a-f-]{36}\b/, order.id),
+      );
+    });
+
+    it('un administrador ve el de cualquier cliente', async () => {
+      const ana = await insertCustomer();
+      const order = await insertOrder(ana.id);
+
+      const view = await get(order.id, { userId: randomUUID(), role: 'ADMIN' });
+
+      expect(view.id).toBe(order.id);
+    });
+
+    it('el pedido de otro no se lee: la consulta ya lo filtra', async () => {
+      const [ana, luis] = [
+        await insertCustomer({ email: 'ana@example.com' }),
+        await insertCustomer({ email: 'luis@example.com' }),
+      ];
+      const order = await insertOrder(ana.id);
+      const prisma = app.get(PrismaService);
+      const find = vi.spyOn(prisma.order, 'findFirst');
+      try {
+        await get(order.id, { userId: luis.id, role: 'BUYER' }).catch(
+          () => undefined,
+        );
+        expect(find.mock.calls[0][0]?.where).toEqual({
+          id: order.id,
+          customerId: luis.id,
+        });
+      } finally {
+        find.mockRestore();
+      }
+    });
   });
 });

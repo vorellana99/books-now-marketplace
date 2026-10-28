@@ -102,16 +102,39 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
   afterEach(() => vi.restoreAllMocks());
 
   // ── ayudas ──────────────────────────────────────────────────────────────────────────────────
+  // `cart(customerId, …)` dice a nombre de quién se compra: la compra la hace quien tiene ese token (el cuerpo ya no lleva
+  // el cliente). Con `postRaw` se manda el cuerpo tal cual, para probar lo que no debe aceptarse
+  const tokens = new Map<string, { Authorization: string }>();
+  const newCustomer = async (
+    overrides: Parameters<typeof insertCustomer>[0] = {},
+  ) => {
+    const customer = await insertCustomer(overrides);
+    tokens.set(customer.id, await bearer(app, 'BUYER', customer.id));
+    return customer;
+  };
   const post = (
     body: unknown,
     key: string | null = randomUUID(),
     requestId?: string,
   ) => {
-    const req = request(app.getHttpServer()).post('/orders').set(auth);
+    const { customerId, ...payload } = body as { customerId?: string };
+    const req = request(app.getHttpServer())
+      .post('/orders')
+      .set((customerId && tokens.get(customerId)) || auth);
     if (key !== null) req.set('Idempotency-Key', key);
     if (requestId) req.set('X-Request-Id', requestId);
-    return req.send(body as object);
+    return req.send(payload);
   };
+  const postRaw = (
+    body: unknown,
+    headers: Record<string, string> = auth,
+    key: string = randomUUID(),
+  ) =>
+    request(app.getHttpServer())
+      .post('/orders')
+      .set(headers)
+      .set('Idempotency-Key', key)
+      .send(body as object);
   const cart = (
     customerId: string,
     items: { isbn: string; quantity: number }[],
@@ -165,7 +188,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
   // ── la compra completa ─────────────────────────────────────────────────────────────────────
   describe('una compra exitosa', () => {
     it('cliente premium: 201, descuento y envío gratis; reserva CONFIRMED, email en el log y /health/outbox 200', async () => {
-      const premium = await insertCustomer({
+      const premium = await newCustomer({
         premium: true,
         email: 'premium@example.com',
       });
@@ -209,7 +232,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('cliente normal con subtotal bajo: paga el envío (S/ 10.00)', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const res = await post(
         cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
@@ -218,7 +241,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('cliente normal con subtotal desde S/ 150: envío gratis y sin descuento', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const res = await post(
         cart(customer.id, [{ isbn: b.isbn, quantity: 2 }]),
@@ -227,7 +250,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('pedido en dólares: se cobra y se responde en dólares, con el envío de esa moneda', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('20.00', { currency: 'USD' });
 
       const res = await post(
@@ -241,7 +264,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
       });
       const order = await request(app.getHttpServer())
         .get(`/orders/${res.body.orderId}`)
-        .set(auth)
+        .set(tokens.get(customer.id)!)
         .expect(200);
       expect(order.body.charged.currency).toBe('USD');
       expect(order.body.lines[0].unitPrice).toEqual({
@@ -251,7 +274,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('GET /orders/:id devuelve el pedido con sus líneas', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await insertBook({ title: 'Refactoring', price: '60.50' });
       await insertStock(b.isbn, 5);
       const created = await post(
@@ -260,7 +283,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
       const res = await request(app.getHttpServer())
         .get(`/orders/${created.body.orderId}`)
-        .set(auth)
+        .set(tokens.get(customer.id)!)
         .expect(200);
 
       expect(res.body).toEqual({
@@ -279,7 +302,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('acepta el ISBN con guiones y suma las líneas repetidas del mismo libro', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const hyphenated = `${b.isbn.slice(0, 3)}-${b.isbn.slice(3)}`;
 
@@ -292,7 +315,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
       const order = await request(app.getHttpServer())
         .get(`/orders/${res.body.orderId}`)
-        .set(auth)
+        .set(tokens.get(customer.id)!)
         .expect(200);
       expect(order.body.lines).toHaveLength(1);
       expect(order.body.lines[0]).toMatchObject({ isbn: b.isbn, quantity: 2 });
@@ -302,7 +325,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
   // ── lo que falla, y queda todo como estaba ────────────────────────────────────────────────
   describe('compras que fallan dejan todo como estaba', () => {
     it('sin stock: 422 OUT_OF_STOCK, nada cobrado ni guardado; el reintento da PREVIOUS_ATTEMPT_FAILED', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00', { stock: 1 });
       const key = randomUUID();
       const body = cart(customer.id, [{ isbn: b.isbn, quantity: 2 }]);
@@ -323,7 +346,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('pago rechazado (tok_declined): 422 PAYMENT_DECLINED, la reserva se libera y no hay pedido', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
 
       const res = await post(
@@ -338,7 +361,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('error de la pasarela (tok_error): 500 sin detalles, compensado y checkout ABORTED', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
 
       const res = await post(
@@ -355,7 +378,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('mezclar monedas: 422 CURRENCY_MISMATCH sin reservar ni cobrar', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const pen = await book('50.00');
       const usd = await book('20.00', { currency: 'USD' });
 
@@ -373,7 +396,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('más de 10 unidades de un libro: 422 MAX_QUANTITY_EXCEEDED', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('10.00', { stock: 50 });
       const res = await post(
         cart(customer.id, [{ isbn: b.isbn, quantity: 11 }]),
@@ -383,7 +406,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('un ISBN mal formado: 422 INVALID_ISBN', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const res = await post(
         cart(customer.id, [{ isbn: '1234567890123', quantity: 1 }]),
       ).expect(422);
@@ -391,7 +414,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('un libro que no existe, o está inactivo: 404', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const inactive = await book('10.00', { active: false });
       const unknown = '9780306406157';
 
@@ -406,8 +429,10 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
     it('un cliente que no existe: 404, sin efectos', async () => {
       const b = await book('10.00');
+      const ghost = randomUUID();
+      tokens.set(ghost, await bearer(app, 'BUYER', ghost));
       const res = await post(
-        cart(randomUUID(), [{ isbn: b.isbn, quantity: 1 }]),
+        cart(ghost, [{ isbn: b.isbn, quantity: 1 }]),
       ).expect(404);
       expect(res.body.errorCode).toBe('NOT_FOUND');
       expect(await stockOf(b.isbn)).toEqual({ available: 10, reserved: 0 });
@@ -418,7 +443,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
   // ── idempotencia ───────────────────────────────────────────────────────────────────────────
   describe('idempotencia', () => {
     it('repetir la misma clave y el mismo carrito devuelve el mismo resultado sin cobrar de nuevo', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const key = randomUUID();
       const body = cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]);
@@ -434,7 +459,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('la misma clave con otro carrito: 422 IDEMPOTENCY_KEY_REUSED y no se toca nada', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const key = randomUUID();
       await post(
@@ -453,7 +478,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('el ISBN con o sin guiones cuenta como el mismo carrito', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const key = randomUUID();
       const hyphenated = `${b.isbn.slice(0, 3)}-${b.isbn.slice(3)}`;
@@ -471,7 +496,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('dos peticiones simultáneas con la misma clave: la segunda recibe 409 y, al terminar la primera, el reintento devuelve el mismo pedido', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const key = randomUUID();
       const body = cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]);
@@ -493,7 +518,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('la última copia: dos clientes la compran a la vez y solo uno la consigue', async () => {
-      const [a, b2] = await Promise.all([insertCustomer(), insertCustomer()]);
+      const [a, b2] = await Promise.all([newCustomer(), newCustomer()]);
       const b = await book('100.00', { stock: 1 });
 
       const results = await Promise.all([
@@ -515,7 +540,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
   // ── X-Request-Id ───────────────────────────────────────────────────────────────────────────
   describe('X-Request-Id', () => {
     it('viaja de la petición al checkout, al evento y al email', async () => {
-      const customer = await insertCustomer({ email: 'traza@example.com' });
+      const customer = await newCustomer({ email: 'traza@example.com' });
       const b = await book('100.00');
 
       const res = await post(
@@ -554,7 +579,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     ) => ({ ...cart(customerId, [{ isbn, quantity: 1 }]), shippingAddress });
 
     it('la compra guarda la dirección en el pedido', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
 
       const res = await post(
@@ -573,7 +598,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('guarda la dirección ya recortada, y sin referencia la deja en NULL', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       const { reference: _omit, ...rest } = ADDRESS_BODY;
 
@@ -590,7 +615,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('el evento del pedido es la versión 2 y lleva la dirección', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
 
       const res = await post(
@@ -604,7 +629,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('los consumidores del evento siguen funcionando con la versión 2', async () => {
-      const customer = await insertCustomer({ email: 'v2@example.com' });
+      const customer = await newCustomer({ email: 'v2@example.com' });
       const b = await book();
       const res = await post(
         cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
@@ -619,7 +644,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('sin dirección: 400 y no pasa nada', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       const { shippingAddress: _omit, ...withoutAddress } = cart(customer.id, [
         { isbn: b.isbn, quantity: 1 },
@@ -632,7 +657,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('con un campo obligatorio vacío: 400', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       await post(
         withAddress(customer.id, b.isbn, { ...ADDRESS_BODY, district: '' }),
@@ -641,7 +666,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('un teléfono que no es un teléfono: 422 INVALID_SHIPPING_ADDRESS, sin reservar ni cobrar', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
 
       const res = await post(
@@ -659,7 +684,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('un salto de línea en la calle: 422 INVALID_SHIPPING_ADDRESS', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       const res = await post(
         withAddress(customer.id, b.isbn, {
@@ -671,7 +696,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('la misma clave con otra dirección: 422 IDEMPOTENCY_KEY_REUSED, y no se toca el pedido', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       const key = randomUUID();
       const first = await post(
@@ -695,7 +720,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('la misma clave con la misma dirección (con espacios de más) devuelve el mismo pedido', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       const key = randomUUID();
       const first = await post(
@@ -717,7 +742,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
     // Decisión D2: GET /orders/:id no tiene autenticación, así que no devuelve datos personales
     it('GET /orders/:id no devuelve la dirección ni el teléfono', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       const created = await post(
         cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
@@ -725,7 +750,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
       const res = await request(app.getHttpServer())
         .get(`/orders/${created.body.orderId}`)
-        .set(auth)
+        .set(tokens.get(customer.id)!)
         .expect(200);
 
       const text = JSON.stringify(res.body);
@@ -741,7 +766,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('la dirección no aparece en los logs, ni de la compra ni de los consumidores', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book();
       await post(cart(customer.id, [{ isbn: b.isbn, quantity: 1 }])).expect(
         201,
@@ -770,7 +795,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
   // ── forma de la petición ───────────────────────────────────────────────────────────────────
   describe('validación', () => {
     it('sin Idempotency-Key, o con uno que no es UUID: 400', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       const body = cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]);
       await post(body, null).expect(400);
@@ -779,10 +804,13 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('un cuerpo inválido o con campos de más: 400, sin efectos', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
       await post(cart(customer.id, [])).expect(400);
-      await post(cart('no-uuid', [{ isbn: b.isbn, quantity: 1 }])).expect(400);
+      await postRaw({
+        ...cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
+        customerId: customer.id,
+      }).expect(400);
       await post(cart(customer.id, [{ isbn: b.isbn, quantity: 0 }])).expect(
         400,
       );
@@ -809,7 +837,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
   // ── el token de la tarjeta ─────────────────────────────────────────────────────────────────
   describe('el token de la tarjeta', () => {
     it('no queda en ninguna tabla ni en los logs, ni en la compra exitosa ni en la fallida', async () => {
-      const customer = await insertCustomer();
+      const customer = await newCustomer();
       const b = await book('100.00');
 
       await post(
@@ -818,9 +846,10 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
       await post(
         cart(customer.id, [{ isbn: b.isbn, quantity: 1 }], 'tok_declined'),
       ).expect(422);
-      await post(
-        cart('no-uuid', [{ isbn: b.isbn, quantity: 1 }], TOKEN),
-      ).expect(400);
+      await postRaw({
+        ...cart(customer.id, [{ isbn: b.isbn, quantity: 1 }], TOKEN),
+        customerId: customer.id,
+      }).expect(400);
       await deliverEvents(2);
 
       const tables = [
