@@ -49,6 +49,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `ADMIN_API_ENABLED` | `false` | Endpoints `/admin`, solo para desarrollo. Con `NODE_ENV=production` no se permite `true` |
 | `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external`. Con `NODE_ENV=production` la API no arranca con `fake`, porque aprueba cualquier tarjeta |
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
+| `PAYMENT_SIMULATED_DELAY_MS` | `3000` | Solo con `PAYMENT_PROVIDER=fake`: lo que tarda la pasarela simulada en cobrar y en reembolsar, como un proveedor real. `0` quita la demora |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
@@ -205,6 +206,8 @@ curl http://localhost:3000/orders/<orderId>
 | `tok_declined` | `422 PAYMENT_DECLINED`; la reserva se libera y no queda pedido |
 | `tok_error` | `500`: la pasarela "se cae"; se compensa igual (se libera la reserva y el intento queda anulado) |
 | cualquier otro (por ejemplo `tok_visa`) | Aprobado |
+
+La pasarela simulada **tarda 3 segundos** en cobrar (y en reembolsar), así que `POST /orders` responde pasados unos 3 s. Es a propósito: una segunda petición con la misma `Idempotency-Key` durante ese rato recibe `409 CHECKOUT_IN_PROGRESS`, que se puede ver con dos `curl` seguidos. Cámbialo con `PAYMENT_SIMULATED_DELAY_MS`.
 
 El token solo viaja a la pasarela: no se guarda en la base ni se escribe en los logs.
 

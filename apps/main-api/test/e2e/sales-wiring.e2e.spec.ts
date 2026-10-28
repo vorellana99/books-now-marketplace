@@ -140,6 +140,19 @@ describe('SalesModule en la aplicación completa', () => {
       }
     });
 
+    it('la simulada recibe la demora de PAYMENT_SIMULATED_DELAY_MS', async () => {
+      const app = await build({
+        PAYMENT_PROVIDER: 'fake',
+        PAYMENT_SIMULATED_DELAY_MS: '1234',
+      });
+      try {
+        const gateway = app.get(PaymentGateway, { strict: false });
+        expect((gateway as SimulatedPaymentGateway).delayMs).toBe(1234);
+      } finally {
+        await app.close();
+      }
+    });
+
     it('con fake, la simulada', async () => {
       const app = await build({ PAYMENT_PROVIDER: 'fake' });
       try {

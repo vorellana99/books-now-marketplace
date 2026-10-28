@@ -16,6 +16,7 @@ export const envSchema = z
     PORT: z.coerce.number().int().default(3000),
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,
+    PAYMENT_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // solo con PAYMENT_PROVIDER=fake
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),

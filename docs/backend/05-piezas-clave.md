@@ -820,7 +820,7 @@ export class SalesModule {}
 
 ### Pasarelas de pago
 
-`SimulatedPaymentGateway` (la que usa la aplicación con `PAYMENT_PROVIDER=fake`) no hace red: el token de la tarjeta decide el resultado. `tok_declined` rechaza, `tok_error` lanza un error (una pasarela caída) y cualquier otro token aprueba. Es idempotente por `orderId`, expone un libro de cobros y reembolsos (`charges`, `refunds`) y nunca guarda el token. La clase `FakePaymentGateway` de `test/fakes/` sigue siendo el doble de los tests unitarios.
+`SimulatedPaymentGateway` (la que usa la aplicación con `PAYMENT_PROVIDER=fake`) no hace red: el token de la tarjeta decide el resultado. `tok_declined` rechaza, `tok_error` lanza un error (una pasarela caída) y cualquier otro token aprueba. Cada operación tarda `PAYMENT_SIMULATED_DELAY_MS` (3 s por defecto; los tests lo ponen en 0), como un proveedor real. Es idempotente por `orderId`, **también entre dos cobros que coinciden dentro de la demora** (guarda la promesa del cobro en curso, no solo su resultado, para no contarlo dos veces), y un reembolso pedido con el cobro en curso espera a que termine. Expone un libro de cobros y reembolsos (`charges`, `refunds`) y nunca guarda el token. La clase `FakePaymentGateway` de `test/fakes/` sigue siendo el doble de los tests unitarios.
 
 `ExternalPaymentAdapter` habla con un contrato HTTP mínimo, provisional hasta elegir proveedor:
 

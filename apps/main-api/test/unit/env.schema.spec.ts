@@ -15,6 +15,7 @@ describe('envSchema', () => {
     expect(env.OUTBOX_MAX_ATTEMPTS).toBe(8);
     expect(env.CHECKOUT_RECOVERY_MINUTES).toBe(10);
     expect(env.DB_STATEMENT_TIMEOUT_MS).toBe(5000);
+    expect(env.PAYMENT_SIMULATED_DELAY_MS).toBe(3000);
     expect(env.ADMIN_API_ENABLED).toBe(false);
   });
 
@@ -33,6 +34,25 @@ describe('envSchema', () => {
       ).toThrow(/DB_STATEMENT_TIMEOUT_MS/);
     },
   );
+
+  describe('PAYMENT_SIMULATED_DELAY_MS', () => {
+    it('se convierte a número y admite 0 para desactivar la demora', () => {
+      expect(
+        envSchema.parse({ ...base, PAYMENT_SIMULATED_DELAY_MS: '0' })
+          .PAYMENT_SIMULATED_DELAY_MS,
+      ).toBe(0);
+      expect(
+        envSchema.parse({ ...base, PAYMENT_SIMULATED_DELAY_MS: '1500' })
+          .PAYMENT_SIMULATED_DELAY_MS,
+      ).toBe(1500);
+    });
+
+    it.each(['-1', '1.5', 'abc'])('rechaza %s', (value) => {
+      expect(() =>
+        envSchema.parse({ ...base, PAYMENT_SIMULATED_DELAY_MS: value }),
+      ).toThrow(/PAYMENT_SIMULATED_DELAY_MS/);
+    });
+  });
 
   it('acepta PAYMENT_API_URL vacía con el proveedor fake', () => {
     expect(

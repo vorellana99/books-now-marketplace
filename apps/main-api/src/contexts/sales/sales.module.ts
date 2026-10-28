@@ -45,7 +45,9 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
       useFactory: (config: ConfigService): PaymentGateway =>
         config.get('PAYMENT_PROVIDER') === 'external'
           ? new ExternalPaymentAdapter(config.getOrThrow('PAYMENT_API_URL'))
-          : new SimulatedPaymentGateway(),
+          : new SimulatedPaymentGateway(
+              config.getOrThrow<number>('PAYMENT_SIMULATED_DELAY_MS'),
+            ),
     },
   ],
 })
