@@ -165,7 +165,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       ├── lock-order.ts                           sortByIsbn: el orden de bloqueo de reservar y liberar
 │       │       ├── order-id.ts                             assertOrderId: el orderId debe ser un UUID
 │       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox   ✅ hecho (5.7)
-│       │       ├── create-stock-item.consumer.ts           (fase 12) consumidor `db`
+│       │       ├── create-stock-item.consumer.ts           ✅ hecho (6.6) consumidor `db`
 │       │       ├── admin-stock.controller.ts               (fase 13) guard en la clase
 │       │       ├── add-stock.dto.ts                        (fase 13)
 │       │       └── add-stock.handler.ts                    (fase 13)
