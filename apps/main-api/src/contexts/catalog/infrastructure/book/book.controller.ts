@@ -13,11 +13,14 @@ import {
   GetBookPriceQuery,
   type BookPrice,
 } from '../../../../contracts/catalog/get-book-price.query.js';
+import { Public } from '../../../../platform/auth/public.decorator.js';
 import { Isbn } from '../../../../shared-kernel/isbn.vo.js';
 import { SearchBooksQuery } from '../../application/book/search-books.query.js';
 import { BookPageResponse, BookResponse } from './book-price.response.js';
 import { SearchBooksDto } from './search-books.dto.js';
 
+// El catálogo es público: se consulta sin sesión
+@Public()
 @ApiTags('books')
 @Controller('books')
 export class BookController {

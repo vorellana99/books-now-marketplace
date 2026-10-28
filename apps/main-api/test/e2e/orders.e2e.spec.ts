@@ -18,6 +18,7 @@ import {
   reservationsOf,
   stockOf,
 } from '../support/builders.js';
+import { bearer } from '../support/auth.js';
 import { query, resetDatabase } from '../support/database.js';
 
 const TOKEN = 'tok_secreto_de_prueba_123';
@@ -67,6 +68,8 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     refund: (orderId: string) => gateway.refund(orderId),
   } as PaymentGateway;
   let logLines: string[];
+  // Las rutas de pedidos exigen sesión. La tarea 7.7 hará que el cliente sea el del token
+  let auth: { Authorization: string };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] })
@@ -78,6 +81,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     app.useLogger(new RequestAwareLogger({ json: true }));
     await app.init();
     relay = app.get(OutboxRelay);
+    auth = await bearer(app, 'BUYER');
   });
   afterAll(async () => {
     await app.close();
@@ -103,7 +107,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     key: string | null = randomUUID(),
     requestId?: string,
   ) => {
-    const req = request(app.getHttpServer()).post('/orders');
+    const req = request(app.getHttpServer()).post('/orders').set(auth);
     if (key !== null) req.set('Idempotency-Key', key);
     if (requestId) req.set('X-Request-Id', requestId);
     return req.send(body as object);
@@ -237,6 +241,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
       });
       const order = await request(app.getHttpServer())
         .get(`/orders/${res.body.orderId}`)
+        .set(auth)
         .expect(200);
       expect(order.body.charged.currency).toBe('USD');
       expect(order.body.lines[0].unitPrice).toEqual({
@@ -255,6 +260,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
       const res = await request(app.getHttpServer())
         .get(`/orders/${created.body.orderId}`)
+        .set(auth)
         .expect(200);
 
       expect(res.body).toEqual({
@@ -286,6 +292,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
       const order = await request(app.getHttpServer())
         .get(`/orders/${res.body.orderId}`)
+        .set(auth)
         .expect(200);
       expect(order.body.lines).toHaveLength(1);
       expect(order.body.lines[0]).toMatchObject({ isbn: b.isbn, quantity: 2 });
@@ -718,6 +725,7 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
 
       const res = await request(app.getHttpServer())
         .get(`/orders/${created.body.orderId}`)
+        .set(auth)
         .expect(200);
 
       const text = JSON.stringify(res.body);
@@ -787,9 +795,13 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
     });
 
     it('GET /orders/:id: 400 si el id no es un UUID y 404 si no existe', async () => {
-      await request(app.getHttpServer()).get('/orders/123').expect(400);
+      await request(app.getHttpServer())
+        .get('/orders/123')
+        .set(auth)
+        .expect(400);
       await request(app.getHttpServer())
         .get(`/orders/${randomUUID()}`)
+        .set(auth)
         .expect(404);
     });
   });

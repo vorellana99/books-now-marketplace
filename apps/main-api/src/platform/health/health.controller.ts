@@ -1,8 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
+import { Public } from '../auth/public.decorator.js';
 import { OutboxHealthIndicator } from '../outbox/outbox.health.js';
 import { DbHealthIndicator } from './db.health.js';
 
+// Públicas: las consulta el balanceador y el monitoreo, sin sesión
+@Public()
 @Controller('health')
 export class HealthController {
   constructor(

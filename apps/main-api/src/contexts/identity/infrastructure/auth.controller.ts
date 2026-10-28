@@ -11,6 +11,7 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
+import { Public } from '../../../platform/auth/public.decorator.js';
 import { LoginCommand } from '../application/login.command.js';
 import { LogoutCommand } from '../application/logout.command.js';
 import { RefreshSessionCommand } from '../application/refresh-session.command.js';
@@ -22,6 +23,8 @@ import {
 import { CredentialsDto, RefreshTokenDto } from './auth.dto.js';
 import { LoginResponse, UserResponse } from './auth.responses.js';
 
+// Todas públicas: son la puerta para conseguir un token
+@Public()
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {

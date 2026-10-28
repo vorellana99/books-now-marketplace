@@ -6,6 +6,7 @@ import {
 import { DomainExceptionFilter } from '../../src/platform/http/domain-exception.filter.js';
 import {
   AuthenticationError,
+  AuthorizationError,
   ConflictError,
   DomainError,
   NotFoundError,
@@ -54,6 +55,19 @@ describe('DomainExceptionFilter', () => {
         message: 'no entra',
       },
     });
+  });
+
+  it('AuthorizationError → 403, con su código', () => {
+    expect(respond(new AuthorizationError('FORBIDDEN', 'sin permiso'))).toEqual(
+      {
+        status: 403,
+        body: {
+          statusCode: 403,
+          errorCode: 'FORBIDDEN',
+          message: 'sin permiso',
+        },
+      },
+    );
   });
 
   it('OutOfStockError (de Inventario) → 422 OUT_OF_STOCK', () => {

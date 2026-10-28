@@ -21,3 +21,6 @@ export class ConflictError extends DomainError {}
 
 // → 401. Quien llama no se pudo identificar. Su mensaje es siempre genérico: no revela cuál de las credenciales falló
 export class AuthenticationError extends DomainError {}
+
+// → 403. Se sabe quién llama, pero no puede hacer esto
+export class AuthorizationError extends DomainError {}

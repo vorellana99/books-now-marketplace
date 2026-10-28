@@ -45,6 +45,7 @@ import {
 } from './order.response.js';
 import { PlaceOrderDto } from './place-order.dto.js';
 
+// Exigen sesión (cualquier rol) por el denegado por defecto. El cliente sigue viniendo en el cuerpo hasta la tarea 7.7
 @ApiTags('orders')
 @Controller('orders')
 export class OrderController {

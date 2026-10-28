@@ -29,6 +29,7 @@ import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import { OutboxRegistry } from '../../src/platform/outbox/outbox.registry.js';
 import { NotFoundError } from '../../src/shared-kernel/domain.errors.js';
+import { bearer } from '../support/auth.js';
 import { resetDatabase } from '../support/database.js';
 import { createTestApp, withEnv } from '../support/nest.js';
 
@@ -109,15 +110,17 @@ describe('SalesModule en la aplicación completa', () => {
 
     it('las rutas de pedidos están publicadas: sin clave, 400; pedido inexistente, 404', async () => {
       const http = app.getHttpServer();
+      const auth = await bearer(app, 'BUYER');
       await request(http)
         .post('/orders')
+        .set(auth)
         .send({
           customerId: randomUUID(),
           cardToken: 'tok_visa',
           items: [{ isbn: '9780132350884', quantity: 1 }],
         })
         .expect(400);
-      await request(http).get(`/orders/${randomUUID()}`).expect(404);
+      await request(http).get(`/orders/${randomUUID()}`).set(auth).expect(404);
     });
   });
 
