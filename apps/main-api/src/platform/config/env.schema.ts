@@ -36,6 +36,8 @@ export const envSchema = z
       .min(60)
       .max(3600)
       .default(900),
+    // Cuántos días vale un token de refresco sin usarse. Cada uso entrega uno nuevo con su plazo completo
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(14),
     // Costo (log2 de N) del hash de contraseñas con scrypt. Los tests lo bajan; en producción no puede ser menor que 15
     PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15),
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado

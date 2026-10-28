@@ -2,13 +2,11 @@ import { randomBytes } from 'node:crypto';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { PrismaService } from '../../../platform/prisma/prisma.service.js';
 import { AuthenticationError } from '../../../shared-kernel/domain.errors.js';
-import { AccessTokenIssuer } from '../application/access-token-issuer.js';
-import {
-  LoginCommand,
-  type LoginResult,
-} from '../application/login.command.js';
+import { LoginCommand } from '../application/login.command.js';
+import type { Session } from '../application/session.js';
 import { Email } from '../domain/email.vo.js';
 import { PasswordHasher } from '../domain/password-hasher.port.js';
+import { SessionService } from './session.service.js';
 
 const invalidCredentials = () =>
   new AuthenticationError(
@@ -25,10 +23,10 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
   constructor(
     private readonly prisma: PrismaService,
     private readonly hasher: PasswordHasher,
-    private readonly issuer: AccessTokenIssuer,
+    private readonly sessions: SessionService,
   ) {}
 
-  async execute(command: LoginCommand): Promise<LoginResult> {
+  async execute(command: LoginCommand): Promise<Session> {
     const email = this.parseEmail(command.email);
     const user = email
       ? await this.prisma.user.findUnique({ where: { email: email.value } })
@@ -42,15 +40,7 @@ export class LoginHandler implements ICommandHandler<LoginCommand> {
     );
     if (!user || !valid) throw invalidCredentials();
 
-    const { token, expiresInSeconds } = await this.issuer.issue({
-      id: user.id,
-      role: user.role,
-    });
-    return {
-      accessToken: token,
-      expiresInSeconds,
-      user: { id: user.id, email: user.email, role: user.role },
-    };
+    return this.sessions.open(this.prisma, user);
   }
 
   // Un correo mal escrito no se distingue de uno desconocido: ambos terminan en INVALID_CREDENTIALS

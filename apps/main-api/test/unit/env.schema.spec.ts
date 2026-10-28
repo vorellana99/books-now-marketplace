@@ -191,6 +191,25 @@ describe('envSchema', () => {
       },
     );
 
+    it('la duración del token de refresco es de 14 días por defecto, de 1 a 90', () => {
+      expect(envSchema.parse(base).REFRESH_TOKEN_TTL_DAYS).toBe(14);
+      for (const days of ['1', '90']) {
+        expect(
+          envSchema.parse({ ...base, REFRESH_TOKEN_TTL_DAYS: days })
+            .REFRESH_TOKEN_TTL_DAYS,
+        ).toBe(Number(days));
+      }
+    });
+
+    it.each(['0', '91', '1.5', 'abc', '-1'])(
+      'rechaza una duración de refresco de %j días',
+      (value) => {
+        expect(() =>
+          envSchema.parse({ ...base, REFRESH_TOKEN_TTL_DAYS: value }),
+        ).toThrow(/REFRESH_TOKEN_TTL_DAYS/);
+      },
+    );
+
     it('la duración del token de acceso es de 900 segundos por defecto, de 60 a 3600', () => {
       expect(envSchema.parse(base).ACCESS_TOKEN_TTL_SECONDS).toBe(900);
       expect(

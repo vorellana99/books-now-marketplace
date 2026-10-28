@@ -43,6 +43,7 @@ const APP_SCHEMAS = ['sales', 'catalog', 'inventory', 'messaging', 'identity'];
 export async function resetDatabase(): Promise<void> {
   assertIsolatedDatabase();
   await removeSlowStockUpdates(); // por si un test falló antes de quitar el retardo
+  await removeSlowRefreshTokenUpdates();
   await resetDatabaseTimeZone(); // por si un test falló antes de restaurar la zona horaria
   const tables = await query<{ name: string }>(
     `SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) AS name
@@ -80,6 +81,31 @@ export async function removeSlowStockUpdates(): Promise<void> {
     'DROP TRIGGER IF EXISTS test_slow_update ON inventory.stock_items',
   );
   await query('DROP FUNCTION IF EXISTS inventory.test_slow_update()');
+}
+
+// Lo mismo para las filas de tokens de refresco: ensancha la ventana entre leer un token y marcarlo usado, que es donde
+// dos renovaciones simultáneas se pisarían si no hubiera un bloqueo
+export async function slowDownRefreshTokenUpdates(
+  milliseconds: number,
+): Promise<() => Promise<void>> {
+  assertIsolatedDatabase();
+  if (!Number.isFinite(milliseconds) || milliseconds < 0)
+    throw new Error('milliseconds inválido');
+  await query(`
+    CREATE OR REPLACE FUNCTION identity.test_slow_update() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN PERFORM pg_sleep(${milliseconds / 1000}); RETURN NEW; END $$`);
+  await query(`
+    CREATE OR REPLACE TRIGGER test_slow_update BEFORE UPDATE ON identity.refresh_tokens
+    FOR EACH ROW EXECUTE FUNCTION identity.test_slow_update()`);
+  return removeSlowRefreshTokenUpdates;
+}
+
+export async function removeSlowRefreshTokenUpdates(): Promise<void> {
+  assertIsolatedDatabase();
+  await query(
+    'DROP TRIGGER IF EXISTS test_slow_update ON identity.refresh_tokens',
+  );
+  await query('DROP FUNCTION IF EXISTS identity.test_slow_update()');
 }
 
 // Cambia la zona horaria de la sesión por defecto de la base de pruebas, para comprobar que nada depende de que sea UTC.

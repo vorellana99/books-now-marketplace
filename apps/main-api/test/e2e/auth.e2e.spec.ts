@@ -175,6 +175,7 @@ describe('/auth (e2e, aplicación y PostgreSQL reales)', () => {
         accessToken: expect.stringMatching(/^[\w-]+\.[\w-]+\.[\w-]+$/),
         tokenType: 'Bearer',
         expiresIn: 900,
+        refreshToken: expect.stringMatching(/^[\w-]{43}$/),
         user: { id: expect.stringMatching(UUID), email: EMAIL, role: 'BUYER' },
       });
       expect(res.text).not.toContain('scrypt');
@@ -244,6 +245,132 @@ describe('/auth (e2e, aplicación y PostgreSQL reales)', () => {
     });
   });
 
+  describe('POST /auth/refresh', () => {
+    const refresh = (body: unknown) =>
+      http()
+        .post('/auth/refresh')
+        .send(body as object);
+    const start = async () => {
+      await register().expect(201);
+      return (await login().expect(200)).body as {
+        accessToken: string;
+        refreshToken: string;
+        user: { id: string };
+      };
+    };
+
+    it('200 con la misma forma que el login: un token de acceso y uno de refresco nuevos', async () => {
+      const session = await start();
+
+      const res = await refresh({ refreshToken: session.refreshToken }).expect(
+        200,
+      );
+
+      expect(res.body).toEqual({
+        accessToken: expect.stringMatching(/^[\w-]+\.[\w-]+\.[\w-]+$/),
+        tokenType: 'Bearer',
+        expiresIn: 900,
+        refreshToken: expect.stringMatching(/^[\w-]{43}$/),
+        user: { id: session.user.id, email: EMAIL, role: 'BUYER' },
+      });
+      expect(res.body.refreshToken).not.toBe(session.refreshToken);
+      expect(res.headers['cache-control']).toBe('no-store');
+      expect(
+        await app.get(AccessTokenVerifier).verify(res.body.accessToken),
+      ).toEqual({ userId: session.user.id, role: 'BUYER' });
+    });
+
+    it('el token usado ya no sirve: 401 INVALID_REFRESH_TOKEN, y la sesión entera queda revocada', async () => {
+      const session = await start();
+      const next = (
+        await refresh({ refreshToken: session.refreshToken }).expect(200)
+      ).body;
+
+      const reuse = await refresh({
+        refreshToken: session.refreshToken,
+      }).expect(401);
+
+      expect(reuse.body).toEqual({
+        statusCode: 401,
+        errorCode: 'INVALID_REFRESH_TOKEN',
+        message: expect.any(String),
+      });
+      await refresh({ refreshToken: next.refreshToken }).expect(401);
+    });
+
+    it('un token desconocido o mal formado da el mismo 401', async () => {
+      const bodies = [];
+      for (const refreshToken of ['a'.repeat(43), 'malo']) {
+        bodies.push((await refresh({ refreshToken }).expect(401)).body);
+      }
+      expect(bodies[1]).toEqual(bodies[0]);
+      expect(bodies[0].errorCode).toBe('INVALID_REFRESH_TOKEN');
+    });
+
+    it('el 401 no repite el token', async () => {
+      const token = 'b'.repeat(43);
+      const res = await refresh({ refreshToken: token }).expect(401);
+      expect(res.text).not.toContain(token);
+    });
+
+    it('400 sin cuerpo', async () => {
+      await http().post('/auth/refresh').expect(400);
+    });
+
+    it.each([
+      ['con un cuerpo vacío', {}],
+      ['con el token vacío', { refreshToken: '' }],
+      ['con el token como número', { refreshToken: 42 }],
+      ['con el token como objeto', { refreshToken: { $ne: '' } }],
+      [
+        'con un token de más de 512 caracteres',
+        { refreshToken: 'a'.repeat(513) },
+      ],
+      ['con un campo de más', { refreshToken: 'a'.repeat(43), userId: 'x' }],
+    ])('400 %s', async (_why, body) => {
+      await refresh(body).expect(400);
+    });
+  });
+
+  describe('POST /auth/logout', () => {
+    const logout = (body: unknown) =>
+      http()
+        .post('/auth/logout')
+        .send(body as object);
+
+    it('204 sin cuerpo, y la sesión deja de poder refrescarse', async () => {
+      await register().expect(201);
+      const { refreshToken } = (await login().expect(200)).body;
+
+      const res = await logout({ refreshToken }).expect(204);
+
+      expect(res.text).toBe('');
+      await http().post('/auth/refresh').send({ refreshToken }).expect(401);
+    });
+
+    it('un token desconocido o ya cerrado también da 204: no revela si existía', async () => {
+      await register().expect(201);
+      const { refreshToken } = (await login().expect(200)).body;
+      await logout({ refreshToken }).expect(204);
+
+      await logout({ refreshToken }).expect(204);
+      await logout({ refreshToken: 'a'.repeat(43) }).expect(204);
+      await logout({ refreshToken: 'malo' }).expect(204);
+    });
+
+    it('400 sin cuerpo o con un cuerpo que no es válido', async () => {
+      await http().post('/auth/logout').expect(400);
+      for (const body of [
+        {},
+        { refreshToken: '' },
+        { refreshToken: 1 },
+        { refreshToken: 'a'.repeat(43), extra: true },
+      ]) {
+        await logout(body).expect(400);
+      }
+    });
+  });
+
   describe('lo que se escribe en los logs', () => {
     it('ninguna petición deja en la salida la contraseña, el hash ni el token', async () => {
       const written: string[] = [];
@@ -254,13 +381,26 @@ describe('/auth (e2e, aplicación y PostgreSQL reales)', () => {
       const out = vi.spyOn(process.stdout, 'write').mockImplementation(capture);
       const err = vi.spyOn(process.stderr, 'write').mockImplementation(capture);
       let token = '';
+      let refreshToken = '';
+      const secrets: string[] = [];
       try {
         await register().expect(201);
         await register().expect(409);
         await login({ email: EMAIL, password: 'otra contraseña buena' }).expect(
           401,
         );
-        token = (await login().expect(200)).body.accessToken;
+        const session = (await login().expect(200)).body;
+        token = session.accessToken;
+        refreshToken = session.refreshToken;
+        const next = (
+          await http().post('/auth/refresh').send({ refreshToken }).expect(200)
+        ).body;
+        await http().post('/auth/refresh').send({ refreshToken }).expect(401);
+        await http()
+          .post('/auth/logout')
+          .send({ refreshToken: next.refreshToken })
+          .expect(204);
+        secrets.push(next.refreshToken);
       } finally {
         out.mockRestore();
         err.mockRestore();
@@ -270,7 +410,14 @@ describe('/auth (e2e, aplicación y PostgreSQL reales)', () => {
       );
 
       const output = written.join('');
-      for (const secret of [PASSWORD, 'otra contraseña buena', hash, token]) {
+      for (const secret of [
+        PASSWORD,
+        'otra contraseña buena',
+        hash,
+        token,
+        refreshToken,
+        ...secrets,
+      ]) {
         expect(output).not.toContain(secret);
       }
     });
@@ -288,6 +435,12 @@ describe('/auth (e2e, aplicación y PostgreSQL reales)', () => {
       expect(Object.keys(loginDoc.responses)).toEqual(
         expect.arrayContaining(['200', '400', '401']),
       );
+      expect(
+        Object.keys(res.body.paths['/auth/refresh'].post.responses),
+      ).toEqual(expect.arrayContaining(['200', '400', '401']));
+      expect(
+        Object.keys(res.body.paths['/auth/logout'].post.responses),
+      ).toEqual(expect.arrayContaining(['204', '400']));
     });
   });
 });

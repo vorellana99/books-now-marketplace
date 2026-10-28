@@ -181,13 +181,17 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       └── identity/                                       (fase 15) usuarios, roles y guards
 │           ├── identity.module.ts                          ✅ hecho (7.1; 7.2 añade los tokens)
 │           ├── application/                                ✅ hecho: access-token-issuer.ts (7.2),
-│           │                                                  register-user.command.ts, login.command.ts (7.3)
+│           │                                                  register-user.command.ts, login.command.ts (7.3),
+│           │                                                  session.ts, refresh-session.command.ts,
+│           │                                                  logout.command.ts (7.4)
 │           ├── domain/                                     ✅ hecho (7.1): email.vo.ts, password-policy.ts,
 │           │                                                  password-hasher.port.ts, user.aggregate.ts
 │           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1),
 │                                                              jwt-token.service.ts (7.2), register-user.handler.ts,
 │                                                              login.handler.ts, auth.controller.ts, auth.dto.ts,
-│                                                              auth.responses.ts (7.3)
+│                                                              auth.responses.ts (7.3), refresh-token.ts,
+│                                                              session.service.ts, refresh-session.handler.ts,
+│                                                              logout.handler.ts (7.4)
 │
 └── test/
     ├── fakes/                                              ✅ hecho (corte 2); se importan desde index.ts
@@ -326,6 +330,7 @@ PAYMENT_SIMULATED_DELAY_MS=3000  # solo con fake: lo que tarda la pasarela simul
 EMAIL_SIMULATED_DELAY_MS=3000    # lo que tarda el correo simulado en "enviarse" (0 = sin demora)
 JWT_SECRET=                      # secreto de los tokens (≥ 32 caracteres variados); obligatorio en producción
 ACCESS_TOKEN_TTL_SECONDS=900     # vida del token de acceso (de 60 a 3600)
+REFRESH_TOKEN_TTL_DAYS=14        # días que vale un token de refresco sin usarse (de 1 a 90)
 PASSWORD_HASH_LOG_N=15           # costo del hash de contraseñas (scrypt, N = 2^valor); en producción no puede ser menor que 15
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
@@ -354,6 +359,7 @@ export const envSchema = z
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
     JWT_SECRET: optionalSecret, // ≥ 32 caracteres con variedad; obligatorio en producción
     ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(14),
     PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15), // costo del hash de contraseñas (en producción, ≥ 15)
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),

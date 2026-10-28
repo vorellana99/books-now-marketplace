@@ -2,7 +2,7 @@ import { Module, type INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { LoginCommand } from '../../src/contexts/identity/application/login.command.js';
 import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
-import { AccessTokenIssuer } from '../../src/contexts/identity/application/access-token-issuer.js';
+import { SessionService } from '../../src/contexts/identity/infrastructure/session.service.js';
 import { LoginHandler } from '../../src/contexts/identity/infrastructure/login.handler.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { PasswordHasher } from '../../src/contexts/identity/domain/password-hasher.port.js';
@@ -269,7 +269,7 @@ describe('LoginHandler (PostgreSQL real, por el CommandBus)', () => {
         const fresh = new LoginHandler(
           app.get(PrismaService),
           hasher,
-          app.get(AccessTokenIssuer),
+          app.get(SessionService),
         );
         const attempt = () =>
           fresh.execute(new LoginCommand('nadie@example.com', PASSWORD)).then(

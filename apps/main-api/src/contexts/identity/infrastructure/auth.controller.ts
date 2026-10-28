@@ -4,6 +4,7 @@ import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
+  ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -11,11 +12,14 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { LoginCommand } from '../application/login.command.js';
+import { LogoutCommand } from '../application/logout.command.js';
+import { RefreshSessionCommand } from '../application/refresh-session.command.js';
+import type { Session } from '../application/session.js';
 import {
   RegisterUserCommand,
   type RegisteredUser,
 } from '../application/register-user.command.js';
-import { CredentialsDto } from './auth.dto.js';
+import { CredentialsDto, RefreshTokenDto } from './auth.dto.js';
 import { LoginResponse, UserResponse } from './auth.responses.js';
 
 @ApiTags('auth')
@@ -63,14 +67,55 @@ export class AuthController {
     description: 'INVALID_CREDENTIALS: correo o contraseña incorrectos',
   })
   async login(@Body() dto: CredentialsDto): Promise<LoginResponse> {
-    const result = await this.commandBus.execute(
-      new LoginCommand(dto.email, dto.password),
+    return toResponse(
+      await this.commandBus.execute(new LoginCommand(dto.email, dto.password)),
     );
-    return {
-      accessToken: result.accessToken,
-      tokenType: 'Bearer',
-      expiresIn: result.expiresInSeconds,
-      user: result.user,
-    };
+  }
+
+  @Post('refresh')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @ApiOperation({
+    summary: 'Renovar la sesión',
+    description:
+      'Cambia un token de refresco por un token de acceso y un token de refresco nuevos. Cada token de refresco sirve **una sola vez**: si se presenta uno ya usado se asume que se copió o se robó y se revoca la sesión entera, incluido el token nuevo. Dos renovaciones simultáneas con el mismo token cuentan como reutilización.',
+  })
+  @ApiOkResponse({ type: LoginResponse })
+  @ApiBadRequestResponse({
+    description: 'Falta el token, no es texto o hay campos de más',
+  })
+  @ApiUnauthorizedResponse({
+    description:
+      'INVALID_REFRESH_TOKEN: desconocido, mal formado, vencido, revocado o ya usado',
+  })
+  async refresh(@Body() dto: RefreshTokenDto): Promise<LoginResponse> {
+    return toResponse(
+      await this.commandBus.execute(
+        new RefreshSessionCommand(dto.refreshToken),
+      ),
+    );
+  }
+
+  @Post('logout')
+  @HttpCode(204)
+  @ApiOperation({
+    summary: 'Cerrar la sesión',
+    description:
+      'Revoca la sesión a la que pertenece el token de refresco (las de otros dispositivos siguen). Responde 204 también con un token desconocido o ya cerrado. El token de acceso ya emitido vale hasta que vence (15 minutos por defecto).',
+  })
+  @ApiNoContentResponse({ description: 'Sesión cerrada (o no existía)' })
+  @ApiBadRequestResponse({
+    description: 'Falta el token, no es texto o hay campos de más',
+  })
+  async logout(@Body() dto: RefreshTokenDto): Promise<void> {
+    await this.commandBus.execute(new LogoutCommand(dto.refreshToken));
   }
 }
+
+const toResponse = (session: Session): LoginResponse => ({
+  accessToken: session.accessToken,
+  tokenType: 'Bearer',
+  expiresIn: session.expiresInSeconds,
+  refreshToken: session.refreshToken,
+  user: session.user,
+});

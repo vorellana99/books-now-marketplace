@@ -23,3 +23,12 @@ export class CredentialsDto {
   @MaxLength(1024)
   password!: string;
 }
+
+// El token de refresco que entregó el login o la renovación anterior
+export class RefreshTokenDto {
+  @ApiProperty({ example: 'b3JpZ2luYWw5X3Rva2VuLWRlLXJlZnJlc2NvLTQzY2g' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(512)
+  refreshToken!: string;
+}

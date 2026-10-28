@@ -24,6 +24,12 @@ export class LoginResponse {
   @ApiProperty({ example: 900, description: 'Segundos que vale el token' })
   expiresIn!: number;
 
+  @ApiProperty({
+    description:
+      'Opaco. Sirve una sola vez, en `POST /auth/refresh`, que entrega otro. Guárdelo como una contraseña',
+  })
+  refreshToken!: string;
+
   @ApiProperty({ type: UserResponse })
   user!: UserResponse;
 }

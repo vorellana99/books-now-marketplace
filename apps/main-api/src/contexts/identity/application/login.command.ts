@@ -1,15 +1,9 @@
 import { Command } from '@nestjs/cqrs';
-import type { Role } from '../../../shared-kernel/role.js';
+import type { Session } from './session.js';
 
-export interface LoginResult {
-  accessToken: string;
-  expiresInSeconds: number;
-  user: { id: string; email: string; role: Role };
-}
-
-// Inicia sesión con correo y contraseña. Falla con AuthenticationError INVALID_CREDENTIALS, siempre igual, sea cual sea
-// la causa: correo desconocido, mal escrito o contraseña equivocada
-export class LoginCommand extends Command<LoginResult> {
+// Inicia sesión con correo y contraseña y abre una sesión nueva. Falla con AuthenticationError INVALID_CREDENTIALS,
+// siempre igual, sea cual sea la causa: correo desconocido, mal escrito o contraseña equivocada
+export class LoginCommand extends Command<Session> {
   constructor(
     readonly email: string,
     readonly password: string,

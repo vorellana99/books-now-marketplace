@@ -8,15 +8,21 @@ import { PasswordHasher } from './domain/password-hasher.port.js';
 import { AuthController } from './infrastructure/auth.controller.js';
 import { JwtTokenService } from './infrastructure/jwt-token.service.js';
 import { LoginHandler } from './infrastructure/login.handler.js';
+import { LogoutHandler } from './infrastructure/logout.handler.js';
+import { RefreshSessionHandler } from './infrastructure/refresh-session.handler.js';
 import { RegisterUserHandler } from './infrastructure/register-user.handler.js';
 import { ScryptPasswordHasher } from './infrastructure/scrypt-password-hasher.js';
+import { SessionService } from './infrastructure/session.service.js';
 
 @Module({
   imports: [OutboxModule], // RegisterUserHandler guarda el evento del usuario con OutboxWriter
   controllers: [AuthController],
   providers: [
+    SessionService,
     RegisterUserHandler,
     LoginHandler,
+    RefreshSessionHandler,
+    LogoutHandler,
     {
       provide: PasswordHasher,
       inject: [ConfigService],
