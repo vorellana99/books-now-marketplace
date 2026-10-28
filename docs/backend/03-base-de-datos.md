@@ -131,6 +131,15 @@ model Order {
   chargedAmount Decimal    @map("charged_amount") @db.Decimal(19, 2)   // importe final: 2 decimales
   currency     Currency    @default(PEN)
   createdAt    DateTime    @default(now()) @map("created_at")
+  // Dirección de entrega copiada en el pedido (fase 11). Admiten nulo: los pedidos anteriores no la tienen. Una CHECK
+  // exige los seis campos obligatorios o ninguno; la referencia es opcional, pero no puede existir sola
+  shipRecipient  String? @map("ship_recipient") @db.VarChar(100)
+  shipPhone      String? @map("ship_phone") @db.VarChar(20)
+  shipLine1      String? @map("ship_line1") @db.VarChar(200)
+  shipDistrict   String? @map("ship_district") @db.VarChar(60)
+  shipProvince   String? @map("ship_province") @db.VarChar(60)
+  shipDepartment String? @map("ship_department") @db.VarChar(60)
+  shipReference  String? @map("ship_reference") @db.VarChar(200)
   lines        OrderLine[]
   @@map("orders")
   @@schema("sales")

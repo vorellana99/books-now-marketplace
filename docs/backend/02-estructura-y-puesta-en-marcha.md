@@ -83,7 +83,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   │   ├── order.aggregate.ts
 │       │   │   │   ├── order-line.entity.ts
 │       │   │   │   ├── order.factory.ts
-│       │   │   │   ├── shipping-address.vo.ts              (fase 11)
+│       │   │   │   ├── shipping-address.vo.ts              ✅ hecho (6.2)
 │       │   │   │   ├── order.repository.ts
 │       │   │   │   ├── checkout-log.port.ts
 │       │   │   │   ├── catalog-pricing.port.ts

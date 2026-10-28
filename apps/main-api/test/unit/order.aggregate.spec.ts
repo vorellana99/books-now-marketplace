@@ -6,6 +6,8 @@ import {
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { DomainError } from '../../src/shared-kernel/domain.errors.js';
 import { Isbn } from '../../src/shared-kernel/isbn.vo.js';
+import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ADDRESS_DATA } from '../fakes/fixtures.js';
 
 const ISBN_A = Isbn.create('9780306406157');
 const ISBN_B = Isbn.create('9780306406140');
@@ -219,5 +221,29 @@ describe('Order', () => {
       ).toBe('ORDER_ALREADY_PLACED');
       expect(order.getLines()).toHaveLength(2);
     });
+  });
+});
+
+describe('Order: dirección de envío', () => {
+  const address = ShippingAddress.create(ADDRESS_DATA);
+
+  it('un pedido nuevo puede llevar su dirección', () => {
+    expect(new Order('o-1', 'c-1', address).shippingAddress).toBe(address);
+  });
+
+  it('sin dirección, la dirección es null', () => {
+    expect(new Order('o-1', 'c-1').shippingAddress).toBeNull();
+  });
+
+  it('la dirección no cambia al confirmar el pedido', () => {
+    const order = new Order('o-1', 'c-1', address);
+    order.addBook(
+      Isbn.create('9780306406157'),
+      'Clean Code',
+      Money.of('45.00'),
+      1,
+    );
+    order.place();
+    expect(order.shippingAddress).toBe(address);
   });
 });

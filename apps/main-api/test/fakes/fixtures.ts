@@ -18,3 +18,14 @@ export const customersWithNormal = () =>
   new InMemoryCustomerRepository([
     Customer.create(CUSTOMER_ID, 'ana@example.com'),
   ]);
+
+// Una dirección de entrega válida, para los tests que arman pedidos
+export const ADDRESS_DATA = {
+  recipient: 'Ana Pérez',
+  phone: '+51 999 888 777',
+  line1: 'Av. Larco 123, Dpto 401',
+  district: 'Miraflores',
+  province: 'Lima',
+  department: 'Lima',
+  reference: 'Frente al parque Kennedy',
+} as const;

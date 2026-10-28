@@ -114,16 +114,20 @@ Se guarda como **snapshot en el pedido**, igual que el título y el precio: si e
 ```prisma
 model Order {
   // …
-  shipRecipient  String  @map("ship_recipient")
-  shipPhone      String  @map("ship_phone")
-  shipLine1      String  @map("ship_line1")
-  shipDistrict   String  @map("ship_district")      // distrito
-  shipProvince   String  @map("ship_province")      // provincia
-  shipDepartment String  @map("ship_department")    // departamento
-  shipReference  String? @map("ship_reference")     // referencia para el repartidor
+  // Admiten nulo para poder agregar las columnas a una base que ya tiene pedidos (decisión D1): los de antes quedan
+  // sin dirección. La dirección completa es obligatoria al CREAR un pedido (DTO y dominio); una CHECK de la
+  // migración exige que estén los seis campos obligatorios o ninguno, y la referencia no puede existir sola
+  shipRecipient  String? @map("ship_recipient") @db.VarChar(100)
+  shipPhone      String? @map("ship_phone") @db.VarChar(20)
+  shipLine1      String? @map("ship_line1") @db.VarChar(200)
+  shipDistrict   String? @map("ship_district") @db.VarChar(60)       // distrito
+  shipProvince   String? @map("ship_province") @db.VarChar(60)       // provincia
+  shipDepartment String? @map("ship_department") @db.VarChar(60)     // departamento
+  shipReference  String? @map("ship_reference") @db.VarChar(200)     // referencia para el repartidor (opcional)
 }
 ```
 
+- **El dominio la valida con el valor `ShippingAddress`** (`sales/domain/order/shipping-address.vo.ts`): recorta cada campo, exige los seis obligatorios, acota el largo (los mismos tamaños de las columnas), rechaza saltos de línea y otros caracteres de control, y pide un teléfono de al menos 6 dígitos con solo dígitos, espacios, `+`, `-` y paréntesis. `ShippingAddress.create` valida; `ShippingAddress.restore` lee lo que ya está en la base sin validar, para que una regla nueva no impida leer pedidos antiguos. El mapper trata la dirección con todas las columnas en nulo como "pedido anterior" (`null`) y una dirección a medias como un dato roto.
 - **El DTO la valida** como objeto anidado (`@ValidateNested`), con todos los campos obligatorios salvo la referencia.
 - **Forma parte del hash de la `Idempotency-Key`:** un reintento con la misma clave y otra dirección responde `422 IDEMPOTENCY_KEY_REUSED`, igual que si cambiara el carrito. Cambian dos firmas:
 

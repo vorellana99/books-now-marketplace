@@ -4,6 +4,7 @@ import { DomainError } from '../../../../shared-kernel/domain.errors.js';
 import type { Isbn } from '../../../../shared-kernel/isbn.vo.js';
 import { Money, type Currency } from '../shared/money.vo.js';
 import { OrderLine } from './order-line.entity.js';
+import type { ShippingAddress } from './shipping-address.vo.js';
 
 export const MAX_UNITS_PER_BOOK = 10;
 
@@ -15,9 +16,11 @@ export class Order {
   private readonly lines: OrderLine[] = [];
   private events: DomainEvent[] = [];
 
+  // La dirección de entrega es una copia del momento de comprar. Puede faltar en un pedido anterior a que existiera
   constructor(
     readonly id: string,
     readonly customerId: string,
+    readonly shippingAddress: ShippingAddress | null = null,
   ) {}
 
   // Reconstruye un pedido YA confirmado desde la base de datos. No genera eventos (su evento ya se guardó) y no aplica
@@ -27,11 +30,16 @@ export class Order {
     id: string;
     customerId: string;
     lines: { isbn: Isbn; title: string; unitPrice: Money; quantity: number }[];
+    shippingAddress?: ShippingAddress | null; // null en un pedido anterior a la dirección
   }): Order {
     if (data.lines.length === 0) {
       throw new DomainError('EMPTY_ORDER', 'El pedido no tiene libros');
     }
-    const order = new Order(data.id, data.customerId);
+    const order = new Order(
+      data.id,
+      data.customerId,
+      data.shippingAddress ?? null,
+    );
     for (const { isbn, title, unitPrice, quantity } of data.lines) {
       if (!Number.isInteger(quantity) || quantity < 1) {
         throw new DomainError(

@@ -1,5 +1,7 @@
 import { OrderFactory } from '../../src/contexts/sales/domain/order/order.factory.js';
 import { DomainError } from '../../src/shared-kernel/domain.errors.js';
+import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ADDRESS_DATA } from '../fakes/fixtures.js';
 
 const codeOf = (fn: () => unknown): string | undefined => {
   try {
@@ -117,5 +119,20 @@ describe('OrderFactory.fromCart', () => {
         ]),
       ),
     ).toBe('MAX_QUANTITY_EXCEEDED');
+  });
+});
+
+describe('OrderFactory.fromCart: dirección de envío', () => {
+  const address = ShippingAddress.create(ADDRESS_DATA);
+
+  it('pasa la dirección al pedido', () => {
+    const order = OrderFactory.fromCart('o-1', 'c-1', [item()], address);
+    expect(order.shippingAddress).toBe(address);
+  });
+
+  it('sin dirección, el pedido queda sin ella', () => {
+    expect(
+      OrderFactory.fromCart('o-1', 'c-1', [item()]).shippingAddress,
+    ).toBeNull();
   });
 });

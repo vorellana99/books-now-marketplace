@@ -1,6 +1,8 @@
 import { OrderMapper } from '../../src/contexts/sales/infrastructure/order/order.mapper.js';
 import { OrderFactory } from '../../src/contexts/sales/domain/order/order.factory.js';
 import { Prisma } from '../../src/platform/prisma/generated/client.js';
+import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ADDRESS_DATA } from '../fakes/fixtures.js';
 
 const item = (overrides: Record<string, unknown> = {}) => ({
   isbn: '9780306406157',
@@ -74,6 +76,13 @@ describe('OrderMapper', () => {
       chargedAmount: new Prisma.Decimal('90.00'),
       currency: 'PEN' as const,
       createdAt: new Date(),
+      shipRecipient: null,
+      shipPhone: null,
+      shipLine1: null,
+      shipDistrict: null,
+      shipProvince: null,
+      shipDepartment: null,
+      shipReference: null,
       lines: [
         {
           orderId: 'o-1',
@@ -104,5 +113,136 @@ describe('OrderMapper', () => {
       };
       expect(OrderMapper.toDomain(usd).currency).toBe('USD');
     });
+  });
+});
+
+describe('OrderMapper: dirección de envío', () => {
+  const address = ShippingAddress.create(ADDRESS_DATA);
+  const placed = (shipping: ShippingAddress | null) => {
+    const order = OrderFactory.fromCart('o-1', 'c-1', [item()], shipping);
+    order.place();
+    return order;
+  };
+  const row = (overrides: Record<string, unknown> = {}) =>
+    ({
+      id: 'o-1',
+      customerId: 'c-1',
+      status: 'PLACED',
+      chargedAmount: new Prisma.Decimal('90.00'),
+      currency: 'PEN',
+      createdAt: new Date(),
+      shipRecipient: ADDRESS_DATA.recipient,
+      shipPhone: ADDRESS_DATA.phone,
+      shipLine1: ADDRESS_DATA.line1,
+      shipDistrict: ADDRESS_DATA.district,
+      shipProvince: ADDRESS_DATA.province,
+      shipDepartment: ADDRESS_DATA.department,
+      shipReference: ADDRESS_DATA.reference,
+      lines: [
+        {
+          orderId: 'o-1',
+          isbn: '9780306406157',
+          title: 'Clean Code',
+          unitPrice: new Prisma.Decimal('33.335000'),
+          currency: 'PEN',
+          quantity: 2,
+        },
+      ],
+      ...overrides,
+    }) as never;
+
+  describe('toCreate', () => {
+    it('lleva los siete campos de la dirección en sus columnas', () => {
+      expect(
+        OrderMapper.toCreate(placed(address), '90.00', 'PEN'),
+      ).toMatchObject({
+        shipRecipient: ADDRESS_DATA.recipient,
+        shipPhone: ADDRESS_DATA.phone,
+        shipLine1: ADDRESS_DATA.line1,
+        shipDistrict: ADDRESS_DATA.district,
+        shipProvince: ADDRESS_DATA.province,
+        shipDepartment: ADDRESS_DATA.department,
+        shipReference: ADDRESS_DATA.reference,
+      });
+    });
+
+    it('sin referencia, la columna va en null', () => {
+      const { reference: _omit, ...rest } = ADDRESS_DATA;
+      const data = OrderMapper.toCreate(
+        placed(ShippingAddress.create(rest)),
+        '90.00',
+        'PEN',
+      );
+      expect(data.shipReference).toBeNull();
+    });
+
+    it('un pedido sin dirección deja todas las columnas en null', () => {
+      const data = OrderMapper.toCreate(placed(null), '90.00', 'PEN');
+      expect(data).toMatchObject({
+        shipRecipient: null,
+        shipPhone: null,
+        shipLine1: null,
+        shipDistrict: null,
+        shipProvince: null,
+        shipDepartment: null,
+        shipReference: null,
+      });
+    });
+  });
+
+  describe('toDomain', () => {
+    it('reconstruye la dirección', () => {
+      const order = OrderMapper.toDomain(row());
+      expect(order.shippingAddress?.toJSON()).toEqual(ADDRESS_DATA);
+    });
+
+    it('con la referencia en null, la dirección no tiene referencia', () => {
+      const order = OrderMapper.toDomain(row({ shipReference: null }));
+      expect(order.shippingAddress?.reference).toBeNull();
+    });
+
+    it('un pedido anterior a la dirección (todas las columnas en null) da null', () => {
+      const order = OrderMapper.toDomain(
+        row({
+          shipRecipient: null,
+          shipPhone: null,
+          shipLine1: null,
+          shipDistrict: null,
+          shipProvince: null,
+          shipDepartment: null,
+          shipReference: null,
+        }),
+      );
+      expect(order.shippingAddress).toBeNull();
+    });
+
+    it('una referencia sola, sin los campos obligatorios, es un dato roto y no un pedido sin dirección', () => {
+      const alone = row({
+        shipRecipient: null,
+        shipPhone: null,
+        shipLine1: null,
+        shipDistrict: null,
+        shipProvince: null,
+        shipDepartment: null,
+        shipReference: 'solo la referencia',
+      });
+      expect(() => OrderMapper.toDomain(alone)).toThrow(/dirección/i);
+    });
+
+    it.each([
+      'shipRecipient',
+      'shipPhone',
+      'shipLine1',
+      'shipDistrict',
+      'shipProvince',
+      'shipDepartment',
+    ])(
+      'una dirección a medias (%s en null y el resto no) es un error, no un pedido sin dirección',
+      (column) => {
+        expect(() => OrderMapper.toDomain(row({ [column]: null }))).toThrow(
+          /dirección/i,
+        );
+      },
+    );
   });
 });

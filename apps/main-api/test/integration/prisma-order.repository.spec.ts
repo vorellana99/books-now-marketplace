@@ -22,6 +22,9 @@ import {
 import { query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 import { OrderPlacedProbe } from '../support/outbox-probes.js';
+import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ADDRESS_DATA } from '../fakes/fixtures.js';
+import { insertOrder } from '../support/builders.js';
 
 const ISBN_A = '9780306406157';
 const ISBN_B = '9780306406140';
@@ -459,6 +462,94 @@ describe('PrismaOrderRepository (PostgreSQL real)', () => {
 
     it('un pedido que no existe da null', async () => {
       expect(await repo.findById(randomUUID())).toBeNull();
+    });
+  });
+
+  describe('la dirección de envío', () => {
+    const address = ShippingAddress.create(ADDRESS_DATA);
+
+    async function orderWithAddress(shipping: ShippingAddress | null) {
+      const customer = await insertCustomer();
+      const order = OrderFactory.fromCart(
+        repo.nextId(),
+        customer.id,
+        [item()],
+        shipping,
+      );
+      order.place();
+      await checkouts.start(order.id, randomUUID(), 'hash');
+      return order;
+    }
+    const shipColumns = async (orderId: string) =>
+      (
+        await query<Record<string, string | null>>(
+          `SELECT ship_recipient, ship_phone, ship_line1, ship_district, ship_province, ship_department, ship_reference
+           FROM sales.orders WHERE id = $1`,
+          [orderId],
+        )
+      )[0];
+
+    it('guarda los siete campos en sus columnas', async () => {
+      const order = await orderWithAddress(address);
+
+      await repo.save(order, Money.of('90.00'));
+
+      expect(await shipColumns(order.id)).toEqual({
+        ship_recipient: ADDRESS_DATA.recipient,
+        ship_phone: ADDRESS_DATA.phone,
+        ship_line1: ADDRESS_DATA.line1,
+        ship_district: ADDRESS_DATA.district,
+        ship_province: ADDRESS_DATA.province,
+        ship_department: ADDRESS_DATA.department,
+        ship_reference: ADDRESS_DATA.reference,
+      });
+    });
+
+    it('ida y vuelta: lo que se guarda se lee igual', async () => {
+      const order = await orderWithAddress(address);
+      await repo.save(order, Money.of('90.00'));
+
+      const found = await repo.findById(order.id);
+
+      expect(found?.shippingAddress?.equals(address)).toBe(true);
+    });
+
+    it('sin referencia, la columna queda en NULL y vuelve sin referencia', async () => {
+      const { reference: _omit, ...rest } = ADDRESS_DATA;
+      const order = await orderWithAddress(ShippingAddress.create(rest));
+      await repo.save(order, Money.of('90.00'));
+
+      expect((await shipColumns(order.id)).ship_reference).toBeNull();
+      expect(
+        (await repo.findById(order.id))?.shippingAddress?.reference,
+      ).toBeNull();
+    });
+
+    it('un pedido sin dirección se guarda con todas las columnas en NULL y se lee con dirección null', async () => {
+      const order = await orderWithAddress(null);
+      await repo.save(order, Money.of('90.00'));
+
+      expect(
+        Object.values(await shipColumns(order.id)).every((v) => v === null),
+      ).toBe(true);
+      expect((await repo.findById(order.id))?.shippingAddress).toBeNull();
+    });
+
+    it('un pedido anterior a la dirección, insertado sin ella, se lee con dirección null', async () => {
+      const customer = await insertCustomer();
+      const legacy = await insertOrder(customer.id);
+
+      const found = await repo.findById(legacy.id);
+
+      expect(found?.shippingAddress).toBeNull();
+      expect(found?.getLines()).toHaveLength(1);
+    });
+
+    it('el evento no cambia con la dirección (la versión 2 llega en la tarea siguiente)', async () => {
+      const order = await orderWithAddress(address);
+      await repo.save(order, Money.of('90.00'));
+      const [event] = await outboxRows();
+      expect(event.event_version).toBe(1);
     });
   });
 
