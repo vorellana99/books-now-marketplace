@@ -1,5 +1,12 @@
 import { execFileSync } from 'node:child_process';
-import { BOOKS, CUSTOMERS, STOCK } from '../../prisma/seed-data.js';
+import {
+  BOOKS,
+  CUSTOMERS,
+  DEV_PASSWORD,
+  STOCK,
+  USERS,
+} from '../../prisma/seed-data.js';
+import { ScryptPasswordHasher } from '../../src/contexts/identity/infrastructure/scrypt-password-hasher.js';
 import { query, resetDatabase } from '../support/database.js';
 
 // El mismo comando que usa quien desarrolla: pnpm run db:seed
@@ -108,5 +115,117 @@ describe('pnpm run db:seed (PostgreSQL real)', () => {
        LEFT JOIN inventory.stock_items s ON s.isbn = b.isbn WHERE s.isbn IS NULL`,
     );
     expect(rows.length).toBeGreaterThanOrEqual(1);
+  });
+
+  describe('los usuarios de ejemplo', () => {
+    const users = () =>
+      query<{ id: string; email: string; role: string; password_hash: string }>(
+        'SELECT id, email, role::text AS role, password_hash FROM identity.users ORDER BY email',
+      );
+
+    it('crea un comprador por cada cliente, con su mismo id y correo, y un administrador', async () => {
+      runSeed();
+
+      const rows = await users();
+      expect(rows.map(({ id, email, role }) => ({ id, email, role }))).toEqual(
+        [...USERS]
+          .sort((a, b) => a.email.localeCompare(b.email))
+          .map(({ id, email, role }) => ({ id, email, role })),
+      );
+      expect(rows.filter((u) => u.role === 'ADMIN')).toHaveLength(1);
+      for (const customer of CUSTOMERS) {
+        expect(rows.find((u) => u.id === customer.id)).toMatchObject({
+          email: customer.email,
+          role: 'BUYER',
+        });
+      }
+    });
+
+    it('todos entran con la contraseña de desarrollo, y no se guarda en claro', async () => {
+      runSeed();
+
+      const hasher = new ScryptPasswordHasher({ logN: 4 });
+      for (const user of await users()) {
+        expect(user.password_hash).not.toContain(DEV_PASSWORD);
+        expect(await hasher.verify(DEV_PASSWORD, user.password_hash)).toBe(
+          true,
+        );
+        expect(await hasher.verify('otra contraseña', user.password_hash)).toBe(
+          false,
+        );
+      }
+    });
+
+    it('cada usuario lleva su propia sal: dos hashes no son iguales aunque la contraseña lo sea', async () => {
+      runSeed();
+      const hashes = (await users()).map((u) => u.password_hash);
+      expect(new Set(hashes).size).toBe(hashes.length);
+    });
+
+    it('usa el costo de PASSWORD_HASH_LOG_N', async () => {
+      runSeed();
+      for (const user of await users()) {
+        expect(user.password_hash.startsWith('scrypt$4$')).toBe(true);
+      }
+    });
+
+    it('al repetirlo no duplica y restaura el rol y la contraseña', async () => {
+      runSeed();
+      const [admin] = USERS.filter((u) => u.role === 'ADMIN');
+      await query(
+        "UPDATE identity.users SET role = 'BUYER', password_hash = 'x' WHERE id = $1",
+        [admin.id],
+      );
+
+      runSeed();
+
+      const rows = await users();
+      expect(rows).toHaveLength(USERS.length);
+      const restored = rows.find((u) => u.id === admin.id)!;
+      expect(restored.role).toBe('ADMIN');
+      expect(
+        await new ScryptPasswordHasher({ logN: 4 }).verify(
+          DEV_PASSWORD,
+          restored.password_hash,
+        ),
+      ).toBe(true);
+    });
+
+    it('se niega a correr con NODE_ENV=production y no escribe nada', async () => {
+      const fail = () =>
+        execFileSync('pnpm', ['run', 'db:seed'], {
+          env: { ...process.env, NODE_ENV: 'production' },
+          stdio: 'pipe',
+        });
+
+      let output = '';
+      try {
+        fail();
+      } catch (error) {
+        const { stdout, stderr } = error as { stdout: Buffer; stderr: Buffer };
+        output = stdout.toString() + stderr.toString();
+      }
+
+      expect(output).toMatch(/producción/);
+      expect(await count('identity.users')).toBe(0);
+      expect(await count('sales.customers')).toBe(0);
+      expect(await count('catalog.books')).toBe(0);
+    });
+
+    it('tampoco corre con NODE_ENV=Production ni con espacios', async () => {
+      for (const value of ['Production', ' production ', 'PRODUCTION']) {
+        let failed = false;
+        try {
+          execFileSync('pnpm', ['run', 'db:seed'], {
+            env: { ...process.env, NODE_ENV: value },
+            stdio: 'pipe',
+          });
+        } catch {
+          failed = true;
+        }
+        expect(failed, value).toBe(true);
+      }
+      expect(await count('identity.users')).toBe(0);
+    });
   });
 });

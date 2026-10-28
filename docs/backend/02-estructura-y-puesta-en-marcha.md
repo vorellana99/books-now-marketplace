@@ -133,7 +133,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       │   ├── inventory-in-process.adapter.ts     ✅ hecho (5.4)
 │       │       │   └── console-notifier.adapter.ts         ✅ hecho (5.4)
 │       │       ├── customer/
-│       │       │   └── prisma-customer.repository.ts       ✅ hecho (5.2)
+│       │       │   ├── prisma-customer.repository.ts       ✅ hecho (5.2)
+│       │       │   └── create-customer.consumer.ts         ✅ hecho (7.5) consumidor `db` de identity.user.registered
 │       │       └── payment/
 │       │           ├── simulated-payment-gateway.adapter.ts   ✅ hecho (5.5); en la guía v5 se llamaba FakePaymentGateway
 │       │           └── external-payment.adapter.ts            ✅ hecho (5.5)

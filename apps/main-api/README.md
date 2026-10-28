@@ -21,7 +21,7 @@ pnpm install                       # 1. dependencias
 cp .env.example .env               # 2. variables de entorno (ajusta DB_PORT y las credenciales si no usas Docker)
 pnpm run db:up                     # 3. base de datos (solo con Docker; si usas la tuya, ver "Base de datos")
 pnpm exec prisma migrate dev       # 4. crea las tablas y genera el cliente de Prisma
-pnpm run db:seed                   # (opcional) clientes, libros y stock de ejemplo
+pnpm run db:seed                   # (opcional) usuarios, clientes, libros y stock de ejemplo
 pnpm run start:dev                 # 5. API en http://localhost:3000
 ```
 
@@ -149,7 +149,17 @@ Al cambiar `prisma/schema.prisma`: `pnpm exec prisma migrate dev --name descripc
 pnpm run db:seed
 ```
 
-Carga clientes, libros y stock para probar la API a mano (usa las variables `DB_*` de tu `.env`). **Se puede ejecutar las veces que quieras**: no duplica filas y restaura los datos de los clientes y del catálogo, pero no pisa el stock que ya exista, así que no pierdes las reservas que hayas hecho al probar. Los títulos y autores son reales; los precios y el stock, inventados. Los datos están en `prisma/seed-data.ts`.
+Carga usuarios, clientes, libros y stock para probar la API a mano (usa las variables `DB_*` de tu `.env`). **Se puede ejecutar las veces que quieras**: no duplica filas y restaura los datos de los clientes y del catálogo, pero no pisa el stock que ya exista, así que no pierdes las reservas que hayas hecho al probar. Los títulos y autores son reales; los precios y el stock, inventados. Los datos están en `prisma/seed-data.ts`.
+
+**Usuarios** (todos con la contraseña de desarrollo `LibroYa-dev-2026`; el seed la guarda como hash):
+
+| Correo | Rol | Id |
+|---|---|---|
+| `ana@example.com` | comprador | `11111111-1111-4111-8111-111111111111` |
+| `luis@example.com` | comprador (cliente premium) | `22222222-2222-4222-8222-222222222222` |
+| `admin@example.com` | administrador | `99999999-9999-4999-8999-999999999999` |
+
+El id del comprador es también el de su cliente en Ventas. **El seed se niega a correr con `NODE_ENV=production`**: la contraseña es pública.
 
 | ISBN | Libro | Precio | Stock | Para probar |
 |---|---|---|---|---|
