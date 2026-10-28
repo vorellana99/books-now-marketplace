@@ -14,7 +14,7 @@ Los cortes 0 a 4 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 1 | Fundaciones | 1 | ✅ | `claude/gifted-brown-gqfpwp` | — |
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
-| 4 | Outbox | 6 | ⬜ | `feature/corte-4-outbox` | — |
+| 4 | Outbox | 6 | 🔄 | `feature/corte-4-outbox` | — |
 | 5 | Compra completa | 7–9 | ⬜ | — | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
@@ -165,7 +165,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 4: Outbox ⬜
+## Corte 4: Outbox 🔄
 
 **Guía:** [05-piezas-clave](05-piezas-clave.md) (Platform: el Outbox) · [06-tests](06-tests.md)
 
@@ -175,7 +175,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
-| 1 | Consumidores y registro | `outbox-consumer.ts` (consumidor `db` y `external`), `@OutboxHandler()` y `OutboxRegistry` | Que el sistema sepa qué consumidores existen y a qué evento responde cada uno | ⬜ |
+| 1 | Consumidores y registro | `outbox-consumer.ts` (consumidor `db` y `external`), `@OutboxHandler()` y `OutboxRegistry` | Que el sistema sepa qué consumidores existen y a qué evento responde cada uno | ✅ |
 | 2 | `OutboxWriter` | `append(tx, events)`: guarda el evento y una entrega por consumidor | Que el evento se guarde en la misma transacción que el pedido | ⬜ |
 | 3 | Relay: reclamar y entregar | `runOnce()`: reclama con `SKIP LOCKED`, entrega y marca `DONE`, con consumidores `db` y `external` | Que cada evento llegue a su consumidor y quede marcado | ⬜ |
 | 4 | Relay: fallos y reintentos | Retroceso exponencial, `last_error` y paso a `FAILED` | Que un consumidor que falla no se pierda ni bloquee a los demás | ⬜ |
@@ -194,7 +194,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Riesgos:** las pruebas de concurrencia pueden ser inestables, así que se hacen sin esperas reales (consumidores que se detienen hasta que el test los libera, y bloqueos vencidos con SQL en vez de esperar 2 minutos), se repiten y se comprueba que fallan si se rompe el código; al registrar el relay, el e2e de "BD caída" lo vería fallar cada segundo y habrá que ajustarlo; una instancia entrega unos 10 eventos por segundo, que sobra para esta tienda y escala con más instancias. Los commits solo se hacen si todos los chequeos pasan.
 
-- [ ] 4.1 `outbox-consumer.ts`, `@OutboxHandler()` y `OutboxRegistry`. Se comprueba: descubre los consumidores decorados; un nombre duplicado impide arrancar; un evento sin consumidores da una lista vacía
+- [x] 4.1 `outbox-consumer.ts`, `@OutboxHandler()` y `OutboxRegistry`. Se comprueba: descubre los consumidores decorados; un nombre duplicado impide arrancar; un evento sin consumidores da una lista vacía
 - [ ] 4.2 `OutboxWriter` (`append(tx, events)`). Se comprueba: si se revierte la transacción de quien llama, no queda evento ni entregas; no abre transacción propia; guarda el `correlationId`; ignora los eventos sin consumidores
 - [ ] 4.3 `OutboxRelay` (`runOnce`: `SKIP LOCKED`, orden por agregado). Se comprueba: entrega y marca `DONE`; el efecto `db` y `DONE` se confirman juntos; el consumidor `external` corre sin transacción abierta; restauración de `correlationId`
 - [ ] 4.4 Fallos y reintentos del relay. Se comprueba: reintenta con retroceso y tras agotar los intentos queda `FAILED` con su motivo; el SQL de reprocesar de la guía funciona
@@ -275,6 +275,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 3 | Los tests de interbloqueo usan `slowDownStockUpdates(ms)` (`test/support/database.ts`): un disparador de prueba que retrasa cada actualización de stock para que dos transacciones en orden distinto se crucen siempre. `resetDatabase()` lo quita si un test lo dejó puesto | Sin el retardo, operaciones de milisegundos casi nunca coinciden y la prueba pasaría aunque el orden de bloqueo estuviera mal. Con él, quitar el orden de `reserve`, de `release` o del helper compartido hace fallar los tests con interbloqueos reales de PostgreSQL |
 | 2026-10-27 | 3 | `InventoryModule` y `CatalogModule` están en `AppModule`; antes los comandos de Inventario no tenían quién los atendiera en la aplicación real. La regla de dependencias suma que `application/` no usa Prisma (`@prisma/*` ni `platform/prisma`), aunque hoy ningún contexto tiene código ahí | Cierra el corte 3. La regla se probó añadiendo archivos de prueba con imports prohibidos en los contextos reales |
 | 2026-10-27 | 3 | `ReserveStockHandler` toma un bloqueo de aviso por pedido (`pg_advisory_xact_lock` con una clave de dos enteros: el espacio `inventory.reserve-stock` y el hash del `orderId`) antes de la comprobación previa. Pedidos distintos no se esperan; una colisión de hash solo causaría una espera innecesaria | Cierra el hueco de la 3.6: con libros distintos, dos reservas del mismo pedido no competían por ninguna fila de stock ni chocaban en la clave primaria, así que las dos tenían éxito. Se demostró forzando el cruce con `slowDownStockUpdates` |
+| 2026-10-27 | 4 | `OutboxRegistry` valida al arrancar cada consumidor decorado: `kind` (`db` o `external`), `name`, `event` y `handle()`, con un mensaje que nombra la clase. La guía solo detectaba nombres duplicados. `OutboxModule` importa `DiscoveryModule` y no `ScheduleModule` (decisión 4) | Un consumidor mal escrito (por ejemplo, sin `kind`) se descubriría tarde y fallaría al llegar su primer evento. Es mejor que impida arrancar |
 
 ## Problemas abiertos
 
@@ -320,3 +321,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 3, tarea 9 (3.9): cableado y cierre. 7 tests e2e por los buses con la aplicación completa, 4 de la regla de `application/` y 2 del filtro HTTP con los errores de stock. **Corte 3 terminado:** `GET /books/:isbn` responde (e2e y `curl` real); reservar sin stock lanza `OutOfStockError` y no cambia nada; los tests contra PostgreSQL real pasan (Testcontainers); la simulación completa del CI en una copia limpia pasa (lint, formato, build, 261 unitarios, 89 de integración y e2e, auditoría). Hoy 261 unitarios y 89 de integración y e2e |
 | 2026-10-27 | Corte 3, tarea 10 (3.10): bloqueo por pedido en la reserva. Antes, dos reservas simultáneas del mismo pedido con libros distintos tenían éxito las dos (2 reservas para un pedido); ahora una se crea y la otra da `ORDER_ALREADY_RESERVED`. 2 tests nuevos (uno mide el tiempo para comprobar que pedidos distintos no se esperan); estables en 5 ejecuciones. Se comprobó que fallan sin el bloqueo, con un bloqueo global y con el bloqueo después de la comprobación. Hoy 261 unitarios y 91 de integración y e2e pasan |
 | 2026-10-27 | Plan del corte 4 (4.0): 8 tareas (4.1–4.8) con su cuadro, sus comprobaciones, 5 decisiones y los riesgos. Rama `feature/corte-4-outbox`, abierta desde la del corte 3. Se revisó el diseño de la guía contra el esquema real y las APIs de Nest instaladas, y se anotaron cuatro puntos que la guía no cubre: el orden por id del evento, el reloj de los reintentos, el apagado ordenado y el intervalo real en los e2e |
+| 2026-10-27 | Corte 4, tarea 1 (4.1): `outbox-consumer.ts`, `@OutboxHandler()`, `OutboxRegistry` y `OutboxModule`. Descubre los consumidores decorados, devuelve los de un evento, y rechaza al arrancar los nombres duplicados y los consumidores mal formados. 14 tests nuevos de integración. Hoy 261 unitarios y 105 de integración y e2e pasan |

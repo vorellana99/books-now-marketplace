@@ -373,6 +373,8 @@ export class OutboxRegistry implements OnModuleInit {
 }
 ```
 
+El registro hace una comprobación más que el código de arriba: al arrancar rechaza un consumidor mal formado (un `kind` que no sea `db` o `external`, sin `name`, sin `event` o sin método `handle()`), con un mensaje que nombra la clase. Así el error aparece al desplegar y no cuando llega el primer evento. `OutboxModule` importa `DiscoveryModule` y **no** `ScheduleModule`, que se queda en `AppModule`: los tests construyen el Outbox sin intervalo y manejan el relay a mano.
+
 ```ts
 // platform/outbox/outbox.writer.ts
 @Injectable()

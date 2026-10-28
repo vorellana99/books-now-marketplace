@@ -53,10 +53,10 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── prisma.service.ts
 │   │   │   └── generated/            lo crea `prisma generate` (no se sube)
 │   │   ├── outbox/
-│   │   │   ├── outbox.module.ts
-│   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer
-│   │   │   ├── outbox-handler.decorator.ts
-│   │   │   ├── outbox.registry.ts
+│   │   │   ├── outbox.module.ts                            ✅ hecho (4.1); importa DiscoveryModule, no ScheduleModule
+│   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer   ✅ hecho (4.1)
+│   │   │   ├── outbox-handler.decorator.ts                 ✅ hecho (4.1)
+│   │   │   ├── outbox.registry.ts                          ✅ hecho (4.1)
 │   │   │   ├── outbox.writer.ts
 │   │   │   ├── outbox.relay.ts
 │   │   │   └── outbox.health.ts
