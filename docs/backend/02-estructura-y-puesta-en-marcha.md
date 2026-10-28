@@ -39,7 +39,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   └── order-placed.event.ts
 │   │   ├── catalog/
 │   │   │   ├── get-book-price.query.ts
-│   │   │   └── book-created.event.ts                       (fase 12)
+│   │   │   └── book-created.event.ts                       ✅ hecho (6.5)
 │   │   └── inventory/
 │   │       ├── reserve-stock.command.ts
 │   │       ├── release-stock.command.ts
@@ -137,7 +137,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   ├── catalog.module.ts
 │       │   ├── application/book/
 │       │   │   ├── search-books.query.ts                   ✅ hecho (6.1)
-│       │   │   ├── create-book.command.ts                  (fase 12)
+│       │   │   ├── create-book.command.ts                  ✅ hecho (6.5)
 │       │   │   ├── update-book.command.ts                  (fase 12)
 │       │   │   └── deactivate-book.command.ts              (fase 12)
 │       │   └── infrastructure/book/                        todos usan Prisma directo
@@ -146,10 +146,10 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       ├── get-book-price.handler.ts
 │       │       ├── search-books.dto.ts                     ✅ hecho (6.1)
 │       │       ├── search-books.handler.ts                 ✅ hecho (6.1)
-│       │       ├── admin-book.controller.ts                (fase 12) guard en la clase
-│       │       ├── create-book.dto.ts                      (fase 12)
+│       │       ├── admin-book.controller.ts                ✅ hecho (6.5) guard en la clase
+│       │       ├── create-book.dto.ts                      ✅ hecho (6.5)
 │       │       ├── update-book.dto.ts                      (fase 12)
-│       │       ├── create-book.handler.ts                  (fase 12) libro + evento en 1 transacción
+│       │       ├── create-book.handler.ts                  ✅ hecho (6.5) libro + evento en 1 transacción
 │       │       ├── update-book.handler.ts                  (fase 12)
 │       │       └── deactivate-book.handler.ts              (fase 12)
 │       │

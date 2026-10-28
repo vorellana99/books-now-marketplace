@@ -229,6 +229,21 @@ El token solo viaja a la pasarela: no se guarda en la base ni se escribe en los 
 
 Pasado un segundo, el relay del Outbox entrega el evento: la reserva pasa a `CONFIRMED` y, unos 3 segundos después (lo que tarda el correo simulado), el correo de confirmación aparece en el log (`Email a ana@example.com: …`) con el mismo `requestId` de la compra. Si algo se queda a medias (por ejemplo, el proceso se cae tras cobrar), `RecoverCheckoutsJob` lo reembolsa y lo libera pasados `CHECKOUT_RECOVERY_MINUTES` minutos. Con `PAYMENT_PROVIDER=external` se usa un proveedor real por HTTP (contrato en [docs/backend/05-piezas-clave.md](../../docs/backend/05-piezas-clave.md)).
 
+### Probar la administración
+
+Las rutas `/admin` solo existen con `ADMIN_API_ENABLED=true` en tu `.env` (reinicia la API después). Con el valor por defecto, `false`, responden `404` como si no existieran y `/docs` no las muestra. Con `NODE_ENV=production` la API no arranca con `true`.
+
+```bash
+# Crear un libro: 201 con el libro; 409 BOOK_ALREADY_EXISTS si el ISBN ya existe
+curl -X POST http://localhost:3000/admin/books \
+  -H 'Content-Type: application/json' \
+  -d '{"isbn":"9780134494166","title":"Clean Architecture","author":"Robert C. Martin","price":{"amount":"55.00","currency":"PEN"}}'
+
+curl 'http://localhost:3000/books?q=architecture'    # el libro nuevo ya aparece en la búsqueda
+```
+
+El precio entra como sale: `{ "amount": "55.00", "currency": "PEN" }`, con el monto en texto.
+
 ## Levantar la API
 
 ```bash

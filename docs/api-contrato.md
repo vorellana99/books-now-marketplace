@@ -10,6 +10,7 @@
 | `GET` | `/orders/:id` | `200 { id, status, charged: { amount, currency }, lines[{ isbn, title, unitPrice: { amount, currency }, quantity }] }` (líneas ordenadas por ISBN). **No incluye la dirección de envío ni el teléfono:** el endpoint no tiene autenticación y cualquiera con el UUID del pedido los vería | `400` (el id no es un UUID) · `404 NOT_FOUND` |
 | `GET` | `/books?q=&page=&pageSize=` | `200 { items[{ isbn, title, author, price: { amount, currency } }], page, pageSize, total }`: solo libros activos, ordenados por título y, con el mismo título, por ISBN. `q` busca en el título o el autor sin distinguir mayúsculas (ni ignorar acentos); sin `q` lista todo. `page` ≥ 1 (1 por defecto), `pageSize` de 1 a 50 (20 por defecto) y `total` cuenta toda la búsqueda | `400` (un parámetro inválido o desconocido) |
 | `GET` | `/books/:isbn` | `200 { isbn, title, author, price: { amount, currency } }`; acepta el ISBN con o sin guiones y devuelve el normalizado | `404 NOT_FOUND` (no existe o está inactivo) · `422 INVALID_ISBN` (mal formado o con el dígito de control incorrecto) |
+| `POST` | `/admin/books` (solo con `ADMIN_API_ENABLED=true`) | `201 { isbn, title, author, price: { amount, currency } }`: crea un libro activo, con el ISBN normalizado, título y autor recortados y el precio con 2 decimales. Su stock en cero lo crea Inventario al recibir el evento `catalog.book.created` | `400` (cuerpo inválido: un campo falta o no cumple el formato, o hay campos de más) · `404` (la administración está cerrada, con el mismo cuerpo que una ruta inexistente) · `409 BOOK_ALREADY_EXISTS` · `422 INVALID_ISBN`, `INVALID_PRICE` (cero o más de 1 000 000), `INVALID_CURRENCY`, `INVALID_BOOK` (título o autor con saltos de línea) |
 | `GET` | `/health/live` | `200` si el proceso responde (liveness; no toca la BD) | — |
 | `GET` | `/health/ready` | `200` si la BD responde (readiness; lo usa el balanceador) | `503` |
 | `GET` | `/health/outbox` | `200` si el relay de esta instancia sigue completando vueltas; informa `failed` y `due` (lo usa el monitoreo) | `503` |
@@ -24,6 +25,10 @@
 **Idempotencia de `POST /orders`.** `Idempotency-Key` es un UUID que el cliente genera una vez por intento de compra. Repetir la misma clave con el mismo carrito devuelve el mismo `201` sin cobrar de nuevo; mientras la primera petición sigue en curso, `409 CHECKOUT_IN_PROGRESS`; si el intento anterior falló, `422 PREVIOUS_ATTEMPT_FAILED` (hay que usar una clave nueva); con otro carrito, `422 IDEMPOTENCY_KEY_REUSED`. El ISBN con o sin guiones y la dirección con o sin espacios sobrantes cuentan como el mismo carrito; **otra dirección con la misma clave es otro carrito** (`422 IDEMPOTENCY_KEY_REUSED`).
 
 **El token de la tarjeta** (`cardToken`) solo viaja a la pasarela de pago: no se guarda ni aparece en ninguna respuesta de error ni en los logs. Con la pasarela simulada de desarrollo, `tok_declined` da `422 PAYMENT_DECLINED` y `tok_error` un `500`; cualquier otro token se aprueba.
+
+**Administración (`/admin/*`).** Mientras no haya autenticación, solo existe con `ADMIN_API_ENABLED=true`, un valor que el esquema de entorno rechaza con `NODE_ENV=production`. Con la variable en `false` (el valor por defecto) toda ruta `/admin` responde `404` con el cuerpo de una ruta inexistente (`{ message: "Cannot POST /admin/books", error: "Not Found", statusCode: 404 }`), aunque el cuerpo sea inválido, y `/docs` no las muestra.
+
+**Los precios entran como salen:** `{ "amount": "45.00", "currency": "PEN" }`, con el monto en texto (un número se rechaza con `400`), punto decimal y hasta 2 decimales.
 
 **Todas las respuestas incluyen el header `X-Request-Id`.** Si la petición lo trae (con formato válido), se devuelve el mismo; si no, uno generado.
 

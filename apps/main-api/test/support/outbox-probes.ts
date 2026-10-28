@@ -136,6 +136,18 @@ export class OrderPlacedProbe implements DbOutboxConsumer<unknown> {
   }
 }
 
+// Escucha el evento real de Catálogo, para comprobar que crear un libro guarda también su evento
+@OutboxHandler()
+@Injectable()
+export class BookCreatedProbe implements DbOutboxConsumer<unknown> {
+  readonly kind = 'db' as const;
+  readonly name = 'test.book-created';
+  readonly event = 'catalog.book.created';
+  async handle(event: unknown, ctx: DbDeliveryContext): Promise<void> {
+    await record(this.name, event, ctx);
+  }
+}
+
 // Levanta la aplicación con el Outbox y solo los consumidores de prueba indicados
 export function appWithProbes(...consumers: Type[]): Promise<INestApplication> {
   class ProbesModule {}
