@@ -247,8 +247,8 @@ Es la funcionalidad más grande y **bloquea el despliegue público**: sin ella, 
 
 | Fase | Listo cuando… |
 |---|---|
-| 10 | `GET /books?q=clean` devuelve los libros activos que coinciden, paginados |
-| 11 | `POST /orders` sin dirección responde 400; con dirección, la guarda en el pedido y en `OrderPlacedEvent` v2 |
-| 12 | Se crea un libro con `POST /admin/books`, aparece en la búsqueda, y su stock en cero existe en Inventario |
-| 13 | `POST /admin/stock/:isbn/additions` suma unidades, y una compra posterior las reserva |
-| 14 | `GET /orders?customerId=` devuelve los pedidos del cliente, del más reciente al más antiguo, con cursor |
+| 10 ✅ | `GET /books?q=clean` devuelve los libros activos que coinciden, paginados |
+| 11 ✅ | `POST /orders` sin dirección responde 400; con dirección, la guarda en el pedido y en `OrderPlacedEvent` v2 |
+| 12 ✅ | Se crea un libro con `POST /admin/books`, aparece en la búsqueda, y su stock en cero existe en Inventario |
+| 13 ✅ | `POST /admin/stock/:isbn/additions` suma unidades, y una compra posterior las reserva |
+| 14 ✅ | `GET /orders?customerId=` devuelve los pedidos del cliente, del más reciente al más antiguo, con cursor |

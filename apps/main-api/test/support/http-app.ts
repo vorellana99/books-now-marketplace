@@ -1,4 +1,4 @@
-import type { INestApplication, Type } from '@nestjs/common';
+import type { DynamicModule, INestApplication, Type } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
@@ -12,7 +12,7 @@ import { withEnv } from './nest.js';
 // variables de entorno que haga falta (por ejemplo ADMIN_API_ENABLED). AppModule valida el entorno al importarse, así
 // que para cambiarlo se arman los módulos aquí, con una validación nueva
 export async function createHttpApp(
-  modules: Type[],
+  modules: (Type | DynamicModule)[],
   env: Record<string, string> = {},
 ): Promise<INestApplication> {
   const moduleRef = await withEnv(env, () =>

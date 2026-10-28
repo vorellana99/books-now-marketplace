@@ -195,21 +195,19 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
     const { customer, book } = await setup();
     const res = await post(customer.id, book.isbn).expect(201);
 
-    // Se mira la tabla cada 25 ms: desde que el relay reclama la entrega del correo (PENDING con un intento y un
-    // bloqueo) hasta que el correo aparece en el log, tiene que pasar lo que tarda el proveedor
-    let claimedAt: number | undefined;
+    // Se mira la tabla cada 25 ms. Con el proveedor lento tiene que existir un tiempo (de unos 600 ms) en el que el
+    // relay ya reclamó la entrega del correo (PENDING con un intento y un bloqueo) y el correo todavía no salió. No se
+    // mide cuánto dura lo observado, porque con la máquina cargada la observación llega tarde: basta con haber visto
+    // la entrega reclamada sin correo. Sin demora, ese tiempo dura milisegundos y casi nunca se ve
+    let claimedWithoutEmail = false;
     const deadline = Date.now() + 15_000;
     while (emailLogs().length === 0 && Date.now() < deadline) {
       const mail = (await deliveryRows()).find(
         (d) => d.consumer === 'sales.send-order-confirmation',
       );
-      if (
-        mail?.status === 'PENDING' &&
-        mail.attempts >= 1 &&
-        mail.locked_until
-      ) {
-        claimedAt ??= Date.now();
-      }
+      const claimed =
+        mail?.status === 'PENDING' && mail.attempts >= 1 && !!mail.locked_until;
+      if (claimed && emailLogs().length === 0) claimedWithoutEmail = true;
       await new Promise((r) => setTimeout(r, 25));
     }
     await waitFor(
@@ -220,8 +218,7 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
     const [email] = emailLogs();
     expect(email.line.message).toContain('lenta@example.com');
     expect(email.line.message).toContain(res.body.orderId);
-    expect(claimedAt).toBeDefined();
-    expect(email.at - claimedAt!).toBeGreaterThanOrEqual(DELAY - 100);
+    expect(claimedWithoutEmail).toBe(true);
     expect(await reservationsOf(res.body.orderId)).toEqual([
       { isbn: book.isbn, quantity: 1, status: 'CONFIRMED' },
     ]);

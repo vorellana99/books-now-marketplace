@@ -117,7 +117,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       ├── order/
 │       │       │   ├── order.controller.ts                 ✅ hecho (5.8)
 │       │       │   ├── place-order.dto.ts                  ✅ hecho (5.8)
-│       │       │   ├── shipping-address.dto.ts             (fase 11)
+│       │       │   ├── (ShippingAddressDto vive en place-order.dto.ts) ✅ hecho (6.3)
 │       │       │   ├── list-orders.dto.ts                  ✅ hecho (6.9) (nombre real)
 │       │       │   ├── get-order.handler.ts                ✅ hecho (5.8)
 │       │       │   ├── list-customer-orders.handler.ts     ✅ hecho (6.9); también order-cursor.ts y order-view.ts
