@@ -681,20 +681,24 @@ export class RequestContextInterceptor implements NestInterceptor {
 ```
 
 ```ts
-// platform/observability/request-aware.logger.ts: agrega el requestId a cada línea del log (campo en JSON, prefijo `[id]` en texto)
+// platform/observability/request-aware.logger.ts: agrega el requestId a cada línea del log
+// (campo de primer nivel en JSON, prefijo `[id]` en texto). Se hace al FORMATEAR, así que cubre los seis niveles
 export class RequestAwareLogger extends ConsoleLogger {
-  override log(message: unknown, ...rest: unknown[]) { super.log(this.tag(message), ...rest); }
-  override warn(message: unknown, ...rest: unknown[]) { super.warn(this.tag(message), ...rest); }
-  override error(message: unknown, ...rest: unknown[]) { super.error(this.tag(message), ...rest); }
-
-  private tag(message: unknown) {
+  protected override getJsonLogObject(message: unknown, options: Parameters<ConsoleLogger['getJsonLogObject']>[1]) {
+    const entry = super.getJsonLogObject(message, options);
     const requestId = RequestContext.requestId();
-    if (!requestId) return message;
-    if (!this.options.json && typeof message === 'string') return `[${requestId}] ${message}`;
-    return { requestId, message };
+    return requestId ? { ...entry, requestId } : entry;          // `message` conserva su tipo
+  }
+
+  protected override stringifyMessage(message: unknown, logLevel: LogLevel): string {
+    const requestId = RequestContext.requestId();
+    if (!requestId) return super.stringifyMessage(message, logLevel);
+    return super.stringifyMessage(typeof message === 'string' ? `[${requestId}] ${message}` : { requestId, message }, logLevel);
   }
 }
 ```
+
+En JSON, una línea con petición en curso es `{"level":"log","pid":1,"timestamp":…,"requestId":"r-7f3a","message":"hola","context":"Demo"}`. `message` es **siempre texto** (o el objeto que se haya pasado a propósito), nunca un contenedor del `requestId`: un campo que unas veces es texto y otras un objeto provoca conflictos de tipo en los indexadores de logs (Elasticsearch, OpenSearch, Datadog) y se pierden líneas. La primera versión lo anidaba y sobrescribía solo `log`, `warn` y `error`; `debug`, `verbose` y `fatal` salían sin el id.
 
 - **Todo `new Logger(...)` de la app usa este logger** (se registra en `main.ts`), así que el `requestId` aparece sin cambiar ningún handler ni consumidor.
 - **El ID viaja guardado en la BD:** en `checkouts.request_id` (lo reutiliza el job de recuperación) y en `outbox.correlation_id` (lo restaura el relay). Va fuera del payload, porque es un dato técnico.

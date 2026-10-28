@@ -133,12 +133,10 @@ describe('Outbox con el intervalo real, en la aplicación completa (e2e)', () =>
 
       const line = logs.lines.find((l) => l.includes('recibió un evento'));
       expect(line).toBeDefined();
-      // en modo JSON, el requestId va dentro de `message`
+      // en modo JSON, el requestId es un campo de primer nivel y `message` sigue siendo texto
       expect(JSON.parse(line!)).toMatchObject({
-        message: {
-          requestId: 'r-intervalo',
-          message: expect.stringContaining('recibió un evento'),
-        },
+        requestId: 'r-intervalo',
+        message: expect.stringContaining('recibió un evento'),
         context: 'OutboxProbe',
       });
     });
@@ -154,7 +152,7 @@ describe('Outbox con el intervalo real, en la aplicación completa (e2e)', () =>
 
       const [{ event_id: eventId }] = await deliveryRows();
       const line = logs.lines.find((l) => l.includes('recibió un evento'));
-      expect(JSON.parse(line!).message.requestId).toBe(`event-${eventId}`);
+      expect(JSON.parse(line!).requestId).toBe(`event-${eventId}`);
     });
   });
 
