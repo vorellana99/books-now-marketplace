@@ -1,4 +1,8 @@
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  OnApplicationShutdown,
+  OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { buildDatabaseUrl } from '../config/database-url.js';
@@ -7,7 +11,7 @@ import { PrismaClient } from './generated/client.js'; // NO desde '@prisma/clien
 @Injectable()
 export class PrismaService
   extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
+  implements OnModuleInit, OnApplicationShutdown
 {
   constructor(config: ConfigService) {
     super({
@@ -31,7 +35,9 @@ export class PrismaService
     await this.$connect();
   }
 
-  async onModuleDestroy() {
+  // Se desconecta en la fase de apagado (después de beforeApplicationShutdown) y no al destruir los módulos:
+  // así el relay del Outbox puede terminar la entrega en curso antes de que se cierre la conexión
+  async onApplicationShutdown() {
     await this.$disconnect();
   }
 }

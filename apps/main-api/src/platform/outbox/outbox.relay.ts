@@ -1,10 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  type BeforeApplicationShutdown,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Interval } from '@nestjs/schedule';
 import { RequestContext } from '../observability/request-context.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { OutboxRegistry } from './outbox.registry.js';
 
 export const LEASE_MS = 2 * 60_000; // bloqueo de cada entrega reclamada
+export const STOP_TIMEOUT_MS = 15_000; // cuánto espera el cierre a una vuelta en curso (antes de que el orquestador mate el proceso)
 export const BATCH = 10; // BATCH × duración máxima por entrega (10 s) = 100 s < LEASE_MS
 
 type Claimed = {
@@ -24,14 +30,79 @@ class LeaseLostError extends Error {
 }
 
 @Injectable()
-export class OutboxRelay {
+export class OutboxRelay implements BeforeApplicationShutdown {
   private readonly logger = new Logger(OutboxRelay.name);
+  private running = false;
+  private runStartedAt: number | null = null;
+  private lastRunAt: number | null = null;
+  private stopping = false;
+  private currentRun: Promise<void> | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly registry: OutboxRegistry,
     private readonly config: ConfigService,
   ) {}
+
+  // Viva si está en una vuelta que aún no supera el bloqueo, o si terminó una hace menos de 1 minuto.
+  // Una vuelta legítima dura hasta ~100 s (10 × 10 s): mientras no supere LEASE_MS, cuenta como viva
+  isAlive(now = Date.now()): boolean {
+    if (this.running && this.runStartedAt !== null)
+      return now - this.runStartedAt < LEASE_MS;
+    return this.lastRunAt !== null && now - this.lastRunAt < 60_000;
+  }
+
+  get lastRunAtIso(): string | null {
+    return this.lastRunAt === null
+      ? null
+      : new Date(this.lastRunAt).toISOString();
+  }
+
+  @Interval(1000)
+  async tick(): Promise<void> {
+    if (this.running || this.stopping) return; // una vuelta a la vez por instancia, y ninguna nueva al cerrar
+    this.running = true;
+    this.runStartedAt = Date.now();
+    const run = (async () => {
+      try {
+        await this.runOnce();
+        this.lastRunAt = Date.now(); // solo cuenta una vuelta que terminó bien
+      } catch (err) {
+        this.logger.error(`Vuelta del relay fallida: ${String(err)}`);
+      } finally {
+        this.running = false;
+        this.runStartedAt = null;
+      }
+    })();
+    this.currentRun = run;
+    await run;
+    this.currentRun = null;
+  }
+
+  // Deja de empezar vueltas y espera (con un tope) a la que esté en curso, para no cortar una entrega a medias
+  async stop(timeoutMs = STOP_TIMEOUT_MS): Promise<void> {
+    this.stopping = true;
+    const run = this.currentRun;
+    if (!run) return;
+    let timer: NodeJS.Timeout | undefined;
+    const timedOut = await Promise.race([
+      run.then(() => false),
+      new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(true), timeoutMs);
+      }),
+    ]);
+    clearTimeout(timer);
+    if (timedOut) {
+      this.logger.warn(
+        `La vuelta del relay no terminó en ${timeoutMs} ms; se cierra igual (sus entregas se reintentan al vencer el bloqueo)`,
+      );
+    }
+  }
+
+  // Antes de que se cierre la conexión a la base: ver PrismaService.onApplicationShutdown
+  async beforeApplicationShutdown(): Promise<void> {
+    await this.stop();
+  }
 
   // Una vuelta: reclama un lote acotado y entrega cada elemento. Devuelve cuántas entregas reclamó
   async runOnce(): Promise<number> {

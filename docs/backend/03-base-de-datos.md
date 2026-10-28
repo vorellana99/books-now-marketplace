@@ -275,14 +275,14 @@ export default defineConfig({
 **`platform/prisma/prisma.service.ts`**
 
 ```ts
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { buildDatabaseUrl } from '../config/database-url.js';
 import { PrismaClient } from './generated/client.js';   // NO desde '@prisma/client'
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService extends PrismaClient implements OnModuleInit, OnApplicationShutdown {
   constructor(config: ConfigService) {
     super({ adapter: new PrismaPg({ connectionString: buildDatabaseUrl({
       DB_HOST: config.getOrThrow('DB_HOST'), DB_PORT: config.getOrThrow('DB_PORT'),
@@ -293,7 +293,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     }) });
   }
   onModuleInit() { return this.$connect(); }
-  onModuleDestroy() { return this.$disconnect(); }
+  // En la fase de apagado, no al destruir los módulos: el relay del Outbox espera su entrega en curso antes
+  onApplicationShutdown() { return this.$disconnect(); }
 }
 ```
 

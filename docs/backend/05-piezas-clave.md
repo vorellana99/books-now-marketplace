@@ -547,6 +547,8 @@ export class OutboxRelay {
 
 La instancia lenta nunca pisa a la que retomó la entrega, en ninguno de sus tres finales: si **termina bien**, la actualización a `DONE` no encuentra su intento (en `db` se revierte también el efecto; en `external` solo se avisa de que pudo repetirse); si **falla tarde**, el SQL del fallo tampoco modifica nada y el log lo registra como aviso, sin anunciar un `FAILED` que no ocurrió; y si termina **mientras la otra todavía trabaja**, tampoco marca `DONE`. Los tests lo comprueban con consumidores que se quedan parados hasta que el test los suelta y con el bloqueo vencido por SQL, sin esperar los 2 minutos.
 
+**Apagado ordenado.** `stop()` impide empezar vueltas nuevas y espera (hasta 15 s) a la que esté en curso; el relay lo llama desde `beforeApplicationShutdown`. Por eso `PrismaService` se desconecta en `onApplicationShutdown`, una fase posterior: la conexión sigue abierta mientras el relay termina. Si el relay no alcanza a terminar, la entrega queda bloqueada y otra vuelta la retoma al vencer el bloqueo (a lo sumo, un efecto externo repetido, que por eso lleva el `eventId` como clave de idempotencia).
+
 ```ts
 // platform/outbox/outbox.health.ts: lo usa GET /health/outbox
 @Injectable()
