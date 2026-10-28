@@ -32,14 +32,17 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   ├── shared-kernel/
 │   │   ├── isbn.vo.ts
 │   │   ├── domain-event.ts           eventName, eventVersion, aggregateId, occurredOn
-│   │   └── domain.errors.ts          DomainError, NotFoundError, ConflictError
+│   │   ├── domain.errors.ts          DomainError, NotFoundError, ConflictError
+│   │   └── role.ts                   Role (BUYER | ADMIN), ROLES   ✅ hecho (7.2)
 │   │
 │   ├── contracts/                    ← Published Language
 │   │   ├── sales/
 │   │   │   └── order-placed.event.ts
+│   │   ├── identity/
+│   │   │   └── user-registered.event.ts                    ✅ hecho (7.3)
 │   │   ├── catalog/
 │   │   │   ├── get-book-price.query.ts
-│   │   │   └── book-created.event.ts                       (fase 12)
+│   │   │   └── book-created.event.ts                       ✅ hecho (6.5)
 │   │   └── inventory/
 │   │       ├── reserve-stock.command.ts
 │   │       ├── release-stock.command.ts
@@ -52,6 +55,11 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── prisma.module.ts
 │   │   │   ├── prisma.service.ts
 │   │   │   └── generated/            lo crea `prisma generate` (no se sube)
+│   │   ├── auth/                                           ✅ hecho (7.2): authenticated-user.ts, access-token-verifier.ts
+│   │   │                                                      (el puerto del guard; lo implementa Identidad)
+│   │   │                                                   ✅ hecho (7.6): auth.guard.ts (global, denegado por defecto),
+│   │   │                                                      public.decorator.ts, roles.decorator.ts,
+│   │   │                                                      current-user.decorator.ts
 │   │   ├── outbox/
 │   │   │   ├── outbox.module.ts                            ✅ hecho (4.1); importa DiscoveryModule, no ScheduleModule
 │   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer   ✅ hecho (4.1)
@@ -69,7 +77,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── configure-app.ts
 │   │   │   ├── configure-swagger.ts
 │   │   │   ├── domain-exception.filter.ts
-│   │   │   └── admin-api-enabled.guard.ts                  (fase 12)
+│   │   │   ├── admin-api-enabled.guard.ts                  ✅ hecho (6.4)
+│   │   │   └── admin-api.decorator.ts                      ✅ hecho (6.4): @AdminApi() = guard + etiqueta `admin`
 │   │   └── health/
 │   │       ├── health.module.ts
 │   │       ├── health.controller.ts
@@ -83,7 +92,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   │   ├── order.aggregate.ts
 │       │   │   │   ├── order-line.entity.ts
 │       │   │   │   ├── order.factory.ts
-│       │   │   │   ├── shipping-address.vo.ts              (fase 11)
+│       │   │   │   ├── shipping-address.vo.ts              ✅ hecho (6.2)
 │       │   │   │   ├── order.repository.ts
 │       │   │   │   ├── checkout-log.port.ts
 │       │   │   │   ├── catalog-pricing.port.ts
@@ -109,17 +118,17 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   ├── place-order.command.ts
 │       │   │   ├── place-order.handler.ts
 │       │   │   ├── get-order.query.ts                      ✅ hecho (5.8)
-│       │   │   ├── list-customer-orders.query.ts           (fase 14)
+│       │   │   ├── list-customer-orders.query.ts           ✅ hecho (6.9)
 │       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias   ✅ hecho (5.6)
 │       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox   ✅ hecho (5.7)
 │       │   └── infrastructure/
 │       │       ├── order/
 │       │       │   ├── order.controller.ts                 ✅ hecho (5.8)
 │       │       │   ├── place-order.dto.ts                  ✅ hecho (5.8)
-│       │       │   ├── shipping-address.dto.ts             (fase 11)
-│       │       │   ├── list-customer-orders.dto.ts         (fase 14)
+│       │       │   ├── (ShippingAddressDto vive en place-order.dto.ts) ✅ hecho (6.3)
+│       │       │   ├── list-orders.dto.ts                  ✅ hecho (6.9) (nombre real)
 │       │       │   ├── get-order.handler.ts                ✅ hecho (5.8)
-│       │       │   ├── list-customer-orders.handler.ts     (fase 14)
+│       │       │   ├── list-customer-orders.handler.ts     ✅ hecho (6.9); también order-cursor.ts y order-view.ts
 │       │       │   ├── prisma-order.repository.ts          ✅ hecho (5.3)
 │       │       │   ├── order.mapper.ts                     ✅ hecho (5.3)
 │       │       │   ├── prisma-checkout-log.adapter.ts      ✅ hecho (5.2)
@@ -127,7 +136,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       │   ├── inventory-in-process.adapter.ts     ✅ hecho (5.4)
 │       │       │   └── console-notifier.adapter.ts         ✅ hecho (5.4)
 │       │       ├── customer/
-│       │       │   └── prisma-customer.repository.ts       ✅ hecho (5.2)
+│       │       │   ├── prisma-customer.repository.ts       ✅ hecho (5.2)
+│       │       │   └── create-customer.consumer.ts         ✅ hecho (7.5) consumidor `db` de identity.user.registered
 │       │       └── payment/
 │       │           ├── simulated-payment-gateway.adapter.ts   ✅ hecho (5.5); en la guía v5 se llamaba FakePaymentGateway
 │       │           └── external-payment.adapter.ts            ✅ hecho (5.5)
@@ -135,41 +145,57 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       ├── catalog/
 │       │   ├── catalog.module.ts
 │       │   ├── application/book/
-│       │   │   ├── search-books.query.ts                   (fase 10)
-│       │   │   ├── create-book.command.ts                  (fase 12)
-│       │   │   ├── update-book.command.ts                  (fase 12)
-│       │   │   └── deactivate-book.command.ts              (fase 12)
+│       │   │   ├── search-books.query.ts                   ✅ hecho (6.1)
+│       │   │   ├── create-book.command.ts                  ✅ hecho (6.5)
+│       │   │   ├── update-book.command.ts                  ✅ hecho (6.7) también desactiva y reactiva (ver desvíos)
+│       │   │   └── admin-book.ts                           ✅ hecho (6.7) el libro + `active`, como lo ve la administración
+│       │   ├── domain/book/                            ✅ hecho (6.5 y 6.7): reglas de título, autor y precio
+│       │   │   ├── book-rules.ts
+│       │   │   ├── new-book.ts
+│       │   │   └── book-changes.ts
 │       │   └── infrastructure/book/                        todos usan Prisma directo
 │       │       ├── book.controller.ts
 │       │       ├── book-price.response.ts                  esquema de la respuesta, solo para Swagger
 │       │       ├── get-book-price.handler.ts
-│       │       ├── search-books.dto.ts                     (fase 10)
-│       │       ├── search-books.handler.ts                 (fase 10)
-│       │       ├── admin-book.controller.ts                (fase 12) guard en la clase
-│       │       ├── create-book.dto.ts                      (fase 12)
-│       │       ├── update-book.dto.ts                      (fase 12)
-│       │       ├── create-book.handler.ts                  (fase 12) libro + evento en 1 transacción
-│       │       ├── update-book.handler.ts                  (fase 12)
-│       │       └── deactivate-book.handler.ts              (fase 12)
+│       │       ├── search-books.dto.ts                     ✅ hecho (6.1)
+│       │       ├── search-books.handler.ts                 ✅ hecho (6.1)
+│       │       ├── admin-book.controller.ts                ✅ hecho (6.5) guard en la clase
+│       │       ├── create-book.dto.ts                      ✅ hecho (6.5)
+│       │       ├── (UpdateBookDto vive en create-book.dto.ts)
+│       │       ├── create-book.handler.ts                  ✅ hecho (6.5) libro + evento en 1 transacción
+│       │       └── update-book.handler.ts                  ✅ hecho (6.7) datos, precio y estado en una transacción
 │       │
 │       ├── inventory/
 │       │   ├── inventory.module.ts
 │       │   ├── domain/stock/
 │       │   │   └── stock-item.aggregate.ts
 │       │   ├── application/stock/
-│       │   │   └── add-stock.command.ts                    (fase 13)
+│       │   │   └── add-stock.command.ts                    ✅ hecho (6.8)
 │       │   └── infrastructure/stock/                       todos usan Prisma directo
 │       │       ├── reserve-stock.handler.ts                ✅ hecho (corte 3)
 │       │       ├── release-stock.handler.ts                ✅ hecho (corte 3)
 │       │       ├── lock-order.ts                           sortByIsbn: el orden de bloqueo de reservar y liberar
 │       │       ├── order-id.ts                             assertOrderId: el orderId debe ser un UUID
 │       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox   ✅ hecho (5.7)
-│       │       ├── create-stock-item.consumer.ts           (fase 12) consumidor `db`
-│       │       ├── admin-stock.controller.ts               (fase 13) guard en la clase
-│       │       ├── add-stock.dto.ts                        (fase 13)
-│       │       └── add-stock.handler.ts                    (fase 13)
+│       │       ├── create-stock-item.consumer.ts           ✅ hecho (6.6) consumidor `db`
+│       │       ├── admin-stock.controller.ts               ✅ hecho (6.8) guard en la clase
+│       │       ├── add-stock.dto.ts                        ✅ hecho (6.8)
+│       │       └── add-stock.handler.ts                    ✅ hecho (6.8)
 │       │
 │       └── identity/                                       (fase 15) usuarios, roles y guards
+│           ├── identity.module.ts                          ✅ hecho (7.1; 7.2 añade los tokens)
+│           ├── application/                                ✅ hecho: access-token-issuer.ts (7.2),
+│           │                                                  register-user.command.ts, login.command.ts (7.3),
+│           │                                                  session.ts, refresh-session.command.ts,
+│           │                                                  logout.command.ts (7.4)
+│           ├── domain/                                     ✅ hecho (7.1): email.vo.ts, password-policy.ts,
+│           │                                                  password-hasher.port.ts, user.aggregate.ts
+│           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1),
+│                                                              jwt-token.service.ts (7.2), register-user.handler.ts,
+│                                                              login.handler.ts, auth.controller.ts, auth.dto.ts,
+│                                                              auth.responses.ts (7.3), refresh-token.ts,
+│                                                              session.service.ts, refresh-session.handler.ts,
+│                                                              logout.handler.ts (7.4)
 │
 └── test/
     ├── fakes/                                              ✅ hecho (corte 2); se importan desde index.ts
@@ -306,6 +332,10 @@ PAYMENT_PROVIDER=fake            # fake | external
 PAYMENT_API_URL=
 PAYMENT_SIMULATED_DELAY_MS=3000  # solo con fake: lo que tarda la pasarela simulada en cobrar y reembolsar (0 = sin demora)
 EMAIL_SIMULATED_DELAY_MS=3000    # lo que tarda el correo simulado en "enviarse" (0 = sin demora)
+JWT_SECRET=                      # secreto de los tokens (≥ 32 caracteres variados); obligatorio en producción
+ACCESS_TOKEN_TTL_SECONDS=900     # vida del token de acceso (de 60 a 3600)
+REFRESH_TOKEN_TTL_DAYS=14        # días que vale un token de refresco sin usarse (de 1 a 90)
+PASSWORD_HASH_LOG_N=15           # costo del hash de contraseñas (scrypt, N = 2^valor); en producción no puede ser menor que 15
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
 DB_STATEMENT_TIMEOUT_MS=5000     # límite de cada sentencia SQL; mantiene acotada la duración de la compra
@@ -331,6 +361,10 @@ export const envSchema = z
     PAYMENT_API_URL: optionalUrl,
     PAYMENT_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // solo con PAYMENT_PROVIDER=fake
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
+    JWT_SECRET: optionalSecret, // ≥ 32 caracteres con variedad; obligatorio en producción
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(14),
+    PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15), // costo del hash de contraseñas (en producción, ≥ 15)
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),

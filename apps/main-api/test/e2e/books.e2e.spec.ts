@@ -99,6 +99,84 @@ describe('GET /books/:isbn (e2e, PostgreSQL real)', () => {
     expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
   });
 
+  describe('GET /books (buscar y listar)', () => {
+    const list = (query = '') =>
+      request(app.getHttpServer()).get(`/books${query}`);
+
+    it('200 con la página, el tamaño y el total por defecto', async () => {
+      await insertBook({ title: 'Clean Code' });
+
+      const res = await list().expect(200);
+
+      expect(res.body).toMatchObject({ page: 1, pageSize: 20, total: 1 });
+      expect(res.body.items).toHaveLength(1);
+      expect(res.body.items[0].price).toEqual({
+        amount: '45.00',
+        currency: 'PEN',
+      });
+    });
+
+    it('busca con ?q= y pagina con page y pageSize', async () => {
+      for (const t of ['Java 1', 'Java 2', 'Java 3', 'Otro']) {
+        await insertBook({ title: t });
+      }
+
+      const res = await list('?q=java&page=2&pageSize=2').expect(200);
+
+      expect(res.body.items.map((b: { title: string }) => b.title)).toEqual([
+        'Java 3',
+      ]);
+      expect(res.body).toMatchObject({ page: 2, pageSize: 2, total: 3 });
+    });
+
+    it('recorta los espacios del texto de búsqueda', async () => {
+      await insertBook({ title: 'Clean Code' });
+      const res = await list('?q=%20%20clean%20%20').expect(200);
+      expect(res.body.total).toBe(1);
+    });
+
+    it('GET /books/:isbn sigue funcionando junto a GET /books', async () => {
+      const book = await insertBook();
+      await request(app.getHttpServer()).get(`/books/${book.isbn}`).expect(200);
+    });
+
+    it.each([
+      ['page 0', '?page=0'],
+      ['page negativa', '?page=-1'],
+      ['page decimal', '?page=1.5'],
+      ['page con letras', '?page=abc'],
+      ['page desmesurada', '?page=100001'],
+      ['pageSize 0', '?pageSize=0'],
+      ['pageSize mayor que 50', '?pageSize=51'],
+      ['pageSize con letras', '?pageSize=muchos'],
+      ['q repetida', '?q=a&q=b'],
+      ['q demasiado larga', `?q=${'x'.repeat(101)}`],
+      ['un parámetro desconocido', '?orden=precio'],
+    ])('400 si %s', async (_caso, query) => {
+      await list(query).expect(400);
+    });
+
+    it('acepta pageSize 50, el máximo, y q de 100 caracteres', async () => {
+      await list('?pageSize=50').expect(200);
+      await list(`?q=${'x'.repeat(100)}`).expect(200);
+    });
+
+    it('documenta los parámetros y las respuestas en Swagger', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/docs-json')
+        .expect(200);
+      const operation = res.body.paths['/books'].get;
+
+      expect(operation.tags).toContain('books');
+      expect(operation.parameters.map((p: { name: string }) => p.name)).toEqual(
+        expect.arrayContaining(['page', 'pageSize', 'q']),
+      );
+      expect(Object.keys(operation.responses)).toEqual(
+        expect.arrayContaining(['200', '400']),
+      );
+    });
+  });
+
   describe('documentación (Swagger)', () => {
     it('/docs-json describe el endpoint con sus respuestas', async () => {
       const res = await request(app.getHttpServer())

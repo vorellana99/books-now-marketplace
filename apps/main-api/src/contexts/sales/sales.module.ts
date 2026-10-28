@@ -12,10 +12,12 @@ import { OrderRepository } from './domain/order/order.repository.js';
 import { StockReservation } from './domain/order/stock-reservation.port.js';
 import { PaymentGateway } from './domain/payment/payment-gateway.port.js';
 import { PricingService } from './domain/pricing/pricing.service.js';
+import { CreateCustomerConsumer } from './infrastructure/customer/create-customer.consumer.js';
 import { PrismaCustomerRepository } from './infrastructure/customer/prisma-customer.repository.js';
 import { CatalogInProcessAdapter } from './infrastructure/order/catalog-in-process.adapter.js';
 import { ConsoleNotifier } from './infrastructure/order/console-notifier.adapter.js';
 import { GetOrderHandler } from './infrastructure/order/get-order.handler.js';
+import { ListCustomerOrdersHandler } from './infrastructure/order/list-customer-orders.handler.js';
 import { InventoryInProcessAdapter } from './infrastructure/order/inventory-in-process.adapter.js';
 import { OrderController } from './infrastructure/order/order.controller.js';
 import { PrismaCheckoutLog } from './infrastructure/order/prisma-checkout-log.adapter.js';
@@ -30,7 +32,9 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
   providers: [
     PlaceOrderHandler,
     GetOrderHandler,
+    ListCustomerOrdersHandler,
     SendOrderConfirmationConsumer,
+    CreateCustomerConsumer,
     RecoverCheckoutsJob,
     PricingService,
     { provide: OrderRepository, useClass: PrismaOrderRepository },

@@ -15,6 +15,7 @@ import {
   SharedExternalProbe,
   appWithProbes,
 } from '../support/outbox-probes.js';
+import { ADDRESS_PAYLOAD } from '../fakes/fixtures.js';
 
 describe('OutboxWriter (PostgreSQL real)', () => {
   let app: INestApplication;
@@ -97,9 +98,13 @@ describe('OutboxWriter (PostgreSQL real)', () => {
 
     it('guarda los eventos reales del contrato con los montos como texto', async () => {
       // OrderPlaced no tiene consumidor de prueba: se comprueba con un evento cuyo nombre sí tiene
-      const placed = new OrderPlacedEvent('o-1', 'c-1', '100.00', [
-        { isbn: '9780306406157', quantity: 2 },
-      ]);
+      const placed = new OrderPlacedEvent(
+        'o-1',
+        'c-1',
+        '100.00',
+        [{ isbn: '9780306406157', quantity: 2 }],
+        ADDRESS_PAYLOAD,
+      );
       Object.defineProperty(placed, 'eventName', { value: 'test.db.event' });
 
       await append(placed as unknown as ProbeEvent);

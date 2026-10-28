@@ -13,6 +13,7 @@ import {
   type CheckoutRecord,
 } from '../../domain/order/checkout-log.port.js';
 import { OrderFactory } from '../../domain/order/order.factory.js';
+import { ShippingAddress } from '../../domain/order/shipping-address.vo.js';
 import { OrderRepository } from '../../domain/order/order.repository.js';
 import { StockReservation } from '../../domain/order/stock-reservation.port.js';
 import { PaymentGateway } from '../../domain/payment/payment-gateway.port.js';
@@ -45,7 +46,10 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       isbn: Isbn.create(i.isbn).value,
       quantity: i.quantity,
     }));
-    const requestHash = hashRequest(cmd.customerId, items);
+    // La dirección se valida y se normaliza antes de la huella y de cualquier efecto: una inválida es un 422 sin
+    // reservar ni cobrar nada, y los espacios sobrantes no hacen pasar por otra compra un reintento
+    const address = ShippingAddress.create(cmd.shippingAddress);
+    const requestHash = hashRequest(cmd.customerId, items, address);
     const previous = await this.checkouts.findByKey(cmd.idempotencyKey);
     if (previous) return this.replay(previous, requestHash);
 
@@ -56,6 +60,7 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       this.orders.nextId(),
       customer.id,
       await this.catalog.priceCart(items),
+      address,
     );
     const finalPrice = this.pricing
       .calculateFinalPrice(

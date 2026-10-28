@@ -127,7 +127,10 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     // 0. Idempotencia: un reintento con la misma clave nunca crea otro pedido ni cobra otra vez
     // Los ISBN se normalizan antes: "978-0-…" y "978…" son el mismo libro y deben dar el mismo hash
     const items = cmd.items.map((i) => ({ isbn: Isbn.create(i.isbn).value, quantity: i.quantity }));
-    const requestHash = hashRequest(cmd.customerId, items);
+    // La dirección se valida y normaliza antes de la huella y de cualquier efecto: una inválida es un 422 sin reservar
+    // ni cobrar nada, y los espacios sobrantes no hacen pasar por otra compra un reintento
+    const address = ShippingAddress.create(cmd.shippingAddress);
+    const requestHash = hashRequest(cmd.customerId, items, address);
     const previous = await this.checkouts.findByKey(cmd.idempotencyKey);
     if (previous) return this.replay(previous, requestHash);
 
@@ -180,13 +183,18 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   }
 }
 
-// Mismo cliente y mismo carrito → mismo hash. Fusiona las cantidades del mismo ISBN (como hace el agregado)
-// y ordena, así {A:1, A:2} y {A:2, A:1} producen el mismo hash que {A:3}
-function hashRequest(customerId: string, items: { isbn: string; quantity: number }[]): string {
+// Mismo cliente, mismo carrito y misma dirección → mismo hash. Fusiona las cantidades del mismo ISBN (como hace el
+// agregado) y ordena, así {A:1, A:2} y {A:2, A:1} producen el mismo hash que {A:3}. La dirección llega ya normalizada
+// (ShippingAddress.create) y va como lista JSON, no separada por un carácter: un texto con ese carácter podría
+// confundirse con otro reparto de campos
+function hashRequest(customerId: string, items: { isbn: string; quantity: number }[], address: ShippingAddress): string {
   const merged = new Map<string, number>();
   for (const i of items) merged.set(i.isbn, (merged.get(i.isbn) ?? 0) + i.quantity);
-  const lines = [...merged].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))   // comparación simple: localeCompare cambia según el idioma del sistema.map(([isbn, q]) => `${isbn}:${q}`).join(',');
-  return createHash('sha256').update(`${customerId}|${lines}`).digest('hex');
+  const lines = [...merged].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))   // comparación simple: localeCompare cambia según el idioma del sistema
+    .map(([isbn, q]) => `${isbn}:${q}`).join(',');
+  const shipping = JSON.stringify([address.recipient, address.phone, address.line1, address.district,
+    address.province, address.department, address.reference ?? '']);
+  return createHash('sha256').update(`${customerId}|${lines}|${shipping}`).digest('hex');
 }
 ```
 

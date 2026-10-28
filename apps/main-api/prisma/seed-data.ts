@@ -22,7 +22,7 @@ export interface SeedStock {
   reserved: number;
 }
 
-// Ids fijos para poder usarlos como `customerId` en las peticiones de prueba
+// Ids fijos: son también los ids de sus usuarios de ejemplo, y se usan como `customerId` en las peticiones de prueba
 export const CUSTOMERS: SeedCustomer[] = [
   {
     id: '11111111-1111-4111-8111-111111111111',
@@ -33,6 +33,27 @@ export const CUSTOMERS: SeedCustomer[] = [
     id: '22222222-2222-4222-8222-222222222222',
     email: 'luis@example.com',
     premium: true,
+  },
+];
+
+export interface SeedUser {
+  id: string;
+  email: string;
+  role: 'BUYER' | 'ADMIN';
+}
+
+// La contraseña de todos los usuarios de ejemplo. Es de desarrollo y está en el README: por eso el seed se niega a
+// correr en producción
+export const DEV_PASSWORD = 'LibroYa-dev-2026';
+
+// Cada cliente de ejemplo es también un comprador con su mismo id y correo (el usuario y el cliente comparten id), más
+// un administrador, que no es un cliente
+export const USERS: SeedUser[] = [
+  ...CUSTOMERS.map(({ id, email }): SeedUser => ({ id, email, role: 'BUYER' })),
+  {
+    id: '99999999-9999-4999-8999-999999999999',
+    email: 'admin@example.com',
+    role: 'ADMIN',
   },
 ];
 

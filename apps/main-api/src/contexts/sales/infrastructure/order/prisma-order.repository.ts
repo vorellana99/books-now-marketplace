@@ -42,6 +42,12 @@ export class PrismaOrderRepository extends OrderRepository {
         'Solo se guarda un pedido confirmado',
       );
     }
+    if (!order.shippingAddress) {
+      throw new DomainError(
+        'SHIPPING_ADDRESS_REQUIRED',
+        'Solo se guarda un pedido con dirección de envío',
+      );
+    }
     if (charged.currency !== order.currency) {
       throw new DomainError(
         'CURRENCY_MISMATCH',

@@ -1,4 +1,5 @@
 import { Command } from '@nestjs/cqrs';
+import type { ShippingAddressData } from '../../domain/order/shipping-address.vo.js';
 import type { CartItem } from '../../domain/order/catalog-pricing.port.js';
 import type { Money } from '../../domain/shared/money.vo.js';
 
@@ -12,6 +13,7 @@ export class PlaceOrderCommand extends Command<PlaceOrderResult> {
     readonly idempotencyKey: string,
     readonly customerId: string,
     readonly items: CartItem[],
+    readonly shippingAddress: ShippingAddressData, // sin validar: el handler la normaliza y la valida
     readonly cardToken: string, // solo viaja a la pasarela: nunca se guarda ni se registra
   ) {
     super();

@@ -6,14 +6,19 @@ import type { DeliveryContext } from '../../src/platform/outbox/outbox-consumer.
 import { OutboxHandler } from '../../src/platform/outbox/outbox-handler.decorator.js';
 import { FakeNotifier } from '../fakes/fake-notifier.js';
 import { InMemoryCustomerRepository } from '../fakes/in-memory-customer-repository.js';
+import { ADDRESS_PAYLOAD } from '../fakes/fixtures.js';
 
 const ORDER = '0196a000-0000-7000-8000-0000000000aa';
 const EVENT_ID = '0196a000-0000-7000-8000-0000000000bb';
 
 const event = (customerId = 'c-1') =>
-  new OrderPlacedEvent(ORDER, customerId, '100.00', [
-    { isbn: '9780306406157', quantity: 2 },
-  ]);
+  new OrderPlacedEvent(
+    ORDER,
+    customerId,
+    '100.00',
+    [{ isbn: '9780306406157', quantity: 2 }],
+    ADDRESS_PAYLOAD,
+  );
 const ctx = (overrides: Partial<DeliveryContext> = {}): DeliveryContext => ({
   eventId: EVENT_ID,
   occurredOn: new Date(),

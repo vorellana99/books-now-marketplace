@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+// Un secreto de al menos 32 caracteres y con variedad: uno repetido ("xxxx…") o de plantilla no protege nada
+const optionalSecret = z.preprocess(
+  (v) => (v === '' ? undefined : v),
+  z
+    .string()
+    .min(32, 'debe tener al menos 32 caracteres')
+    .refine((v) => new Set(v).size >= 12, 'tiene poca variedad de caracteres')
+    .optional(),
+);
+
 const optionalUrl = z.preprocess(
   (v) => (v === '' ? undefined : v),
   z.url().optional(),
@@ -17,6 +27,19 @@ export const envSchema = z
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,
     PAYMENT_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // solo con PAYMENT_PROVIDER=fake
+    // Secreto con el que se firman los tokens de acceso. Obligatorio en producción; sin él, fuera de producción, la
+    // aplicación usa uno aleatorio por proceso (los tokens dejan de valer al reiniciar)
+    JWT_SECRET: optionalSecret,
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(3600)
+      .default(900),
+    // Cuántos días vale un token de refresco sin usarse. Cada uso entrega uno nuevo con su plazo completo
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(14),
+    // Costo (log2 de N) del hash de contraseñas con scrypt. Los tests lo bajan; en producción no puede ser menor que 15
+    PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15),
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
@@ -43,6 +66,16 @@ export const envSchema = z
         'PAYMENT_PROVIDER=fake aprueba cualquier tarjeta y no puede usarse en producción: configura PAYMENT_PROVIDER=external y PAYMENT_API_URL',
     },
   )
+  .refine((e) => !(e.NODE_ENV === 'production' && !e.JWT_SECRET), {
+    path: ['JWT_SECRET'],
+    message:
+      'JWT_SECRET es obligatorio en producción: genera uno con `openssl rand -base64 48`',
+  })
+  // Un costo bajo debilitaría todos los hashes de contraseña: solo es para desarrollo y tests
+  .refine((e) => !(e.NODE_ENV === 'production' && e.PASSWORD_HASH_LOG_N < 15), {
+    path: ['PASSWORD_HASH_LOG_N'],
+    message: 'PASSWORD_HASH_LOG_N no puede ser menor que 15 en producción',
+  })
   .refine(
     (e) => e.PAYMENT_PROVIDER !== 'external' || Boolean(e.PAYMENT_API_URL),
     {

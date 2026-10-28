@@ -2,6 +2,8 @@ import { Order } from '../../src/contexts/sales/domain/order/order.aggregate.js'
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import type { DomainError } from '../../src/shared-kernel/domain.errors.js';
 import { Isbn } from '../../src/shared-kernel/isbn.vo.js';
+import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ADDRESS_DATA } from '../fakes/fixtures.js';
 
 const A = Isbn.create('9780306406157');
 const B = Isbn.create('9780306406140');
@@ -145,5 +147,36 @@ describe('Order.restore: reconstruir un pedido ya confirmado desde la base de da
         ),
       ).toBe('INVALID_QUANTITY');
     });
+  });
+});
+
+describe('Order.restore: dirección de envío', () => {
+  const address = ShippingAddress.restore(ADDRESS_DATA);
+  const lines = [line(A, 1, '45.00')];
+
+  it('conserva la dirección guardada', () => {
+    const order = Order.restore({
+      id: 'o-1',
+      customerId: 'c-1',
+      lines,
+      shippingAddress: address,
+    });
+    expect(order.shippingAddress).toBe(address);
+  });
+
+  it('un pedido anterior a la dirección (null) se lee con dirección null', () => {
+    const order = Order.restore({
+      id: 'o-1',
+      customerId: 'c-1',
+      lines,
+      shippingAddress: null,
+    });
+    expect(order.shippingAddress).toBeNull();
+  });
+
+  it('si no se indica, queda en null', () => {
+    expect(
+      Order.restore({ id: 'o-1', customerId: 'c-1', lines }).shippingAddress,
+    ).toBeNull();
   });
 });

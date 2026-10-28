@@ -10,21 +10,27 @@ import { PremiumCustomerSpec } from '../../src/contexts/sales/domain/pricing/pre
 import { PremiumOfferSpec } from '../../src/contexts/sales/domain/pricing/premium-offer.specification.js';
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { Specification } from '../../src/contexts/sales/domain/shared/specification.js';
+import { ADDRESS } from '../fakes/fixtures.js';
 
 const context = (
   subtotal: string,
   premium: boolean,
   currency: 'PEN' | 'USD' = 'PEN',
 ): PricingContext => ({
-  order: OrderFactory.fromCart('o-1', 'c-1', [
-    {
-      isbn: '9780306406157',
-      quantity: 1,
-      title: 'Libro',
-      price: subtotal,
-      currency,
-    },
-  ]),
+  order: OrderFactory.fromCart(
+    'o-1',
+    'c-1',
+    [
+      {
+        isbn: '9780306406157',
+        quantity: 1,
+        title: 'Libro',
+        price: subtotal,
+        currency,
+      },
+    ],
+    ADDRESS,
+  ),
   customer: Customer.create('c-1', 'ana@example.com', premium),
 });
 

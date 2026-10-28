@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  schemas  = ["sales", "catalog", "inventory", "messaging"]
+  schemas  = ["sales", "catalog", "inventory", "messaging", "identity"]
 }
 
 // ── sales ──────────────────────────────────────────────
@@ -33,15 +33,26 @@ enum Currency {
 }
 
 model Order {
-  id            String      @id @db.Uuid
-  customerId    String      @map("customer_id") @db.Uuid
-  customer      Customer    @relation(fields: [customerId], references: [id]) // FK: mismo contexto
-  status        OrderStatus
-  chargedAmount Decimal     @map("charged_amount") @db.Decimal(19, 2) // importe final: 2 decimales
-  currency      Currency    @default(PEN)
-  createdAt     DateTime    @default(now()) @map("created_at")
-  lines         OrderLine[]
+  id             String      @id @db.Uuid
+  customerId     String      @map("customer_id") @db.Uuid
+  customer       Customer    @relation(fields: [customerId], references: [id]) // FK: mismo contexto
+  status         OrderStatus
+  chargedAmount  Decimal     @map("charged_amount") @db.Decimal(19, 2) // importe final: 2 decimales
+  currency       Currency    @default(PEN)
+  createdAt      DateTime    @default(now()) @map("created_at")
+  // Dirección de entrega, copiada en el pedido. Admiten nulo para poder agregarlas a una base con pedidos (los de
+  // antes no tienen dirección); una CHECK de la migración exige que estén todas o ninguna. La referencia es opcional
+  shipRecipient  String?     @map("ship_recipient") @db.VarChar(100)
+  shipPhone      String?     @map("ship_phone") @db.VarChar(20)
+  shipLine1      String?     @map("ship_line1") @db.VarChar(200)
+  shipDistrict   String?     @map("ship_district") @db.VarChar(60)
+  shipProvince   String?     @map("ship_province") @db.VarChar(60)
+  shipDepartment String?     @map("ship_department") @db.VarChar(60)
+  shipReference  String?     @map("ship_reference") @db.VarChar(200)
+  lines          OrderLine[]
 
+  // El historial de un cliente: sus pedidos del más reciente al más antiguo, paginados por (fecha, id)
+  @@index([customerId, createdAt(sort: Desc), id(sort: Desc)])
   @@map("orders")
   @@schema("sales")
 }
@@ -176,4 +187,48 @@ model Delivery {
   @@index([status, nextAttemptAt])
   @@map("deliveries")
   @@schema("messaging")
+}
+
+// ── identity ───────────────────────────────────────────
+enum UserRole {
+  BUYER
+  ADMIN
+
+  @@schema("identity")
+}
+
+// Quién puede iniciar sesión. Nunca guarda la contraseña, solo su hash (scrypt, con sal propia). El correo va en
+// minúsculas y recortado: una CHECK de la migración lo exige
+model User {
+  id           String   @id @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  role         UserRole
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+  @@schema("identity")
+}
+
+// Un token de refresco que se entregó: opaco y aleatorio, y aquí solo se guarda su SHA-256 (quien lea la tabla no puede
+// usarlos). Los de una misma sesión comparten `familyId`. Cada uso lo marca `usedAt` y entrega uno nuevo de la familia;
+// si se vuelve a presentar uno ya usado, se revoca la familia entera (`revokedAt`)
+model RefreshToken {
+  id        String    @id @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  familyId  String    @map("family_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  createdAt DateTime  @default(now()) @map("created_at")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([familyId])
+  @@index([userId])
+  @@map("refresh_tokens")
+  @@schema("identity")
 }

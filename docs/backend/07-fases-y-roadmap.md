@@ -57,18 +57,29 @@ flowchart LR
 > Mientras no haya autenticación, solo funcionan con **`ADMIN_API_ENABLED=true`** (por defecto `false`, y rechazado por el schema de Zod cuando `NODE_ENV=production`). Si está desactivado, responden **404**, como si no existieran. Así sirven en desarrollo sin quedar expuestos en un despliegue.
 
 ```ts
-// platform/http/admin-api-enabled.guard.ts: @UseGuards(AdminApiEnabledGuard) en la clase de cada controller de /admin,
-// y en el historial solo en su método (OrderController también tiene POST /orders, que no lleva guard)
+// platform/http/admin-api-enabled.guard.ts
 @Injectable()
 export class AdminApiEnabledGuard implements CanActivate {
   constructor(private readonly config: ConfigService) {}
 
-  canActivate(): boolean {
-    if (!this.config.get<boolean>('ADMIN_API_ENABLED')) throw new NotFoundException();
+  canActivate(context: ExecutionContext): boolean {
+    if (this.config.get<boolean>('ADMIN_API_ENABLED') !== true) {   // solo `true` abre: ausente o texto, no
+      const req = context.switchToHttp().getRequest();
+      throw new NotFoundException(`Cannot ${req.method} ${req.originalUrl ?? req.url}`);   // el mismo cuerpo que una ruta inexistente
+    }
     return true;
   }
 }
+
+// platform/http/admin-api.decorator.ts: el guard y la etiqueta `admin` de Swagger, en una sola anotación
+export const AdminApi = () => applyDecorators(UseGuards(AdminApiEnabledGuard), ApiTags('admin'));
 ```
+
+`@AdminApi()` va en la clase de cada controlador de `/admin`, y en el historial solo en su método (`OrderController` también tiene `POST /orders`, que no lleva guard).
+
+- **El 404 es idéntico al de una ruta que no existe** (`{ message: "Cannot GET /admin/books", error: "Not Found", statusCode: 404 }`), salvo la ruta que menciona: con el `NotFoundException()` sin mensaje, el cuerpo sería distinto y delataría que la ruta existe.
+- **Los guards corren antes que los pipes:** con la administración cerrada, un cuerpo inválido da 404 y no 400, que también delataría la ruta.
+- **Swagger tampoco las muestra** cuando está cerrada: `configureSwagger` quita las operaciones con la etiqueta `admin` del documento. El documento se calcula una vez, al primer acceso a `/docs`; como la variable no cambia en caliente, no importa.
 
 Un guard es más simple que registrar controllers de forma condicional, que en Nest exige módulos dinámicos.
 
@@ -102,6 +113,9 @@ export class SearchBooksHandler implements IQueryHandler<SearchBooksQuery> {
 
 - **El orden incluye el ISBN como desempate:** con títulos repetidos, ordenar solo por título puede repetir un libro en dos páginas u omitirlo.
 - **`pageSize` con máximo de 50** en el DTO (`@Max(50)`), para que nadie pida el catálogo entero de una vez.
+- **Los comodines se escapan:** Prisma pasa el texto tal cual a `ILIKE`, donde `%` y `_` son comodines. El handler antepone una barra invertida a `\`, `%` y `_` (`q.trim().replace(/[\\%_]/g, '\\$&')`) para que se busquen como texto; sin esto, `?q=%` devolvía todo el catálogo.
+- **`page` tiene tope (100 000)** y `q` largo máximo (100): un `skip` enorme desbordaría el entero de la base.
+- **No ignora los acentos** ("programacion" no encuentra "Programación"): decisión D3, hasta que el catálogo crezca y se agreguen `unaccent` y `pg_trgm`.
 - **Cuando el catálogo crezca**, `contains` (un `ILIKE`) se vuelve lento: agrega en la migración la extensión `pg_trgm` y un índice GIN sobre `title` y `author`.
 
 ### Fase 11: Dirección de envío
@@ -111,46 +125,55 @@ Se guarda como **snapshot en el pedido**, igual que el título y el precio: si e
 ```prisma
 model Order {
   // …
-  shipRecipient  String  @map("ship_recipient")
-  shipPhone      String  @map("ship_phone")
-  shipLine1      String  @map("ship_line1")
-  shipDistrict   String  @map("ship_district")      // distrito
-  shipProvince   String  @map("ship_province")      // provincia
-  shipDepartment String  @map("ship_department")    // departamento
-  shipReference  String? @map("ship_reference")     // referencia para el repartidor
+  // Admiten nulo para poder agregar las columnas a una base que ya tiene pedidos (decisión D1): los de antes quedan
+  // sin dirección. La dirección completa es obligatoria al CREAR un pedido (DTO y dominio); una CHECK de la
+  // migración exige que estén los seis campos obligatorios o ninguno, y la referencia no puede existir sola
+  shipRecipient  String? @map("ship_recipient") @db.VarChar(100)
+  shipPhone      String? @map("ship_phone") @db.VarChar(20)
+  shipLine1      String? @map("ship_line1") @db.VarChar(200)
+  shipDistrict   String? @map("ship_district") @db.VarChar(60)       // distrito
+  shipProvince   String? @map("ship_province") @db.VarChar(60)       // provincia
+  shipDepartment String? @map("ship_department") @db.VarChar(60)     // departamento
+  shipReference  String? @map("ship_reference") @db.VarChar(200)     // referencia para el repartidor (opcional)
 }
 ```
 
-- **El DTO la valida** como objeto anidado (`@ValidateNested`), con todos los campos obligatorios salvo la referencia.
+- **El dominio la valida con el valor `ShippingAddress`** (`sales/domain/order/shipping-address.vo.ts`): recorta cada campo, exige los seis obligatorios, acota el largo (los mismos tamaños de las columnas), rechaza saltos de línea y otros caracteres de control, y pide un teléfono de al menos 6 dígitos con solo dígitos, espacios, `+`, `-` y paréntesis. `ShippingAddress.create` valida; `ShippingAddress.restore` lee lo que ya está en la base sin validar, para que una regla nueva no impida leer pedidos antiguos. El mapper trata la dirección con todas las columnas en nulo como "pedido anterior" (`null`) y una dirección a medias como un dato roto.
+- **El DTO valida la forma** como objeto anidado (`@ValidateNested`, `@IsObject`): obligatoria, los seis campos con texto no vacío y su largo máximo, y la referencia opcional; lo que falte es un `400`. **El contenido lo valida el dominio** (teléfono, caracteres de control): un `422 INVALID_SHIPPING_ADDRESS`, igual que un ISBN mal formado.
 - **Forma parte del hash de la `Idempotency-Key`:** un reintento con la misma clave y otra dirección responde `422 IDEMPOTENCY_KEY_REUSED`, igual que si cambiara el carrito. Cambian dos firmas:
 
 ```ts
-// PlaceOrderCommand agrega la dirección
+// PlaceOrderCommand agrega la dirección (sin validar: el handler la normaliza con ShippingAddress.create)
 new PlaceOrderCommand(key, dto.customerId, dto.items, dto.shippingAddress, dto.cardToken);
 
-// hashRequest la incluye, normalizada: sin espacios sobrantes y siempre en el mismo orden de campos
-function hashRequest(customerId: string, items: CartItem[], address: ShippingAddress): string {
-  const merged = new Map<string, number>();
-  for (const i of items) merged.set(i.isbn, (merged.get(i.isbn) ?? 0) + i.quantity);
-  const lines = [...merged].sort(([a], [b]) => a.localeCompare(b)).map(([isbn, q]) => `${isbn}:${q}`).join(',');
-  const fields = ['recipient', 'phone', 'line1', 'district', 'province', 'department', 'reference'] as const;
-  const addr = fields.map((f) => (address[f] ?? '').trim()).join('|');
-  return createHash('sha256').update(`${customerId}|${lines}|${addr}`).digest('hex');
-}
+// hashRequest la recibe ya normalizada (recortada; una referencia vacía es null) y la incluye como lista JSON.
+// El código completo está en 04-flujo-pedido-y-saga.md
+hashRequest(customerId, items, address);
 ```
-- **`OrderPlacedEvent` pasa a `eventVersion = 2`** e incluye la dirección, porque Envíos la necesitará. Los consumidores actuales ignoran el campo nuevo.
+- **`OrderPlacedEvent` pasa a `eventVersion = 2`** e incluye la dirección, porque Envíos la necesitará. Los consumidores actuales ignoran el campo nuevo. Los eventos ya guardados siguen siendo de la versión 1 y los consumidores los leen igual (hay un test que lo comprueba).
+- **`GET /orders/:id` no la devuelve** (decisión D2): el endpoint no tiene autenticación, y la calle y el teléfono son datos personales. La dirección viaja en el evento y, más adelante, en el historial de administración.
+- **Cambiar `hashRequest` invalida las claves de idempotencia en vuelo:** una compra a medias iniciada antes de esta versión, reintentada después, daría `IDEMPOTENCY_KEY_REUSED`. Es aceptable antes de desplegar.
 
 ### Fase 12: Administrar libros y precios
 
 | Comando | Qué valida |
 |---|---|
 | `CreateBookCommand` | ISBN válido (`Isbn.create`) y no repetido (`409 BOOK_ALREADY_EXISTS`); precio > 0 |
-| `UpdateBookCommand` | El libro existe (`404`); precio > 0 si cambia |
-| `DeactivateBookCommand` | Pone `active = false`. **Nunca se borra**: otros contextos lo referencian por ISBN |
+| `UpdateBookCommand` | El libro existe (`404`); cualquier subconjunto de `title`, `author`, `price` y `active`, pero al menos uno (`NOTHING_TO_UPDATE`); precio > 0 si cambia; **la moneda no cambia** (`CURRENCY_CANNOT_CHANGE`); todo o nada |
 
+`DeactivateBookCommand` de la guía original se unió a `UpdateBookCommand`: `PATCH /admin/books/:isbn` con `{ "active": false }` desactiva el libro y con `true` lo reactiva (decisión D4). Una sola operación hace atómico un cambio que toca el precio y el estado a la vez. **El libro nunca se borra**: otros contextos lo referencian por ISBN, y un libro desactivado sigue ocupando su ISBN.
+
+- **`PATCH /admin/books/:isbn`:** el cuerpo admite `title`, `author`, `price` (`{ amount, currency? }`) y `active`. La moneda es opcional dentro del precio y solo sirve para confirmar la actual: pedir otra es `422 CURRENCY_CANNOT_CHANGE` (decisión D5: cambiarla sería otro libro, y afectaría a carritos en curso). Un campo con valor `null` es un `400`, no "sin cambio"; un campo de más (`isbn`, `stock`, `currency` fuera del precio) también. Responde `200` con el libro y `active`.
+- **Se escriben solo las columnas que cambian:** dos cambios simultáneos de campos distintos se conservan los dos, y dos del mismo campo dejan uno de los dos sin error.
+- **Qué pasa al desactivar:** desaparece de `GET /books`, de `GET /books/:isbn` y de las compras (`GetBookPriceQuery` falla con `NOT_FOUND`); los pedidos ya hechos se siguen leyendo; el stock no se toca.
+
+- **Forma de la petición (`POST /admin/books`):** `{ isbn, title, author, price: { amount: "45.00", currency: "PEN" } }`. El precio entra con la misma forma con la que sale: el monto en texto (un número se rechaza), con punto y hasta 2 decimales. El DTO valida la forma (`400`); el dominio (`NewBook.create`) valida el contenido (`422`): ISBN válido, título (hasta 200) y autor (hasta 150) recortados, no vacíos y sin caracteres de control (`INVALID_BOOK`), precio mayor que cero y no más de 1 000 000 (`INVALID_PRICE`) y moneda `PEN` o `USD` (`INVALID_CURRENCY`). No se pueden mandar `active` ni `stock`: un campo de más es `400`.
+- **La unicidad la decide la clave primaria, no una consulta previa:** el handler inserta y traduce el error `P2002` de Prisma a `409 BOOK_ALREADY_EXISTS`. Mirar antes de insertar dejaría una carrera entre dos altas simultáneas del mismo ISBN. Un libro desactivado sigue ocupando su ISBN.
+- **El evento `catalog.book.created` solo lleva el ISBN** (con el ISBN como `aggregateId`): es lo que Inventario necesita, y otros contextos se refieren al libro por su ISBN.
 - **Cambiar un precio no afecta pedidos ya hechos:** el precio quedó copiado en cada línea (snapshot).
 - **El handler de `CreateBookCommand` guarda el libro y su evento en la misma transacción:** `prisma.$transaction(async (tx) => { await tx.book.create({ … }); await this.outbox.append(tx, [new BookCreatedEvent(isbn)]); })`. El evento va en `contracts/catalog/book-created.event.ts`, con `aggregateId` = ISBN. Guardados por separado, una caída entre ambos dejaría un libro sin registro de stock.
 - **Al crear un libro también se crea su registro de stock en cero**, en Inventario. Se hace con un consumidor del Outbox (`inventory.create-stock-item`, tipo `db`) que reacciona a un evento nuevo, `catalog.book.created`. Así todo libro nuevo tiene su registro de stock. El caso de `STOCK_ITEM_NOT_FOUND` queda reducido a la breve ventana (alrededor de 1 s) entre que se crea el libro y el relay entrega el evento: si alguien compra justo entonces, recibe 422 y no se cobra nada, porque falla antes de reservar. En la práctica no ocurre, porque un libro recién creado tiene stock cero y no se puede vender hasta cargarle unidades (fase 13).
+- **El consumidor** (`CreateStockItemConsumer`, `inventory/infrastructure/stock/`) hace `createMany({ skipDuplicates: true })` con el `tx` del relay: un `INSERT … ON CONFLICT DO NOTHING`. Repetir la entrega, o dos entregas a la vez, deja un solo registro, y **nunca pisa un stock que ya exista**. Valida el ISBN del evento con `Isbn.create`: uno mal formado es un error, el relay lo reintenta y acaba `FAILED`, a la vista de `/health/outbox`. Mientras el relay no entrega el evento, comprar el libro da `STOCK_ITEM_NOT_FOUND`; después, `OUT_OF_STOCK` (hay un test de cada).
 
 ### Fase 13: Cargar stock
 
@@ -160,17 +183,29 @@ function hashRequest(customerId: string, items: CartItem[], address: ShippingAdd
 export class AddStockHandler implements ICommandHandler<AddStockCommand> {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute({ isbn, quantity }: AddStockCommand): Promise<void> {
-    if (!Number.isInteger(quantity) || quantity <= 0) throw new DomainError('INVALID_QUANTITY', 'La cantidad debe ser un entero positivo');
-    // Incremento atómico: no se pisa con reservas simultáneas
-    const { count } = await this.prisma.stockItem.updateMany({ where: { isbn }, data: { available: { increment: quantity } } });
-    if (count === 0) throw new StockItemNotFoundError(isbn);
+  async execute({ isbn: raw, quantity }: AddStockCommand): Promise<StockLevel> {
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_ADDITION) throw new DomainError('INVALID_QUANTITY', …);
+    const isbn = Isbn.create(raw).value;
+    // Un solo UPDATE atómico: suma en la base y solo si el resultado respeta el tope; devuelve el nivel resultante
+    const updated = await this.prisma.$queryRaw<StockLevel[]>`
+      UPDATE inventory.stock_items SET available = available + ${quantity}
+      WHERE isbn = ${isbn} AND available <= ${MAX_AVAILABLE - quantity}
+      RETURNING isbn, available, reserved`;
+    if (updated.length === 1) return updated[0];
+    // No actualizó: o no existe el registro, o la carga pasaría del tope
+    if (!(await this.prisma.stockItem.findUnique({ where: { isbn } }))) throw new StockItemNotFoundError(isbn);
+    throw new DomainError('STOCK_LIMIT_EXCEEDED', …);
   }
 }
 ```
 
-- **Una entrada de stock es una suma, no un "fijar en N"**: con `increment`, una carga y una reserva al mismo tiempo no se pisan.
+`POST /admin/stock/:isbn/additions` con `{ "quantity": 25 }` responde `201 { isbn, available, reserved }`.
+
+- **Una entrada de stock es una suma, no un "fijar en N"**: el `UPDATE` suma dentro de la base (no lee, suma y escribe), así que una carga y una reserva al mismo tiempo no se pisan. Hay un test con diez cargas y diez reservas cruzadas, con cada actualización frenada 40 ms, que comprueba que el total se conserva.
+- **Dos topes que la guía no tenía:** `available` es un entero de 32 bits y una carga enorme lo desbordaría con un `500` de la base. Una carga admite de 1 a **100 000** unidades (`INVALID_QUANTITY` fuera de ese rango; el DTO responde `400` antes), y lo disponible de un libro no pasa de **1 000 000** (`422 STOCK_LIMIT_EXCEEDED`). El tope se mide solo con lo disponible, no con lo reservado.
+- **El libro debe tener registro de stock** (lo crea Inventario al recibir `catalog.book.created`): sin él, `422 STOCK_ITEM_NOT_FOUND` y no se crea. Un libro desactivado sí se puede reabastecer antes de reactivarlo.
 - **Toca una sola fila**, así que no rompe la regla de bloquear en orden de ISBN.
+- **No se guarda un historial de cargas** (decisión D6): sin autenticación no se sabría quién la hizo; la tabla de movimientos puede añadirse con la fase 15.
 
 ### Fase 14: Historial de pedidos
 
@@ -180,23 +215,31 @@ export class AddStockHandler implements ICommandHandler<AddStockCommand> {
 export class ListCustomerOrdersHandler implements IQueryHandler<ListCustomerOrdersQuery> {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute({ customerId, cursor, limit }: ListCustomerOrdersQuery) {
+  async execute({ customerId, limit, after }: ListCustomerOrdersQuery): Promise<OrderHistoryPage> {
     const rows = await this.prisma.order.findMany({
-      where: { customerId },
+      where: {
+        customerId,
+        // Lo que viene DESPUÉS del último pedido de la página anterior, en el mismo orden (fecha desc, id desc)
+        ...(after && { OR: [{ createdAt: { lt: after.createdAt } }, { createdAt: after.createdAt, id: { lt: after.id } }] }),
+      },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,                                      // uno de más para saber si hay otra página
-      ...(cursor && { cursor: { id: cursor }, skip: 1 }),
       include: { lines: true },
     });
     const page = rows.slice(0, limit);
-    return { items: page.map(toOrderView), nextCursor: rows.length > limit ? page.at(-1)!.id : null };
+    const last = page.at(-1);
+    return { items: page.map(toHistoryItem), nextCursor: rows.length > limit && last ? OrderCursor.encode({ createdAt: last.createdAt, id: last.id }) : null };
   }
 }
 ```
 
+`GET /orders?customerId=&cursor=&limit=` responde `{ items[…], nextCursor }`. Cada pedido trae lo mismo que `GET /orders/:id` más `createdAt` (ISO, UTC) y **`shippingAddress`** (la dirección de envío; `null` en un pedido anterior a ella): por eso el endpoint es de administración.
+
 - **Paginación por cursor** (no por número de página): el historial solo crece, y con páginas numeradas un pedido nuevo desplazaría a los demás.
-- **Agrega el índice `@@index([customerId, createdAt])`** en `Order`.
-- **Hoy el `customerId` llega como parámetro**, y cualquiera que lo conozca vería los pedidos de ese cliente, con nombre, teléfono y dirección. Por eso, hasta tener autenticación, el método `list` de `OrderController` usa también `AdminApiEnabledGuard`, **en el método y no en la clase**, para que `POST /orders` siga abierto. Con la autenticación, el `customerId` saldrá del token y el endpoint pasará a `GET /me/orders`, sin el guard.
+- **El cursor es la posición (fecha, id), no el cursor de Prisma por id** (la guía usaba `cursor: { id }, skip: 1`): es **opaco** para el cliente (`base64url` de `fecha|id`, que se devuelve tal cual) y sigue valiendo aunque el pedido al que apunta ya no exista, aunque lleguen pedidos nuevos entre una página y otra y con pedidos del mismo instante repartidos entre páginas (el id desempata). `OrderCursor.decode` devuelve `null` con cualquier cosa que no sea un cursor canónico (caracteres que Node ignoraría, fechas que JS normalizaría como el 31 de febrero, un id que no sea UUID) y el controlador lo responde con `400`.
+- **El índice es `@@index([customerId, createdAt(sort: Desc), id(sort: Desc)])`** (la guía decía `[customerId, createdAt]`): coincide con el orden de la consulta. Hay un test que la prueba también sin el índice, donde los empates salen en el orden físico.
+- **`limit`** de 1 a 50 (20 por defecto). Un cliente sin pedidos, o que no existe, recibe una lista vacía y no un `404`. La última página trae `nextCursor: null`, y si el total es múltiplo del límite no hay una página final vacía.
+- **Hoy el `customerId` llega como parámetro**, y cualquiera que lo conozca vería los pedidos de ese cliente, con nombre, teléfono y dirección. Por eso, hasta tener autenticación, el método `list` de `OrderController` usa `@AdminApi()` (el guard de `AdminApiEnabledGuard`), **en el método y no en la clase**, para que `POST /orders` y `GET /orders/:id` sigan abiertos. Con la autenticación, el `customerId` saldrá del token y el endpoint pasará a `GET /me/orders`, sin el guard.
 
 ### Fase 15: Autenticación (fase aparte)
 
@@ -204,8 +247,8 @@ Es la funcionalidad más grande y **bloquea el despliegue público**: sin ella, 
 
 | Fase | Listo cuando… |
 |---|---|
-| 10 | `GET /books?q=clean` devuelve los libros activos que coinciden, paginados |
-| 11 | `POST /orders` sin dirección responde 400; con dirección, la guarda en el pedido y en `OrderPlacedEvent` v2 |
-| 12 | Se crea un libro con `POST /admin/books`, aparece en la búsqueda, y su stock en cero existe en Inventario |
-| 13 | `POST /admin/stock/:isbn/additions` suma unidades, y una compra posterior las reserva |
-| 14 | `GET /orders?customerId=` devuelve los pedidos del cliente, del más reciente al más antiguo, con cursor |
+| 10 ✅ | `GET /books?q=clean` devuelve los libros activos que coinciden, paginados |
+| 11 ✅ | `POST /orders` sin dirección responde 400; con dirección, la guarda en el pedido y en `OrderPlacedEvent` v2 |
+| 12 ✅ | Se crea un libro con `POST /admin/books`, aparece en la búsqueda, y su stock en cero existe en Inventario |
+| 13 ✅ | `POST /admin/stock/:isbn/additions` suma unidades, y una compra posterior las reserva |
+| 14 ✅ | `GET /orders?customerId=` devuelve los pedidos del cliente, del más reciente al más antiguo, con cursor |

@@ -40,6 +40,10 @@ export default async function setup(): Promise<() => Promise<void>> {
   // Los proveedores simulados tardan 3 s en desarrollo; los tests no deben esperarlos
   process.env.PAYMENT_SIMULATED_DELAY_MS = '0';
   process.env.EMAIL_SIMULATED_DELAY_MS = '0';
+  // El costo mínimo del hash de contraseñas: los tests crean muchos usuarios (el valor seguro se prueba aparte)
+  process.env.PASSWORD_HASH_LOG_N = '4';
+  // Un secreto fijo para que los tests puedan firmar tokens (cualquier valor de 32 o más caracteres variados sirve)
+  process.env.JWT_SECRET = 'secreto-de-pruebas-libroya-0123456789-abcdefXYZ';
 
   try {
     // El mismo comando que usa producción, sobre una base vacía

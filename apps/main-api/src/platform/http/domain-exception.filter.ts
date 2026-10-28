@@ -1,5 +1,7 @@
 import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import {
+  AuthenticationError,
+  AuthorizationError,
   ConflictError,
   DomainError,
   NotFoundError,
@@ -13,7 +15,11 @@ export class DomainExceptionFilter implements ExceptionFilter {
         ? 404
         : error instanceof ConflictError
           ? 409
-          : 422;
+          : error instanceof AuthenticationError
+            ? 401
+            : error instanceof AuthorizationError
+              ? 403
+              : 422;
     host.switchToHttp().getResponse().status(status).json({
       statusCode: status,
       errorCode: error.code,

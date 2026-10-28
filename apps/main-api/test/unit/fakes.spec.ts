@@ -24,18 +24,24 @@ import {
   customersWithPremium,
   fixedCatalog,
 } from '../fakes/index.js';
+import { ADDRESS } from '../fakes/fixtures.js';
 
 const LINES = [{ isbn: ISBN, quantity: 2 }];
 const order = (id = 'o-1') =>
-  OrderFactory.fromCart(id, 'c-1', [
-    {
-      isbn: ISBN,
-      quantity: 1,
-      title: 'Libro',
-      price: '100.00',
-      currency: 'PEN',
-    },
-  ]);
+  OrderFactory.fromCart(
+    id,
+    'c-1',
+    [
+      {
+        isbn: ISBN,
+        quantity: 1,
+        title: 'Libro',
+        price: '100.00',
+        currency: 'PEN',
+      },
+    ],
+    ADDRESS,
+  );
 
 describe('los fakes implementan los puertos del dominio', () => {
   it('son instancias de sus puertos', () => {

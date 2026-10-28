@@ -2,6 +2,7 @@ import { Customer } from '../../src/contexts/sales/domain/customer/customer.aggr
 import { OrderFactory } from '../../src/contexts/sales/domain/order/order.factory.js';
 import { freeShippingSpec } from '../../src/contexts/sales/domain/pricing/free-shipping.specification.js';
 import { PricingService } from '../../src/contexts/sales/domain/pricing/pricing.service.js';
+import { ADDRESS } from '../fakes/fixtures.js';
 
 const ISBN = '9780306406157';
 const normal = Customer.create('c-1', 'ana@example.com');
@@ -9,9 +10,12 @@ const premium = Customer.create('c-2', 'luis@example.com', true);
 
 // Un pedido de un solo libro cuyo subtotal es exactamente `subtotal`
 const orderWith = (subtotal: string, currency: 'PEN' | 'USD' = 'PEN') =>
-  OrderFactory.fromCart('o-1', 'c-1', [
-    { isbn: ISBN, quantity: 1, title: 'Libro', price: subtotal, currency },
-  ]);
+  OrderFactory.fromCart(
+    'o-1',
+    'c-1',
+    [{ isbn: ISBN, quantity: 1, title: 'Libro', price: subtotal, currency }],
+    ADDRESS,
+  );
 
 // Igual que el handler: la specification decide el envío gratis y el servicio calcula
 const finalPrice = (
@@ -80,9 +84,20 @@ describe('PricingService: reglas', () => {
 
   it('devuelve el importe sin redondear: el handler redondea una sola vez', () => {
     // 100.005 × 0.90 = 90.0045 → toFinal da 90.00
-    const order = OrderFactory.fromCart('o-1', 'c-2', [
-      { isbn: ISBN, quantity: 3, title: 'L', price: '33.335', currency: 'PEN' },
-    ]);
+    const order = OrderFactory.fromCart(
+      'o-1',
+      'c-2',
+      [
+        {
+          isbn: ISBN,
+          quantity: 3,
+          title: 'L',
+          price: '33.335',
+          currency: 'PEN',
+        },
+      ],
+      ADDRESS,
+    );
     const total = new PricingService().calculateFinalPrice(
       order,
       premium,

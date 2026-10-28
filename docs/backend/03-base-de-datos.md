@@ -131,6 +131,15 @@ model Order {
   chargedAmount Decimal    @map("charged_amount") @db.Decimal(19, 2)   // importe final: 2 decimales
   currency     Currency    @default(PEN)
   createdAt    DateTime    @default(now()) @map("created_at")
+  // Dirección de entrega copiada en el pedido (fase 11). Admiten nulo: los pedidos anteriores no la tienen. Una CHECK
+  // exige los seis campos obligatorios o ninguno; la referencia es opcional, pero no puede existir sola
+  shipRecipient  String? @map("ship_recipient") @db.VarChar(100)
+  shipPhone      String? @map("ship_phone") @db.VarChar(20)
+  shipLine1      String? @map("ship_line1") @db.VarChar(200)
+  shipDistrict   String? @map("ship_district") @db.VarChar(60)
+  shipProvince   String? @map("ship_province") @db.VarChar(60)
+  shipDepartment String? @map("ship_department") @db.VarChar(60)
+  shipReference  String? @map("ship_reference") @db.VarChar(200)
   lines        OrderLine[]
   @@map("orders")
   @@schema("sales")
@@ -298,6 +307,11 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnAppli
   onApplicationShutdown() { return this.$disconnect(); }
 }
 ```
+
+> [!important] Schema `identity` (corte 7)
+> Un cuarto schema de la aplicación, además de `sales`, `catalog` e `inventory` (y `messaging` para el Outbox). `identity.users` guarda `id`, `email` (único, recortado y en minúsculas: una `CHECK` lo exige), `password_hash`, `role` (`BUYER` o `ADMIN`) y `created_at`. **Nunca guarda la contraseña, solo su hash** (`scrypt$15$8$3$<sal>$<clave>`, con sal propia). `resetDatabase()` de los tests también lo vacía.
+>
+> `identity.refresh_tokens` (tarea 7.4) guarda los tokens de refresco entregados: `user_id` (cascada), `family_id` (una sesión), `token_hash` (único; **solo el SHA-256**, una `CHECK` exige 64 caracteres hexadecimales), `created_at`, `expires_at`, `used_at` y `revoked_at`. Cada renovación marca el token usado y crea uno nuevo en la misma familia; si se reutiliza uno usado, se revoca la familia entera.
 
 > [!important] Las conexiones de la aplicación fuerzan UTC
 > Las columnas `TIMESTAMP(3)` de Prisma **no llevan zona horaria**. Prisma rellena `@default(now())` en el cliente, en UTC, y el relay del Outbox compara contra `now()` de la base, que usa la zona de su sesión. Con la base en UTC−5 y sin `options: '-c timezone=UTC'`, una entrega nueva quedaba programada 5 horas en el futuro y no se entregaba nada. Con la opción, da igual qué zona tenga la base. El SQL que se escribe a mano (por ejemplo, reprocesar entregas `FAILED`) debe ejecutarse con `SET TIME ZONE 'UTC'`.

@@ -9,13 +9,26 @@ import { OrderPlacedEvent } from '../../src/contracts/sales/order-placed.event.j
 import { DomainError } from '../../src/shared-kernel/domain.errors.js';
 
 describe('contracts/sales: OrderPlacedEvent', () => {
-  const event = new OrderPlacedEvent('o-1', 'c-1', '100.00', [
-    { isbn: '9780306406157', quantity: 2 },
-  ]);
+  const address = {
+    recipient: 'Ana Pérez',
+    phone: '999888777',
+    line1: 'Av. Larco 123',
+    district: 'Miraflores',
+    province: 'Lima',
+    department: 'Lima',
+    reference: null,
+  };
+  const event = new OrderPlacedEvent(
+    'o-1',
+    'c-1',
+    '100.00',
+    [{ isbn: '9780306406157', quantity: 2 }],
+    address,
+  );
 
   it('identifica el evento y su versión', () => {
     expect(event.eventName).toBe('sales.order.placed');
-    expect(event.eventVersion).toBe(1);
+    expect(event.eventVersion).toBe(2);
   });
 
   it('usa el pedido como aggregateId', () => {
@@ -26,14 +39,33 @@ describe('contracts/sales: OrderPlacedEvent', () => {
     const payload = JSON.parse(JSON.stringify(event));
     expect(payload).toMatchObject({
       eventName: 'sales.order.placed',
-      eventVersion: 1,
+      eventVersion: 2,
       aggregateId: 'o-1',
       orderId: 'o-1',
       customerId: 'c-1',
       subtotal: '100.00',
       lines: [{ isbn: '9780306406157', quantity: 2 }],
+      shippingAddress: address,
     });
     expect(typeof payload.occurredOn).toBe('string'); // la fecha llega como texto
+  });
+
+  it('la versión 2 agrega la dirección y conserva los campos de la versión 1', () => {
+    const payload = JSON.parse(JSON.stringify(event));
+    for (const field of ['orderId', 'customerId', 'subtotal', 'lines']) {
+      expect(payload).toHaveProperty(field);
+    }
+    expect(
+      Object.keys(payload.shippingAddress).sort((a, b) => a.localeCompare(b)),
+    ).toEqual([
+      'department',
+      'district',
+      'line1',
+      'phone',
+      'province',
+      'recipient',
+      'reference',
+    ]);
   });
 });
 

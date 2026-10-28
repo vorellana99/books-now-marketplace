@@ -1,3 +1,4 @@
+import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
 import { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
 import { FixedCatalog } from './fixed-catalog.js';
 import { InMemoryCustomerRepository } from './in-memory-customer-repository.js';
@@ -18,3 +19,19 @@ export const customersWithNormal = () =>
   new InMemoryCustomerRepository([
     Customer.create(CUSTOMER_ID, 'ana@example.com'),
   ]);
+
+// Una dirección de entrega válida, para los tests que arman pedidos
+export const ADDRESS_DATA = {
+  recipient: 'Ana Pérez',
+  phone: '+51 999 888 777',
+  line1: 'Av. Larco 123, Dpto 401',
+  district: 'Miraflores',
+  province: 'Lima',
+  department: 'Lima',
+  reference: 'Frente al parque Kennedy',
+} as const;
+
+export const ADDRESS = ShippingAddress.create(ADDRESS_DATA);
+
+// La misma dirección como viaja en el evento OrderPlacedEvent
+export const ADDRESS_PAYLOAD = ADDRESS.toJSON();

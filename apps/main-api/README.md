@@ -21,7 +21,7 @@ pnpm install                       # 1. dependencias
 cp .env.example .env               # 2. variables de entorno (ajusta DB_PORT y las credenciales si no usas Docker)
 pnpm run db:up                     # 3. base de datos (solo con Docker; si usas la tuya, ver "Base de datos")
 pnpm exec prisma migrate dev       # 4. crea las tablas y genera el cliente de Prisma
-pnpm run db:seed                   # (opcional) clientes, libros y stock de ejemplo
+pnpm run db:seed                   # (opcional) usuarios, clientes, libros y stock de ejemplo
 pnpm run start:dev                 # 5. API en http://localhost:3000
 ```
 
@@ -46,16 +46,20 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `DB_NAME` | — (obligatoria) | Nombre de la base de datos |
 | `PORT` | `3000` | Puerto de la API |
 | `NODE_ENV` | `development` | `development`, `test` o `production` |
-| `ADMIN_API_ENABLED` | `false` | Endpoints `/admin`, solo para desarrollo. Con `NODE_ENV=production` no se permite `true` |
+| `ADMIN_API_ENABLED` | `false` | Abre los endpoints `/admin` (libros y stock) y el historial de pedidos de un cliente, solo para desarrollo, hasta que exista la autenticación. Cerrada, responden `404` como si no existieran. Con `NODE_ENV=production` no se permite `true` |
 | `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external`. Con `NODE_ENV=production` la API no arranca con `fake`, porque aprueba cualquier tarjeta |
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
 | `PAYMENT_SIMULATED_DELAY_MS` | `3000` | Solo con `PAYMENT_PROVIDER=fake`: lo que tarda la pasarela simulada en cobrar y en reembolsar, como un proveedor real. `0` quita la demora |
 | `EMAIL_SIMULATED_DELAY_MS` | `3000` | Lo que tarda el correo simulado en "enviarse" (se escribe en el log al terminar). `0` quita la demora |
+| `JWT_SECRET` | — | Secreto con el que se firman los tokens de acceso (al menos 32 caracteres variados; `openssl rand -base64 48`). **Obligatorio con `NODE_ENV=production`**; sin él, en desarrollo, cada arranque usa uno aleatorio y los tokens dejan de valer al reiniciar |
+| `ACCESS_TOKEN_TTL_SECONDS` | `900` | Vida del token de acceso, en segundos (de 60 a 3600) |
+| `REFRESH_TOKEN_TTL_DAYS` | `14` | Días que vale un token de refresco sin usarse (de 1 a 90). Cada renovación entrega uno nuevo con el plazo completo |
+| `PASSWORD_HASH_LOG_N` | `15` | Costo del hash de contraseñas (scrypt, N = 2^valor). Más alto es más lento y más seguro; los tests lo bajan. Con `NODE_ENV=production` no se permite menos de 15 |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
 
-`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. `ADMIN_API_ENABLED` se valida desde ya y se usará con los endpoints de administración. El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. `ADMIN_API_ENABLED` (corte 6) abre las rutas `/admin` y el historial de pedidos; cerrada, responden `404`. El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
 
 ## Base de datos
 
@@ -145,7 +149,17 @@ Al cambiar `prisma/schema.prisma`: `pnpm exec prisma migrate dev --name descripc
 pnpm run db:seed
 ```
 
-Carga clientes, libros y stock para probar la API a mano (usa las variables `DB_*` de tu `.env`). **Se puede ejecutar las veces que quieras**: no duplica filas y restaura los datos de los clientes y del catálogo, pero no pisa el stock que ya exista, así que no pierdes las reservas que hayas hecho al probar. Los títulos y autores son reales; los precios y el stock, inventados. Los datos están en `prisma/seed-data.ts`.
+Carga usuarios, clientes, libros y stock para probar la API a mano (usa las variables `DB_*` de tu `.env`). **Se puede ejecutar las veces que quieras**: no duplica filas y restaura los datos de los clientes y del catálogo, pero no pisa el stock que ya exista, así que no pierdes las reservas que hayas hecho al probar. Los títulos y autores son reales; los precios y el stock, inventados. Los datos están en `prisma/seed-data.ts`.
+
+**Usuarios** (todos con la contraseña de desarrollo `LibroYa-dev-2026`; el seed la guarda como hash):
+
+| Correo | Rol | Id |
+|---|---|---|
+| `ana@example.com` | comprador | `11111111-1111-4111-8111-111111111111` |
+| `luis@example.com` | comprador (cliente premium) | `22222222-2222-4222-8222-222222222222` |
+| `admin@example.com` | administrador | `99999999-9999-4999-8999-999999999999` |
+
+El id del comprador es también el de su cliente en Ventas. **El seed se niega a correr con `NODE_ENV=production`**: la contraseña es pública.
 
 | ISBN | Libro | Precio | Stock | Para probar |
 |---|---|---|---|---|
@@ -170,20 +184,32 @@ curl http://localhost:3000/books/9780132350884       # 200: { isbn, title, autho
 curl http://localhost:3000/books/978-0-13-235088-4   # el ISBN también se acepta con guiones
 curl http://localhost:3000/books/9780201633610       # 404 NOT_FOUND: libro inactivo
 curl http://localhost:3000/books/123                 # 422 INVALID_ISBN
+curl 'http://localhost:3000/books?q=clean'        # 200: { items, page, pageSize, total }, por título o autor
+curl 'http://localhost:3000/books?page=2&pageSize=2'  # el catálogo activo, de 2 en 2 (pageSize máximo 50)
 ```
 
 La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas por dentro al comprar.
 
 ### Probar una compra
 
-`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta y las líneas. Con la API en marcha y los datos de ejemplo:
+`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta, las líneas y la dirección de envío. Con la API en marcha y los datos de ejemplo:
 
 ```bash
 # Ana (normal) compra 2 Clean Code: 90.00 + 10.00 de envío → 201 { orderId, charged: { amount: "100.00", currency: "PEN" } }
 curl -X POST http://localhost:3000/orders \
   -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"customerId":"11111111-1111-4111-8111-111111111111","cardToken":"tok_visa","items":[{"isbn":"9780132350884","quantity":2}]}'
+  -d '{
+    "customerId": "11111111-1111-4111-8111-111111111111",
+    "cardToken": "tok_visa",
+    "items": [{ "isbn": "9780132350884", "quantity": 2 }],
+    "shippingAddress": {
+      "recipient": "Ana Pérez", "phone": "+51 999 888 777",
+      "line1": "Av. Larco 123, Dpto 401", "district": "Miraflores",
+      "province": "Lima", "department": "Lima",
+      "reference": "Frente al parque Kennedy"
+    }
+  }'
 
 # Consultar el pedido
 curl http://localhost:3000/orders/<orderId>
@@ -199,6 +225,9 @@ curl http://localhost:3000/orders/<orderId>
 | Sin registro de stock | Code Complete | `422 STOCK_ITEM_NOT_FOUND` |
 | Libro inactivo | Design Patterns | `404 NOT_FOUND` |
 | Sin `Idempotency-Key`, o con una que no es UUID | — | `400` |
+| Sin dirección de envío, o con un campo obligatorio vacío | Quitar `shippingAddress` o dejar `district` en `""` | `400` |
+| Teléfono que no es un teléfono (o un salto de línea en la calle) | `"phone": "llamar a Ana"` | `422 INVALID_SHIPPING_ADDRESS`, sin reservar ni cobrar |
+| Misma clave con otra dirección | Cambiar `line1` y repetir la `Idempotency-Key` | `422 IDEMPOTENCY_KEY_REUSED` |
 
 **La pasarela de pago simulada** (`PAYMENT_PROVIDER=fake`, la de por defecto) decide por el token de la tarjeta, sin salir a la red:
 
@@ -213,6 +242,47 @@ La pasarela simulada **tarda 3 segundos** en cobrar (y en reembolsar), así que 
 El token solo viaja a la pasarela: no se guarda en la base ni se escribe en los logs.
 
 Pasado un segundo, el relay del Outbox entrega el evento: la reserva pasa a `CONFIRMED` y, unos 3 segundos después (lo que tarda el correo simulado), el correo de confirmación aparece en el log (`Email a ana@example.com: …`) con el mismo `requestId` de la compra. Si algo se queda a medias (por ejemplo, el proceso se cae tras cobrar), `RecoverCheckoutsJob` lo reembolsa y lo libera pasados `CHECKOUT_RECOVERY_MINUTES` minutos. Con `PAYMENT_PROVIDER=external` se usa un proveedor real por HTTP (contrato en [docs/backend/05-piezas-clave.md](../../docs/backend/05-piezas-clave.md)).
+
+### El flujo de la tienda, de punta a punta
+
+Con la administración abierta: (1) `POST /admin/books` da de alta un libro; (2) un segundo después Inventario le crea su stock en cero; (3) `GET /books?q=` lo encuentra, pero comprarlo da `OUT_OF_STOCK`; (4) `POST /admin/stock/:isbn/additions` le carga unidades; (5) `POST /orders` lo compra, con la dirección de envío; (6) `GET /orders?customerId=` lo muestra en el historial, con la dirección. `PATCH /admin/books/:isbn` cambia el precio o lo desactiva. Está probado entero en `test/e2e/store-flow.e2e.spec.ts`.
+
+### Probar la administración
+
+Las rutas `/admin` solo existen con `ADMIN_API_ENABLED=true` en tu `.env` (reinicia la API después). Con el valor por defecto, `false`, responden `404` como si no existieran y `/docs` no las muestra. Con `NODE_ENV=production` la API no arranca con `true`.
+
+```bash
+# Crear un libro: 201 con el libro; 409 BOOK_ALREADY_EXISTS si el ISBN ya existe
+curl -X POST http://localhost:3000/admin/books \
+  -H 'Content-Type: application/json' \
+  -d '{"isbn":"9780134494166","title":"Clean Architecture","author":"Robert C. Martin","price":{"amount":"55.00","currency":"PEN"}}'
+
+curl 'http://localhost:3000/books?q=architecture'    # el libro nuevo ya aparece en la búsqueda
+
+# Cambiar el precio (y/o el título, el autor): 200 con el libro. La moneda no se cambia
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+  -H 'Content-Type: application/json' -d '{"price":{"amount":"49.90"}}'
+
+# Desactivar el libro (no se borra): deja de verse en el catálogo y de poder comprarse. Con "active": true se reactiva
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+  -H 'Content-Type: application/json' -d '{"active":false}'
+```
+
+```bash
+# Historial de pedidos de un cliente, del más reciente al más antiguo, con su dirección de envío
+curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5'
+# Página siguiente: el nextCursor de la respuesta, tal cual (es opaco). Es null en la última página
+curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5&cursor=<nextCursor>'
+```
+
+```bash
+# Cargar stock: SUMA unidades a lo disponible (no fija un valor). 201 { isbn, available, reserved }
+# El libro nuevo tiene su stock en cero un segundo después de crearlo (lo crea Inventario al recibir el evento)
+curl -X POST http://localhost:3000/admin/stock/9780134494166/additions \
+  -H 'Content-Type: application/json' -d '{"quantity":25}'
+```
+
+El precio entra como sale: `{ "amount": "55.00", "currency": "PEN" }`, con el monto en texto.
 
 ## Levantar la API
 
