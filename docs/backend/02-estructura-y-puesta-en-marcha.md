@@ -77,7 +77,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │
 │   └── contexts/
 │       ├── sales/
-│       │   ├── sales.module.ts
+│       │   ├── sales.module.ts                             ✅ hecho (5.9)
 │       │   ├── domain/
 │       │   │   ├── order/
 │       │   │   │   ├── order.aggregate.ts
@@ -108,29 +108,29 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   ├── application/order/
 │       │   │   ├── place-order.command.ts
 │       │   │   ├── place-order.handler.ts
-│       │   │   ├── get-order.query.ts
+│       │   │   ├── get-order.query.ts                      ✅ hecho (5.8)
 │       │   │   ├── list-customer-orders.query.ts           (fase 14)
-│       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias
-│       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox
+│       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias   ✅ hecho (5.6)
+│       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox   ✅ hecho (5.7)
 │       │   └── infrastructure/
 │       │       ├── order/
-│       │       │   ├── order.controller.ts
-│       │       │   ├── place-order.dto.ts
+│       │       │   ├── order.controller.ts                 ✅ hecho (5.8)
+│       │       │   ├── place-order.dto.ts                  ✅ hecho (5.8)
 │       │       │   ├── shipping-address.dto.ts             (fase 11)
 │       │       │   ├── list-customer-orders.dto.ts         (fase 14)
-│       │       │   ├── get-order.handler.ts
+│       │       │   ├── get-order.handler.ts                ✅ hecho (5.8)
 │       │       │   ├── list-customer-orders.handler.ts     (fase 14)
-│       │       │   ├── prisma-order.repository.ts
-│       │       │   ├── order.mapper.ts
-│       │       │   ├── prisma-checkout-log.adapter.ts
-│       │       │   ├── catalog-in-process.adapter.ts
-│       │       │   ├── inventory-in-process.adapter.ts
-│       │       │   └── console-notifier.adapter.ts
+│       │       │   ├── prisma-order.repository.ts          ✅ hecho (5.3)
+│       │       │   ├── order.mapper.ts                     ✅ hecho (5.3)
+│       │       │   ├── prisma-checkout-log.adapter.ts      ✅ hecho (5.2)
+│       │       │   ├── catalog-in-process.adapter.ts       ✅ hecho (5.4)
+│       │       │   ├── inventory-in-process.adapter.ts     ✅ hecho (5.4)
+│       │       │   └── console-notifier.adapter.ts         ✅ hecho (5.4)
 │       │       ├── customer/
-│       │       │   └── prisma-customer.repository.ts
+│       │       │   └── prisma-customer.repository.ts       ✅ hecho (5.2)
 │       │       └── payment/
-│       │           ├── fake-payment-gateway.adapter.ts
-│       │           └── external-payment.adapter.ts
+│       │           ├── simulated-payment-gateway.adapter.ts   ✅ hecho (5.5); en la guía v5 se llamaba FakePaymentGateway
+│       │           └── external-payment.adapter.ts            ✅ hecho (5.5)
 │       │
 │       ├── catalog/
 │       │   ├── catalog.module.ts
@@ -163,7 +163,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       ├── release-stock.handler.ts                ✅ hecho (corte 3)
 │       │       ├── lock-order.ts                           sortByIsbn: el orden de bloqueo de reservar y liberar
 │       │       ├── order-id.ts                             assertOrderId: el orderId debe ser un UUID
-│       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox
+│       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox   ✅ hecho (5.7)
 │       │       ├── create-stock-item.consumer.ts           (fase 12) consumidor `db`
 │       │       ├── admin-stock.controller.ts               (fase 13) guard en la clase
 │       │       ├── add-stock.dto.ts                        (fase 13)
@@ -304,8 +304,11 @@ DB_NAME=libroya
 PORT=3000
 PAYMENT_PROVIDER=fake            # fake | external
 PAYMENT_API_URL=
+PAYMENT_SIMULATED_DELAY_MS=3000  # solo con fake: lo que tarda la pasarela simulada en cobrar y reembolsar (0 = sin demora)
+EMAIL_SIMULATED_DELAY_MS=3000    # lo que tarda el correo simulado en "enviarse" (0 = sin demora)
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
+DB_STATEMENT_TIMEOUT_MS=5000     # límite de cada sentencia SQL; mantiene acotada la duración de la compra
 ADMIN_API_ENABLED=false          # endpoints /admin solo en desarrollo, hasta tener autenticación (ver [07-fases-y-roadmap.md](07-fases-y-roadmap.md))
 ```
 
@@ -326,14 +329,22 @@ export const envSchema = z
     PORT: z.coerce.number().int().default(3000),
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,
+    PAYMENT_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // solo con PAYMENT_PROVIDER=fake
+    EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
+    DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     ADMIN_API_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
   })
   .refine((e) => !(e.NODE_ENV === 'production' && e.ADMIN_API_ENABLED), {
     path: ['ADMIN_API_ENABLED'],
     message: 'Los endpoints /admin no pueden habilitarse en producción sin autenticación',
+  })
+  // La pasarela simulada aprueba cualquier tarjeta: en producción hay que elegir un proveedor de verdad
+  .refine((e) => !(e.NODE_ENV === 'production' && e.PAYMENT_PROVIDER === 'fake'), {
+    path: ['PAYMENT_PROVIDER'],
+    message: 'PAYMENT_PROVIDER=fake aprueba cualquier tarjeta y no puede usarse en producción: configura PAYMENT_PROVIDER=external y PAYMENT_API_URL',
   })
   .refine((e) => e.PAYMENT_PROVIDER !== 'external' || Boolean(e.PAYMENT_API_URL), {
     path: ['PAYMENT_API_URL'],

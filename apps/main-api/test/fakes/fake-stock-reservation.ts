@@ -9,7 +9,12 @@ export class FakeStockReservation extends StockReservation {
   readonly reserved: { orderId: string; lines: StockLine[] }[] = [];
   readonly released: string[] = [];
 
-  constructor(private readonly options: { outOfStock?: string[] } = {}) {
+  constructor(
+    private readonly options: {
+      outOfStock?: string[];
+      releaseFails?: boolean;
+    } = {},
+  ) {
     super();
   }
 
@@ -24,6 +29,9 @@ export class FakeStockReservation extends StockReservation {
 
   // Idempotente, como la liberación real: sin reserva no hace nada
   release(orderId: string): Promise<void> {
+    if (this.options.releaseFails) {
+      return Promise.reject(new Error('Falla de la liberación'));
+    }
     const index = this.reserved.findIndex((r) => r.orderId === orderId);
     if (index !== -1) {
       this.reserved.splice(index, 1);

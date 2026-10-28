@@ -165,6 +165,23 @@ export class CatalogInProcessAdapter extends CatalogPricing {
 }
 ```
 
+```ts
+// sales/infrastructure/order/console-notifier.adapter.ts
+export class ConsoleNotifier extends Notifier {
+  private readonly logger = new Logger(ConsoleNotifier.name);
+
+  constructor(readonly delayMs = 0) { super(); /* valida: entero de 0 o más */ }
+
+  async send(to: string, message: string, options?: { idempotencyKey?: string }): Promise<void> {
+    if (this.delayMs > 0) await new Promise((resolve) => setTimeout(resolve, this.delayMs));   // como un proveedor real
+    const key = options?.idempotencyKey;
+    this.logger.log(`Email a ${to}: ${message}${key ? ` (clave de idempotencia ${key})` : ''}`);   // el requestId lo añade RequestAwareLogger
+  }
+}
+```
+
+Es un sustituto de desarrollo: escribe el destinatario en el log, así que no es para producción con datos reales. Tarda `EMAIL_SIMULATED_DELAY_MS` (3 s por defecto; los tests lo ponen en 0) y escribe el log **al terminar la espera**: si el proceso se detiene durante ella, el correo no "salió" y el relay lo reintenta con la misma clave. La crea la fábrica de `SalesModule`, que le pasa la demora.
+
 **Cambio en el dominio de la guía v5:** el título viaja como snapshot. `PricedCartItem` y `OrderLine` agregan `title`, y la factory lo pasa a `order.addBook(isbn, title, price, quantity)`. `PricedCartItem` lleva `price` como texto (`"45.00"`) y `currency`, y la factory los convierte con `Money.of(item.price, item.currency)`, sin pasar por `number`.
 
 ### Inventario: reserva atómica, liberación y confirmación
@@ -262,19 +279,27 @@ export class PrismaOrderRepository extends OrderRepository {
   nextId() { return randomUUID(); }
 
   async findById(id: string) {
-    const row = await this.prisma.order.findUnique({ where: { id }, include: { lines: true } });
-    return row ? OrderMapper.toDomain(row) : null;
+    const row = await this.prisma.order.findUnique({
+      where: { id },
+      include: { lines: { orderBy: { isbn: 'asc' } } },       // orden estable, no el físico
+    });
+    return row ? OrderMapper.toDomain(row) : null;           // Order.restore: confirmado y sin eventos
   }
 
   async save(order: Order, charged: Money): Promise<void> {
+    if (order.status !== 'PLACED') throw new DomainError('ORDER_NOT_PLACED', 'Solo se guarda un pedido confirmado');
+    if (charged.currency !== order.currency) throw new DomainError('CURRENCY_MISMATCH', 'El monto cobrado debe estar en la moneda del pedido');
+    const final = charged.toFinal();                          // se redondea una sola vez, aquí
     const events = order.pullEvents();
     await this.prisma.$transaction(async (tx) => {
-      const chargedAmount = charged.toFinal().amount.toString();   // Prisma acepta texto en columnas Decimal
-      await tx.order.create({ data: OrderMapper.toCreate(order, chargedAmount, charged.currency) });
-      await tx.checkout.update({
-        where: { orderId: order.id },
-        data: { status: 'COMPLETED', chargedAmount, currency: charged.currency },   // monto y moneda, para los reintentos
+      // Solo completa un checkout que siga PENDING. Si la recuperación ya lo anuló (reembolsó y liberó), crear el
+      // pedido lo dejaría sin cobro y sin stock: se lanza el error y la transacción se deshace
+      const completed = await tx.checkout.updateMany({
+        where: { orderId: order.id, status: 'PENDING' },
+        data: { status: 'COMPLETED', chargedAmount: final.amount.toFixed(2), currency: final.currency },   // para los reintentos
       });
+      if (completed.count === 0) throw new ConflictError('CHECKOUT_NOT_PENDING', `El checkout del pedido ${order.id} ya no está pendiente`);
+      await tx.order.create({ data: OrderMapper.toCreate(order, final.amount.toFixed(2), final.currency) });
       await this.outbox.append(tx, events);                   // misma transacción: recibe tx
     });
   }
@@ -712,14 +737,14 @@ En JSON, una línea con petición en curso es `{"level":"log","pid":1,"timestamp
 ```ts
 // sales/infrastructure/order/place-order.dto.ts: valida la forma; las reglas las protege el dominio
 class CartItemDto {
-  @ApiProperty({ example: '9780132350884' }) @IsString() @Length(13, 13) isbn!: string;
+  @ApiProperty({ example: '9780132350884' }) @IsString() @IsNotEmpty() @MaxLength(32) isbn!: string;   // el dominio lo normaliza: INVALID_ISBN → 422
   @ApiProperty({ example: 1 }) @IsInt() @Min(1) quantity!: number;
 }
 export class PlaceOrderDto {
   @ApiProperty() @IsUUID() customerId!: string;
-  @ApiProperty() @IsString() cardToken!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) cardToken!: string;
   @ApiProperty({ type: [CartItemDto] })
-  @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => CartItemDto)
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => CartItemDto)
   items!: CartItemDto[];
 }
 
@@ -733,7 +758,10 @@ export class OrderController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'UUID generado por el cliente, uno por intento de compra' })
   place(@Headers('idempotency-key') key: string | undefined, @Body() dto: PlaceOrderDto) {
     if (!key || !isUUID(key)) throw new BadRequestException('Falta el header Idempotency-Key (UUID)');
-    return this.commandBus.execute(new PlaceOrderCommand(key, dto.customerId, dto.items, dto.cardToken));
+    // Se copian solo isbn y quantity: el comando lleva objetos planos, no instancias del DTO
+    return this.commandBus.execute(
+      new PlaceOrderCommand(key, dto.customerId, dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })), dto.cardToken),
+    );
   }
 
   @Get(':id')
@@ -768,6 +796,7 @@ export function configureApp(app: INestApplication): void {
 ```ts
 // contexts/sales/sales.module.ts
 @Module({
+  imports: [OutboxModule],            // PrismaOrderRepository guarda el evento con OutboxWriter (el módulo no es global)
   controllers: [OrderController],
   providers: [
     PlaceOrderHandler, GetOrderHandler, SendOrderConfirmationConsumer, RecoverCheckoutsJob, PricingService,
@@ -783,12 +812,28 @@ export function configureApp(app: INestApplication): void {
       useFactory: (config: ConfigService) =>
         config.get('PAYMENT_PROVIDER') === 'external'
           ? new ExternalPaymentAdapter(config.getOrThrow('PAYMENT_API_URL'))
-          : new FakePaymentGateway(),
+          : new SimulatedPaymentGateway(),
     },
   ],
 })
 export class SalesModule {}
 ```
+
+### Pasarelas de pago
+
+`SimulatedPaymentGateway` (la que usa la aplicación con `PAYMENT_PROVIDER=fake`) no hace red: el token de la tarjeta decide el resultado. `tok_declined` rechaza, `tok_error` lanza un error (una pasarela caída) y cualquier otro token aprueba. Cada operación tarda `PAYMENT_SIMULATED_DELAY_MS` (3 s por defecto; los tests lo ponen en 0), como un proveedor real. Es idempotente por `orderId`, **también entre dos cobros que coinciden dentro de la demora** (guarda la promesa del cobro en curso, no solo su resultado, para no contarlo dos veces), y un reembolso pedido con el cobro en curso espera a que termine. Expone un libro de cobros y reembolsos (`charges`, `refunds`) y nunca guarda el token. La clase `FakePaymentGateway` de `test/fakes/` sigue siendo el doble de los tests unitarios.
+
+`ExternalPaymentAdapter` habla con un contrato HTTP mínimo, provisional hasta elegir proveedor:
+
+| Operación | Petición | Respuesta |
+|---|---|---|
+| Cobrar | `POST {PAYMENT_API_URL}/charges` con `{ reference, amount: "90.00", currency, token }` | `200 { approved: boolean, reason?: string }`. Un rechazo es un 200 con `approved: false` |
+| Reembolsar | `POST {PAYMENT_API_URL}/refunds` con `{ reference }` | `200`, `204` o `404` (no había cobro): las tres se toman como hecho |
+
+- `reference` es el `orderId`, y también viaja en la cabecera `Idempotency-Key`.
+- Tiempo máximo de 10 s (configurable en el constructor). Si se agota, o si el proveedor responde con otro código o con algo que no cumple el contrato, es un **error**, no un rechazo: el cobro pudo haberse hecho y la saga reembolsa.
+- No sigue redirecciones. El motivo de un rechazo se limita a 200 caracteres porque llega al cliente.
+- El token de la tarjeta solo viaja en el cuerpo del cobro: los errores lanzados no lo incluyen (ni a la petición) y nunca se escribe en un log.
 
 Importa los puertos como **valor**, no con `import type`: Nest necesita la clase en runtime para inyectarla.
 

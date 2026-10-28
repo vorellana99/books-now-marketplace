@@ -47,12 +47,15 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `PORT` | `3000` | Puerto de la API |
 | `NODE_ENV` | `development` | `development`, `test` o `production` |
 | `ADMIN_API_ENABLED` | `false` | Endpoints `/admin`, solo para desarrollo. Con `NODE_ENV=production` no se permite `true` |
-| `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external` |
+| `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external`. Con `NODE_ENV=production` la API no arranca con `fake`, porque aprueba cualquier tarjeta |
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
+| `PAYMENT_SIMULATED_DELAY_MS` | `3000` | Solo con `PAYMENT_PROVIDER=fake`: lo que tarda la pasarela simulada en cobrar y en reembolsar, como un proveedor real. `0` quita la demora |
+| `EMAIL_SIMULATED_DELAY_MS` | `3000` | Lo que tarda el correo simulado en "enviarse" (se escribe en el log al terminar). `0` quita la demora |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
+| `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
 
-`OUTBOX_MAX_ATTEMPTS` ya se usa (corte 4). `PAYMENT_PROVIDER`, `PAYMENT_API_URL` y `CHECKOUT_RECOVERY_MINUTES` se validan desde ya, pero se usarán al implementar la compra (corte 5), y `ADMIN_API_ENABLED`, con los endpoints de administración. El avance está en [`docs/backend/00-avance.md`](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. `ADMIN_API_ENABLED` se valida desde ya y se usará con los endpoints de administración. El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
 
 ## Base de datos
 
@@ -169,7 +172,47 @@ curl http://localhost:3000/books/9780201633610       # 404 NOT_FOUND: libro inac
 curl http://localhost:3000/books/123                 # 422 INVALID_ISBN
 ```
 
-La reserva y la liberación de stock aún no tienen endpoint: las usará Ventas por dentro cuando exista (corte 5).
+La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas por dentro al comprar.
+
+### Probar una compra
+
+`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta y las líneas. Con la API en marcha y los datos de ejemplo:
+
+```bash
+# Ana (normal) compra 2 Clean Code: 90.00 + 10.00 de envío → 201 { orderId, charged: { amount: "100.00", currency: "PEN" } }
+curl -X POST http://localhost:3000/orders \
+  -H 'Content-Type: application/json' \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"customerId":"11111111-1111-4111-8111-111111111111","cardToken":"tok_visa","items":[{"isbn":"9780132350884","quantity":2}]}'
+
+# Consultar el pedido
+curl http://localhost:3000/orders/<orderId>
+```
+
+| Prueba | Cómo | Resultado |
+|---|---|---|
+| Cliente premium | `customerId` de Luis (`2222…`), 2 Clean Code | `201`, `81.00 PEN` (10 % de descuento y envío gratis) |
+| Pedido en dólares | Ana, 1 The Pragmatic Programmer | `201`, `18.00 USD` (15.00 + 3.00 de envío) |
+| Reintento | La misma `Idempotency-Key` y el mismo cuerpo | `201` con el mismo `orderId`, sin cobrar otra vez |
+| Clave reutilizada | La misma clave con otro carrito | `422 IDEMPOTENCY_KEY_REUSED` |
+| Sin stock | Refactoring (stock 0) | `422 OUT_OF_STOCK`, no se cobra nada |
+| Sin registro de stock | Code Complete | `422 STOCK_ITEM_NOT_FOUND` |
+| Libro inactivo | Design Patterns | `404 NOT_FOUND` |
+| Sin `Idempotency-Key`, o con una que no es UUID | — | `400` |
+
+**La pasarela de pago simulada** (`PAYMENT_PROVIDER=fake`, la de por defecto) decide por el token de la tarjeta, sin salir a la red:
+
+| `cardToken` | Resultado |
+|---|---|
+| `tok_declined` | `422 PAYMENT_DECLINED` tras unos 6 s (el cobro y el reembolso de la compensación tardan 3 s cada uno); la reserva se libera y no queda pedido |
+| `tok_error` | `500` tras unos 6 s: la pasarela "se cae"; se compensa igual (se libera la reserva y el intento queda anulado) |
+| cualquier otro (por ejemplo `tok_visa`) | Aprobado |
+
+La pasarela simulada **tarda 3 segundos** en cobrar (y en reembolsar), así que `POST /orders` responde pasados unos 3 s. Es a propósito: una segunda petición con la misma `Idempotency-Key` durante ese rato recibe `409 CHECKOUT_IN_PROGRESS`, que se puede ver con dos `curl` seguidos. Cámbialo con `PAYMENT_SIMULATED_DELAY_MS`.
+
+El token solo viaja a la pasarela: no se guarda en la base ni se escribe en los logs.
+
+Pasado un segundo, el relay del Outbox entrega el evento: la reserva pasa a `CONFIRMED` y, unos 3 segundos después (lo que tarda el correo simulado), el correo de confirmación aparece en el log (`Email a ana@example.com: …`) con el mismo `requestId` de la compra. Si algo se queda a medias (por ejemplo, el proceso se cae tras cobrar), `RecoverCheckoutsJob` lo reembolsa y lo libera pasados `CHECKOUT_RECOVERY_MINUTES` minutos. Con `PAYMENT_PROVIDER=external` se usa un proveedor real por HTTP (contrato en [docs/backend/05-piezas-clave.md](../../docs/backend/05-piezas-clave.md)).
 
 ## Levantar la API
 

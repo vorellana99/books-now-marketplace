@@ -1,5 +1,12 @@
 import type { Money } from '../shared/money.vo.js';
 
+// Cuántos checkouts reclama como mucho cada vuelta de la recuperación: lote × duración máxima por checkout
+// (~15 s: reembolso 10 s + liberación 5 s) debe ser menor que el bloqueo de 2 minutos
+export const RECOVERY_BATCH = 5;
+
+// Cuánto queda bloqueado un checkout reclamado por la recuperación, para que otra instancia no lo tome a la vez
+export const RECOVERY_LOCK_MINUTES = 2;
+
 export type CheckoutStatus = 'PENDING' | 'COMPLETED' | 'ABORTED';
 
 export interface CheckoutRecord {

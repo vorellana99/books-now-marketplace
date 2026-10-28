@@ -289,7 +289,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnAppli
       DB_USER: config.getOrThrow('DB_USER'), DB_PASSWORD: config.getOrThrow('DB_PASSWORD'),
       DB_NAME: config.getOrThrow('DB_NAME'),
     }),
-    options: '-c timezone=UTC',   // las columnas TIMESTAMP no llevan zona horaria: todas las conexiones de la app, en UTC
+    // platform/config/connection-options.ts: '-c timezone=UTC -c statement_timeout=5000'
+    options: connectionOptions(config.getOrThrow('DB_STATEMENT_TIMEOUT_MS')),   // todas las conexiones de la app, en UTC y con límite por sentencia
     }) });
   }
   onModuleInit() { return this.$connect(); }
@@ -300,6 +301,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnAppli
 
 > [!important] Las conexiones de la aplicación fuerzan UTC
 > Las columnas `TIMESTAMP(3)` de Prisma **no llevan zona horaria**. Prisma rellena `@default(now())` en el cliente, en UTC, y el relay del Outbox compara contra `now()` de la base, que usa la zona de su sesión. Con la base en UTC−5 y sin `options: '-c timezone=UTC'`, una entrega nueva quedaba programada 5 horas en el futuro y no se entregaba nada. Con la opción, da igual qué zona tenga la base. El SQL que se escribe a mano (por ejemplo, reprocesar entregas `FAILED`) debe ejecutarse con `SET TIME ZONE 'UTC'`.
+
+> [!important] Cada sentencia tiene un límite de tiempo
+> `statement_timeout` (por defecto 5 s, `DB_STATEMENT_TIMEOUT_MS`) cancela cualquier sentencia que se quede esperando un bloqueo o una consulta lenta. Mantiene acotada la duración de la compra, de la que depende el umbral del job de recuperación (`CHECKOUT_RECOVERY_MINUTES`, 10 min). Una sentencia cancelada es un error normal: la saga compensa.
 
 > [!important] El cliente se importa siempre desde la carpeta generada
 > Con `output` propio, `@prisma/client` no conoce este schema. `PrismaClient` y el namespace `Prisma` (por ejemplo, `Prisma.TransactionClient` o `Prisma.PrismaClientKnownRequestError`) se importan desde `src/platform/prisma/generated/client.js`, con la ruta relativa que corresponda:

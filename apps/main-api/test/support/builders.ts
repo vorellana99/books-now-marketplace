@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { query } from './database.js';
 
 // Insertan con SQL directo, no con el código bajo prueba: así un fallo del handler no se esconde detrás del mismo cliente
@@ -137,4 +138,76 @@ export async function secondsUntilRetry(eventId?: string): Promise<number> {
     [eventId ?? null],
   );
   return row.secs;
+}
+
+// ── Ventas ──────────────────────────────────────────────────────────────────────────────────────
+
+export interface CustomerRow {
+  id: string;
+  email: string;
+  premium: boolean;
+}
+
+let nextCustomer = 0;
+
+export async function insertCustomer(
+  overrides: Partial<CustomerRow> = {},
+): Promise<CustomerRow> {
+  const n = ++nextCustomer;
+  const customer: CustomerRow = {
+    id: randomUUID(),
+    email: `cliente${n}@example.com`,
+    premium: false,
+    ...overrides,
+  };
+  await query(
+    'INSERT INTO sales.customers (id, email, premium) VALUES ($1, $2, $3)',
+    [customer.id, customer.email, customer.premium],
+  );
+  return customer;
+}
+
+export interface OrderLineRow {
+  isbn: string;
+  title: string;
+  unit_price: string;
+  currency: 'PEN' | 'USD';
+  quantity: number;
+}
+
+// Un pedido ya guardado, por SQL directo (sin pasar por el repositorio). Los precios van como en la BD, con escala 6
+export async function insertOrder(
+  customerId: string,
+  options: {
+    id?: string;
+    charged?: string;
+    currency?: 'PEN' | 'USD';
+    lines?: Partial<OrderLineRow>[];
+  } = {},
+): Promise<{ id: string; lines: OrderLineRow[] }> {
+  const id = options.id ?? randomUUID();
+  const currency = options.currency ?? 'PEN';
+  await query(
+    `INSERT INTO sales.orders (id, customer_id, status, charged_amount, currency)
+     VALUES ($1, $2, 'PLACED', $3, $4)`,
+    [id, customerId, options.charged ?? '90.00', currency],
+  );
+  const lines: OrderLineRow[] = (
+    options.lines ?? [{ quantity: 2, unit_price: '45.000000' }]
+  ).map((line) => ({
+    isbn: uniqueIsbn(),
+    title: 'Clean Code',
+    unit_price: '45.000000',
+    currency,
+    quantity: 1,
+    ...line,
+  }));
+  for (const l of lines) {
+    await query(
+      `INSERT INTO sales.order_lines (order_id, isbn, title, unit_price, currency, quantity)
+       VALUES ($1, $2, $3, $4, $5, $6)`,
+      [id, l.isbn, l.title, l.unit_price, l.currency, l.quantity],
+    );
+  }
+  return { id, lines };
 }

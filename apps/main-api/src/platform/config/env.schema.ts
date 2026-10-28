@@ -16,8 +16,11 @@ export const envSchema = z
     PORT: z.coerce.number().int().default(3000),
     PAYMENT_PROVIDER: z.enum(['fake', 'external']).default('fake'),
     PAYMENT_API_URL: optionalUrl,
+    PAYMENT_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // solo con PAYMENT_PROVIDER=fake
+    EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
+    DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
@@ -31,6 +34,15 @@ export const envSchema = z
     message:
       'Los endpoints /admin no pueden habilitarse en producción sin autenticación',
   })
+  // La pasarela simulada aprueba cualquier tarjeta: en producción hay que elegir un proveedor de verdad
+  .refine(
+    (e) => !(e.NODE_ENV === 'production' && e.PAYMENT_PROVIDER === 'fake'),
+    {
+      path: ['PAYMENT_PROVIDER'],
+      message:
+        'PAYMENT_PROVIDER=fake aprueba cualquier tarjeta y no puede usarse en producción: configura PAYMENT_PROVIDER=external y PAYMENT_API_URL',
+    },
+  )
   .refine(
     (e) => e.PAYMENT_PROVIDER !== 'external' || Boolean(e.PAYMENT_API_URL),
     {

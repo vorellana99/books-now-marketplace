@@ -14,7 +14,64 @@ describe('envSchema', () => {
     expect(env.PAYMENT_PROVIDER).toBe('fake');
     expect(env.OUTBOX_MAX_ATTEMPTS).toBe(8);
     expect(env.CHECKOUT_RECOVERY_MINUTES).toBe(10);
+    expect(env.DB_STATEMENT_TIMEOUT_MS).toBe(5000);
+    expect(env.PAYMENT_SIMULATED_DELAY_MS).toBe(3000);
+    expect(env.EMAIL_SIMULATED_DELAY_MS).toBe(3000);
     expect(env.ADMIN_API_ENABLED).toBe(false);
+  });
+
+  it('DB_STATEMENT_TIMEOUT_MS se convierte a número', () => {
+    expect(
+      envSchema.parse({ ...base, DB_STATEMENT_TIMEOUT_MS: '8000' })
+        .DB_STATEMENT_TIMEOUT_MS,
+    ).toBe(8000);
+  });
+
+  it.each(['0', '-5', '1.5', 'abc'])(
+    'rechaza DB_STATEMENT_TIMEOUT_MS=%s',
+    (value) => {
+      expect(() =>
+        envSchema.parse({ ...base, DB_STATEMENT_TIMEOUT_MS: value }),
+      ).toThrow(/DB_STATEMENT_TIMEOUT_MS/);
+    },
+  );
+
+  describe('PAYMENT_SIMULATED_DELAY_MS', () => {
+    it('se convierte a número y admite 0 para desactivar la demora', () => {
+      expect(
+        envSchema.parse({ ...base, PAYMENT_SIMULATED_DELAY_MS: '0' })
+          .PAYMENT_SIMULATED_DELAY_MS,
+      ).toBe(0);
+      expect(
+        envSchema.parse({ ...base, PAYMENT_SIMULATED_DELAY_MS: '1500' })
+          .PAYMENT_SIMULATED_DELAY_MS,
+      ).toBe(1500);
+    });
+
+    it.each(['-1', '1.5', 'abc'])('rechaza %s', (value) => {
+      expect(() =>
+        envSchema.parse({ ...base, PAYMENT_SIMULATED_DELAY_MS: value }),
+      ).toThrow(/PAYMENT_SIMULATED_DELAY_MS/);
+    });
+  });
+
+  describe('EMAIL_SIMULATED_DELAY_MS', () => {
+    it('se convierte a número y admite 0 para desactivar la demora', () => {
+      expect(
+        envSchema.parse({ ...base, EMAIL_SIMULATED_DELAY_MS: '0' })
+          .EMAIL_SIMULATED_DELAY_MS,
+      ).toBe(0);
+      expect(
+        envSchema.parse({ ...base, EMAIL_SIMULATED_DELAY_MS: '2500' })
+          .EMAIL_SIMULATED_DELAY_MS,
+      ).toBe(2500);
+    });
+
+    it.each(['-1', '1.5', 'abc'])('rechaza %s', (value) => {
+      expect(() =>
+        envSchema.parse({ ...base, EMAIL_SIMULATED_DELAY_MS: value }),
+      ).toThrow(/EMAIL_SIMULATED_DELAY_MS/);
+    });
   });
 
   it('acepta PAYMENT_API_URL vacía con el proveedor fake', () => {
@@ -27,6 +84,64 @@ describe('envSchema', () => {
     expect(() =>
       envSchema.parse({ ...base, PAYMENT_PROVIDER: 'external' }),
     ).toThrow(/PAYMENT_API_URL/);
+  });
+
+  describe('la pasarela simulada no llega a producción', () => {
+    const production = { ...base, NODE_ENV: 'production' };
+
+    it('rechaza PAYMENT_PROVIDER=fake con NODE_ENV=production', () => {
+      expect(() =>
+        envSchema.parse({ ...production, PAYMENT_PROVIDER: 'fake' }),
+      ).toThrow(/PAYMENT_PROVIDER/);
+    });
+
+    it('también cuando no se define: el valor por defecto es fake', () => {
+      expect(() => envSchema.parse(production)).toThrow(/PAYMENT_PROVIDER/);
+    });
+
+    it('el error señala la variable PAYMENT_PROVIDER', () => {
+      const result = envSchema.safeParse(production);
+      expect(result.success).toBe(false);
+      expect(result.error?.issues.map((i) => i.path.join('.'))).toContain(
+        'PAYMENT_PROVIDER',
+      );
+    });
+
+    it('el mensaje dice qué hacer', () => {
+      expect(() => envSchema.parse(production)).toThrow(/external/);
+    });
+
+    it('acepta external con su URL en producción', () => {
+      const env = envSchema.parse({
+        ...production,
+        PAYMENT_PROVIDER: 'external',
+        PAYMENT_API_URL: 'https://pagos.example.com',
+      });
+      expect(env.PAYMENT_PROVIDER).toBe('external');
+    });
+
+    it.each(['development', 'test'])(
+      'fake sigue permitido con NODE_ENV=%s',
+      (nodeEnv) => {
+        expect(
+          envSchema.parse({
+            ...base,
+            NODE_ENV: nodeEnv,
+            PAYMENT_PROVIDER: 'fake',
+          }).PAYMENT_PROVIDER,
+        ).toBe('fake');
+      },
+    );
+
+    it('sin NODE_ENV (desarrollo por defecto) también', () => {
+      expect(envSchema.parse(base).PAYMENT_PROVIDER).toBe('fake');
+    });
+
+    it('external sin URL en producción pide la URL, no solo cambiar de proveedor', () => {
+      expect(() =>
+        envSchema.parse({ ...production, PAYMENT_PROVIDER: 'external' }),
+      ).toThrow(/PAYMENT_API_URL/);
+    });
   });
 
   it('rechaza ADMIN_API_ENABLED en producción', () => {

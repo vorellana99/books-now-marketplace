@@ -42,6 +42,40 @@ sequenceDiagram
     RL->>DB: entregas → DONE
 ```
 
+### Quién paga y en qué punto ocurre el cobro
+
+En una tienda propia **paga el cliente**, no el dueño. El dueño es quien cobra: el dinero llega a su cuenta bancaria. Entre los dos está el **proveedor de pagos** (Stripe, Culqi, Niubiz, etc.), que cobra la tarjeta del cliente por cuenta del dueño y le deposita el importe menos su comisión. La tienda no procesa tarjetas por sí misma: hacerlo exigiría certificación PCI-DSS.
+
+| Quién | Qué hace |
+|---|---|
+| **Cliente** | Elige los libros y paga con su tarjeta. |
+| **Dueño de la tienda** | Vende los libros y recibe el dinero. No hace ningún pago. |
+| **Proveedor de pagos** | Cobra la tarjeta del cliente, abona el importe al dueño y se queda una comisión por venta. |
+
+```mermaid
+sequenceDiagram
+    actor C as Cliente (navegador)
+    participant API as API de la tienda (POST /orders)
+    participant PP as Proveedor de pagos
+    participant D as Dueño (cuenta bancaria)
+
+    C->>PP: 1. Escribe su tarjeta en el formulario del proveedor
+    PP-->>C: 2. Devuelve un token de un solo uso (cardToken)
+    C->>API: 3. Carrito + cardToken (la tarjeta nunca pasa por la API)
+    API->>API: 4. Valida, calcula el total y reserva el stock
+    API->>PP: 5. COBRO: charge(total, cardToken, orderId)
+    PP->>PP: cobra la tarjeta del cliente
+    PP-->>API: aprobado o rechazado
+    PP->>D: abona el importe, menos la comisión
+    API->>API: 6. Guarda el pedido (o libera la reserva si se rechazó)
+    API-->>C: 7. 201 con el pedido, o 422 PAYMENT_DECLINED
+```
+
+- **El cobro es el paso 5**: ocurre después de reservar el stock y antes de guardar el pedido, dentro de `PlaceOrderHandler`. Si se rechaza, se libera la reserva y no queda pedido; si el cobro pasa y algo falla después, la saga reembolsa al cliente.
+- **La API solo ve el token.** El número de la tarjeta lo escribe el cliente en el formulario del proveedor (pasos 1 y 2), así que no se guarda ni se registra en ningún sitio de la tienda.
+- **En desarrollo no hay proveedor.** `SimulatedPaymentGateway` hace el papel del paso 5 sin mover dinero: decide por el texto del token (`tok_declined` rechaza, `tok_error` falla) y tarda 3 s. En producción lo hace el proveedor real, a través de `ExternalPaymentAdapter`, y la API no arranca con la simulada (`PAYMENT_PROVIDER=external`).
+- **Pendiente de elegir proveedor:** el diseño actual supone un cobro síncrono con token. Si el proveedor exige 3-D Secure o una redirección con confirmación por webhook, el cobro quedaría pendiente hasta recibir la confirmación y habría que adaptar la saga, no solo el adaptador.
+
 ### La saga mínima: qué pasa si el proceso se cae
 
 ```mermaid
@@ -91,14 +125,16 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
   async execute(cmd: PlaceOrderCommand) {
     // 0. Idempotencia: un reintento con la misma clave nunca crea otro pedido ni cobra otra vez
-    const requestHash = hashRequest(cmd.customerId, cmd.items);
+    // Los ISBN se normalizan antes: "978-0-…" y "978…" son el mismo libro y deben dar el mismo hash
+    const items = cmd.items.map((i) => ({ isbn: Isbn.create(i.isbn).value, quantity: i.quantity }));
+    const requestHash = hashRequest(cmd.customerId, items);
     const previous = await this.checkouts.findByKey(cmd.idempotencyKey);
     if (previous) return this.replay(previous, requestHash);
 
     // 1. Sin efectos: validar, pedir precios, armar el pedido y calcular el total
     const customer = await this.customers.findById(cmd.customerId);
     if (!customer) throw new NotFoundError('Customer', cmd.customerId);
-    const order = OrderFactory.fromCart(this.orders.nextId(), customer.id, await this.catalog.priceCart(cmd.items));
+    const order = OrderFactory.fromCart(this.orders.nextId(), customer.id, await this.catalog.priceCart(items));
     const finalPrice = this.pricing.calculateFinalPrice(order, customer, freeShippingSpec.isSatisfiedBy({ order, customer })).toFinal();
     const lines = order.getLines().map((l) => ({ isbn: l.isbn.value, quantity: l.quantity }));
 
@@ -146,10 +182,10 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
 // Mismo cliente y mismo carrito → mismo hash. Fusiona las cantidades del mismo ISBN (como hace el agregado)
 // y ordena, así {A:1, A:2} y {A:2, A:1} producen el mismo hash que {A:3}
-function hashRequest(customerId: string, items: CartItem[]): string {
+function hashRequest(customerId: string, items: { isbn: string; quantity: number }[]): string {
   const merged = new Map<string, number>();
   for (const i of items) merged.set(i.isbn, (merged.get(i.isbn) ?? 0) + i.quantity);
-  const lines = [...merged].sort(([a], [b]) => a.localeCompare(b)).map(([isbn, q]) => `${isbn}:${q}`).join(',');
+  const lines = [...merged].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))   // comparación simple: localeCompare cambia según el idioma del sistema.map(([isbn, q]) => `${isbn}:${q}`).join(',');
   return createHash('sha256').update(`${customerId}|${lines}`).digest('hex');
 }
 ```
@@ -198,25 +234,50 @@ export class RecoverCheckoutsJob {
     const stale = await this.checkouts.claimStale(this.config.get<number>('CHECKOUT_RECOVERY_MINUTES', 10));
     for (const { orderId, requestId } of stale) {
       // Los logs de la recuperación llevan el mismo requestId que la compra original
-      await RequestContext.run(requestId ?? `recovery-${orderId}`, async () => {
-        try {
-          await this.payments.refund(orderId);     // idempotente: sin cobro previo, no hace nada
-          await this.stock.release(orderId);       // idempotente
-          await this.checkouts.abort(orderId);
-          this.logger.warn(`Checkout ${orderId} recuperado: reembolsado y liberado`);
-        } catch (e) {
-          this.logger.error(`No se pudo recuperar ${orderId}; se reintenta en la próxima vuelta: ${e}`);
-        }
-      });
+      await RequestContext.run(requestId ?? `recovery-${orderId}`, () => this.recover(orderId));
     }
     return stale.length;
+  }
+
+  // Un checkout que falla no detiene a los demás: queda PENDING y se reintenta cuando venza su bloqueo
+  private async recover(orderId: string): Promise<void> {
+    try {
+      // La compra pudo completarse después de reclamarse: reembolsar ahora dejaría un pedido sin cobro
+      if (await this.checkouts.isCompleted(orderId)) return;
+      await this.payments.refund(orderId);     // idempotente: sin cobro previo, no hace nada
+      await this.stock.release(orderId);       // idempotente
+      await this.checkouts.abort(orderId);     // solo si las dos compensaciones terminaron
+      this.logger.warn(`Checkout ${orderId} recuperado: reembolsado y liberado`);
+    } catch (e) {
+      this.logger.error(`No se pudo recuperar ${orderId}; se reintenta cuando venza el bloqueo: ${String(e)}`);
+    }
   }
 }
 ```
 
+- **Dos protecciones contra una compra que sigue viva:** el umbral (10 min) supera con mucho lo que puede tardar el handler, y `OrderRepository.save` solo completa un checkout que siga `PENDING`. El `isCompleted` previo cubre el caso en que la compra se complete entre reclamar y compensar. Queda una ventana mínima (completarse justo entre ese `isCompleted` y el reembolso) que solo es posible si un handler sigue vivo pasados los 10 minutos, algo que los timeouts de cada paso impiden.
+
 - **El umbral (10 min) debe superar la duración máxima del handler**, no solo la de la petición HTTP: aunque el cliente se desconecte, el handler sigue ejecutándose. Esa duración está acotada por los timeouts de cada paso (BD 5 s, pasarela 10 s); en el peor caso, con compensaciones, es menos de 1 minuto.
 - **Con varias instancias, cada job reclama checkouts distintos** (`SKIP LOCKED` y un bloqueo de 2 min). Aun así, los tres pasos son idempotentes y `abort` solo cambia filas `PENDING`.
 - **Misma regla que el relay: lote × duración máxima por checkout < bloqueo** (5 × 15 s = 75 s < 120 s). Si el lote tardara más, otra instancia retomaría checkouts que este job todavía no procesó, y se reembolsarían dos veces en la pasarela (sin error de datos, pero con llamadas duplicadas). Los checkouts que no entren en una vuelta se toman en la siguiente, 5 min después.
+
+#### Con proveedores lentos (3 s por operación)
+
+Mientras no haya proveedores reales, la pasarela y el correo simulados tardan 3 s (`PAYMENT_SIMULATED_DELAY_MS` y `EMAIL_SIMULATED_DELAY_MS`), y el diseño tiene que aguantarlo. Los márgenes, con los valores por defecto (los comprueba `test/unit/delay-margins.spec.ts`):
+
+| Margen | Cuenta | Resultado |
+|---|---|---|
+| Vuelta del relay | `BATCH` (10) correos seguidos × 3 s | 30 s < 120 s de bloqueo de las entregas |
+| Lote de la recuperación | `RECOVERY_BATCH` (5) × (reembolso 3 s + liberación 5 s) | 40 s < 120 s de bloqueo (`RECOVERY_LOCK_MINUTES`) |
+| Compra fallida en el peor punto | cobro 3 s + reembolso 3 s + 3 sentencias de 5 s como máximo | 21 s < 2 min, el umbral mínimo de recuperación |
+| Pasarela simulada | 3 s | no supera los 10 s del timeout del adaptador externo |
+
+Lo que cambia en el comportamiento:
+
+- **La respuesta de `POST /orders` tarda unos 3 s** (y unos 6 s si el cobro falla y se compensa con un reembolso). Durante ese rato, otra petición con la misma clave recibe `409 CHECKOUT_IN_PROGRESS`, sin necesidad de compuertas.
+- **El correo llega unos 3 s después de que el relay lo reclame.** El relay entrega una a una, así que con varias compras seguidas un correo puede esperar detrás de otros y la confirmación de una reserva (`db`) también.
+- **Un cierre ordenado puede cortar una vuelta con muchos correos:** el cierre espera 15 s (`STOP_TIMEOUT_MS`) y una vuelta completa puede durar 30 s. Los correos que no terminaron se reintentan al vencer el bloqueo, con la misma clave de idempotencia, así que no se duplican. Por eso el notificador escribe su log al terminar la espera y no al empezar.
+- **Una pasarela lenta no abre una carrera nueva:** la simulada guarda la promesa del cobro en curso, así que dos cobros de la misma referencia dentro de la espera cuentan uno solo.
 
 ```ts
 // sales/infrastructure/order/prisma-checkout-log.adapter.ts (fragmento)
