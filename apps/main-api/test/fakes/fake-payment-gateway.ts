@@ -12,6 +12,11 @@ interface Options {
 }
 
 export class FakePaymentGateway extends PaymentGateway {
+  // Todos los intentos de cobro, aprobados o no
+  readonly attempts: { amount: Money; cardToken: string; orderId: string }[] =
+    [];
+  // Lo realmente cobrado: lo aprobado, y lo que se cobró pero no llegó la respuesta (timeout).
+  // Un pago rechazado no es un cobro
   readonly charged: { amount: Money; cardToken: string; orderId: string }[] =
     [];
   readonly refunded: string[] = [];
@@ -25,12 +30,14 @@ export class FakePaymentGateway extends PaymentGateway {
     cardToken: string,
     orderId: string,
   ): Promise<PaymentResult> {
-    this.charged.push({ amount, cardToken, orderId });
+    const attempt = { amount, cardToken, orderId };
+    this.attempts.push(attempt);
+    if (this.options.approved === false && !this.options.timeout) {
+      return Promise.resolve({ approved: false, reason: this.options.reason });
+    }
+    this.charged.push(attempt);
     if (this.options.timeout) {
       return Promise.reject(new Error('Tiempo de espera agotado'));
-    }
-    if (this.options.approved === false) {
-      return Promise.resolve({ approved: false, reason: this.options.reason });
     }
     return Promise.resolve({ approved: true });
   }

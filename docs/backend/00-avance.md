@@ -15,7 +15,7 @@ Los cortes 0 a 5 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ✅ | `feature/corte-4-outbox` | — |
-| 5 | Compra completa | 7–9 | ⬜ | `feature/corte-5-compra-completa` | — |
+| 5 | Compra completa | 7–9 | 🔄 | `feature/corte-5-compra-completa` | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
 
@@ -207,7 +207,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 5: Compra completa ⬜
+## Corte 5: Compra completa 🔄
 
 **Guía:** [04-flujo-pedido-y-saga](04-flujo-pedido-y-saga.md) · [05-piezas-clave](05-piezas-clave.md) · [api-contrato](../api-contrato.md) · [06-tests](06-tests.md)
 
@@ -217,7 +217,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
-| 1 | `PlaceOrderHandler` | La saga con los fakes: idempotencia, reserva, cobro, guardado y compensaciones | Que cada fallo deje todo como estaba y un reintento nunca cobre dos veces | ⬜ |
+| 1 | `PlaceOrderHandler` | La saga con los fakes: idempotencia, reserva, cobro, guardado y compensaciones | Que cada fallo deje todo como estaba y un reintento nunca cobre dos veces | ✅ |
 | 2 | Checkouts y clientes | `PrismaCheckoutLog` y `PrismaCustomerRepository`, con tests de contrato compartidos con el fake | Que el estado de la saga sobreviva a caídas | ⬜ |
 | 3 | Guardar el pedido | `PrismaOrderRepository` y `OrderMapper` (más `Order.restore`) | Que pedido, cobro registrado y evento se confirmen juntos o ninguno | ⬜ |
 | 4 | Adaptadores en proceso | `CatalogInProcessAdapter`, `InventoryInProcessAdapter` y `ConsoleNotifier` | Que Ventas hable con los otros contextos solo por contratos | ⬜ |
@@ -240,7 +240,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Riesgos:** es el corte más grande y delicado, así que cada compensación se prueba con un test y rompiendo el código a propósito; los dos `POST` simultáneos con la misma clave se prueban con una pasarela que se queda parada (sin tiempos); el timeout del adaptador es configurable para probarlo en milisegundos; el job de cada 5 minutos se prueba llamando a `run()`; el proveedor real aún no está elegido.
 
-- [ ] 5.1 `PlaceOrderCommand` y `PlaceOrderHandler` con compensaciones e idempotencia. Se comprueba: los casos de `06-tests.md` (sin stock, pago rechazado, falla al guardar, timeout del cobro, commit ambiguo, reembolso fallido, reintentos y hash)
+- [x] 5.1 `PlaceOrderCommand` y `PlaceOrderHandler` con compensaciones e idempotencia. Se comprueba: los casos de `06-tests.md` (sin stock, pago rechazado, falla al guardar, timeout del cobro, commit ambiguo, reembolso fallido, reintentos y hash)
 - [ ] 5.2 `PrismaCheckoutLog` y `PrismaCustomerRepository`, con tests de contrato compartidos. Se comprueba: clave repetida, `abort` que no toca un `COMPLETED`, recuperación con `SKIP LOCKED` y bloqueo
 - [ ] 5.3 `PrismaOrderRepository` y `OrderMapper` (pedido + checkout + outbox en una transacción). Se comprueba: atomicidad, ida y vuelta, y un checkout ya anulado
 - [ ] 5.4 Adaptadores: `CatalogInProcessAdapter`, `InventoryInProcessAdapter`, `ConsoleNotifier`. Se comprueba: los errores conservan su clase y el log del email lleva el `requestId`
@@ -316,6 +316,8 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | 4 | `AppModule` registra `OutboxModule` por sí mismo (antes llegaba solo porque `HealthModule` lo importa) y mantiene `ScheduleModule`, que es lo que pone en marcha el intervalo. Los tests lo comprueban, y también que `OutboxModule` por sí solo no programa nada | Depender de un efecto lateral de otro módulo es frágil: quitar el endpoint de salud habría apagado el relay sin avisar |
 | 2026-10-27 | 4 | Límite conocido (decisión 3): el orden de entrega por pedido usa el id del evento (uuidv7), no el orden de confirmación. Hoy no afecta, porque cada pedido genera un solo evento. Queda escrito en la guía y en el README | Se revisa si algún día hay varios eventos por pedido |
 | 2026-10-27 | 1 | `RequestAwareLogger` formatea en vez de envolver: sobrescribe `getJsonLogObject` (JSON) y `stringifyMessage` (texto) en lugar de `log`/`warn`/`error`. Depende de dos métodos protegidos de `ConsoleLogger` de Nest; los tests sobre la forma real de la salida fallarían si una versión futura los cambia | Cubre los seis niveles y evita el conflicto de tipos en `message`. Elegida entre cuatro opciones (dejarlo, primer nivel, ambos formatos, o `nestjs-pino`) |
+| 2026-10-28 | 5 | `PlaceOrderHandler` normaliza los ISBN con `Isbn.create` (acepta guiones, `INVALID_ISBN` si están mal) antes de calcular el hash, y `hashRequest` ordena con comparación de texto simple en vez de `localeCompare`. Si la clave ya existe al iniciar el checkout y `findByKey` no la encuentra, responde `CHECKOUT_IN_PROGRESS` en vez de fallar con un valor nulo | D3 acordada. Sin la normalización, `978-0-…` y `978…` (la misma compra) darían hashes distintos y un reintento se rechazaría como otro carrito |
+| 2026-10-28 | 5 | Los fakes de test se acercan a lo real: un pago **rechazado** ya no cuenta como cobrado (`FakePaymentGateway.charged`; los intentos están en `attempts`), así reembolsar tras un rechazo no hace nada, y `FakeStockReservation` puede fallar al liberar (`releaseFails`) | Con el fake anterior, el reembolso tras un rechazo parecía haber hecho algo y no se podía probar que la compensación se queda a medias si falla la liberación |
 
 ## Problemas abiertos
 
@@ -372,3 +374,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 4, tarea 8 (4.8): cableado y cierre. `AppModule` registra `OutboxModule`; 10 tests e2e con la aplicación completa y el intervalo real (un evento guardado con `append` llega solo a su consumidor, un fallo se reintenta solo con el retroceso real de 2 s, el log del consumidor lleva el `requestId` de origen o `event-<id>`, `/health/outbox` pasa a 200 y sin `ScheduleModule` el relay no corre solo), estables en 3 ejecuciones; 5 mutaciones detectadas. README con una sección operativa del Outbox, y las guías de pruebas y de piezas clave al día. **Corte 4 terminado:** los tests de integración del Outbox pasan, incluido el del `correlationId`. Hoy 290 unitarios y 198 de integración y e2e pasan |
 | 2026-10-27 | Corte 4, tarea 9 (4.9): logs JSON con el `requestId` de primer nivel y `message` siempre del mismo tipo, en los seis niveles (antes `debug`, `verbose` y `fatal` salían sin id). Es una corrección al logger del corte 1, descubierta al probar los logs del relay. 22 tests nuevos de la forma real del JSON y del texto (incluidas peticiones simultáneas) y los 2 del e2e del Outbox actualizados; 6 mutaciones detectadas. Hoy 312 unitarios y 198 de integración y e2e pasan |
 | 2026-10-28 | Plan del corte 5 (5.0): 10 tareas (5.1–5.10) con su cuadro, los huecos de la lista original, 5 decisiones acordadas con el usuario (todas con la opción recomendada) y los riesgos. Rama `feature/corte-5-compra-completa`, abierta desde `develop` al día (a partir de ahora las ramas parten de `develop`) |
+| 2026-10-28 | Corte 5, tarea 1 (5.1): `PlaceOrderHandler` (la saga) y `hashRequest`. Cubre los casos de `06-tests.md`: sin stock, pago rechazado, falla al guardar, timeout del cobro (reembolsa de todos modos), commit ambiguo (no compensa), reembolso o liberación fallidos (el checkout queda `PENDING` y el cliente recibe el error original), y los cuatro finales de un reintento con la misma clave. Compensa en orden (reembolsar, liberar, `ABORTED`). 42 tests nuevos y 2 de los fakes; 28 mutaciones detectadas. Una sobrevivió hasta mirar el importe exacto, porque `toFixed()` redondea por su cuenta y escondía que faltara `toFinal()`. Hoy 356 unitarios y 198 de integración y e2e pasan |

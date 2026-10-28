@@ -91,14 +91,16 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
   async execute(cmd: PlaceOrderCommand) {
     // 0. Idempotencia: un reintento con la misma clave nunca crea otro pedido ni cobra otra vez
-    const requestHash = hashRequest(cmd.customerId, cmd.items);
+    // Los ISBN se normalizan antes: "978-0-…" y "978…" son el mismo libro y deben dar el mismo hash
+    const items = cmd.items.map((i) => ({ isbn: Isbn.create(i.isbn).value, quantity: i.quantity }));
+    const requestHash = hashRequest(cmd.customerId, items);
     const previous = await this.checkouts.findByKey(cmd.idempotencyKey);
     if (previous) return this.replay(previous, requestHash);
 
     // 1. Sin efectos: validar, pedir precios, armar el pedido y calcular el total
     const customer = await this.customers.findById(cmd.customerId);
     if (!customer) throw new NotFoundError('Customer', cmd.customerId);
-    const order = OrderFactory.fromCart(this.orders.nextId(), customer.id, await this.catalog.priceCart(cmd.items));
+    const order = OrderFactory.fromCart(this.orders.nextId(), customer.id, await this.catalog.priceCart(items));
     const finalPrice = this.pricing.calculateFinalPrice(order, customer, freeShippingSpec.isSatisfiedBy({ order, customer })).toFinal();
     const lines = order.getLines().map((l) => ({ isbn: l.isbn.value, quantity: l.quantity }));
 
@@ -146,10 +148,10 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
 // Mismo cliente y mismo carrito → mismo hash. Fusiona las cantidades del mismo ISBN (como hace el agregado)
 // y ordena, así {A:1, A:2} y {A:2, A:1} producen el mismo hash que {A:3}
-function hashRequest(customerId: string, items: CartItem[]): string {
+function hashRequest(customerId: string, items: { isbn: string; quantity: number }[]): string {
   const merged = new Map<string, number>();
   for (const i of items) merged.set(i.isbn, (merged.get(i.isbn) ?? 0) + i.quantity);
-  const lines = [...merged].sort(([a], [b]) => a.localeCompare(b)).map(([isbn, q]) => `${isbn}:${q}`).join(',');
+  const lines = [...merged].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))   // comparación simple: localeCompare cambia según el idioma del sistema.map(([isbn, q]) => `${isbn}:${q}`).join(',');
   return createHash('sha256').update(`${customerId}|${lines}`).digest('hex');
 }
 ```

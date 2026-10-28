@@ -73,6 +73,15 @@ describe('FakeStockReservation', () => {
     expect(stock.reserved).toEqual([]);
   });
 
+  it('la liberación puede fallar, y la reserva sigue en pie', async () => {
+    const stock = new FakeStockReservation({ releaseFails: true });
+    await stock.reserve('o-1', LINES);
+
+    await expect(stock.release('o-1')).rejects.toThrow(/liberación/i);
+    expect(stock.released).toEqual([]);
+    expect(stock.reserved).toHaveLength(1);
+  });
+
   it('liberar un pedido sin reserva no hace nada', async () => {
     const stock = new FakeStockReservation();
     await stock.release('o-9');
@@ -102,6 +111,19 @@ describe('FakePaymentGateway', () => {
       approved: false,
       reason: 'fondos insuficientes',
     });
+  });
+
+  it('un pago rechazado no cuenta como cobrado: reembolsarlo no hace nada', async () => {
+    const payments = new FakePaymentGateway({
+      approved: false,
+      reason: 'sin fondos',
+    });
+    await payments.charge(amount, 'tok', 'o-1');
+
+    expect(payments.charged).toEqual([]);
+    expect(payments.attempts).toHaveLength(1); // pero el intento queda registrado
+    await payments.refund('o-1');
+    expect(payments.refunded).toEqual([]);
   });
 
   it('reembolsa solo lo cobrado y una sola vez (idempotente)', async () => {
