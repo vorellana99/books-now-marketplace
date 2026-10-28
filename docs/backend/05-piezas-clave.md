@@ -165,6 +165,22 @@ export class CatalogInProcessAdapter extends CatalogPricing {
 }
 ```
 
+```ts
+// sales/infrastructure/order/console-notifier.adapter.ts
+@Injectable()
+export class ConsoleNotifier extends Notifier {
+  private readonly logger = new Logger(ConsoleNotifier.name);
+
+  send(to: string, message: string, options?: { idempotencyKey?: string }): Promise<void> {
+    const key = options?.idempotencyKey;
+    this.logger.log(`Email a ${to}: ${message}${key ? ` (clave de idempotencia ${key})` : ''}`);   // el requestId lo añade RequestAwareLogger
+    return Promise.resolve();
+  }
+}
+```
+
+Es un sustituto de desarrollo: escribe el destinatario en el log, así que no es para producción con datos reales.
+
 **Cambio en el dominio de la guía v5:** el título viaja como snapshot. `PricedCartItem` y `OrderLine` agregan `title`, y la factory lo pasa a `order.addBook(isbn, title, price, quantity)`. `PricedCartItem` lleva `price` como texto (`"45.00"`) y `currency`, y la factory los convierte con `Money.of(item.price, item.currency)`, sin pasar por `number`.
 
 ### Inventario: reserva atómica, liberación y confirmación
