@@ -1,9 +1,9 @@
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { configureApp } from './platform/http/configure-app.js';
+import { configureSwagger } from './platform/http/configure-swagger.js';
 import { formatStartupBanner } from './platform/observability/startup-banner.js';
 import { RequestAwareLogger } from './platform/observability/request-aware.logger.js';
 
@@ -16,19 +16,7 @@ async function bootstrap() {
   });
   configureApp(app);
 
-  const doc = new DocumentBuilder()
-    .setTitle('LibroYa API')
-    .setVersion('1.0')
-    .addGlobalParameters({
-      name: 'X-Request-Id',
-      in: 'header',
-      required: false,
-      description: 'Opcional; si falta, la API genera uno',
-    })
-    .build();
-  SwaggerModule.setup('docs', app, () =>
-    SwaggerModule.createDocument(app, doc),
-  );
+  configureSwagger(app);
 
   const config = app.get(ConfigService);
   const port = config.getOrThrow<number>('PORT');

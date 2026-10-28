@@ -179,8 +179,7 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
     await this.prisma.$transaction(async (tx) => {
       // Siempre en orden de ISBN: si dos pedidos con los libros {A, B} y {B, A} reservan a la vez,
       // ambos bloquean primero A y luego B, y no se produce un interbloqueo (deadlock)
-      const sorted = [...lines].sort((a, b) => a.isbn.localeCompare(b.isbn));
-      for (const { isbn, quantity } of sorted) {
+      for (const { isbn, quantity } of sortByIsbn(lines)) {    // lock-order.ts: comparación de texto simple, no depende del idioma del sistema
         // Solo descuenta si alcanza: nunca queda en negativo, aunque haya pedidos simultáneos
         const { count } = await tx.stockItem.updateMany({
           where: { isbn, available: { gte: quantity } },
@@ -198,7 +197,8 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
 }
 ```
 
-- **Las líneas llegan sin ISBN repetidos:** el agregado `Order` ya suma en una sola línea las unidades del mismo libro.
+- **Las líneas llegan sin ISBN repetidos:** el agregado `Order` ya suma en una sola línea las unidades del mismo libro. El handler lo exige antes de abrir la transacción: sin líneas (`EMPTY_RESERVATION`), un ISBN repetido (`DUPLICATE_RESERVATION_LINE`) o una cantidad que no sea un entero ≥ 1 (`INVALID_QUANTITY`) son errores de dominio, no el error de la base.
+- **Un pedido solo reserva una vez:** si ya tiene reservas, el handler lanza `ConflictError` (`ORDER_ALREADY_RESERVED`). Lo detecta una comprobación previa. Para que dos peticiones del mismo pedido a la vez no la esquiven, la transacción empieza con `pg_advisory_xact_lock(hashtext('inventory.reserve-stock'), hashtext(orderId))`: serializa las reservas del mismo pedido, también cuando sus libros son distintos (y por eso no compiten por ninguna fila de stock ni chocan en la clave primaria). Pedidos distintos no se esperan. Como último recurso queda la clave primaria de `reservations` (`P2002`), que se traduce al mismo error. La saga no debería llegar ahí, porque el checkout con su `Idempotency-Key` lo impide.
 - **Toda transacción que toca `stock_items` bloquea las filas en orden de ISBN** (reservar y liberar). Es la regla que evita interbloqueos entre pedidos simultáneos; cualquier operación nueva sobre stock debe seguirla.
 - **`StockItemNotFoundError`** (422, `STOCK_ITEM_NOT_FOUND`) indica un libro del catálogo sin registro de stock: además de rechazar la compra, se registra como error para corregir el dato.
 
@@ -245,6 +245,9 @@ export class ConfirmReservationConsumer implements DbOutboxConsumer<OrderPlacedE
   }
 }
 ```
+
+- **La liberación es idempotente por construcción:** el `DELETE … RETURNING` devuelve cada reserva una sola vez, así que liberar dos veces, o dos liberaciones simultáneas, devuelven el stock una sola vez. Solo toca reservas `HELD`: una `CONFIRMED` ya es definitiva. Es todo o nada: si una línea no se puede devolver (por ejemplo, falta su registro de stock), la transacción se revierte y la reserva se conserva para reintentar.
+- **El `orderId` debe ser un UUID** en la reserva y en la liberación; si no, `INVALID_ORDER_ID` en lugar de un error crudo de la base.
 
 Las reservas `HELD` sin pedido ya no necesitan un job propio en Inventario: las libera `RecoverCheckoutsJob` de Ventas, a través del mismo `ReleaseStockCommand`. Confirmar la reserva sirve para que Inventario distinga las reservas definitivas, que Envíos descontará más adelante.
 
@@ -370,6 +373,8 @@ export class OutboxRegistry implements OnModuleInit {
 }
 ```
 
+El registro hace una comprobación más que el código de arriba: al arrancar rechaza un consumidor mal formado (un `kind` que no sea `db` o `external`, sin `name`, sin `event` o sin método `handle()`), con un mensaje que nombra la clase. Así el error aparece al desplegar y no cuando llega el primer evento. `OutboxModule` importa `DiscoveryModule` y **no** `ScheduleModule`, que se queda en `AppModule`: los tests construyen el Outbox sin intervalo y manejan el relay a mano.
+
 ```ts
 // platform/outbox/outbox.writer.ts
 @Injectable()
@@ -403,6 +408,8 @@ Las entregas se crean al escribir el evento. Un consumidor nuevo solo recibe los
 | **Lote × duración máxima por entrega < bloqueo** (10 × 10 s = 100 s < 2 min) | Si el lote tardara más que el bloqueo, otra instancia reclamaría entregas que todavía esperan en la cola de esta, y se procesarían dos veces |
 | **Fencing por `attempts`** en cada actualización | Si el bloqueo venció y otra instancia reclamó la entrega, la instancia lenta no pisa su estado (por ejemplo, devolver a PENDING algo que ya está DONE). En un consumidor `db`, además, revierte el efecto |
 | **Orden por agregado y consumidor** | Un consumidor nunca procesa un evento de un pedido antes que otro anterior del mismo pedido (por ejemplo, `OrderCancelled` antes que `OrderPlaced`). Si un evento queda FAILED, los posteriores de ese mismo pedido y consumidor siguen adelante; si un consumidor necesita orden estricto incluso con fallos, debe incluir `FAILED` en el `NOT EXISTS` |
+
+**Límite conocido del orden:** `NOT EXISTS` compara el identificador del evento (uuidv7, que crece con el tiempo), no el orden de confirmación. Si dos transacciones del mismo pedido corrieran a la vez y la de id menor confirmara después, el relay podría ver primero el evento posterior. Hoy cada pedido genera un solo evento (`OrderPlaced`), así que no ocurre; si algún día hay varios por pedido, hay que revisar este punto.
 
 ```ts
 // platform/outbox/outbox.relay.ts
@@ -524,22 +531,25 @@ export class OutboxRelay {
       }
       const max = this.config.get<number>('OUTBOX_MAX_ATTEMPTS', 8);
       const failed = d.attempts >= max;
-      const backoffMs = Math.min(2 ** d.attempts * 1000, 5 * 60_000);   // 2 s, 4 s, 8 s… hasta 5 min
-      await this.prisma.delivery.updateMany({
-        where: mine,                                                     // también con fencing
-        data: {
-          status: failed ? 'FAILED' : 'PENDING',
-          nextAttemptAt: new Date(Date.now() + backoffMs),
-          lockedUntil: null,
-          lastError: String(err).slice(0, 1000),
-        },
-      });
+      const backoffSeconds = Math.min(2 ** d.attempts, 5 * 60);   // 2 s, 4 s, 8 s… hasta 5 min
+      // La hora del próximo intento sale del reloj de la base (el mismo del bloqueo), también con fencing por `attempts`
+      await this.prisma.$executeRaw`
+        UPDATE messaging.deliveries
+        SET status = ${failed ? 'FAILED' : 'PENDING'}::messaging."DeliveryStatus",
+            next_attempt_at = now() + make_interval(secs => ${backoffSeconds}),
+            locked_until = NULL, last_error = ${String(err).slice(0, 1000)}
+        WHERE event_id = ${d.eventId}::uuid AND consumer = ${d.consumer}
+          AND attempts = ${d.attempts} AND status = 'PENDING'::messaging."DeliveryStatus"`;
       const msg = `Entrega ${d.consumer} de ${d.eventId}, intento ${d.attempts}: ${String(err)}`;
       failed ? this.logger.error(`FAILED. ${msg}`) : this.logger.warn(msg);
     }
   }
 }
 ```
+
+La instancia lenta nunca pisa a la que retomó la entrega, en ninguno de sus tres finales: si **termina bien**, la actualización a `DONE` no encuentra su intento (en `db` se revierte también el efecto; en `external` solo se avisa de que pudo repetirse); si **falla tarde**, el SQL del fallo tampoco modifica nada y el log lo registra como aviso, sin anunciar un `FAILED` que no ocurrió; y si termina **mientras la otra todavía trabaja**, tampoco marca `DONE`. Los tests lo comprueban con consumidores que se quedan parados hasta que el test los suelta y con el bloqueo vencido por SQL, sin esperar los 2 minutos.
+
+**Apagado ordenado.** `stop()` impide empezar vueltas nuevas y espera (hasta 15 s) a la que esté en curso; el relay lo llama desde `beforeApplicationShutdown`. Por eso `PrismaService` se desconecta en `onApplicationShutdown`, una fase posterior: la conexión sigue abierta mientras el relay termina. Si el relay no alcanza a terminar, la entrega queda bloqueada y otra vuelta la retoma al vencer el bloqueo (a lo sumo, un efecto externo repetido, que por eso lleva el `eventId` como clave de idempotencia).
 
 ```ts
 // platform/outbox/outbox.health.ts: lo usa GET /health/outbox
@@ -596,6 +606,7 @@ export class HealthController {
 **Reprocesar entregas fallidas** (sin autenticación no conviene un endpoint; se hace por SQL o con un script):
 
 ```sql
+SET TIME ZONE 'UTC';   -- las columnas no llevan zona horaria: se escriben en UTC, como hace la aplicación
 UPDATE messaging.deliveries
 SET status = 'PENDING', attempts = 0, next_attempt_at = now(), last_error = NULL
 WHERE status = 'FAILED' AND consumer = 'sales.send-order-confirmation';

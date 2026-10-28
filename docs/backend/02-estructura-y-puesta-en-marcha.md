@@ -53,13 +53,13 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── prisma.service.ts
 │   │   │   └── generated/            lo crea `prisma generate` (no se sube)
 │   │   ├── outbox/
-│   │   │   ├── outbox.module.ts
-│   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer
-│   │   │   ├── outbox-handler.decorator.ts
-│   │   │   ├── outbox.registry.ts
-│   │   │   ├── outbox.writer.ts
-│   │   │   ├── outbox.relay.ts
-│   │   │   └── outbox.health.ts
+│   │   │   ├── outbox.module.ts                            ✅ hecho (4.1); importa DiscoveryModule, no ScheduleModule
+│   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer   ✅ hecho (4.1)
+│   │   │   ├── outbox-handler.decorator.ts                 ✅ hecho (4.1)
+│   │   │   ├── outbox.registry.ts                          ✅ hecho (4.1)
+│   │   │   ├── outbox.writer.ts                            ✅ hecho (4.2)
+│   │   │   ├── outbox.relay.ts                             ✅ runOnce hecho (4.3); ciclo de vida en 4.6
+│   │   │   └── outbox.health.ts                            ✅ hecho (4.7); lo provee HealthModule
 │   │   ├── observability/
 │   │   │   ├── request-context.ts
 │   │   │   ├── request-id.middleware.ts
@@ -67,6 +67,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   └── request-aware.logger.ts
 │   │   ├── http/
 │   │   │   ├── configure-app.ts
+│   │   │   ├── configure-swagger.ts
 │   │   │   ├── domain-exception.filter.ts
 │   │   │   └── admin-api-enabled.guard.ts                  (fase 12)
 │   │   └── health/
@@ -140,6 +141,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   └── deactivate-book.command.ts              (fase 12)
 │       │   └── infrastructure/book/                        todos usan Prisma directo
 │       │       ├── book.controller.ts
+│       │       ├── book-price.response.ts                  esquema de la respuesta, solo para Swagger
 │       │       ├── get-book-price.handler.ts
 │       │       ├── search-books.dto.ts                     (fase 10)
 │       │       ├── search-books.handler.ts                 (fase 10)
@@ -157,8 +159,10 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   ├── application/stock/
 │       │   │   └── add-stock.command.ts                    (fase 13)
 │       │   └── infrastructure/stock/                       todos usan Prisma directo
-│       │       ├── reserve-stock.handler.ts
-│       │       ├── release-stock.handler.ts
+│       │       ├── reserve-stock.handler.ts                ✅ hecho (corte 3)
+│       │       ├── release-stock.handler.ts                ✅ hecho (corte 3)
+│       │       ├── lock-order.ts                           sortByIsbn: el orden de bloqueo de reservar y liberar
+│       │       ├── order-id.ts                             assertOrderId: el orderId debe ser un UUID
 │       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox
 │       │       ├── create-stock-item.consumer.ts           (fase 12) consumidor `db`
 │       │       ├── admin-stock.controller.ts               (fase 13) guard en la clase
@@ -178,7 +182,11 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
     │   ├── fixed-catalog.ts
     │   └── fixtures.ts                                     ISBN, fixedCatalog(), customersWithPremium()
     ├── support/
-    │   └── architecture.ts                                 reglas de dependencias entre capas
+    │   ├── architecture.ts                                 reglas de dependencias entre capas
+    │   ├── global-setup.ts                                 postgres:18 con Testcontainers para integration/ y e2e/
+    │   ├── database.ts                                     query(), resetDatabase() y su guardián
+    │   ├── builders.ts                                     insertBook(), insertStock() con SQL directo
+    │   └── nest.ts                                         createTestApp(): bus CQRS y módulos elegidos sobre la base de pruebas
     ├── unit/
     │   ├── money.vo.spec.ts
     │   ├── order.aggregate.spec.ts

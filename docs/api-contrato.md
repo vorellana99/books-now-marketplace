@@ -6,9 +6,9 @@
 
 | Método | Ruta | Respuesta | Errores (`errorCode`) |
 |---|---|---|---|
-| `POST` | `/orders` (header `Idempotency-Key`) | `201 { orderId, charged: { amount: "90.00", currency: "PEN" } }`, también al reintentar una compra completada | `400` DTO o falta la clave · `404 NOT_FOUND` · `409 CHECKOUT_IN_PROGRESS` · `422 OUT_OF_STOCK`, `PAYMENT_DECLINED`, `IDEMPOTENCY_KEY_REUSED`, `PREVIOUS_ATTEMPT_FAILED` o una regla del dominio |
+| `POST` | `/orders` (header `Idempotency-Key`) | `201 { orderId, charged: { amount: "90.00", currency: "PEN" } }`, también al reintentar una compra completada | `400` DTO o falta la clave · `404 NOT_FOUND` · `409 CHECKOUT_IN_PROGRESS` · `422 OUT_OF_STOCK`, `STOCK_ITEM_NOT_FOUND`, `PAYMENT_DECLINED`, `IDEMPOTENCY_KEY_REUSED`, `PREVIOUS_ATTEMPT_FAILED` o una regla del dominio |
 | `GET` | `/orders/:id` | `200 { id, status, charged: { amount, currency }, lines[{ isbn, title, unitPrice: { amount, currency }, quantity }] }` | `404` |
-| `GET` | `/books/:isbn` | `200 { isbn, title, author, price: { amount, currency } }` | `404` (no existe o está inactivo) |
+| `GET` | `/books/:isbn` | `200 { isbn, title, author, price: { amount, currency } }`; acepta el ISBN con o sin guiones y devuelve el normalizado | `404 NOT_FOUND` (no existe o está inactivo) · `422 INVALID_ISBN` (mal formado o con el dígito de control incorrecto) |
 | `GET` | `/health/live` | `200` si el proceso responde (liveness; no toca la BD) | — |
 | `GET` | `/health/ready` | `200` si la BD responde (readiness; lo usa el balanceador) | `503` |
 | `GET` | `/health/outbox` | `200` si el relay de esta instancia sigue completando vueltas; informa `failed` y `due` (lo usa el monitoreo) | `503` |

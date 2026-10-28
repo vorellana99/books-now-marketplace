@@ -23,21 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
-    # PostgreSQL 18 como en desarrollo: el Outbox usa uuidv7(), que no existe antes
-    services:
-      postgres:
-        image: postgres:18
-        env:
-          POSTGRES_USER: libroya
-          POSTGRES_PASSWORD: libroya
-          POSTGRES_DB: libroya
-        ports: ["5432:5432"]
-        options: >-
-          --health-cmd "pg_isready -U libroya -d libroya"
-          --health-interval 2s
-          --health-timeout 3s
-          --health-retries 15
-
+    # `prisma generate` exige estas variables aunque no se conecte. Los tests e2e levantan su propio
+    # PostgreSQL 18 con Testcontainers (el runner trae Docker) y definen las suyas
     env:
       DB_HOST: localhost
       DB_PORT: "5432"
@@ -68,7 +55,6 @@ jobs:
       - run: pnpm run build
       - run: pnpm test
 
-      - run: pnpm run db:deploy
       - run: pnpm run test:e2e
 
   audit:

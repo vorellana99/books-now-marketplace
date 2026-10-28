@@ -275,25 +275,31 @@ export default defineConfig({
 **`platform/prisma/prisma.service.ts`**
 
 ```ts
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnApplicationShutdown, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { buildDatabaseUrl } from '../config/database-url.js';
 import { PrismaClient } from './generated/client.js';   // NO desde '@prisma/client'
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService extends PrismaClient implements OnModuleInit, OnApplicationShutdown {
   constructor(config: ConfigService) {
     super({ adapter: new PrismaPg({ connectionString: buildDatabaseUrl({
       DB_HOST: config.getOrThrow('DB_HOST'), DB_PORT: config.getOrThrow('DB_PORT'),
       DB_USER: config.getOrThrow('DB_USER'), DB_PASSWORD: config.getOrThrow('DB_PASSWORD'),
       DB_NAME: config.getOrThrow('DB_NAME'),
-    }) }) });
+    }),
+    options: '-c timezone=UTC',   // las columnas TIMESTAMP no llevan zona horaria: todas las conexiones de la app, en UTC
+    }) });
   }
   onModuleInit() { return this.$connect(); }
-  onModuleDestroy() { return this.$disconnect(); }
+  // En la fase de apagado, no al destruir los módulos: el relay del Outbox espera su entrega en curso antes
+  onApplicationShutdown() { return this.$disconnect(); }
 }
 ```
+
+> [!important] Las conexiones de la aplicación fuerzan UTC
+> Las columnas `TIMESTAMP(3)` de Prisma **no llevan zona horaria**. Prisma rellena `@default(now())` en el cliente, en UTC, y el relay del Outbox compara contra `now()` de la base, que usa la zona de su sesión. Con la base en UTC−5 y sin `options: '-c timezone=UTC'`, una entrega nueva quedaba programada 5 horas en el futuro y no se entregaba nada. Con la opción, da igual qué zona tenga la base. El SQL que se escribe a mano (por ejemplo, reprocesar entregas `FAILED`) debe ejecutarse con `SET TIME ZONE 'UTC'`.
 
 > [!important] El cliente se importa siempre desde la carpeta generada
 > Con `output` propio, `@prisma/client` no conoce este schema. `PrismaClient` y el namespace `Prisma` (por ejemplo, `Prisma.TransactionClient` o `Prisma.PrismaClientKnownRequestError`) se importan desde `src/platform/prisma/generated/client.js`, con la ruta relativa que corresponda:

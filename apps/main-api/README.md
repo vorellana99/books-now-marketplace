@@ -2,14 +2,14 @@
 
 API de LibroYa (NestJS 12 + Prisma 7 + PostgreSQL 18). La documentación de diseño está en [`/docs`](../../docs/libroya-backend-guia.md).
 
-Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [Variables de entorno](#variables-de-entorno) · [Base de datos](#base-de-datos) · [Migraciones](#migraciones) · [Levantar la API](#levantar-la-api) · [Pruebas](#pruebas) · [Calidad de código](#calidad-de-código) · [Comandos](#comandos) · [Problemas frecuentes](#problemas-frecuentes)
+Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [Variables de entorno](#variables-de-entorno) · [Base de datos](#base-de-datos) · [Migraciones](#migraciones) · [Datos de ejemplo](#datos-de-ejemplo) · [Levantar la API](#levantar-la-api) · [Outbox](#outbox-eventos-entre-contextos) · [Pruebas](#pruebas) · [Calidad de código](#calidad-de-código) · [Comandos](#comandos) · [Problemas frecuentes](#problemas-frecuentes)
 
 ## Requisitos
 
 - Node.js 24 LTS (≥ 24.15), fijado en `engines` de `package.json`
 - pnpm
 - PostgreSQL **18**, con Docker o instalado en tu máquina. No sirve una versión anterior: el Outbox usa `uuidv7()`.
-- Docker (solo si eliges esa opción de base de datos)
+- Docker: para la base de desarrollo si eliges esa opción, y siempre para `pnpm run test:e2e` (levanta su propio PostgreSQL)
 
 ## Primer arranque
 
@@ -21,6 +21,7 @@ pnpm install                       # 1. dependencias
 cp .env.example .env               # 2. variables de entorno (ajusta DB_PORT y las credenciales si no usas Docker)
 pnpm run db:up                     # 3. base de datos (solo con Docker; si usas la tuya, ver "Base de datos")
 pnpm exec prisma migrate dev       # 4. crea las tablas y genera el cliente de Prisma
+pnpm run db:seed                   # (opcional) clientes, libros y stock de ejemplo
 pnpm run start:dev                 # 5. API en http://localhost:3000
 ```
 
@@ -31,7 +32,7 @@ Compruébalo en <http://localhost:3000/health/ready> (debe responder 200) y en <
 Se leen del archivo `.env` (no se sube al repositorio; la plantilla es `.env.example`). Una variable definida en el terminal tiene prioridad sobre `.env`:
 
 ```bash
-DB_NAME=libroya_test pnpm run test:e2e
+PORT=4000 pnpm run start:dev
 ```
 
 La app valida las variables al arrancar y, si alguna es inválida, no inicia y dice cuál.
@@ -51,7 +52,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 
-Las cuatro últimas ya se validan, pero se usan a medida que se implementan los cortes de [`docs/backend/00-avance.md`](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` ya se usa (corte 4). `PAYMENT_PROVIDER`, `PAYMENT_API_URL` y `CHECKOUT_RECOVERY_MINUTES` se validan desde ya, pero se usarán al implementar la compra (corte 5), y `ADMIN_API_ENABLED`, con los endpoints de administración. El avance está en [`docs/backend/00-avance.md`](../../docs/backend/00-avance.md).
 
 ## Base de datos
 
@@ -117,21 +118,9 @@ psql "postgresql://libroya:tu_contraseña@localhost:5432/libroya" -c "select ver
 
 Debe mostrar `PostgreSQL 18.x`. Si muestra otra versión, esa no sirve.
 
-### Base de datos aparte para las pruebas
+### Base de datos para las pruebas
 
-Los tests e2e usan las variables `DB_*`. Hoy solo leen, pero conviene tener una base de pruebas separada para no mezclar datos con los de desarrollo:
-
-```sql
-CREATE DATABASE libroya_test OWNER libroya;
-```
-
-```bash
-export DB_NAME=libroya_test   # el resto de variables salen de .env
-pnpm run db:deploy        # aplica las migraciones en la base de pruebas
-pnpm run test:e2e
-```
-
-Con Docker, la base se crea con `docker compose exec db psql -U libroya -d libroya -c "CREATE DATABASE libroya_test OWNER libroya"`.
+No tienes que preparar nada: `pnpm run test:e2e` levanta su propio PostgreSQL 18 en un contenedor (Testcontainers), aplica las migraciones y lo elimina al terminar. **No toca tu base de desarrollo**, ni siquiera si `.env` apunta a ella. Solo necesita Docker en marcha.
 
 ## Migraciones
 
@@ -146,6 +135,41 @@ Hazlo la primera vez, y cada vez que cambie `prisma/schema.prisma` o llegue una 
 Al cambiar `prisma/schema.prisma`: `pnpm exec prisma migrate dev --name descripcion_del_cambio`. Genera el SQL en `prisma/migrations/`, que se sube al repositorio. Prisma no permite declarar `CHECK` en el schema: se agregan a mano en ese SQL.
 
 > Los datos de ejemplo (`pnpm run db:seed`) llegan con el corte 3 del [plan de avance](../../docs/backend/00-avance.md). Hoy la base queda vacía.
+
+## Datos de ejemplo
+
+```bash
+pnpm run db:seed
+```
+
+Carga clientes, libros y stock para probar la API a mano (usa las variables `DB_*` de tu `.env`). **Se puede ejecutar las veces que quieras**: no duplica filas y restaura los datos de los clientes y del catálogo, pero no pisa el stock que ya exista, así que no pierdes las reservas que hayas hecho al probar. Los títulos y autores son reales; los precios y el stock, inventados. Los datos están en `prisma/seed-data.ts`.
+
+| ISBN | Libro | Precio | Stock | Para probar |
+|---|---|---|---|---|
+| `9780132350884` | Clean Code | 45.00 PEN | 25 | Compra normal en soles |
+| `9780321125217` | Domain-Driven Design | 120.00 PEN | 8 | Con dos unidades se supera el mínimo de envío gratis (150 PEN) |
+| `9780135957059` | The Pragmatic Programmer | 15.00 USD | 40 | Compra en dólares |
+| `9780134757599` | Refactoring | 22.50 USD | 0 | Agotado: reservarlo da `OUT_OF_STOCK` |
+| `9780201633610` | Design Patterns | 95.00 PEN | 5 | Inactivo: el catálogo lo trata como inexistente |
+| `9780735619678` | Code Complete | 85.00 PEN | sin registro | Reservarlo da `STOCK_ITEM_NOT_FOUND` |
+
+| Cliente | `customerId` | Tipo |
+|---|---|---|
+| ana@example.com | `11111111-1111-4111-8111-111111111111` | Normal |
+| luis@example.com | `22222222-2222-4222-8222-222222222222` | Premium (10 % de descuento y envío gratis) |
+
+### Probar el catálogo
+
+Con la API en marcha (`pnpm run start:dev`) y los datos de ejemplo cargados:
+
+```bash
+curl http://localhost:3000/books/9780132350884       # 200: { isbn, title, author, price: { amount, currency } }
+curl http://localhost:3000/books/978-0-13-235088-4   # el ISBN también se acepta con guiones
+curl http://localhost:3000/books/9780201633610       # 404 NOT_FOUND: libro inactivo
+curl http://localhost:3000/books/123                 # 422 INVALID_ISBN
+```
+
+La reserva y la liberación de stock aún no tienen endpoint: las usará Ventas por dentro cuando exista (corte 5).
 
 ## Levantar la API
 
@@ -176,11 +200,11 @@ Hay dos tipos, y solo uno necesita base de datos:
 | Comando | Qué prueba | ¿Necesita la BD? |
 |---|---|---|
 | `pnpm test` | Unitarios: configuración, contexto de petición, filtro de errores (`test/unit/`) | No |
-| `pnpm run test:e2e` | e2e e integración: arranca la app completa contra PostgreSQL real (`test/e2e/`, `test/integration/`) | **Sí**: base levantada, migraciones aplicadas y variables `DB_*` definidas |
+| `pnpm run test:e2e` | e2e e integración: arranca la app completa contra PostgreSQL real (`test/e2e/`, `test/integration/`) | No usa la tuya: levanta su propio PostgreSQL 18 en un contenedor, así que **necesita Docker en marcha** |
 
 ```bash
 pnpm test                                        # unitarios
-pnpm run test:e2e                                # e2e (levanta antes la base: pnpm run db:up)
+pnpm run test:e2e                                # e2e e integración (levantan su propio PostgreSQL; requiere Docker)
 pnpm run test:watch                              # unitarios en modo observación
 pnpm run test:cov                                # unitarios con cobertura
 pnpm exec vitest run test/unit/env.schema.spec.ts   # un solo archivo
@@ -189,7 +213,53 @@ pnpm exec vitest run -t "texto del test"             # un test por nombre
 
 - Los dos comandos generan el cliente de Prisma antes de ejecutarse.
 - Los tests viven en `test/`, no junto al código: `unit/` para los unitarios, y `integration/` y `e2e/` para los que usan la base de datos.
-- Los tests de integración de los siguientes cortes arrancarán su propio PostgreSQL con Testcontainers (necesitan Docker en marcha).
+- Los archivos de `integration/` y `e2e/` se ejecutan uno tras otro, porque comparten el contenedor. Cada archivo vacía las tablas antes de sus tests con `resetDatabase()` (`test/support/database.ts`), que solo funciona sobre ese contenedor.
+- La primera ejecución descarga la imagen `postgres:18` si no la tienes.
+
+## Outbox: eventos entre contextos
+
+Cuando algo importante pasa en un contexto (por ejemplo, se crea un pedido), se guarda un **evento** en la misma transacción que el cambio, y otro proceso lo entrega después a quien lo escucha. Así el pedido y su evento se confirman juntos o no se confirma ninguno, y un fallo del proveedor de email no deshace una compra.
+
+**Cómo funciona:** `OutboxWriter.append(tx, events)` guarda cada evento y una entrega por consumidor. El `OutboxRelay` corre cada segundo, reclama un lote (hasta 10 entregas), las entrega y las marca `DONE`. Si un consumidor falla, la entrega se reintenta con esperas de 2, 4, 8… segundos (hasta 5 minutos) y, al agotar `OUTBOX_MAX_ATTEMPTS`, queda `FAILED`.
+
+**Agregar un consumidor** (no hay que registrarlo en ningún sitio; basta el decorador y listarlo en `providers`):
+
+```ts
+@OutboxHandler()
+@Injectable()
+export class SendOrderConfirmationConsumer implements ExternalOutboxConsumer<OrderPlacedEvent> {
+  readonly kind = 'external' as const;   // 'db' si el efecto es en la propia base y debe confirmarse junto con la entrega
+  readonly name = 'sales.send-order-confirmation';   // único
+  readonly event = 'sales.order.placed';
+  async handle(event: OrderPlacedEvent, ctx: DeliveryContext) {
+    await this.notifier.send(/* … */ { idempotencyKey: ctx.eventId });   // el proveedor descarta repeticiones por esa clave
+  }
+}
+```
+
+| Tipo | Garantía | Qué hacer |
+|---|---|---|
+| `db` | El efecto y la marca `DONE` se confirman juntos: **efecto único** | Usa `ctx.tx` para escribir; no abras otra transacción |
+| `external` | **Al menos una vez**: puede repetirse si el proceso cae a mitad | Envía `ctx.eventId` como clave de idempotencia |
+
+Un consumidor nuevo solo recibe los eventos que se guarden **después** de desplegarlo. Un evento que nadie escucha no se guarda.
+
+**Vigilar:** `GET /health/outbox` responde `200` mientras el relay de esa instancia siga dando vueltas, y `503` si está detenido (sin vueltas hace más de un minuto). Trae `relayLastRunAt`, `failed` (entregas `FAILED`) y `due` (entregas vencidas sin entregar). Las dos cantidades son informativas: alerta con tus propios umbrales (por ejemplo, `failed` creció, o `due` lleva varios minutos alto). **No lo uses como comprobación del balanceador**: un proveedor de email lento sacaría de servicio todas las instancias; para eso están `/health/live` y `/health/ready`. Tras arrancar, responde `503` durante aproximadamente un segundo, hasta la primera vuelta.
+
+**Reprocesar entregas `FAILED`** (`FAILED` no borra nada: el evento, su payload y `last_error` quedan en la base; cada paso a `FAILED` se registra como error en el log):
+
+```sql
+SET TIME ZONE 'UTC';   -- las columnas no llevan zona horaria: se escriben en UTC, como hace la aplicación
+UPDATE messaging.deliveries
+SET status = 'PENDING', attempts = 0, next_attempt_at = now(), last_error = NULL
+WHERE status = 'FAILED' AND consumer = 'sales.send-order-confirmation';
+```
+
+**Límites que conviene conocer:**
+- Las entregas de un mismo pedido y consumidor salen en orden, pero el orden es el del identificador del evento, no el de confirmación: dos transacciones simultáneas del mismo pedido podrían confirmar al revés. Hoy hay un solo evento por pedido, así que no afecta.
+- Un evento `FAILED` no frena los siguientes del mismo pedido.
+- Una instancia entrega unos 10 eventos por segundo; para más, se añaden instancias (se reparten el trabajo sin repetir entregas).
+- Al cerrar la aplicación, el relay espera hasta 15 segundos a la entrega en curso.
 
 ## Calidad de código
 
@@ -200,7 +270,7 @@ pnpm run format:check     # comprueba el formato sin modificar nada
 pnpm run build            # compila con tipos estrictos
 ```
 
-Antes de subir cambios, con la base levantada (`pnpm run db:up`), conviene correr todo de una vez:
+Antes de subir cambios, con Docker en marcha, conviene correr todo de una vez:
 
 ```bash
 pnpm lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:e2e
@@ -222,7 +292,7 @@ El workflow [`.github/workflows/main-api.yml`](../../.github/workflows/main-api.
 | `pnpm run db:up` | Levanta PostgreSQL 18 con Docker |
 | `pnpm exec prisma migrate dev` | Migraciones en desarrollo |
 | `pnpm run db:deploy` | Aplica las migraciones sin crear nuevas |
-| `pnpm run db:seed` | Datos de ejemplo (pendiente, corte 3) |
+| `pnpm run db:seed` | Carga los [datos de ejemplo](#datos-de-ejemplo) (se puede repetir) |
 | `pnpm run prisma:generate` | Regenera el cliente de Prisma (también se hace en `build`, `test` y `test:e2e`) |
 | `pnpm exec prisma studio` | Explorador visual de la base de datos |
 
@@ -230,6 +300,7 @@ El workflow [`.github/workflows/main-api.yml`](../../.github/workflows/main-api.
 
 | Síntoma | Causa y solución |
 |---|---|
+| `No se pudo iniciar PostgreSQL en un contenedor` al correr `test:e2e` | Docker no está en marcha. Compruébalo con `docker info`. `pnpm test` (unitarios) funciona sin Docker |
 | `function uuidv7() does not exist` al migrar | La base no es PostgreSQL 18 |
 | `P3014: Prisma Migrate could not create the shadow database` | El usuario no tiene `CREATEDB`: `ALTER ROLE libroya CREATEDB;` |
 | `permission denied for schema public` al migrar | El usuario no es dueño de la base: `ALTER DATABASE libroya OWNER TO libroya;` |
