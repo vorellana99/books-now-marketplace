@@ -4,7 +4,7 @@
 
 **Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado
 
-Los cortes 0 a 5 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea de un corte en curso, se marca en las dos. Los commits de cada tarea llevan su número (`2.7`, `3.1`…).
+Los cortes 0 a 6 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea de un corte en curso, se marca en las dos. Los commits de cada tarea llevan su número (`2.7`, `3.1`…).
 
 ## Resumen
 
@@ -16,10 +16,10 @@ Los cortes 0 a 5 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ✅ | `feature/corte-4-outbox` | — |
 | 5 | Compra completa | 7–9 | ✅ | `feature/corte-5-compra-completa` | — |
-| 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
-| 7 | Autenticación | 15 | ⬜ | — | — |
+| 6 | Funcionalidades de tienda | 10–14 | 🔄 | `feature/backend-mvp` | — |
+| 7 | Autenticación | 15 | ⬜ | `feature/backend-mvp` | — |
 
-Los cortes 1 y 2 son independientes y pueden ir en paralelo. Del 3 en adelante, cada uno depende del anterior. Una rama y un pull request por corte, partiendo de `develop`.
+Los cortes 1 y 2 son independientes y pueden ir en paralelo. Del 3 en adelante, cada uno depende del anterior. Hasta el corte 5, una rama y un pull request por corte, partiendo de `develop`. **Desde el corte 6, una sola rama de trabajo, `feature/backend-mvp` (creada desde `develop` con el corte 5 ya mergeado), para todos los cortes que faltan**; el pull request lo abre el usuario cuando lo decida.
 
 **Un corte está terminado cuando:** sus tareas están marcadas, `pnpm lint` y `pnpm test` pasan, sus criterios de "listo cuando…" se cumplen ejecutándolos de verdad, y la guía refleja lo que realmente se hizo.
 
@@ -263,15 +263,63 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 6: Funcionalidades siguientes ⬜
+## Corte 6: Funcionalidades de tienda 🔄
 
-**Guía:** [07-fases-y-roadmap](07-fases-y-roadmap.md)
+**Guía:** [07-fases-y-roadmap](07-fases-y-roadmap.md) · [api-contrato](../api-contrato.md) · [05-piezas-clave](05-piezas-clave.md) · [06-tests](06-tests.md)
 
-- [ ] Fase 10: buscar y listar libros
-- [ ] Fase 11: dirección de envío (`OrderPlacedEvent` v2)
-- [ ] Fase 12: administración de libros y precios (con `AdminApiEnabledGuard`)
-- [ ] Fase 13: carga de stock
-- [ ] Fase 14: historial de pedidos
+**Listo cuando:** `GET /books?q=clean` devuelve los libros activos que coinciden, paginados; `POST /orders` sin dirección responde 400 y con dirección la guarda en el pedido y en `OrderPlacedEvent` v2; con `ADMIN_API_ENABLED=true`, un libro creado con `POST /admin/books` aparece en la búsqueda y tiene su stock en cero, `POST /admin/stock/:isbn/additions` suma unidades que una compra posterior reserva, y `GET /orders?customerId=` devuelve el historial con cursor; con `ADMIN_API_ENABLED=false`, todo `/admin` y el historial responden 404; los e2e pasan.
+
+### Tareas
+
+| # | Tarea | Qué es | Objetivo principal | Estado |
+|---|---|---|---|---|
+| 1 | Buscar y listar libros | `SearchBooksQuery`, su handler y `GET /books?q=&page=&pageSize=` | Que el cliente encuentre libros por título o autor, paginados, sin repetir ni omitir ninguno entre páginas | ⬜ |
+| 2 | Dirección de envío en el dominio | `ShippingAddress` (valor), columnas `ship_*` en `Order` con su migración, `Order`, fábrica, mapper y repositorio | Que el pedido conserve la dirección de entrega como una copia, igual que el título y el precio | ⬜ |
+| 3 | Dirección de envío en la compra | DTO anidado, `PlaceOrderCommand`, `hashRequest`, `OrderPlacedEvent` v2 y la vista del pedido | Que `POST /orders` pida la dirección, la guarde y el evento la lleve, sin romper la idempotencia ni a los consumidores actuales | ⬜ |
+| 4 | Guard de administración | `AdminApiEnabledGuard` (404 si `ADMIN_API_ENABLED=false`) y la etiqueta `admin` en Swagger | Que `/admin` y el historial existan solo en desarrollo, sin quedar expuestos | ⬜ |
+| 5 | Crear libros | `CreateBookCommand`, `BookCreatedEvent` y `POST /admin/books` | Que un libro nazca junto con su evento, en la misma transacción | ⬜ |
+| 6 | Stock inicial de un libro nuevo | Consumidor `inventory.create-stock-item` (`db`) del evento `catalog.book.created` | Que todo libro nuevo tenga su registro de stock en cero, sin que Catálogo toque tablas de Inventario | ⬜ |
+| 7 | Editar y desactivar libros | `UpdateBookCommand`, `DeactivateBookCommand` y `PATCH /admin/books/:isbn` | Cambiar datos o precio y retirar un libro sin borrarlo ni afectar pedidos ya hechos | ⬜ |
+| 8 | Cargar stock | `AddStockCommand` y `POST /admin/stock/:isbn/additions` | Sumar unidades de forma atómica, aunque coincidan con reservas | ⬜ |
+| 9 | Historial de pedidos | `ListCustomerOrdersQuery`, `GET /orders?customerId=&cursor=&limit=` con el guard en el método y el índice `(customer_id, created_at)` | Listar los pedidos de un cliente, del más reciente al más antiguo, con cursor | ⬜ |
+| 10 | e2e y cierre | El flujo de tienda completo, README, contrato de la API, guías y CI | Cumplir el "listo cuando" del corte | ⬜ |
+
+**Huecos de la lista original que este plan cubre:**
+- `AdminApiEnabledGuard` no existe todavía: solo está la variable de entorno que lo gobierna.
+- La guía agrega columnas obligatorias de dirección sin decir qué pasa con los pedidos ya guardados (D1).
+- `GET /orders/:id` no tiene autenticación: si devolviera la dirección, cualquiera con el UUID del pedido vería nombre, teléfono y dirección (D2).
+- La guía no dice cómo se desactiva un libro por HTTP (D4) ni si su moneda se puede cambiar (D5).
+- `AddStockCommand` sin tope: `available` es un entero de 32 bits y una carga enorme lo desbordaría con un `500`. Se limita la cantidad por carga y se valida el resultado.
+- `GET /orders` (historial) comparte controlador con `POST /orders`: el guard va en el método y no en la clase, y `POST /orders` sigue abierto. El historial no puede chocar con `GET /orders/:id`.
+- Agregar la dirección cambia `PlaceOrderCommand`, `hashRequest`, el DTO y la fábrica, así que hay que actualizar casi todos los tests de pedidos ya escritos (handler, controlador, repositorio, mapper y e2e).
+- `OrderPlacedEvent` v2 debe seguir funcionando con los consumidores que leen la v1 (test explícito).
+- La búsqueda con `contains` debe tratar `%` y `_` como texto, no como comodines (test).
+- El CI solo corre con `push` a `main` y `develop`, o en un PR: con una sola rama de trabajo, los cambios no tienen CI hasta abrir un PR (D7).
+
+**Decisiones por confirmar** (cada una con su opción recomendada, como se hizo en los cortes anteriores):
+
+1. **D1 · Pedidos ya guardados, sin dirección:** (A) columnas obligatorias con un texto marcador para las filas viejas (`Sin dirección: pedido anterior`); **(B, recomendada)** columnas que admiten nulo en la base, pero dirección obligatoria al crear un pedido nuevo (DTO y dominio); los pedidos viejos muestran `shippingAddress: null`; (C) tabla aparte `order_shipping`. Recomendada B porque no inventa datos y la migración no depende de que haya filas.
+2. **D2 · Dirección en `GET /orders/:id`:** **(A, recomendada)** no incluirla hasta tener autenticación (solo viaja en el evento y en el historial de administración); (B) incluirla completa; (C) incluir solo distrito, provincia y departamento. Recomendada A porque el endpoint está abierto y el teléfono y la calle son datos personales.
+3. **D3 · Cómo busca el texto:** **(A, recomendada)** `contains` sin distinguir mayúsculas (`ILIKE`), como dice la guía, sin índice; (B) además `unaccent` y `pg_trgm` con un índice GIN desde ya, para que "programacion" encuentre "Programación" y la búsqueda siga rápida. Recomendada A mientras el catálogo es pequeño; B queda para cuando crezca (anotado en la guía).
+4. **D4 · Cómo se desactiva (y reactiva) un libro:** **(A, recomendada)** `PATCH /admin/books/:isbn` acepta `active` (`false` desactiva, `true` reactiva); (B) `DELETE /admin/books/:isbn`, que no borra nada y engaña; (C) dos endpoints, `POST …/deactivation` y `POST …/activation`. Recomendada A: un solo endpoint, y permite deshacer un error.
+5. **D5 · Qué se puede cambiar de un libro:** **(A, recomendada)** título, autor y precio; la **moneda no** (cambiarla es otro libro: afectaría carritos en curso y comparaciones); (B) también la moneda.
+6. **D6 · Registro de las cargas de stock:** **(A, recomendada)** solo se suma al stock, como dice la guía; (B) además se guarda cada carga en una tabla de movimientos (cuánto y cuándo). Recomendada A: sin autenticación no se sabría quién la hizo, y la tabla puede añadirse con la fase 15.
+7. **D7 · CI en la rama de trabajo:** (A) dejarlo como está (solo en PR); **(B, recomendada)** agregar `feature/backend-mvp` a los `push` del workflow para tener CI en cada subida sin abrir un PR. Recomendada B porque ahora la rama vive muchos cortes y el CI ya demostró encontrar diferencias con el entorno local.
+
+**Riesgos:** la tarea 3 toca casi todo lo ya probado de pedidos (se hará con los tests existentes actualizados primero, para ver qué se rompe); la migración de las columnas de dirección debe aplicarse sobre una base con pedidos (se prueba con filas previas); cambiar `hashRequest` invalida las claves de idempotencia en vuelo (aceptable antes de desplegar, y se anota); la carga de stock simultánea con reservas se prueba con concurrencia real y comprobando que el total se conserva; los endpoints de administración no pueden quedar abiertos por un descuido (el guard se prueba en cada ruta, y el esquema de entorno ya rechaza `ADMIN_API_ENABLED=true` en producción).
+
+- [ ] 6.1 `SearchBooksQuery`, su handler y `GET /books`. Se comprueba: solo activos, título o autor sin distinguir mayúsculas, orden estable con desempate por ISBN, páginas sin repetir ni omitir con títulos repetidos, `pageSize` máximo 50, `%` y `_` como texto, y la forma de la respuesta
+- [ ] 6.2 `ShippingAddress`, columnas `ship_*` y su migración, `Order`, fábrica, mapper y repositorio. Se comprueba: campos obligatorios y recortados, referencia opcional, ida y vuelta, migración sobre una base con pedidos, y que el repositorio guarda la dirección
+- [ ] 6.3 Dirección en `POST /orders`: DTO anidado, comando, `hashRequest`, `OrderPlacedEvent` v2 y vista. Se comprueba: 400 sin dirección o incompleta, misma clave y otra dirección da `IDEMPOTENCY_KEY_REUSED`, la dirección con espacios de más cuenta como la misma, el evento v2 lleva la dirección y los consumidores actuales siguen funcionando
+- [ ] 6.4 `AdminApiEnabledGuard`. Se comprueba: 404 con la variable en `false`, paso con `true`, y que el guard de método no afecta a `POST /orders`
+- [ ] 6.5 `CreateBookCommand`, `BookCreatedEvent` y `POST /admin/books`. Se comprueba: ISBN válido y nuevo (`409 BOOK_ALREADY_EXISTS`), precio mayor que 0, libro y evento en la misma transacción, y que el libro aparece en la búsqueda
+- [ ] 6.6 Consumidor `inventory.create-stock-item`. Se comprueba: crea el registro en cero al recibir el evento, repetir la entrega no falla ni pisa un stock existente, y un libro nuevo no se puede comprar hasta cargarle unidades
+- [ ] 6.7 `UpdateBookCommand`, `DeactivateBookCommand` y `PATCH /admin/books/:isbn`. Se comprueba: 404, precio mayor que 0, la moneda no cambia, un libro desactivado desaparece de la búsqueda y de las compras, y un cambio de precio no afecta pedidos ya hechos
+- [ ] 6.8 `AddStockCommand` y `POST /admin/stock/:isbn/additions`. Se comprueba: cantidad entera positiva con tope, `STOCK_ITEM_NOT_FOUND`, y que cargas y reservas simultáneas conservan el total
+- [ ] 6.9 `ListCustomerOrdersQuery` y `GET /orders?customerId=`. Se comprueba: del más reciente al más antiguo, cursor estable aunque lleguen pedidos nuevos entre páginas, desempate con pedidos del mismo instante, 404 con el guard apagado, y que `POST /orders` y `GET /orders/:id` siguen igual
+- [ ] 6.10 e2e del flujo de tienda (el administrador crea un libro y carga stock, el cliente lo busca y lo compra con dirección, y el historial lo muestra), README, contrato de la API, guías y CI. Se comprueba: el "listo cuando" del corte ejecutado de verdad con `curl`
+
+---
 
 ## Corte 7: Autenticación ⬜
 
@@ -421,3 +469,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-28 | Corte 5, tarea 13 (5.13): correo simulado con demora de 3 s configurable. 15 tests del notificador (9 nuevos con temporizadores falsos: tarda lo configurado, el log aparece al terminar con su `requestId` y su clave, demora 0 sin temporizadores, dos correos con su propia demora, demoras inválidas), 4 nuevos de esquema de entorno y 1 de cableado. 11 mutaciones, todas detectadas a la primera. Hoy 571 unitarios y 331 de integración y e2e pasan |
 | 2026-10-28 | Corte 5, tarea 14 (5.14): efectos de la demora. `delay-margins.spec.ts` (6 tests que leen los valores por defecto y las constantes reales del relay, la recuperación y el adaptador externo), 1 de integración que mide el bloqueo de la recuperación con el reloj de la base, 2 de integración de la recuperación con una pasarela lenta (reembolsos en serie, dos jobs a la vez) y `orders-delays.e2e.spec.ts` con demora real escalada a 600 ms (5 tests: la compra tarda lo que el cobro, `409` sin compuertas, rechazo lento, compensación con reembolso lento y correo tras su espera). Estables en tres corridas seguidas. 12 mutaciones: 11 detectadas a la primera y 1 (el correo sin demora) tras cambiar una medición que no distinguía (comparaba con la respuesta HTTP, y el tick de 1 s del relay ya la cumplía) por una desde que el relay reclama la entrega. Guías 04 y 06 y README al día. **Corte 5 cerrado otra vez.** Hoy 577 unitarios y 339 de integración y e2e pasan |
 | 2026-10-28 | Documentación (5.14): `04-flujo-pedido-y-saga.md` explica quién paga y en qué punto ocurre el cobro: el cliente paga, el dueño cobra, el proveedor de pagos intermedia; incluye un diagrama de secuencia con el token de la tarjeta (el cobro es el paso 5 de `POST /orders`), qué hace la pasarela simulada en desarrollo y el aviso de que 3-D Secure o una confirmación por webhook cambiarían la saga. Sin cambios de código |
+| 2026-10-28 | Plan del corte 6 (6.0): 10 tareas (6.1–6.10) con su cuadro, los huecos de la guía, 7 decisiones por confirmar con su opción recomendada y los riesgos. Cambia la forma de trabajo: **una sola rama, `feature/backend-mvp`, para todos los cortes que faltan**, creada desde `develop` con el corte 5 ya mergeado (PR #4). Estado comprobado antes de planificar: `AdminApiEnabledGuard` no existe, hay una sola migración, `OrderPlacedEvent` va en la versión 1, `Customer` solo guarda correo y premium, y el CI solo corre con `push` a `main` y `develop` o en un PR |
