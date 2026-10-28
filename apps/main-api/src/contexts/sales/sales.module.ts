@@ -38,7 +38,14 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
     { provide: CustomerRepository, useClass: PrismaCustomerRepository },
     { provide: CatalogPricing, useClass: CatalogInProcessAdapter },
     { provide: StockReservation, useClass: InventoryInProcessAdapter },
-    { provide: Notifier, useClass: ConsoleNotifier },
+    {
+      provide: Notifier,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService): Notifier =>
+        new ConsoleNotifier(
+          config.getOrThrow<number>('EMAIL_SIMULATED_DELAY_MS'),
+        ),
+    },
     {
       provide: PaymentGateway,
       inject: [ConfigService],

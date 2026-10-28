@@ -96,4 +96,94 @@ describe('ConsoleNotifier', () => {
     });
     expect(result).toBeUndefined();
   });
+
+  describe('con demora, como un proveedor de email real', () => {
+    const DELAY = 3000;
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    // Captura el log mientras el reloj es falso: el test decide cuándo pasa el tiempo
+    async function withLogs(
+      run: (lines: string[]) => Promise<void>,
+    ): Promise<void> {
+      const lines: string[] = [];
+      vi.spyOn(process.stdout, 'write').mockImplementation((chunk) => {
+        lines.push(String(chunk));
+        return true;
+      });
+      Logger.overrideLogger(new RequestAwareLogger({ json: true }));
+      try {
+        await run(lines);
+      } finally {
+        Logger.overrideLogger(new ConsoleLogger());
+        vi.restoreAllMocks();
+      }
+    }
+
+    it('expone la demora configurada, y por defecto no hay ninguna', () => {
+      expect(new ConsoleNotifier(DELAY).delayMs).toBe(DELAY);
+      expect(new ConsoleNotifier().delayMs).toBe(0);
+    });
+
+    it.each([-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
+      'rechaza una demora de %s',
+      (value) => {
+        expect(() => new ConsoleNotifier(value)).toThrow(/demora/i);
+      },
+    );
+
+    it('el correo tarda lo configurado: antes no se envía y después aparece en el log', async () => {
+      await withLogs(async (lines) => {
+        const notifier = new ConsoleNotifier(DELAY);
+        let done = false;
+        void notifier.send('ana@example.com', 'Hola').then(() => (done = true));
+
+        await vi.advanceTimersByTimeAsync(DELAY - 1);
+        expect(done).toBe(false);
+        expect(lines).toEqual([]);
+
+        await vi.advanceTimersByTimeAsync(1);
+        expect(done).toBe(true);
+        expect(lines).toHaveLength(1);
+        expect(lines[0]).toContain('ana@example.com');
+      });
+    });
+
+    it('el log, escrito tras la demora, conserva el requestId y la clave de idempotencia', async () => {
+      await withLogs(async (lines) => {
+        const notifier = new ConsoleNotifier(DELAY);
+        void RequestContext.run('r-compra-9', () =>
+          notifier.send('ana@example.com', 'Hola', { idempotencyKey: 'evt-1' }),
+        );
+
+        await vi.advanceTimersByTimeAsync(DELAY);
+
+        const entry = JSON.parse(lines[0]) as Record<string, string>;
+        expect(entry.requestId).toBe('r-compra-9');
+        expect(entry.message).toContain('evt-1');
+      });
+    });
+
+    it('con demora 0 no espera ningún temporizador', async () => {
+      await withLogs(async (lines) => {
+        // sin avanzar el reloj: si esperara un temporizador, nunca terminaría
+        await new ConsoleNotifier(0).send('ana@example.com', 'Hola');
+        expect(lines).toHaveLength(1);
+      });
+    });
+
+    it('dos correos a la vez se envían cada uno tras su propia demora', async () => {
+      await withLogs(async (lines) => {
+        const notifier = new ConsoleNotifier(DELAY);
+        void notifier.send('a@example.com', 'uno');
+        await vi.advanceTimersByTimeAsync(1000);
+        void notifier.send('b@example.com', 'dos');
+
+        await vi.advanceTimersByTimeAsync(DELAY - 1000);
+        expect(lines).toHaveLength(1);
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(lines).toHaveLength(2);
+      });
+    });
+  });
 });

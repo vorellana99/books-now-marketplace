@@ -50,6 +50,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external`. Con `NODE_ENV=production` la API no arranca con `fake`, porque aprueba cualquier tarjeta |
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
 | `PAYMENT_SIMULATED_DELAY_MS` | `3000` | Solo con `PAYMENT_PROVIDER=fake`: lo que tarda la pasarela simulada en cobrar y en reembolsar, como un proveedor real. `0` quita la demora |
+| `EMAIL_SIMULATED_DELAY_MS` | `3000` | Lo que tarda el correo simulado en "enviarse" (se escribe en el log al terminar). `0` quita la demora |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
@@ -211,7 +212,7 @@ La pasarela simulada **tarda 3 segundos** en cobrar (y en reembolsar), así que 
 
 El token solo viaja a la pasarela: no se guarda en la base ni se escribe en los logs.
 
-Un segundo después de comprar, el relay del Outbox entrega el evento: la reserva pasa a `CONFIRMED` y el correo de confirmación aparece en el log (`Email a ana@example.com: …`) con el mismo `requestId` de la compra. Si algo se queda a medias (por ejemplo, el proceso se cae tras cobrar), `RecoverCheckoutsJob` lo reembolsa y lo libera pasados `CHECKOUT_RECOVERY_MINUTES` minutos. Con `PAYMENT_PROVIDER=external` se usa un proveedor real por HTTP (contrato en [docs/backend/05-piezas-clave.md](../../docs/backend/05-piezas-clave.md)).
+Pasado un segundo, el relay del Outbox entrega el evento: la reserva pasa a `CONFIRMED` y, unos 3 segundos después (lo que tarda el correo simulado), el correo de confirmación aparece en el log (`Email a ana@example.com: …`) con el mismo `requestId` de la compra. Si algo se queda a medias (por ejemplo, el proceso se cae tras cobrar), `RecoverCheckoutsJob` lo reembolsa y lo libera pasados `CHECKOUT_RECOVERY_MINUTES` minutos. Con `PAYMENT_PROVIDER=external` se usa un proveedor real por HTTP (contrato en [docs/backend/05-piezas-clave.md](../../docs/backend/05-piezas-clave.md)).
 
 ## Levantar la API
 

@@ -167,19 +167,20 @@ export class CatalogInProcessAdapter extends CatalogPricing {
 
 ```ts
 // sales/infrastructure/order/console-notifier.adapter.ts
-@Injectable()
 export class ConsoleNotifier extends Notifier {
   private readonly logger = new Logger(ConsoleNotifier.name);
 
-  send(to: string, message: string, options?: { idempotencyKey?: string }): Promise<void> {
+  constructor(readonly delayMs = 0) { super(); /* valida: entero de 0 o más */ }
+
+  async send(to: string, message: string, options?: { idempotencyKey?: string }): Promise<void> {
+    if (this.delayMs > 0) await new Promise((resolve) => setTimeout(resolve, this.delayMs));   // como un proveedor real
     const key = options?.idempotencyKey;
     this.logger.log(`Email a ${to}: ${message}${key ? ` (clave de idempotencia ${key})` : ''}`);   // el requestId lo añade RequestAwareLogger
-    return Promise.resolve();
   }
 }
 ```
 
-Es un sustituto de desarrollo: escribe el destinatario en el log, así que no es para producción con datos reales.
+Es un sustituto de desarrollo: escribe el destinatario en el log, así que no es para producción con datos reales. Tarda `EMAIL_SIMULATED_DELAY_MS` (3 s por defecto; los tests lo ponen en 0) y escribe el log **al terminar la espera**: si el proceso se detiene durante ella, el correo no "salió" y el relay lo reintenta con la misma clave. La crea la fábrica de `SalesModule`, que le pasa la demora.
 
 **Cambio en el dominio de la guía v5:** el título viaja como snapshot. `PricedCartItem` y `OrderLine` agregan `title`, y la factory lo pasa a `order.addBook(isbn, title, price, quantity)`. `PricedCartItem` lleva `price` como texto (`"45.00"`) y `currency`, y la factory los convierte con `Money.of(item.price, item.currency)`, sin pasar por `number`.
 

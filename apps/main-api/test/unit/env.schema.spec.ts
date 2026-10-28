@@ -16,6 +16,7 @@ describe('envSchema', () => {
     expect(env.CHECKOUT_RECOVERY_MINUTES).toBe(10);
     expect(env.DB_STATEMENT_TIMEOUT_MS).toBe(5000);
     expect(env.PAYMENT_SIMULATED_DELAY_MS).toBe(3000);
+    expect(env.EMAIL_SIMULATED_DELAY_MS).toBe(3000);
     expect(env.ADMIN_API_ENABLED).toBe(false);
   });
 
@@ -51,6 +52,25 @@ describe('envSchema', () => {
       expect(() =>
         envSchema.parse({ ...base, PAYMENT_SIMULATED_DELAY_MS: value }),
       ).toThrow(/PAYMENT_SIMULATED_DELAY_MS/);
+    });
+  });
+
+  describe('EMAIL_SIMULATED_DELAY_MS', () => {
+    it('se convierte a número y admite 0 para desactivar la demora', () => {
+      expect(
+        envSchema.parse({ ...base, EMAIL_SIMULATED_DELAY_MS: '0' })
+          .EMAIL_SIMULATED_DELAY_MS,
+      ).toBe(0);
+      expect(
+        envSchema.parse({ ...base, EMAIL_SIMULATED_DELAY_MS: '2500' })
+          .EMAIL_SIMULATED_DELAY_MS,
+      ).toBe(2500);
+    });
+
+    it.each(['-1', '1.5', 'abc'])('rechaza %s', (value) => {
+      expect(() =>
+        envSchema.parse({ ...base, EMAIL_SIMULATED_DELAY_MS: value }),
+      ).toThrow(/EMAIL_SIMULATED_DELAY_MS/);
     });
   });
 

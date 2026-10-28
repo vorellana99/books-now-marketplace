@@ -153,6 +153,20 @@ describe('SalesModule en la aplicación completa', () => {
       }
     });
 
+    it('el notificador recibe la demora de EMAIL_SIMULATED_DELAY_MS', async () => {
+      const app = await build({
+        PAYMENT_PROVIDER: 'fake',
+        EMAIL_SIMULATED_DELAY_MS: '777',
+      });
+      try {
+        const notifier = app.get(Notifier, { strict: false });
+        expect(notifier).toBeInstanceOf(ConsoleNotifier);
+        expect((notifier as ConsoleNotifier).delayMs).toBe(777);
+      } finally {
+        await app.close();
+      }
+    });
+
     it('con fake, la simulada', async () => {
       const app = await build({ PAYMENT_PROVIDER: 'fake' });
       try {
