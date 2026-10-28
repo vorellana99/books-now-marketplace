@@ -200,21 +200,28 @@ export class RecoverCheckoutsJob {
     const stale = await this.checkouts.claimStale(this.config.get<number>('CHECKOUT_RECOVERY_MINUTES', 10));
     for (const { orderId, requestId } of stale) {
       // Los logs de la recuperación llevan el mismo requestId que la compra original
-      await RequestContext.run(requestId ?? `recovery-${orderId}`, async () => {
-        try {
-          await this.payments.refund(orderId);     // idempotente: sin cobro previo, no hace nada
-          await this.stock.release(orderId);       // idempotente
-          await this.checkouts.abort(orderId);
-          this.logger.warn(`Checkout ${orderId} recuperado: reembolsado y liberado`);
-        } catch (e) {
-          this.logger.error(`No se pudo recuperar ${orderId}; se reintenta en la próxima vuelta: ${e}`);
-        }
-      });
+      await RequestContext.run(requestId ?? `recovery-${orderId}`, () => this.recover(orderId));
     }
     return stale.length;
   }
+
+  // Un checkout que falla no detiene a los demás: queda PENDING y se reintenta cuando venza su bloqueo
+  private async recover(orderId: string): Promise<void> {
+    try {
+      // La compra pudo completarse después de reclamarse: reembolsar ahora dejaría un pedido sin cobro
+      if (await this.checkouts.isCompleted(orderId)) return;
+      await this.payments.refund(orderId);     // idempotente: sin cobro previo, no hace nada
+      await this.stock.release(orderId);       // idempotente
+      await this.checkouts.abort(orderId);     // solo si las dos compensaciones terminaron
+      this.logger.warn(`Checkout ${orderId} recuperado: reembolsado y liberado`);
+    } catch (e) {
+      this.logger.error(`No se pudo recuperar ${orderId}; se reintenta cuando venza el bloqueo: ${String(e)}`);
+    }
+  }
 }
 ```
+
+- **Dos protecciones contra una compra que sigue viva:** el umbral (10 min) supera con mucho lo que puede tardar el handler, y `OrderRepository.save` solo completa un checkout que siga `PENDING`. El `isCompleted` previo cubre el caso en que la compra se complete entre reclamar y compensar. Queda una ventana mínima (completarse justo entre ese `isCompleted` y el reembolso) que solo es posible si un handler sigue vivo pasados los 10 minutos, algo que los timeouts de cada paso impiden.
 
 - **El umbral (10 min) debe superar la duración máxima del handler**, no solo la de la petición HTTP: aunque el cliente se desconecte, el handler sigue ejecutándose. Esa duración está acotada por los timeouts de cada paso (BD 5 s, pasarela 10 s); en el peor caso, con compensaciones, es menos de 1 minuto.
 - **Con varias instancias, cada job reclama checkouts distintos** (`SKIP LOCKED` y un bloqueo de 2 min). Aun así, los tres pasos son idempotentes y `abort` solo cambia filas `PENDING`.

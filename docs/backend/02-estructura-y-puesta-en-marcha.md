@@ -110,7 +110,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   ├── place-order.handler.ts
 │       │   │   ├── get-order.query.ts
 │       │   │   ├── list-customer-orders.query.ts           (fase 14)
-│       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias
+│       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias   ✅ hecho (5.6)
 │       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox
 │       │   └── infrastructure/
 │       │       ├── order/
