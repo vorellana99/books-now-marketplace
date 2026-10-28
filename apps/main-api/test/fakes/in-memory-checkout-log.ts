@@ -1,4 +1,5 @@
 import {
+  RECOVERY_BATCH,
   CheckoutLog,
   type CheckoutRecord,
   type CheckoutStatus,
@@ -16,7 +17,7 @@ interface Row {
   lockedUntil: Date | null;
 }
 
-const LOCK_MINUTES = 5; // como el bloqueo de la recuperación real
+const LOCK_MINUTES = 2; // como el bloqueo de la recuperación real
 const MINUTE = 60_000;
 
 export class InMemoryCheckoutLog extends CheckoutLog {
@@ -75,7 +76,12 @@ export class InMemoryCheckoutLog extends CheckoutLog {
     const now = this.now();
     const limit = now.getTime() - olderThanMinutes * MINUTE;
     const claimed: { orderId: string; requestId: string | null }[] = [];
-    for (const row of this.rows.values()) {
+    // los más antiguos primero, como la consulta real
+    const byAge = [...this.rows.values()].sort(
+      (x, y) => x.startedAt.getTime() - y.startedAt.getTime(),
+    );
+    for (const row of byAge) {
+      if (claimed.length >= RECOVERY_BATCH) break; // un lote acotado por vuelta, como la consulta real
       const free = !row.lockedUntil || row.lockedUntil <= now;
       if (
         row.status === 'PENDING' &&
@@ -90,6 +96,11 @@ export class InMemoryCheckoutLog extends CheckoutLog {
   }
 
   // Ayudas para los tests y para el repositorio en memoria
+  expireLock(orderId: string): void {
+    const row = this.rows.get(orderId);
+    if (row) row.lockedUntil = new Date(0);
+  }
+
   complete(orderId: string, charged: Money): void {
     const row = this.rows.get(orderId);
     if (!row) return;

@@ -122,12 +122,12 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       │   ├── list-customer-orders.handler.ts     (fase 14)
 │       │       │   ├── prisma-order.repository.ts
 │       │       │   ├── order.mapper.ts
-│       │       │   ├── prisma-checkout-log.adapter.ts
+│       │       │   ├── prisma-checkout-log.adapter.ts      ✅ hecho (5.2)
 │       │       │   ├── catalog-in-process.adapter.ts
 │       │       │   ├── inventory-in-process.adapter.ts
 │       │       │   └── console-notifier.adapter.ts
 │       │       ├── customer/
-│       │       │   └── prisma-customer.repository.ts
+│       │       │   └── prisma-customer.repository.ts       ✅ hecho (5.2)
 │       │       └── payment/
 │       │           ├── fake-payment-gateway.adapter.ts
 │       │           └── external-payment.adapter.ts

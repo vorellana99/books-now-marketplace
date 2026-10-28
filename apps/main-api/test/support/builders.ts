@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { query } from './database.js';
 
 // Insertan con SQL directo, no con el código bajo prueba: así un fallo del handler no se esconde detrás del mismo cliente
@@ -137,4 +138,31 @@ export async function secondsUntilRetry(eventId?: string): Promise<number> {
     [eventId ?? null],
   );
   return row.secs;
+}
+
+// ── Ventas ──────────────────────────────────────────────────────────────────────────────────────
+
+export interface CustomerRow {
+  id: string;
+  email: string;
+  premium: boolean;
+}
+
+let nextCustomer = 0;
+
+export async function insertCustomer(
+  overrides: Partial<CustomerRow> = {},
+): Promise<CustomerRow> {
+  const n = ++nextCustomer;
+  const customer: CustomerRow = {
+    id: randomUUID(),
+    email: `cliente${n}@example.com`,
+    premium: false,
+    ...overrides,
+  };
+  await query(
+    'INSERT INTO sales.customers (id, email, premium) VALUES ($1, $2, $3)',
+    [customer.id, customer.email, customer.premium],
+  );
+  return customer;
 }
