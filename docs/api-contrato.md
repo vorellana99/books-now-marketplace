@@ -16,7 +16,9 @@
 
 **Un pedido tiene una sola moneda.** Si el carrito mezcla libros en monedas distintas, `POST /orders` responde `422 CURRENCY_MISMATCH`. El pedido se cobra en esa moneda (`PEN` o `USD`): `charged.currency` la indica, y el costo de envío y el mínimo de envío gratis dependen de ella. Una moneda sin reglas de precio responde `422 UNSUPPORTED_CURRENCY`.
 
-**Reglas del pedido que `POST /orders` responde con `422`:** `INVALID_ISBN` (ISBN mal formado), `INVALID_QUANTITY` (la cantidad no es un entero ≥ 1), `MAX_QUANTITY_EXCEEDED` (más de 10 unidades del mismo libro, sumando líneas repetidas), `EMPTY_ORDER` (carrito sin libros) y `PRICE_MISMATCH` (el mismo libro con dos precios distintos).
+**Forma del cuerpo de `POST /orders` (`400`):** `customerId` es un UUID; `cardToken` es un texto no vacío (hasta 255 caracteres); `items` es una lista de 1 a 100 líneas con `isbn` (texto no vacío, hasta 32 caracteres) y `quantity` (entero ≥ 1). Cualquier otro campo se rechaza, así que el cliente no puede mandar precios ni totales. Una lista vacía o una cantidad que no es un entero ≥ 1 se rechazan aquí, con `400`, antes de llegar al dominio.
+
+**Reglas del pedido que `POST /orders` responde con `422`:** `INVALID_ISBN` (ISBN mal formado o con el dígito de control incorrecto), `MAX_QUANTITY_EXCEEDED` (más de 10 unidades del mismo libro, sumando líneas repetidas) y `PRICE_MISMATCH` (el mismo libro con dos precios distintos). Las reglas `EMPTY_ORDER` e `INVALID_QUANTITY` siguen existiendo en el dominio, pero por HTTP las intercepta antes la validación del cuerpo.
 
 **Todas las respuestas incluyen el header `X-Request-Id`.** Si la petición lo trae (con formato válido), se devuelve el mismo; si no, uno generado.
 

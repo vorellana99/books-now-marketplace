@@ -736,14 +736,14 @@ En JSON, una línea con petición en curso es `{"level":"log","pid":1,"timestamp
 ```ts
 // sales/infrastructure/order/place-order.dto.ts: valida la forma; las reglas las protege el dominio
 class CartItemDto {
-  @ApiProperty({ example: '9780132350884' }) @IsString() @Length(13, 13) isbn!: string;
+  @ApiProperty({ example: '9780132350884' }) @IsString() @IsNotEmpty() @MaxLength(32) isbn!: string;   // el dominio lo normaliza: INVALID_ISBN → 422
   @ApiProperty({ example: 1 }) @IsInt() @Min(1) quantity!: number;
 }
 export class PlaceOrderDto {
   @ApiProperty() @IsUUID() customerId!: string;
-  @ApiProperty() @IsString() cardToken!: string;
+  @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) cardToken!: string;
   @ApiProperty({ type: [CartItemDto] })
-  @ArrayMinSize(1) @ValidateNested({ each: true }) @Type(() => CartItemDto)
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => CartItemDto)
   items!: CartItemDto[];
 }
 
@@ -757,7 +757,10 @@ export class OrderController {
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'UUID generado por el cliente, uno por intento de compra' })
   place(@Headers('idempotency-key') key: string | undefined, @Body() dto: PlaceOrderDto) {
     if (!key || !isUUID(key)) throw new BadRequestException('Falta el header Idempotency-Key (UUID)');
-    return this.commandBus.execute(new PlaceOrderCommand(key, dto.customerId, dto.items, dto.cardToken));
+    // Se copian solo isbn y quantity: el comando lleva objetos planos, no instancias del DTO
+    return this.commandBus.execute(
+      new PlaceOrderCommand(key, dto.customerId, dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })), dto.cardToken),
+    );
   }
 
   @Get(':id')

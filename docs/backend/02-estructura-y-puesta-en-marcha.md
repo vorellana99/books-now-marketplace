@@ -108,17 +108,17 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   ├── application/order/
 │       │   │   ├── place-order.command.ts
 │       │   │   ├── place-order.handler.ts
-│       │   │   ├── get-order.query.ts
+│       │   │   ├── get-order.query.ts                      ✅ hecho (5.8)
 │       │   │   ├── list-customer-orders.query.ts           (fase 14)
 │       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias   ✅ hecho (5.6)
 │       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox   ✅ hecho (5.7)
 │       │   └── infrastructure/
 │       │       ├── order/
-│       │       │   ├── order.controller.ts
-│       │       │   ├── place-order.dto.ts
+│       │       │   ├── order.controller.ts                 ✅ hecho (5.8)
+│       │       │   ├── place-order.dto.ts                  ✅ hecho (5.8)
 │       │       │   ├── shipping-address.dto.ts             (fase 11)
 │       │       │   ├── list-customer-orders.dto.ts         (fase 14)
-│       │       │   ├── get-order.handler.ts
+│       │       │   ├── get-order.handler.ts                ✅ hecho (5.8)
 │       │       │   ├── list-customer-orders.handler.ts     (fase 14)
 │       │       │   ├── prisma-order.repository.ts          ✅ hecho (5.3)
 │       │       │   ├── order.mapper.ts                     ✅ hecho (5.3)
