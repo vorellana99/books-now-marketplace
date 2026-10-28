@@ -32,6 +32,15 @@ export const envSchema = z
     message:
       'Los endpoints /admin no pueden habilitarse en producción sin autenticación',
   })
+  // La pasarela simulada aprueba cualquier tarjeta: en producción hay que elegir un proveedor de verdad
+  .refine(
+    (e) => !(e.NODE_ENV === 'production' && e.PAYMENT_PROVIDER === 'fake'),
+    {
+      path: ['PAYMENT_PROVIDER'],
+      message:
+        'PAYMENT_PROVIDER=fake aprueba cualquier tarjeta y no puede usarse en producción: configura PAYMENT_PROVIDER=external y PAYMENT_API_URL',
+    },
+  )
   .refine(
     (e) => e.PAYMENT_PROVIDER !== 'external' || Boolean(e.PAYMENT_API_URL),
     {

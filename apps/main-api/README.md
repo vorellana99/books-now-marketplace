@@ -47,7 +47,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `PORT` | `3000` | Puerto de la API |
 | `NODE_ENV` | `development` | `development`, `test` o `production` |
 | `ADMIN_API_ENABLED` | `false` | Endpoints `/admin`, solo para desarrollo. Con `NODE_ENV=production` no se permite `true` |
-| `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external` |
+| `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external`. Con `NODE_ENV=production` la API no arranca con `fake`, porque aprueba cualquier tarjeta |
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
