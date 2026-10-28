@@ -79,3 +79,52 @@ export async function reservationsOf(
     [orderId],
   );
 }
+
+// ── Outbox ──────────────────────────────────────────────────────────────────────────────────────
+
+export interface OutboxRow {
+  id: string;
+  event_name: string;
+  event_version: number;
+  aggregate_id: string;
+  payload: Record<string, unknown>;
+  occurred_on: Date;
+  correlation_id: string | null;
+}
+
+export interface DeliveryRow {
+  event_id: string;
+  consumer: string;
+  status: 'PENDING' | 'DONE' | 'FAILED';
+  attempts: number;
+  next_attempt_at: Date;
+  locked_until: Date | null;
+  last_error: string | null;
+}
+
+export async function outboxRows(): Promise<OutboxRow[]> {
+  return query<OutboxRow>('SELECT * FROM messaging.outbox ORDER BY id');
+}
+
+export async function deliveryRows(eventId?: string): Promise<DeliveryRow[]> {
+  return query<DeliveryRow>(
+    `SELECT event_id, consumer, status::text AS status, attempts, next_attempt_at, locked_until, last_error
+     FROM messaging.deliveries WHERE ($1::uuid IS NULL OR event_id = $1::uuid) ORDER BY event_id, consumer`,
+    [eventId ?? null],
+  );
+}
+
+// Hace vencer el reintento pendiente (backoff) de las entregas PENDING, para no esperar segundos reales
+export async function makeDeliveriesDue(): Promise<void> {
+  await query(
+    "UPDATE messaging.deliveries SET next_attempt_at = now() - interval '1 second' WHERE status = 'PENDING'",
+  );
+}
+
+// Hace vencer el bloqueo de una entrega: como si la instancia que la reclamó se hubiera caído o quedado colgada
+export async function expireLease(eventId: string): Promise<void> {
+  await query(
+    "UPDATE messaging.deliveries SET locked_until = now() - interval '1 second' WHERE event_id = $1",
+    [eventId],
+  );
+}

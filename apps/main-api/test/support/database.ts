@@ -1,4 +1,8 @@
-import { Client } from 'pg';
+import { Client, types } from 'pg';
+
+// Las columnas TIMESTAMP(3) de Prisma no llevan zona horaria y guardan la hora en UTC. Por defecto `pg` las lee
+// con la zona del proceso de Node (UTC−5 en esta máquina) y las desplaza varias horas; aquí se leen como UTC
+types.setTypeParser(1114, (value) => new Date(`${value.replace(' ', 'T')}Z`));
 
 // Solo el globalSetup de los tests de integración (que levanta un contenedor propio) marca esta variable.
 // Impide que un vaciado de tablas llegue por error a la base de desarrollo

@@ -57,7 +57,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer   ✅ hecho (4.1)
 │   │   │   ├── outbox-handler.decorator.ts                 ✅ hecho (4.1)
 │   │   │   ├── outbox.registry.ts                          ✅ hecho (4.1)
-│   │   │   ├── outbox.writer.ts
+│   │   │   ├── outbox.writer.ts                            ✅ hecho (4.2)
 │   │   │   ├── outbox.relay.ts
 │   │   │   └── outbox.health.ts
 │   │   ├── observability/
