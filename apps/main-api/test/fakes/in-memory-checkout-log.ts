@@ -1,5 +1,6 @@
 import {
   RECOVERY_BATCH,
+  RECOVERY_LOCK_MINUTES,
   CheckoutLog,
   type CheckoutRecord,
   type CheckoutStatus,
@@ -17,7 +18,6 @@ interface Row {
   lockedUntil: Date | null;
 }
 
-const LOCK_MINUTES = 2; // como el bloqueo de la recuperación real
 const MINUTE = 60_000;
 
 export class InMemoryCheckoutLog extends CheckoutLog {
@@ -88,7 +88,9 @@ export class InMemoryCheckoutLog extends CheckoutLog {
         row.startedAt.getTime() <= limit &&
         free
       ) {
-        row.lockedUntil = new Date(now.getTime() + LOCK_MINUTES * MINUTE);
+        row.lockedUntil = new Date(
+          now.getTime() + RECOVERY_LOCK_MINUTES * MINUTE,
+        );
         claimed.push({ orderId: row.orderId, requestId: row.requestId });
       }
     }

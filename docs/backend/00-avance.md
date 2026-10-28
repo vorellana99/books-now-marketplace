@@ -15,7 +15,7 @@ Los cortes 0 a 5 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ✅ | `feature/corte-4-outbox` | — |
-| 5 | Compra completa | 7–9 | 🔄 | `feature/corte-5-compra-completa` | — |
+| 5 | Compra completa | 7–9 | ✅ | `feature/corte-5-compra-completa` | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
 
@@ -207,7 +207,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 5: Compra completa 🔄
+## Corte 5: Compra completa ✅
 
 **Guía:** [04-flujo-pedido-y-saga](04-flujo-pedido-y-saga.md) · [05-piezas-clave](05-piezas-clave.md) · [api-contrato](../api-contrato.md) · [06-tests](06-tests.md)
 
@@ -230,7 +230,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 11 | Pasarela fuera de producción | Rechazar `PAYMENT_PROVIDER=fake` con `NODE_ENV=production` | Que una pasarela que aprueba cualquier tarjeta no llegue a producción por descuido | ✅ |
 | 12 | Pasarela simulada con demora | `SimulatedPaymentGateway` tarda 3 s en cobrar y reembolsar (`PAYMENT_SIMULATED_DELAY_MS`), y sigue siendo idempotente aunque dos cobros coincidan dentro de la demora | Que la API se comporte como con un proveedor real: lenta, con la ventana del `409` abierta | ✅ |
 | 13 | Correo simulado con demora | `ConsoleNotifier` tarda 3 s en "enviar" (`EMAIL_SIMULATED_DELAY_MS`) | Que el consumidor `external` del relay se pruebe con un proveedor lento | ✅ |
-| 14 | Efectos de la demora | Los márgenes del relay y del job de recuperación con 3 s por paso, tests con demora real (escalada) y guías | Comprobar que nada del diseño depende de que todo sea instantáneo | ⬜ |
+| 14 | Efectos de la demora | Los márgenes del relay y del job de recuperación con 3 s por paso, tests con demora real (escalada) y guías | Comprobar que nada del diseño depende de que todo sea instantáneo | ✅ |
 
 **Huecos de la lista original que este plan cubre:** falta `PrismaCustomerRepository`; `Order` no se podía reconstruir desde la base (`Order.restore`); el `save` de la guía marcaba `COMPLETED` sin comprobar que el checkout siguiera `PENDING` (si el job de recuperación ya lo había anulado, se creaba un pedido sin cobro y sin stock); la guía no define cómo rechaza pagos la pasarela simulada ni el contrato HTTP de la real; el DTO rechazaba ISBN con guiones y el hash distinguía `978-0-…` de `978…`; el hash usaba `localeCompare`; no había timeouts de base de datos aunque la guía los da por supuestos; `OutboxModule` no es global aquí, así que `SalesModule` lo importa; y se añaden tests de contrato para que el fake de `CheckoutLog` no se desvíe de Prisma, y un test de que `cardToken` no queda en la base ni en los logs.
 
@@ -259,7 +259,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] 5.11 Rechazar `PAYMENT_PROVIDER=fake` con `NODE_ENV=production` (D6). Se comprueba: el esquema de entorno lo rechaza solo en producción y el mensaje dice qué hacer
 - [x] 5.12 `SimulatedPaymentGateway` con demora de 3 s en cobro y reembolso (D7). Se comprueba: tarda lo configurado, dos cobros del mismo `orderId` a la vez cuentan uno solo, y con 0 no espera
 - [x] 5.13 `ConsoleNotifier` con demora de 3 s (D7). Se comprueba: el correo aparece en el log al terminar la demora, con su `requestId` y su clave
-- [ ] 5.14 Efectos de la demora: márgenes del relay y del job de recuperación con 3 s por paso, e2e con demora real escalada, README y guías. Se comprueba: el `409` aparece sin compuerta, el correo llega tras la demora y los márgenes se cumplen con los valores por defecto
+- [x] 5.14 Efectos de la demora: márgenes del relay y del job de recuperación con 3 s por paso, e2e con demora real escalada, README y guías. Se comprueba: el `409` aparece sin compuerta, el correo llega tras la demora y los márgenes se cumplen con los valores por defecto
 
 ---
 
@@ -358,6 +358,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-28 | 5 | `envSchema` rechaza `PAYMENT_PROVIDER=fake` con `NODE_ENV=production` (error en la variable `PAYMENT_PROVIDER`, con la indicación de configurar `external` y `PAYMENT_API_URL`), también cuando no se define y se toma el valor por defecto | Decisión D6. Una pasarela que aprueba cualquier tarjeta no debe llegar a producción por descuido; la API no arranca |
 | 2026-10-28 | 5 | `SimulatedPaymentGateway` recibe `delayMs` (por `PAYMENT_SIMULATED_DELAY_MS`, 3000 por defecto, 0 en los tests desde `global-setup.ts`) y lo aplica al cobro y al reembolso, incluidos el rechazo y el error. Guarda la **promesa** del cobro en curso por `orderId` y no solo su resultado; un reembolso con el cobro en curso espera a que termine. Ya no lleva `@Injectable()`: la crea la fábrica de `SalesModule` | Decisión D7. Con demora, dos cobros de la misma referencia que coinciden dentro de la espera habrían contado dos veces en el libro de cobros, porque el resultado solo se guardaba al terminar |
 | 2026-10-28 | 5 | `ConsoleNotifier` recibe `delayMs` (por `EMAIL_SIMULATED_DELAY_MS`, 3000 por defecto, 0 en los tests) y escribe el log al terminar la espera, no al empezar. Ya no lleva `@Injectable()`: la crea una fábrica de `SalesModule` | Decisión D7. Escribir al terminar significa que un correo interrumpido por un apagado no consta como enviado y el relay lo reintenta con la misma clave de idempotencia |
+| 2026-10-28 | 5 | El bloqueo de la recuperación pasa a la constante `RECOVERY_LOCK_MINUTES` (2) del puerto `CheckoutLog`, usada por la consulta real (`make_interval(mins => …)`) y por el fake, en lugar de un `'2 minutes'` escrito en el SQL y otro `2` en el fake | El test de márgenes necesita leer el valor real, y así no pueden desviarse |
 
 ## Bitácora
 
@@ -418,3 +419,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-28 | Corte 5, tarea 11 (5.11): `PAYMENT_PROVIDER=fake` rechazado con `NODE_ENV=production`. 9 tests nuevos en `env.schema.spec.ts` (rechazo explícito, por defecto, mensaje, variable señalada, `external` con URL permitido, `fake` permitido en desarrollo y test). 6 mutaciones detectadas, una de ellas (el `path` del error) tras añadir un test propio y rehacer la mutación con el ancla correcta. Hoy 539 unitarios y 329 de integración y e2e pasan |
 | 2026-10-28 | Corte 5, tarea 12 (5.12): pasarela simulada con demora de 3 s configurable. 31 tests de la pasarela en total (15 nuevos con temporizadores falsos: tarda lo configurado, rechazo y error también tardan, dos cobros a la vez cobran una vez, error compartido y reintento posible, reembolso con demora, dos reembolsos, reembolso que espera al cobro en curso, demora 0 sin temporizadores y demoras inválidas), 4 nuevos de esquema de entorno y 1 de cableado con la aplicación. 15 mutaciones: 14 detectadas a la primera y 1 (el reembolso que no espera al cobro) tras reforzar el test para mirar el momento y no solo el resultado final. Hoy 558 unitarios y 330 de integración y e2e pasan |
 | 2026-10-28 | Corte 5, tarea 13 (5.13): correo simulado con demora de 3 s configurable. 15 tests del notificador (9 nuevos con temporizadores falsos: tarda lo configurado, el log aparece al terminar con su `requestId` y su clave, demora 0 sin temporizadores, dos correos con su propia demora, demoras inválidas), 4 nuevos de esquema de entorno y 1 de cableado. 11 mutaciones, todas detectadas a la primera. Hoy 571 unitarios y 331 de integración y e2e pasan |
+| 2026-10-28 | Corte 5, tarea 14 (5.14): efectos de la demora. `delay-margins.spec.ts` (6 tests que leen los valores por defecto y las constantes reales del relay, la recuperación y el adaptador externo), 1 de integración que mide el bloqueo de la recuperación con el reloj de la base, 2 de integración de la recuperación con una pasarela lenta (reembolsos en serie, dos jobs a la vez) y `orders-delays.e2e.spec.ts` con demora real escalada a 600 ms (5 tests: la compra tarda lo que el cobro, `409` sin compuertas, rechazo lento, compensación con reembolso lento y correo tras su espera). Estables en tres corridas seguidas. 12 mutaciones: 11 detectadas a la primera y 1 (el correo sin demora) tras cambiar una medición que no distinguía (comparaba con la respuesta HTTP, y el tick de 1 s del relay ya la cumplía) por una desde que el relay reclama la entrega. Guías 04 y 06 y README al día. **Corte 5 cerrado otra vez.** Hoy 577 unitarios y 339 de integración y e2e pasan |

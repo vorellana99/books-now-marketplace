@@ -3,7 +3,10 @@ import { Client } from 'pg';
 import type { INestApplication } from '@nestjs/common';
 import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/order/prisma-checkout-log.adapter.js';
 import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/customer/prisma-customer.repository.js';
-import { RECOVERY_BATCH } from '../../src/contexts/sales/domain/order/checkout-log.port.js';
+import {
+  RECOVERY_BATCH,
+  RECOVERY_LOCK_MINUTES,
+} from '../../src/contexts/sales/domain/order/checkout-log.port.js';
 import { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
@@ -103,6 +106,25 @@ describe('PrismaCheckoutLog: lo que solo se puede probar con PostgreSQL real', (
       [orderId],
     );
     expect(row.request_id).toBe('r-guardado');
+  });
+
+  it(`lo reclamado queda bloqueado exactamente ${RECOVERY_LOCK_MINUTES} minutos, medidos con el reloj de la base`, async () => {
+    const log = new PrismaCheckoutLog(prisma);
+    const orderId = randomUUID();
+    await log.start(orderId, randomUUID(), 'h');
+    await query(
+      'UPDATE sales.checkouts SET started_at = started_at - make_interval(mins => 11) WHERE order_id = $1',
+      [orderId],
+    );
+
+    await log.claimStale(10);
+
+    const [row] = await query<{ secs: number }>(
+      'SELECT extract(epoch FROM (locked_until - now()))::float AS secs FROM sales.checkouts WHERE order_id = $1',
+      [orderId],
+    );
+    expect(row.secs).toBeGreaterThan(RECOVERY_LOCK_MINUTES * 60 - 5);
+    expect(row.secs).toBeLessThanOrEqual(RECOVERY_LOCK_MINUTES * 60);
   });
 
   it('dos recuperaciones a la vez no toman el mismo checkout (SKIP LOCKED)', async () => {

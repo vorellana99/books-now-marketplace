@@ -204,8 +204,8 @@ curl http://localhost:3000/orders/<orderId>
 
 | `cardToken` | Resultado |
 |---|---|
-| `tok_declined` | `422 PAYMENT_DECLINED`; la reserva se libera y no queda pedido |
-| `tok_error` | `500`: la pasarela "se cae"; se compensa igual (se libera la reserva y el intento queda anulado) |
+| `tok_declined` | `422 PAYMENT_DECLINED` tras unos 6 s (el cobro y el reembolso de la compensación tardan 3 s cada uno); la reserva se libera y no queda pedido |
+| `tok_error` | `500` tras unos 6 s: la pasarela "se cae"; se compensa igual (se libera la reserva y el intento queda anulado) |
 | cualquier otro (por ejemplo `tok_visa`) | Aprobado |
 
 La pasarela simulada **tarda 3 segundos** en cobrar (y en reembolsar), así que `POST /orders` responde pasados unos 3 s. Es a propósito: una segunda petición con la misma `Idempotency-Key` durante ese rato recibe `409 CHECKOUT_IN_PROGRESS`, que se puede ver con dos `curl` seguidos. Cámbialo con `PAYMENT_SIMULATED_DELAY_MS`.

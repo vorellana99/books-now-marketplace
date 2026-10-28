@@ -225,4 +225,60 @@ describe('RecoverCheckoutsJob (PostgreSQL real, con Inventario real)', () => {
 
     expect(await statusOf(orderId)).toBe('ABORTED');
   });
+
+  describe('con una pasarela lenta (reembolso de 300 ms)', () => {
+    const SLOW = 300;
+
+    // Cada compra cobró con la pasarela lenta, así que su reembolso también tarda
+    async function crashedWith(slow: SimulatedPaymentGateway, count: number) {
+      payments = slow;
+      return Promise.all(
+        Array.from({ length: count }, () => crashedAfterCharge()),
+      );
+    }
+
+    it('los reembolsos de un lote se hacen uno tras otro y todos terminan', async () => {
+      const slow = new SimulatedPaymentGateway(SLOW);
+      const crashed = await crashedWith(slow, 3);
+
+      const started = Date.now();
+      expect(await newJob(slow).run()).toBe(3);
+      const elapsed = Date.now() - started;
+
+      expect(elapsed).toBeGreaterThanOrEqual(3 * SLOW - 50); // en serie, no a la vez
+      expect([...slow.refunds].sort()).toEqual(
+        crashed.map((c) => c.orderId).sort(),
+      );
+      for (const { orderId, isbn } of crashed) {
+        expect(await statusOf(orderId)).toBe('ABORTED');
+        expect(await stockOf(isbn)).toEqual({ available: 10, reserved: 0 });
+      }
+    });
+
+    it('dos jobs a la vez, con la pasarela lenta, siguen repartiéndose los checkouts sin reembolsar dos veces', async () => {
+      const slow = new SimulatedPaymentGateway(SLOW);
+      const crashed = await crashedWith(slow, 4);
+      const refundCalls: string[] = [];
+      const counting = Object.assign(
+        Object.create(slow) as SimulatedPaymentGateway,
+        {
+          refund: (id: string) => {
+            refundCalls.push(id);
+            return slow.refund(id);
+          },
+        },
+      );
+
+      const [a, b] = await Promise.all([
+        newJob(counting).run(),
+        newJob(counting).run(),
+      ]);
+
+      expect(a + b).toBe(4);
+      expect([...refundCalls].sort()).toEqual(
+        crashed.map((c) => c.orderId).sort(),
+      );
+      expect(slow.refunds).toHaveLength(4);
+    });
+  });
 });

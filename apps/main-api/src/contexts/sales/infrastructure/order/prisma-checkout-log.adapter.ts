@@ -5,6 +5,7 @@ import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import {
   CheckoutLog,
   RECOVERY_BATCH,
+  RECOVERY_LOCK_MINUTES,
   type CheckoutRecord,
 } from '../../domain/order/checkout-log.port.js';
 import { Money } from '../../domain/shared/money.vo.js';
@@ -79,7 +80,7 @@ export class PrismaCheckoutLog extends CheckoutLog {
     const rows = await this.prisma.$queryRaw<
       { order_id: string; request_id: string | null }[]
     >`
-      UPDATE sales.checkouts SET locked_until = now() + interval '2 minutes'
+      UPDATE sales.checkouts SET locked_until = now() + make_interval(mins => ${RECOVERY_LOCK_MINUTES})
       WHERE order_id IN (
         SELECT order_id FROM sales.checkouts
         WHERE status = 'PENDING'

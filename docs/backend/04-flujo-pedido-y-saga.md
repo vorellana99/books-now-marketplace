@@ -227,6 +227,24 @@ export class RecoverCheckoutsJob {
 - **Con varias instancias, cada job reclama checkouts distintos** (`SKIP LOCKED` y un bloqueo de 2 min). Aun así, los tres pasos son idempotentes y `abort` solo cambia filas `PENDING`.
 - **Misma regla que el relay: lote × duración máxima por checkout < bloqueo** (5 × 15 s = 75 s < 120 s). Si el lote tardara más, otra instancia retomaría checkouts que este job todavía no procesó, y se reembolsarían dos veces en la pasarela (sin error de datos, pero con llamadas duplicadas). Los checkouts que no entren en una vuelta se toman en la siguiente, 5 min después.
 
+#### Con proveedores lentos (3 s por operación)
+
+Mientras no haya proveedores reales, la pasarela y el correo simulados tardan 3 s (`PAYMENT_SIMULATED_DELAY_MS` y `EMAIL_SIMULATED_DELAY_MS`), y el diseño tiene que aguantarlo. Los márgenes, con los valores por defecto (los comprueba `test/unit/delay-margins.spec.ts`):
+
+| Margen | Cuenta | Resultado |
+|---|---|---|
+| Vuelta del relay | `BATCH` (10) correos seguidos × 3 s | 30 s < 120 s de bloqueo de las entregas |
+| Lote de la recuperación | `RECOVERY_BATCH` (5) × (reembolso 3 s + liberación 5 s) | 40 s < 120 s de bloqueo (`RECOVERY_LOCK_MINUTES`) |
+| Compra fallida en el peor punto | cobro 3 s + reembolso 3 s + 3 sentencias de 5 s como máximo | 21 s < 2 min, el umbral mínimo de recuperación |
+| Pasarela simulada | 3 s | no supera los 10 s del timeout del adaptador externo |
+
+Lo que cambia en el comportamiento:
+
+- **La respuesta de `POST /orders` tarda unos 3 s** (y unos 6 s si el cobro falla y se compensa con un reembolso). Durante ese rato, otra petición con la misma clave recibe `409 CHECKOUT_IN_PROGRESS`, sin necesidad de compuertas.
+- **El correo llega unos 3 s después de que el relay lo reclame.** El relay entrega una a una, así que con varias compras seguidas un correo puede esperar detrás de otros y la confirmación de una reserva (`db`) también.
+- **Un cierre ordenado puede cortar una vuelta con muchos correos:** el cierre espera 15 s (`STOP_TIMEOUT_MS`) y una vuelta completa puede durar 30 s. Los correos que no terminaron se reintentan al vencer el bloqueo, con la misma clave de idempotencia, así que no se duplican. Por eso el notificador escribe su log al terminar la espera y no al empezar.
+- **Una pasarela lenta no abre una carrera nueva:** la simulada guarda la promesa del cobro en curso, así que dos cobros de la misma referencia dentro de la espera cuentan uno solo.
+
 ```ts
 // sales/infrastructure/order/prisma-checkout-log.adapter.ts (fragmento)
 async start(orderId: string, idempotencyKey: string, requestHash: string): Promise<boolean> {
