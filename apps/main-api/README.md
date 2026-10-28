@@ -250,6 +250,13 @@ curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
   -H 'Content-Type: application/json' -d '{"active":false}'
 ```
 
+```bash
+# Cargar stock: SUMA unidades a lo disponible (no fija un valor). 201 { isbn, available, reserved }
+# El libro nuevo tiene su stock en cero un segundo después de crearlo (lo crea Inventario al recibir el evento)
+curl -X POST http://localhost:3000/admin/stock/9780134494166/additions \
+  -H 'Content-Type: application/json' -d '{"quantity":25}'
+```
+
 El precio entra como sale: `{ "amount": "55.00", "currency": "PEN" }`, con el monto en texto.
 
 ## Levantar la API

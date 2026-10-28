@@ -161,7 +161,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   ├── domain/stock/
 │       │   │   └── stock-item.aggregate.ts
 │       │   ├── application/stock/
-│       │   │   └── add-stock.command.ts                    (fase 13)
+│       │   │   └── add-stock.command.ts                    ✅ hecho (6.8)
 │       │   └── infrastructure/stock/                       todos usan Prisma directo
 │       │       ├── reserve-stock.handler.ts                ✅ hecho (corte 3)
 │       │       ├── release-stock.handler.ts                ✅ hecho (corte 3)
@@ -169,9 +169,9 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       ├── order-id.ts                             assertOrderId: el orderId debe ser un UUID
 │       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox   ✅ hecho (5.7)
 │       │       ├── create-stock-item.consumer.ts           ✅ hecho (6.6) consumidor `db`
-│       │       ├── admin-stock.controller.ts               (fase 13) guard en la clase
-│       │       ├── add-stock.dto.ts                        (fase 13)
-│       │       └── add-stock.handler.ts                    (fase 13)
+│       │       ├── admin-stock.controller.ts               ✅ hecho (6.8) guard en la clase
+│       │       ├── add-stock.dto.ts                        ✅ hecho (6.8)
+│       │       └── add-stock.handler.ts                    ✅ hecho (6.8)
 │       │
 │       └── identity/                                       (fase 15) usuarios, roles y guards
 │

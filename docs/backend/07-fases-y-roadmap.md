@@ -183,17 +183,29 @@ hashRequest(customerId, items, address);
 export class AddStockHandler implements ICommandHandler<AddStockCommand> {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute({ isbn, quantity }: AddStockCommand): Promise<void> {
-    if (!Number.isInteger(quantity) || quantity <= 0) throw new DomainError('INVALID_QUANTITY', 'La cantidad debe ser un entero positivo');
-    // Incremento atómico: no se pisa con reservas simultáneas
-    const { count } = await this.prisma.stockItem.updateMany({ where: { isbn }, data: { available: { increment: quantity } } });
-    if (count === 0) throw new StockItemNotFoundError(isbn);
+  async execute({ isbn: raw, quantity }: AddStockCommand): Promise<StockLevel> {
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_ADDITION) throw new DomainError('INVALID_QUANTITY', …);
+    const isbn = Isbn.create(raw).value;
+    // Un solo UPDATE atómico: suma en la base y solo si el resultado respeta el tope; devuelve el nivel resultante
+    const updated = await this.prisma.$queryRaw<StockLevel[]>`
+      UPDATE inventory.stock_items SET available = available + ${quantity}
+      WHERE isbn = ${isbn} AND available <= ${MAX_AVAILABLE - quantity}
+      RETURNING isbn, available, reserved`;
+    if (updated.length === 1) return updated[0];
+    // No actualizó: o no existe el registro, o la carga pasaría del tope
+    if (!(await this.prisma.stockItem.findUnique({ where: { isbn } }))) throw new StockItemNotFoundError(isbn);
+    throw new DomainError('STOCK_LIMIT_EXCEEDED', …);
   }
 }
 ```
 
-- **Una entrada de stock es una suma, no un "fijar en N"**: con `increment`, una carga y una reserva al mismo tiempo no se pisan.
+`POST /admin/stock/:isbn/additions` con `{ "quantity": 25 }` responde `201 { isbn, available, reserved }`.
+
+- **Una entrada de stock es una suma, no un "fijar en N"**: el `UPDATE` suma dentro de la base (no lee, suma y escribe), así que una carga y una reserva al mismo tiempo no se pisan. Hay un test con diez cargas y diez reservas cruzadas, con cada actualización frenada 40 ms, que comprueba que el total se conserva.
+- **Dos topes que la guía no tenía:** `available` es un entero de 32 bits y una carga enorme lo desbordaría con un `500` de la base. Una carga admite de 1 a **100 000** unidades (`INVALID_QUANTITY` fuera de ese rango; el DTO responde `400` antes), y lo disponible de un libro no pasa de **1 000 000** (`422 STOCK_LIMIT_EXCEEDED`). El tope se mide solo con lo disponible, no con lo reservado.
+- **El libro debe tener registro de stock** (lo crea Inventario al recibir `catalog.book.created`): sin él, `422 STOCK_ITEM_NOT_FOUND` y no se crea. Un libro desactivado sí se puede reabastecer antes de reactivarlo.
 - **Toca una sola fila**, así que no rompe la regla de bloquear en orden de ISBN.
+- **No se guarda un historial de cargas** (decisión D6): sin autenticación no se sabría quién la hizo; la tabla de movimientos puede añadirse con la fase 15.
 
 ### Fase 14: Historial de pedidos
 
