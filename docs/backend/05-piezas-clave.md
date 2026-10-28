@@ -545,6 +545,8 @@ export class OutboxRelay {
 }
 ```
 
+La instancia lenta nunca pisa a la que retomó la entrega, en ninguno de sus tres finales: si **termina bien**, la actualización a `DONE` no encuentra su intento (en `db` se revierte también el efecto; en `external` solo se avisa de que pudo repetirse); si **falla tarde**, el SQL del fallo tampoco modifica nada y el log lo registra como aviso, sin anunciar un `FAILED` que no ocurrió; y si termina **mientras la otra todavía trabaja**, tampoco marca `DONE`. Los tests lo comprueban con consumidores que se quedan parados hasta que el test los suelta y con el bloqueo vencido por SQL, sin esperar los 2 minutos.
+
 ```ts
 // platform/outbox/outbox.health.ts: lo usa GET /health/outbox
 @Injectable()

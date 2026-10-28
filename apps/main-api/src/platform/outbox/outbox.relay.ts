@@ -16,6 +16,13 @@ type Claimed = {
   correlationId: string | null;
 };
 
+// El bloqueo de esta entrega venció y otra instancia la reclamó: lo que hizo esta ya no vale
+class LeaseLostError extends Error {
+  constructor(d: Claimed) {
+    super(`Entrega ${d.consumer}/${d.eventId} reclamada por otra instancia`);
+  }
+}
+
 @Injectable()
 export class OutboxRelay {
   private readonly logger = new Logger(OutboxRelay.name);
@@ -70,6 +77,10 @@ export class OutboxRelay {
     try {
       await this.attempt(d);
     } catch (err) {
+      if (err instanceof LeaseLostError) {
+        this.logger.warn(`${err.message}; efecto revertido`);
+        return;
+      }
       await this.recordFailure(d, err);
     }
   }
@@ -96,18 +107,26 @@ export class OutboxRelay {
       // Efecto local + DONE en la misma transacción: se confirman juntos o ninguno
       await this.prisma.$transaction(async (tx) => {
         await consumer.handle(d.payload, { ...ctx, tx });
-        await tx.delivery.updateMany({
+        const { count } = await tx.delivery.updateMany({
           where: mine,
           data: { status: 'DONE', lockedUntil: null },
         });
+        // Si el bloqueo venció y otra instancia reclamó la entrega, `attempts` ya cambió: se revierte también el efecto
+        if (count === 0) throw new LeaseLostError(d);
       });
     } else {
       // Efecto externo: ninguna transacción abierta mientras se espera la red
       await consumer.handle(d.payload, ctx);
-      await this.prisma.delivery.updateMany({
+      const { count } = await this.prisma.delivery.updateMany({
         where: mine,
         data: { status: 'DONE', lockedUntil: null },
       });
+      // El efecto externo no se puede deshacer: puede haberse repetido, por eso el proveedor recibe `eventId`
+      if (count === 0) {
+        this.logger.warn(
+          `Entrega ${d.consumer}/${d.eventId} reclamada por otra instancia; puede repetirse (idempotencia por eventId)`,
+        );
+      }
     }
   }
 
@@ -122,7 +141,7 @@ export class OutboxRelay {
     const status = failed ? 'FAILED' : 'PENDING';
 
     // También con la comprobación del intento: no pisa lo que haya hecho otra instancia
-    await this.prisma.$executeRaw`
+    const updated = await this.prisma.$executeRaw`
       UPDATE messaging.deliveries
       SET status = ${status}::messaging."DeliveryStatus",
           next_attempt_at = now() + make_interval(secs => ${backoffSeconds}),
@@ -132,6 +151,13 @@ export class OutboxRelay {
         AND attempts = ${d.attempts} AND status = 'PENDING'::messaging."DeliveryStatus"`;
 
     const message = `Entrega ${d.consumer} de ${d.eventId}, intento ${d.attempts}: ${String(err)}`;
+    if (updated === 0) {
+      // Otra instancia ya la reclamó o la terminó: este fallo es tardío y no cambia nada, ni debe anunciar un FAILED
+      this.logger.warn(
+        `${message} (ignorado: la entrega ya es de otra instancia)`,
+      );
+      return;
+    }
     if (failed) this.logger.error(`FAILED. ${message}`);
     else this.logger.warn(message);
   }
