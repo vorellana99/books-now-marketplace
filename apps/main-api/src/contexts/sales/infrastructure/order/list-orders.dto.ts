@@ -4,14 +4,8 @@ import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 
 export const MAX_HISTORY_LIMIT = 50;
 
-export class ListOrdersDto {
-  @ApiProperty({
-    format: 'uuid',
-    description: 'Cliente cuyos pedidos se listan',
-  })
-  @IsUUID()
-  customerId!: string;
-
+// Lo que comparten los dos listados de pedidos: la página
+export class PageDto {
   @ApiPropertyOptional({
     description:
       'nextCursor de la página anterior. Es opaco: se devuelve tal cual, sin interpretarlo',
@@ -28,4 +22,17 @@ export class ListOrdersDto {
   @Min(1)
   @Max(MAX_HISTORY_LIMIT)
   limit: number = 20;
+}
+
+// Mis pedidos: el cliente es el de la sesión, así que no hay `customerId` (si llega, es un 400)
+export class ListMyOrdersDto extends PageDto {}
+
+// El historial de un cliente, para administración
+export class ListOrdersDto extends PageDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Cliente cuyos pedidos se listan',
+  })
+  @IsUUID()
+  customerId!: string;
 }

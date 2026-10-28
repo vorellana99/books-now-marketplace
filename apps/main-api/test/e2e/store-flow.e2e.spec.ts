@@ -173,7 +173,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
 
       // 8. El historial de administración lo muestra, con la dirección; la consulta pública, sin ella
       const history = await http()
-        .get(`/orders?customerId=${ana.id}`)
+        .get(`/admin/orders?customerId=${ana.id}`)
         .set(adminHeader)
         .expect(200);
       expect(history.body.items).toHaveLength(1);
@@ -242,7 +242,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
       expect(
         (
           await http()
-            .get(`/orders?customerId=${ana.id}`)
+            .get(`/admin/orders?customerId=${ana.id}`)
             .set(adminHeader)
             .expect(200)
         ).body.items,
@@ -301,12 +301,12 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
         orderIds.push((await buy(ana.id).expect(201)).body.orderId);
 
       const first = await http()
-        .get(`/orders?customerId=${ana.id}&limit=2`)
+        .get(`/admin/orders?customerId=${ana.id}&limit=2`)
         .set(adminHeader)
         .expect(200);
       const second = await http()
         .get(
-          `/orders?customerId=${ana.id}&limit=2&cursor=${first.body.nextCursor}`,
+          `/admin/orders?customerId=${ana.id}&limit=2&cursor=${first.body.nextCursor}`,
         )
         .set(adminHeader)
         .expect(200);
@@ -400,7 +400,7 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
             .post(`/admin/stock/${ISBN}/additions`)
             .set(adminHeader)
             .send({ quantity: 5 }),
-        () => http().get(`/orders?customerId=${ana.id}`).set(adminHeader),
+        () => http().get(`/admin/orders?customerId=${ana.id}`).set(adminHeader),
       ]) {
         const res = await call().expect(404);
         expect(res.body).toMatchObject({ error: 'Not Found', statusCode: 404 });

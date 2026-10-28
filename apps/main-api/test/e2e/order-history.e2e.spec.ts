@@ -29,7 +29,7 @@ async function orderAt(customerId: string, minutes: number) {
   return order;
 }
 
-describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL reales)', () => {
+describe('GET /admin/orders?customerId= (historial, e2e, aplicación y PostgreSQL reales)', () => {
   describe('con ADMIN_API_ENABLED=false', () => {
     let app: INestApplication;
     let admin: { Authorization: string };
@@ -50,12 +50,12 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
       await orderAt(ana.id, 1);
 
       const res = await request(app.getHttpServer())
-        .get(`/orders?customerId=${ana.id}`)
+        .get(`/admin/orders?customerId=${ana.id}`)
         .set(admin)
         .expect(404);
 
       expect(res.body).toEqual({
-        message: `Cannot GET /orders?customerId=${ana.id}`,
+        message: `Cannot GET /admin/orders?customerId=${ana.id}`,
         error: 'Not Found',
         statusCode: 404,
       });
@@ -64,7 +64,7 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
     it('y también con parámetros inválidos: 404 y no 400', async () => {
       await request(app.getHttpServer()).get('/orders').set(admin).expect(404);
       await request(app.getHttpServer())
-        .get('/orders?customerId=nada&limit=999')
+        .get('/admin/orders?customerId=nada&limit=999')
         .set(admin)
         .expect(404);
     });
@@ -90,13 +90,22 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
         .expect(404);
     });
 
-    it('la documentación no muestra el historial pero sí POST /orders y GET /orders/{id}', async () => {
+    it('la documentación no muestra el historial de administración pero sí POST /orders, GET /orders/{id} y GET /me/orders', async () => {
       const res = await request(app.getHttpServer())
         .get('/docs-json')
         .expect(200);
       expect(res.body.paths['/orders'].post).toBeDefined();
       expect(res.body.paths['/orders'].get).toBeUndefined();
+      expect(res.body.paths['/admin/orders']).toBeUndefined();
       expect(res.body.paths['/orders/{id}'].get).toBeDefined();
+      expect(res.body.paths['/me/orders'].get).toBeDefined();
+    });
+
+    it('la ruta antigua GET /orders ya no existe: 404 incluso para un administrador', async () => {
+      await request(app.getHttpServer())
+        .get(`/orders?customerId=${randomUUID()}`)
+        .set(admin)
+        .expect(404);
     });
   });
 
@@ -116,7 +125,9 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
     beforeEach(resetDatabase);
 
     const get = (queryString: string) =>
-      request(app.getHttpServer()).get(`/orders${queryString}`).set(admin);
+      request(app.getHttpServer())
+        .get(`/admin/orders${queryString}`)
+        .set(admin);
 
     it('200 con los pedidos del cliente, del más reciente al más antiguo', async () => {
       const ana = await insertCustomer();
@@ -238,7 +249,7 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
       const res = await request(app.getHttpServer())
         .get('/docs-json')
         .expect(200);
-      const operation = res.body.paths['/orders'].get;
+      const operation = res.body.paths['/admin/orders'].get;
       expect(operation.tags).toEqual(
         expect.arrayContaining(['orders', 'admin']),
       );
@@ -246,9 +257,19 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
         expect.arrayContaining(['customerId', 'cursor', 'limit']),
       );
       expect(Object.keys(operation.responses)).toEqual(
-        expect.arrayContaining(['200', '400', '404']),
+        expect.arrayContaining(['200', '400', '401', '403', '404']),
       );
       expect(res.body.paths['/orders'].post.tags).not.toContain('admin');
+    });
+
+    it('un comprador no puede verlo: 403, y sin token 401', async () => {
+      await request(app.getHttpServer())
+        .get(`/admin/orders?customerId=${randomUUID()}`)
+        .set(await bearer(app, 'BUYER'))
+        .expect(403);
+      await request(app.getHttpServer())
+        .get(`/admin/orders?customerId=${randomUUID()}`)
+        .expect(401);
     });
   });
 });

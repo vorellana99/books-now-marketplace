@@ -7,7 +7,6 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
-  Query,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import {
@@ -31,26 +30,15 @@ import {
 } from '../../../../platform/auth/current-user.decorator.js';
 import type { AuthenticatedUser } from '../../../../platform/auth/authenticated-user.js';
 import { Roles } from '../../../../platform/auth/roles.decorator.js';
-import { AdminApi } from '../../../../platform/http/admin-api.decorator.js';
 import {
   GetOrderQuery,
   type OrderView,
 } from '../../application/order/get-order.query.js';
 import {
-  ListCustomerOrdersQuery,
-  type OrderHistoryPage,
-} from '../../application/order/list-customer-orders.query.js';
-import {
   PlaceOrderCommand,
   type PlaceOrderResult,
 } from '../../application/order/place-order.command.js';
-import { ListOrdersDto } from './list-orders.dto.js';
-import { OrderCursor } from './order-cursor.js';
-import {
-  OrderHistoryResponse,
-  OrderResponse,
-  PlaceOrderResponse,
-} from './order.response.js';
+import { OrderResponse, PlaceOrderResponse } from './order.response.js';
 import { PlaceOrderDto } from './place-order.dto.js';
 
 // Comprar es de los compradores, y el cliente es quien tiene la sesión: no viene en el cuerpo. Ver un pedido lo pueden su
@@ -127,35 +115,6 @@ export class OrderController {
         },
         dto.cardToken,
       ),
-    );
-  }
-
-  // Solo con ADMIN_API_ENABLED=true, hasta que exista la autenticación: cualquiera que conozca un customerId vería sus
-  // pedidos con nombre, teléfono y dirección. El guard va en el método y no en la clase, para que POST /orders siga abierto
-  @AdminApi()
-  @Get()
-  @ApiOperation({
-    summary: 'Historial de pedidos de un cliente (administración)',
-    description:
-      'Del más reciente al más antiguo, paginado con un cursor opaco: pasa nextCursor tal cual en ?cursor= para pedir la página siguiente. Incluye la dirección de envío. Solo con ADMIN_API_ENABLED=true.',
-  })
-  @ApiOkResponse({ type: OrderHistoryResponse })
-  @ApiBadRequestResponse({
-    description:
-      'customerId falta o no es un UUID, limit fuera de 1 a 50, o el cursor no es válido',
-  })
-  @ApiNotFoundResponse({
-    description: 'La administración está cerrada (ADMIN_API_ENABLED=false)',
-  })
-  list(
-    @Query() { customerId, cursor, limit }: ListOrdersDto,
-  ): Promise<OrderHistoryPage> {
-    const after = cursor === undefined ? undefined : OrderCursor.decode(cursor);
-    if (after === null) {
-      throw new BadRequestException('El cursor no es válido');
-    }
-    return this.queryBus.execute(
-      new ListCustomerOrdersQuery(customerId, limit, after),
     );
   }
 
