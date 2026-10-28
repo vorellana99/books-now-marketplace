@@ -4,7 +4,7 @@
 
 **Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado
 
-Los cortes 0 a 4 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea de un corte en curso, se marca en las dos. Los commits de cada tarea llevan su número (`2.7`, `3.1`…).
+Los cortes 0 a 5 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea de un corte en curso, se marca en las dos. Los commits de cada tarea llevan su número (`2.7`, `3.1`…).
 
 ## Resumen
 
@@ -15,7 +15,7 @@ Los cortes 0 a 4 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ✅ | `feature/corte-4-outbox` | — |
-| 5 | Compra completa | 7–9 | ⬜ | — | — |
+| 5 | Compra completa | 7–9 | ⬜ | `feature/corte-5-compra-completa` | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
 
@@ -213,17 +213,43 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Listo cuando:** `POST /orders` devuelve 201 con saga e idempotencia; tras la compra, el email aparece en el log, la reserva queda `CONFIRMED` y `/health/outbox` responde 200; los e2e pasan (flujo feliz, sin stock, pago rechazado).
 
-- [ ] `PrismaCheckoutLog` y `PrismaOrderRepository` (pedido + checkout + outbox en una transacción) con `OrderMapper`
-- [ ] Adaptadores: `CatalogInProcessAdapter`, `InventoryInProcessAdapter`, `ConsoleNotifier`
-- [ ] `FakePaymentGateway` y `ExternalPaymentAdapter` (timeout de 10 s)
-- [ ] `PlaceOrderHandler` con compensaciones e idempotencia
-- [ ] `OrderController`, `PlaceOrderDto` y `GetOrderHandler` (`GET /orders/:id`)
-- [ ] `RecoverCheckoutsJob`
-- [ ] Consumidores: `SendOrderConfirmationConsumer` y `ConfirmReservationConsumer`
-- [ ] `SalesModule` y conexión en `AppModule`
-- [ ] Tests unitarios del handler (rechazo de pago, timeout, commit ambiguo, reintento con la misma clave, hash)
-- [ ] Tests de integración de recuperación de checkouts
-- [ ] e2e de `orders` (incluye dos `POST` simultáneos con la misma clave y el `X-Request-Id`)
+### Tareas
+
+| # | Tarea | Qué es | Objetivo principal | Estado |
+|---|---|---|---|---|
+| 1 | `PlaceOrderHandler` | La saga con los fakes: idempotencia, reserva, cobro, guardado y compensaciones | Que cada fallo deje todo como estaba y un reintento nunca cobre dos veces | ⬜ |
+| 2 | Checkouts y clientes | `PrismaCheckoutLog` y `PrismaCustomerRepository`, con tests de contrato compartidos con el fake | Que el estado de la saga sobreviva a caídas | ⬜ |
+| 3 | Guardar el pedido | `PrismaOrderRepository` y `OrderMapper` (más `Order.restore`) | Que pedido, cobro registrado y evento se confirmen juntos o ninguno | ⬜ |
+| 4 | Adaptadores en proceso | `CatalogInProcessAdapter`, `InventoryInProcessAdapter` y `ConsoleNotifier` | Que Ventas hable con los otros contextos solo por contratos | ⬜ |
+| 5 | Pasarelas de pago | La pasarela simulada y `ExternalPaymentAdapter` con timeout de 10 s | Cobrar y reembolsar por referencia, de forma idempotente | ⬜ |
+| 6 | Recuperación de checkouts | `RecoverCheckoutsJob` | Reembolsar y liberar lo que quedó a medias tras una caída | ⬜ |
+| 7 | Consumidores del evento | `ConfirmReservationConsumer` (`db`) y `SendOrderConfirmationConsumer` (`external`) | Que la compra confirme la reserva y avise por email | ⬜ |
+| 8 | API HTTP | `PlaceOrderDto`, `OrderController`, `GetOrderHandler` y Swagger | Publicar `POST /orders` y `GET /orders/:id` | ⬜ |
+| 9 | Cableado | `SalesModule` en `AppModule`, `PAYMENT_PROVIDER` y el límite de tiempo de la base | Que la app real quede conectada | ⬜ |
+| 10 | e2e y cierre | Los flujos de `06-tests.md`, README, guías y CI | Cumplir el "listo cuando" del corte | ⬜ |
+
+**Huecos de la lista original que este plan cubre:** falta `PrismaCustomerRepository`; `Order` no se podía reconstruir desde la base (`Order.restore`); el `save` de la guía marcaba `COMPLETED` sin comprobar que el checkout siguiera `PENDING` (si el job de recuperación ya lo había anulado, se creaba un pedido sin cobro y sin stock); la guía no define cómo rechaza pagos la pasarela simulada ni el contrato HTTP de la real; el DTO rechazaba ISBN con guiones y el hash distinguía `978-0-…` de `978…`; el hash usaba `localeCompare`; no había timeouts de base de datos aunque la guía los da por supuestos; `OutboxModule` no es global aquí, así que `SalesModule` lo importa; y se añaden tests de contrato para que el fake de `CheckoutLog` no se desvíe de Prisma, y un test de que `cardToken` no queda en la base ni en los logs.
+
+**Decisiones** (D1 a D5 se acordaron con el usuario; todas con la opción recomendada):
+
+1. **D1 · Cómo rechaza pagos la pasarela simulada:** por convención en el token. `tok_declined` rechaza, `tok_error` lanza un error y cualquier otro aprueba.
+2. **D2 · Pasarela real:** adaptador contra un contrato HTTP mínimo y documentado, provisional hasta elegir proveedor (`POST /charges` y `POST /refunds`, con la referencia, el monto en texto, la moneda y el token), con timeout de 10 s.
+3. **D3 · ISBN en `POST /orders`:** se normaliza con `Isbn.create` (acepta guiones) y un ISBN inválido da `422 INVALID_ISBN`; el hash usa el ISBN normalizado.
+4. **D4 · `OrderRepository.findById`:** se implementa con `Order.restore`, que permite probar la ida y vuelta del mapeo.
+5. **D5 · Límite de tiempo de la base:** `statement_timeout` de 5 s (configurable con `DB_STATEMENT_TIMEOUT_MS`), junto con la comprobación de `PENDING` en `save`.
+
+**Riesgos:** es el corte más grande y delicado, así que cada compensación se prueba con un test y rompiendo el código a propósito; los dos `POST` simultáneos con la misma clave se prueban con una pasarela que se queda parada (sin tiempos); el timeout del adaptador es configurable para probarlo en milisegundos; el job de cada 5 minutos se prueba llamando a `run()`; el proveedor real aún no está elegido.
+
+- [ ] 5.1 `PlaceOrderCommand` y `PlaceOrderHandler` con compensaciones e idempotencia. Se comprueba: los casos de `06-tests.md` (sin stock, pago rechazado, falla al guardar, timeout del cobro, commit ambiguo, reembolso fallido, reintentos y hash)
+- [ ] 5.2 `PrismaCheckoutLog` y `PrismaCustomerRepository`, con tests de contrato compartidos. Se comprueba: clave repetida, `abort` que no toca un `COMPLETED`, recuperación con `SKIP LOCKED` y bloqueo
+- [ ] 5.3 `PrismaOrderRepository` y `OrderMapper` (pedido + checkout + outbox en una transacción). Se comprueba: atomicidad, ida y vuelta, y un checkout ya anulado
+- [ ] 5.4 Adaptadores: `CatalogInProcessAdapter`, `InventoryInProcessAdapter`, `ConsoleNotifier`. Se comprueba: los errores conservan su clase y el log del email lleva el `requestId`
+- [ ] 5.5 Pasarela simulada y `ExternalPaymentAdapter` (timeout de 10 s). Se comprueba: contra un servidor HTTP de prueba (aprobado, rechazado, timeout, error 5xx)
+- [ ] 5.6 `RecoverCheckoutsJob`. Se comprueba: caída tras cobrar, `COMPLETED` intacto, reembolso fallido que se reintenta, dos jobs a la vez
+- [ ] 5.7 Consumidores: `SendOrderConfirmationConsumer` y `ConfirmReservationConsumer`. Se comprueba: reserva `HELD` a `CONFIRMED` junto con `DONE`; email con `eventId` como clave
+- [ ] 5.8 `OrderController`, `PlaceOrderDto` y `GetOrderHandler` (`GET /orders/:id`). Se comprueba: 201, 400, 404, 409, 422 y la forma de la respuesta
+- [ ] 5.9 `SalesModule` y conexión en `AppModule`. Se comprueba: arranca con las dos pasarelas y los consumidores quedan registrados
+- [ ] 5.10 e2e de `orders` (incluye dos `POST` simultáneos con la misma clave y el `X-Request-Id`), README, guías y CI. Se comprueba: tras comprar, el email aparece en el log, la reserva queda `CONFIRMED` y `/health/outbox` responde 200
 
 ---
 
@@ -345,3 +371,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-27 | Corte 4, tarea 7 (4.7): `GET /health/outbox`. 200 con el relay vivo y 503 si está detenido (sin vueltas hace más de un minuto); `relayLastRunAt`, `failed` y `due` en el detalle; una entrega `FAILED` antigua o un reintento en espera no lo ponen en rojo. 6 tests unitarios del indicador y 7 de integración con el reloj adelantado; 11 mutaciones detectadas (4 tuvieron que rehacerse por el formato). Hoy 289 unitarios y 188 de integración y e2e pasan |
 | 2026-10-27 | Corte 4, tarea 8 (4.8): cableado y cierre. `AppModule` registra `OutboxModule`; 10 tests e2e con la aplicación completa y el intervalo real (un evento guardado con `append` llega solo a su consumidor, un fallo se reintenta solo con el retroceso real de 2 s, el log del consumidor lleva el `requestId` de origen o `event-<id>`, `/health/outbox` pasa a 200 y sin `ScheduleModule` el relay no corre solo), estables en 3 ejecuciones; 5 mutaciones detectadas. README con una sección operativa del Outbox, y las guías de pruebas y de piezas clave al día. **Corte 4 terminado:** los tests de integración del Outbox pasan, incluido el del `correlationId`. Hoy 290 unitarios y 198 de integración y e2e pasan |
 | 2026-10-27 | Corte 4, tarea 9 (4.9): logs JSON con el `requestId` de primer nivel y `message` siempre del mismo tipo, en los seis niveles (antes `debug`, `verbose` y `fatal` salían sin id). Es una corrección al logger del corte 1, descubierta al probar los logs del relay. 22 tests nuevos de la forma real del JSON y del texto (incluidas peticiones simultáneas) y los 2 del e2e del Outbox actualizados; 6 mutaciones detectadas. Hoy 312 unitarios y 198 de integración y e2e pasan |
+| 2026-10-28 | Plan del corte 5 (5.0): 10 tareas (5.1–5.10) con su cuadro, los huecos de la lista original, 5 decisiones acordadas con el usuario (todas con la opción recomendada) y los riesgos. Rama `feature/corte-5-compra-completa`, abierta desde `develop` al día (a partir de ahora las ramas parten de `develop`) |
