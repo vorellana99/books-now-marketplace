@@ -69,7 +69,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── configure-app.ts
 │   │   │   ├── configure-swagger.ts
 │   │   │   ├── domain-exception.filter.ts
-│   │   │   └── admin-api-enabled.guard.ts                  (fase 12)
+│   │   │   ├── admin-api-enabled.guard.ts                  ✅ hecho (6.4)
+│   │   │   └── admin-api.decorator.ts                      ✅ hecho (6.4): @AdminApi() = guard + etiqueta `admin`
 │   │   └── health/
 │   │       ├── health.module.ts
 │   │       ├── health.controller.ts

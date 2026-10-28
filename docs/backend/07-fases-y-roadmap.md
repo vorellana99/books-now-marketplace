@@ -57,18 +57,29 @@ flowchart LR
 > Mientras no haya autenticación, solo funcionan con **`ADMIN_API_ENABLED=true`** (por defecto `false`, y rechazado por el schema de Zod cuando `NODE_ENV=production`). Si está desactivado, responden **404**, como si no existieran. Así sirven en desarrollo sin quedar expuestos en un despliegue.
 
 ```ts
-// platform/http/admin-api-enabled.guard.ts: @UseGuards(AdminApiEnabledGuard) en la clase de cada controller de /admin,
-// y en el historial solo en su método (OrderController también tiene POST /orders, que no lleva guard)
+// platform/http/admin-api-enabled.guard.ts
 @Injectable()
 export class AdminApiEnabledGuard implements CanActivate {
   constructor(private readonly config: ConfigService) {}
 
-  canActivate(): boolean {
-    if (!this.config.get<boolean>('ADMIN_API_ENABLED')) throw new NotFoundException();
+  canActivate(context: ExecutionContext): boolean {
+    if (this.config.get<boolean>('ADMIN_API_ENABLED') !== true) {   // solo `true` abre: ausente o texto, no
+      const req = context.switchToHttp().getRequest();
+      throw new NotFoundException(`Cannot ${req.method} ${req.originalUrl ?? req.url}`);   // el mismo cuerpo que una ruta inexistente
+    }
     return true;
   }
 }
+
+// platform/http/admin-api.decorator.ts: el guard y la etiqueta `admin` de Swagger, en una sola anotación
+export const AdminApi = () => applyDecorators(UseGuards(AdminApiEnabledGuard), ApiTags('admin'));
 ```
+
+`@AdminApi()` va en la clase de cada controlador de `/admin`, y en el historial solo en su método (`OrderController` también tiene `POST /orders`, que no lleva guard).
+
+- **El 404 es idéntico al de una ruta que no existe** (`{ message: "Cannot GET /admin/books", error: "Not Found", statusCode: 404 }`), salvo la ruta que menciona: con el `NotFoundException()` sin mensaje, el cuerpo sería distinto y delataría que la ruta existe.
+- **Los guards corren antes que los pipes:** con la administración cerrada, un cuerpo inválido da 404 y no 400, que también delataría la ruta.
+- **Swagger tampoco las muestra** cuando está cerrada: `configureSwagger` quita las operaciones con la etiqueta `admin` del documento. El documento se calcula una vez, al primer acceso a `/docs`; como la variable no cambia en caliente, no importa.
 
 Un guard es más simple que registrar controllers de forma condicional, que en Nest exige módulos dinámicos.
 
