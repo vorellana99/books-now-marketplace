@@ -1,8 +1,8 @@
 import { DomainError } from '../../../shared-kernel/domain.errors.js';
+import { ROLES, type Role } from '../../../shared-kernel/role.js';
 import type { Email } from './email.vo.js';
 
-export type Role = 'BUYER' | 'ADMIN';
-const ROLES: readonly string[] = ['BUYER', 'ADMIN'];
+export type { Role };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Quien puede iniciar sesión. Guarda el hash de la contraseña, nunca la contraseña, y no lo muestra al serializarse
@@ -35,7 +35,7 @@ export class User {
         'Un usuario no puede existir sin el hash de su contraseña',
       );
     }
-    if (!ROLES.includes(data.role as string)) {
+    if (!ROLES.includes(data.role)) {
       throw new DomainError('INVALID_ROLE', 'El rol debe ser BUYER o ADMIN');
     }
     return new User(data.id, data.email, data.passwordHash, data.role);

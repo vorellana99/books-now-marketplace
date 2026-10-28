@@ -51,6 +51,8 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
 | `PAYMENT_SIMULATED_DELAY_MS` | `3000` | Solo con `PAYMENT_PROVIDER=fake`: lo que tarda la pasarela simulada en cobrar y en reembolsar, como un proveedor real. `0` quita la demora |
 | `EMAIL_SIMULATED_DELAY_MS` | `3000` | Lo que tarda el correo simulado en "enviarse" (se escribe en el log al terminar). `0` quita la demora |
+| `JWT_SECRET` | — | Secreto con el que se firman los tokens de acceso (al menos 32 caracteres variados; `openssl rand -base64 48`). **Obligatorio con `NODE_ENV=production`**; sin él, en desarrollo, cada arranque usa uno aleatorio y los tokens dejan de valer al reiniciar |
+| `ACCESS_TOKEN_TTL_SECONDS` | `900` | Vida del token de acceso, en segundos (de 60 a 3600) |
 | `PASSWORD_HASH_LOG_N` | `15` | Costo del hash de contraseñas (scrypt, N = 2^valor). Más alto es más lento y más seguro; los tests lo bajan. Con `NODE_ENV=production` no se permite menos de 15 |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |

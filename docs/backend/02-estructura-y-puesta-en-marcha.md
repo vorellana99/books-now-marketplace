@@ -32,7 +32,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   ├── shared-kernel/
 │   │   ├── isbn.vo.ts
 │   │   ├── domain-event.ts           eventName, eventVersion, aggregateId, occurredOn
-│   │   └── domain.errors.ts          DomainError, NotFoundError, ConflictError
+│   │   ├── domain.errors.ts          DomainError, NotFoundError, ConflictError
+│   │   └── role.ts                   Role (BUYER | ADMIN), ROLES   ✅ hecho (7.2)
 │   │
 │   ├── contracts/                    ← Published Language
 │   │   ├── sales/
@@ -52,6 +53,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── prisma.module.ts
 │   │   │   ├── prisma.service.ts
 │   │   │   └── generated/            lo crea `prisma generate` (no se sube)
+│   │   ├── auth/                                           ✅ hecho (7.2): authenticated-user.ts, access-token-verifier.ts
+│   │   │                                                      (el puerto del guard; lo implementa Identidad)
 │   │   ├── outbox/
 │   │   │   ├── outbox.module.ts                            ✅ hecho (4.1); importa DiscoveryModule, no ScheduleModule
 │   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer   ✅ hecho (4.1)
@@ -174,10 +177,12 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       └── add-stock.handler.ts                    ✅ hecho (6.8)
 │       │
 │       └── identity/                                       (fase 15) usuarios, roles y guards
-│           ├── identity.module.ts                          ✅ hecho (7.1)
+│           ├── identity.module.ts                          ✅ hecho (7.1; 7.2 añade los tokens)
+│           ├── application/access-token-issuer.ts          ✅ hecho (7.2)
 │           ├── domain/                                     ✅ hecho (7.1): email.vo.ts, password-policy.ts,
 │           │                                                  password-hasher.port.ts, user.aggregate.ts
-│           └── infrastructure/scrypt-password-hasher.ts    ✅ hecho (7.1)
+│           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1),
+│                                                              jwt-token.service.ts (7.2)
 │
 └── test/
     ├── fakes/                                              ✅ hecho (corte 2); se importan desde index.ts
@@ -314,6 +319,8 @@ PAYMENT_PROVIDER=fake            # fake | external
 PAYMENT_API_URL=
 PAYMENT_SIMULATED_DELAY_MS=3000  # solo con fake: lo que tarda la pasarela simulada en cobrar y reembolsar (0 = sin demora)
 EMAIL_SIMULATED_DELAY_MS=3000    # lo que tarda el correo simulado en "enviarse" (0 = sin demora)
+JWT_SECRET=                      # secreto de los tokens (≥ 32 caracteres variados); obligatorio en producción
+ACCESS_TOKEN_TTL_SECONDS=900     # vida del token de acceso (de 60 a 3600)
 PASSWORD_HASH_LOG_N=15           # costo del hash de contraseñas (scrypt, N = 2^valor); en producción no puede ser menor que 15
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
@@ -340,6 +347,8 @@ export const envSchema = z
     PAYMENT_API_URL: optionalUrl,
     PAYMENT_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // solo con PAYMENT_PROVIDER=fake
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
+    JWT_SECRET: optionalSecret, // ≥ 32 caracteres con variedad; obligatorio en producción
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
     PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15), // costo del hash de contraseñas (en producción, ≥ 15)
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),

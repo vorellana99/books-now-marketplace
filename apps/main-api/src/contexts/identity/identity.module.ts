@@ -1,6 +1,10 @@
-import { Module } from '@nestjs/common';
+import { randomBytes } from 'node:crypto';
+import { Logger, Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
+import { AccessTokenIssuer } from './application/access-token-issuer.js';
 import { PasswordHasher } from './domain/password-hasher.port.js';
+import { JwtTokenService } from './infrastructure/jwt-token.service.js';
 import { ScryptPasswordHasher } from './infrastructure/scrypt-password-hasher.js';
 
 @Module({
@@ -13,7 +17,28 @@ import { ScryptPasswordHasher } from './infrastructure/scrypt-password-hasher.js
           logN: config.getOrThrow<number>('PASSWORD_HASH_LOG_N'),
         }),
     },
+    {
+      provide: JwtTokenService,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService): JwtTokenService => {
+        let secret = config.get<string>('JWT_SECRET');
+        if (!secret) {
+          // Solo fuera de producción (el esquema de entorno lo exige allí). No hay un secreto "por defecto" en el
+          // código: cada proceso inventa el suyo, y los tokens dejan de valer al reiniciar
+          secret = randomBytes(48).toString('base64url');
+          new Logger('IdentityModule').warn(
+            'JWT_SECRET no está definido: se usa un secreto aleatorio y los tokens dejarán de valer al reiniciar',
+          );
+        }
+        return new JwtTokenService({
+          secret,
+          ttlSeconds: config.getOrThrow<number>('ACCESS_TOKEN_TTL_SECONDS'),
+        });
+      },
+    },
+    { provide: AccessTokenIssuer, useExisting: JwtTokenService },
+    { provide: AccessTokenVerifier, useExisting: JwtTokenService },
   ],
-  exports: [PasswordHasher],
+  exports: [PasswordHasher, AccessTokenIssuer, AccessTokenVerifier],
 })
 export class IdentityModule {}
