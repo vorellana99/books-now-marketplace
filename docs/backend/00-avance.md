@@ -15,7 +15,7 @@ Los cortes 0 a 5 traen un cuadro de **Tareas** que explica qué es cada una y pa
 | 2 | Dominio de Ventas | 2–3 | ✅ | `feature/corte-2-dominio-ventas` | — |
 | 3 | Catálogo e Inventario | 4–5 | ✅ | `feature/corte-3-catalogo-inventario` | — |
 | 4 | Outbox | 6 | ✅ | `feature/corte-4-outbox` | — |
-| 5 | Compra completa | 7–9 | ✅ | `feature/corte-5-compra-completa` | — |
+| 5 | Compra completa | 7–9 | 🔄 | `feature/corte-5-compra-completa` | — |
 | 6 | Funcionalidades siguientes | 10–14 | ⬜ | — | — |
 | 7 | Autenticación | 15 | ⬜ | — | — |
 
@@ -207,7 +207,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ---
 
-## Corte 5: Compra completa ✅
+## Corte 5: Compra completa 🔄
 
 **Guía:** [04-flujo-pedido-y-saga](04-flujo-pedido-y-saga.md) · [05-piezas-clave](05-piezas-clave.md) · [api-contrato](../api-contrato.md) · [06-tests](06-tests.md)
 
@@ -227,16 +227,22 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 | 8 | API HTTP | `PlaceOrderDto`, `OrderController`, `GetOrderHandler` y Swagger | Publicar `POST /orders` y `GET /orders/:id` | ✅ |
 | 9 | Cableado | `SalesModule` en `AppModule`, `PAYMENT_PROVIDER` y el límite de tiempo de la base | Que la app real quede conectada | ✅ |
 | 10 | e2e y cierre | Los flujos de `06-tests.md`, README, guías y CI | Cumplir el "listo cuando" del corte | ✅ |
+| 11 | Pasarela fuera de producción | Rechazar `PAYMENT_PROVIDER=fake` con `NODE_ENV=production` | Que una pasarela que aprueba cualquier tarjeta no llegue a producción por descuido | ⬜ |
+| 12 | Pasarela simulada con demora | `SimulatedPaymentGateway` tarda 3 s en cobrar y reembolsar (`PAYMENT_SIMULATED_DELAY_MS`), y sigue siendo idempotente aunque dos cobros coincidan dentro de la demora | Que la API se comporte como con un proveedor real: lenta, con la ventana del `409` abierta | ⬜ |
+| 13 | Correo simulado con demora | `ConsoleNotifier` tarda 3 s en "enviar" (`EMAIL_SIMULATED_DELAY_MS`) | Que el consumidor `external` del relay se pruebe con un proveedor lento | ⬜ |
+| 14 | Efectos de la demora | Los márgenes del relay y del job de recuperación con 3 s por paso, tests con demora real (escalada) y guías | Comprobar que nada del diseño depende de que todo sea instantáneo | ⬜ |
 
 **Huecos de la lista original que este plan cubre:** falta `PrismaCustomerRepository`; `Order` no se podía reconstruir desde la base (`Order.restore`); el `save` de la guía marcaba `COMPLETED` sin comprobar que el checkout siguiera `PENDING` (si el job de recuperación ya lo había anulado, se creaba un pedido sin cobro y sin stock); la guía no define cómo rechaza pagos la pasarela simulada ni el contrato HTTP de la real; el DTO rechazaba ISBN con guiones y el hash distinguía `978-0-…` de `978…`; el hash usaba `localeCompare`; no había timeouts de base de datos aunque la guía los da por supuestos; `OutboxModule` no es global aquí, así que `SalesModule` lo importa; y se añaden tests de contrato para que el fake de `CheckoutLog` no se desvíe de Prisma, y un test de que `cardToken` no queda en la base ni en los logs.
 
-**Decisiones** (D1 a D5 se acordaron con el usuario; todas con la opción recomendada):
+**Decisiones** (D1 a D5 se acordaron con el usuario, todas con la opción recomendada; D6 y D7 las decidió el usuario después de cerrar el corte):
 
 1. **D1 · Cómo rechaza pagos la pasarela simulada:** por convención en el token. `tok_declined` rechaza, `tok_error` lanza un error y cualquier otro aprueba.
 2. **D2 · Pasarela real:** adaptador contra un contrato HTTP mínimo y documentado, provisional hasta elegir proveedor (`POST /charges` y `POST /refunds`, con la referencia, el monto en texto, la moneda y el token), con timeout de 10 s.
 3. **D3 · ISBN en `POST /orders`:** se normaliza con `Isbn.create` (acepta guiones) y un ISBN inválido da `422 INVALID_ISBN`; el hash usa el ISBN normalizado.
 4. **D4 · `OrderRepository.findById`:** se implementa con `Order.restore`, que permite probar la ida y vuelta del mapeo.
 5. **D5 · Límite de tiempo de la base:** `statement_timeout` de 5 s (configurable con `DB_STATEMENT_TIMEOUT_MS`), junto con la comprobación de `PENDING` en `save`.
+6. **D6 · `fake` en producción** (decidida tras cerrar el corte): se rechaza `PAYMENT_PROVIDER=fake` cuando `NODE_ENV=production`, igual que `ADMIN_API_ENABLED`.
+7. **D7 · Proveedores simulados con demora** (decidida tras cerrar el corte): mientras no se elija proveedor real, la pasarela y el correo simulados tardan **3 segundos** por operación, como un proveedor de verdad. La demora se configura (`PAYMENT_SIMULATED_DELAY_MS` y `EMAIL_SIMULATED_DELAY_MS`, 3000 por defecto) y los tests la ponen en 0. El timeout del adaptador externo y la elección del proveedor real quedan pendientes.
 
 **Riesgos:** es el corte más grande y delicado, así que cada compensación se prueba con un test y rompiendo el código a propósito; los dos `POST` simultáneos con la misma clave se prueban con una pasarela que se queda parada (sin tiempos); el timeout del adaptador es configurable para probarlo en milisegundos; el job de cada 5 minutos se prueba llamando a `run()`; el proveedor real aún no está elegido.
 
@@ -250,6 +256,10 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - [x] 5.8 `OrderController`, `PlaceOrderDto` y `GetOrderHandler` (`GET /orders/:id`). Se comprueba: 201, 400, 404, 409, 422 y la forma de la respuesta
 - [x] 5.9 `SalesModule` y conexión en `AppModule`. Se comprueba: arranca con las dos pasarelas y los consumidores quedan registrados
 - [x] 5.10 e2e de `orders` (incluye dos `POST` simultáneos con la misma clave y el `X-Request-Id`), README, guías y CI. Se comprueba: tras comprar, el email aparece en el log, la reserva queda `CONFIRMED` y `/health/outbox` responde 200
+- [ ] 5.11 Rechazar `PAYMENT_PROVIDER=fake` con `NODE_ENV=production` (D6). Se comprueba: el esquema de entorno lo rechaza solo en producción y el mensaje dice qué hacer
+- [ ] 5.12 `SimulatedPaymentGateway` con demora de 3 s en cobro y reembolso (D7). Se comprueba: tarda lo configurado, dos cobros del mismo `orderId` a la vez cuentan uno solo, y con 0 no espera
+- [ ] 5.13 `ConsoleNotifier` con demora de 3 s (D7). Se comprueba: el correo aparece en el log al terminar la demora, con su `requestId` y su clave
+- [ ] 5.14 Efectos de la demora: márgenes del relay y del job de recuperación con 3 s por paso, e2e con demora real escalada, README y guías. Se comprueba: el `409` aparece sin compuerta, el correo llega tras la demora y los márgenes se cumplen con los valores por defecto
 
 ---
 
@@ -401,3 +411,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-28 | Corte 5, tarea 8 (5.8): `PlaceOrderDto`, `OrderController` (`POST /orders` con `Idempotency-Key` y `GET /orders/:id`), `GetOrderQuery` y `GetOrderHandler`, con Swagger. 44 tests de la capa HTTP con los buses simulados (201, 400 por la clave o por 18 formas de cuerpo inválido, campos extra, 404, 409, 422, 500 sin filtrar mensajes, `X-Request-Id`, token ausente de las respuestas, y el documento de Swagger) y 7 de integración del handler con PostgreSQL real (soles y dólares, 2 decimales, orden por ISBN, pedido inexistente, sin exponer al cliente). 28 mutaciones: 27 detectadas (3 de ellas tras reforzar un test o corregir un ancla) y 1 equivalente (`@IsArray()` es redundante con `@ArrayMinSize`). Hoy 518 unitarios y 291 de integración y e2e pasan |
 | 2026-10-28 | Corte 5, tarea 9 (5.9): `SalesModule` en `AppModule`, pasarela elegida por `PAYMENT_PROVIDER` y `statement_timeout` por `DB_STATEMENT_TIMEOUT_MS`. 12 tests unitarios (opciones de conexión y esquema de entorno), 6 de integración que demuestran el límite sobre PostgreSQL real (`pg_sleep` cancelado en una sentencia y dentro de una transacción) y 8 e2e de cableado con la aplicación completa (un puerto = una implementación real, los dos consumidores registrados, el cron cada 5 minutos, `PlaceOrderCommand` con su handler, rutas publicadas, y las dos pasarelas). 24 mutaciones, todas detectadas por al menos una suite. Hoy 530 unitarios y 305 de integración y e2e pasan |
 | 2026-10-28 | Corte 5, tarea 10 (5.10): e2e de `orders` con la aplicación completa y PostgreSQL real (24 tests: compra premium, normal, con envío gratis y en dólares; sin stock, pago rechazado, error de la pasarela y moneda mezclada; idempotencia; dos `POST` simultáneos con la misma clave; la última copia; `X-Request-Id`; validación; y token ausente en tablas y logs), más README (cómo probar una compra con `curl` y la tabla de tokens), `api-contrato.md` y `06-tests.md`. Estable en tres corridas seguidas. 22 mutaciones sobre piezas de varias capas: 16 detectadas por el e2e a la primera, 2 más tras añadirle una aserción (la clave de idempotencia del correo) y corregir una mutación mal escrita (el log del notificador), y 4 que el e2e no puede ver y cubren otras suites (el reembolso con la pasarela simulada, el `replay` previo al `start`, el redondeo `toFinal` y el fencing de `save`). **Comprobación real:** con la API compilada contra una base temporal (borrada después), 5 compras por `curl` (premium 81.00, normal 100.00, dólares 18.00 USD), `OUT_OF_STOCK`, `STOCK_ITEM_NOT_FOUND`, `PAYMENT_DECLINED`, `tok_error` (500), libro inactivo, reintento con la misma clave (mismo `orderId`), clave reutilizada y sin clave; quedaron 5 pedidos, 4 checkouts `ABORTED`, 5 reservas `CONFIRMED`, 10 entregas `DONE`, el stock cuadrado, el `X-Request-Id` en checkout, evento y correo, y ningún `tok_` en la base ni en el log. Hoy 530 unitarios y 329 de integración y e2e pasan |
+| 2026-10-28 | Plan ampliado del corte 5 (5.0): el usuario respondió los puntos pendientes tras el cierre (rechazar `fake` en producción; pasarela y correo simulados con 3 s de demora; sin PR, sin cambios al CI, sin planificar el corte 6 por ahora) y se agregan las tareas 5.11 a 5.14 con las decisiones D6 y D7. El corte vuelve a 🔄 hasta cerrarlas. Márgenes revisados antes de empezar: `BATCH` 10 × 3 s = 30 s < 120 s de bloqueo del relay; el cierre ordenado espera 15 s, así que una vuelta con muchos correos puede cortarse y reintentarse (seguro por la clave de idempotencia); el recuperador toma 5 checkouts × (3 s + liberación) < 120 s |
