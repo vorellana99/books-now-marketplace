@@ -102,6 +102,9 @@ export class SearchBooksHandler implements IQueryHandler<SearchBooksQuery> {
 
 - **El orden incluye el ISBN como desempate:** con títulos repetidos, ordenar solo por título puede repetir un libro en dos páginas u omitirlo.
 - **`pageSize` con máximo de 50** en el DTO (`@Max(50)`), para que nadie pida el catálogo entero de una vez.
+- **Los comodines se escapan:** Prisma pasa el texto tal cual a `ILIKE`, donde `%` y `_` son comodines. El handler antepone una barra invertida a `\`, `%` y `_` (`q.trim().replace(/[\\%_]/g, '\\$&')`) para que se busquen como texto; sin esto, `?q=%` devolvía todo el catálogo.
+- **`page` tiene tope (100 000)** y `q` largo máximo (100): un `skip` enorme desbordaría el entero de la base.
+- **No ignora los acentos** ("programacion" no encuentra "Programación"): decisión D3, hasta que el catálogo crezca y se agreguen `unaccent` y `pg_trgm`.
 - **Cuando el catálogo crezca**, `contains` (un `ILIKE`) se vuelve lento: agrega en la migración la extensión `pg_trgm` y un índice GIN sobre `title` y `author`.
 
 ### Fase 11: Dirección de envío

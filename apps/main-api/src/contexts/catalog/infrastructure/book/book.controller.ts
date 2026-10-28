@@ -1,6 +1,7 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import {
+  ApiBadRequestResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
@@ -13,12 +14,29 @@ import {
   type BookPrice,
 } from '../../../../contracts/catalog/get-book-price.query.js';
 import { Isbn } from '../../../../shared-kernel/isbn.vo.js';
-import { BookResponse } from './book-price.response.js';
+import { SearchBooksQuery } from '../../application/book/search-books.query.js';
+import { BookPageResponse, BookResponse } from './book-price.response.js';
+import { SearchBooksDto } from './search-books.dto.js';
 
 @ApiTags('books')
 @Controller('books')
 export class BookController {
   constructor(private readonly queryBus: QueryBus) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Buscar y listar libros activos, paginados',
+    description:
+      'Ordenados por título y, con el mismo título, por ISBN. Sin `q`, lista todo el catálogo activo.',
+  })
+  @ApiOkResponse({ type: BookPageResponse })
+  @ApiBadRequestResponse({
+    description:
+      'Un parámetro no cumple el formato (por ejemplo, pageSize mayor que 50)',
+  })
+  search(@Query() { q, page, pageSize }: SearchBooksDto) {
+    return this.queryBus.execute(new SearchBooksQuery(q, page, pageSize));
+  }
 
   @Get(':isbn')
   @ApiOperation({ summary: 'Datos y precio de un libro por su ISBN' })

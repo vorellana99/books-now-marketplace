@@ -25,3 +25,20 @@ export class BookResponse {
   @ApiProperty({ type: MoneyResponse })
   price!: MoneyResponse;
 }
+
+export class BookPageResponse {
+  @ApiProperty({ type: [BookResponse] })
+  items!: BookResponse[];
+
+  @ApiProperty({ example: 1 })
+  page!: number;
+
+  @ApiProperty({ example: 20 })
+  pageSize!: number;
+
+  @ApiProperty({
+    example: 42,
+    description: 'Total de la búsqueda, no de la página',
+  })
+  total!: number;
+}

@@ -170,6 +170,8 @@ curl http://localhost:3000/books/9780132350884       # 200: { isbn, title, autho
 curl http://localhost:3000/books/978-0-13-235088-4   # el ISBN también se acepta con guiones
 curl http://localhost:3000/books/9780201633610       # 404 NOT_FOUND: libro inactivo
 curl http://localhost:3000/books/123                 # 422 INVALID_ISBN
+curl 'http://localhost:3000/books?q=clean'        # 200: { items, page, pageSize, total }, por título o autor
+curl 'http://localhost:3000/books?page=2&pageSize=2'  # el catálogo activo, de 2 en 2 (pageSize máximo 50)
 ```
 
 La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas por dentro al comprar.

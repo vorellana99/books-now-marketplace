@@ -135,7 +135,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       ├── catalog/
 │       │   ├── catalog.module.ts
 │       │   ├── application/book/
-│       │   │   ├── search-books.query.ts                   (fase 10)
+│       │   │   ├── search-books.query.ts                   ✅ hecho (6.1)
 │       │   │   ├── create-book.command.ts                  (fase 12)
 │       │   │   ├── update-book.command.ts                  (fase 12)
 │       │   │   └── deactivate-book.command.ts              (fase 12)
@@ -143,8 +143,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │       ├── book.controller.ts
 │       │       ├── book-price.response.ts                  esquema de la respuesta, solo para Swagger
 │       │       ├── get-book-price.handler.ts
-│       │       ├── search-books.dto.ts                     (fase 10)
-│       │       ├── search-books.handler.ts                 (fase 10)
+│       │       ├── search-books.dto.ts                     ✅ hecho (6.1)
+│       │       ├── search-books.handler.ts                 ✅ hecho (6.1)
 │       │       ├── admin-book.controller.ts                (fase 12) guard en la clase
 │       │       ├── create-book.dto.ts                      (fase 12)
 │       │       ├── update-book.dto.ts                      (fase 12)
