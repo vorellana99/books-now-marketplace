@@ -38,7 +38,7 @@ La guía se divide por audiencia: lo que comparten backend y frontend vive en `d
 | [backend/05-piezas-clave.md](backend/05-piezas-clave.md) | `Money`, puertos y eventos, Inventario, Outbox, correlación, HTTP y arranque | Backend |
 | [backend/06-tests.md](backend/06-tests.md) | Estrategia de tests con Vitest y casos mínimos | Backend |
 | [backend/07-fases-y-roadmap.md](backend/07-fases-y-roadmap.md) | Orden de implementación (fases 0–9) y siguientes funcionalidades (10–15) | Backend |
-| [frontend/README.md](frontend/README.md) | Guía del frontend (`apps/store-web`), pendiente | Frontend |
+| [frontend/README.md](frontend/README.md) | Guía del frontend (`apps/store-web`): [avance](frontend/00-avance.md) por cortes `F0`–`F6`, stack, estructura, integración con la API, flujos de pantalla, piezas clave, tests y roadmap | Frontend |
 
 > [!note] Numeración
 > Los títulos conservan los números de sección de la guía original (0 a 11), por si algún comentario o conversación antigua los menciona.

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Monorepo `books-now-marketplace` (LibroYa, una librería online). La carpeta local se llama `books-frontend`, pero casi todo el código es del backend. La documentación y los comentarios del código están en español; mantén ese idioma.
 
 - `apps/main-api`: API con NestJS 12 + Prisma 7 + PostgreSQL 18 (ESM, TypeScript 6, Vitest 4). Aquí está casi todo el trabajo. Su `README.md` explica la puesta en marcha, las variables de entorno y los problemas frecuentes.
-- `apps/store-web`: andamiaje de Vite+ (CLI `vp`) que por ahora solo tiene el código de ejemplo del contador. Los comandos `vp` (`vp dev`, `vp check`, `vp test`) están en su `AGENTS.md`. La guía del frontend (`docs/frontend/README.md`) sigue marcada como "pendiente".
+- `apps/store-web`: andamiaje de Vite+ (CLI `vp`) que por ahora solo tiene el código de ejemplo del contador. Los comandos `vp` (`vp dev`, `vp check`, `vp test`) están en su `AGENTS.md`. La guía del frontend está en `docs/frontend/` (avance por cortes `F0`–`F6` en `00-avance.md`): el stack decidido es React 19 + TanStack Router/Query + openapi-fetch + Zustand + Tailwind 4/shadcn, pero **aún no está instalado**: el código sigue siendo la plantilla.
 - `docs/`: guía de diseño, contrato de la API (`api-contrato.md`, lo que consume el frontend) y `docs/product/`, la fuente de información del producto (visión, reglas de negocio `RN-nn`, historias `HU-nn`, pantallas `PA-nn`, decisiones abiertas `DP-nn`); si algo ahí contradice a la API real, gana la API. `docs/backend/00-avance.md` es el control de avance.
 
 No hay `package.json` en la raíz; cada app tiene su propio `pnpm-lock.yaml`. Ejecuta los comandos desde la carpeta de la app.

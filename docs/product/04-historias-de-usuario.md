@@ -128,8 +128,8 @@ Reglas: RN-10, RN-11 · Pantallas: PA-05
 **Como** comprador, **quiero** ver mi carrito con el total que voy a pagar, **para** saber cuánto voy a gastar antes de pagar.
 Reglas: RN-01 a RN-08 · Pantallas: PA-05 · `POST /orders/quote` (pendiente, [DP-07](09-decisiones-y-preguntas.md))
 
-- **Dado** un carrito con libros, **cuando** lo abro, **entonces** veo por línea título, autor, precio unitario, cantidad y subtotal de línea.
-- **Dado** un carrito con libros, **cuando** lo abro o cambio una cantidad, **entonces** la tienda pide la **cotización** al backend y muestra subtotal, descuento (si lo hay), envío y **total a pagar**, en la moneda del carrito. La tienda nunca calcula estos montos (RN-08).
+- **Dado** un carrito con libros, **cuando** lo abro, **entonces** veo por línea título, autor, precio unitario y cantidad (los libros salen del carrito de la tienda).
+- **Dado** un carrito con libros, **cuando** lo abro o cambio una cantidad, **entonces** la tienda pide la **cotización** al backend y muestra el **subtotal de cada línea**, el subtotal, el descuento (si lo hay), el envío y el **total a pagar**, en la moneda del carrito. La tienda nunca calcula estos montos (RN-08, DP-20).
 - **Dado** que la cotización está en curso, **cuando** espero, **entonces** veo el total anterior atenuado o un indicador de carga, y no se puede continuar a pagar hasta tener el total vigente.
 - **Dado** que la cotización falla (red o `5xx`), **cuando** ocurre, **entonces** veo "No pudimos calcular tu total" con la opción de reintentar y no se puede continuar.
 - **Dado** el envío, **cuando** lo veo, **entonces** aparece como "Gratis" o con su costo, y la pantalla explica la regla ("Envío S/ 10.00 · gratis desde S/ 150.00").

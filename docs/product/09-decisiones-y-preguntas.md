@@ -29,6 +29,7 @@ Los números identifican el tema y no cambian; no siguen el orden en que se deci
 | DP-17 | Proveedores reales de pago y de email | El MVP sigue con los simulados. La elección de proveedor se decide después; el frontend queda preparado para cambiar el `cardToken` | HU-31, RN-25 |
 | DP-18 | Forma de `GET /me/orders` | La misma de cada ítem del historial actual (`id`, `status`, `charged`, `lines`, `createdAt`, `shippingAddress`) y el mismo cursor: un solo contrato para el comprador y el administrador | HU-40 |
 | DP-19 | Diseño y experiencia | No hay marca ni Figma. Se parte de móvil primero, un solo idioma (`es-PE`) y accesibilidad AA; se pueden modificar | [08](08-requisitos-de-experiencia.md) |
+| DP-20 | Subtotal de cada línea | Lo calcula el backend y llega en la cotización (`lines[…].subtotal`); el frontend nunca multiplica precio por cantidad (RN-08). Se descartó mostrar solo precio unitario y cantidad | HU-22, PA-05, [corte 8](../backend/00-avance.md#corte-8-cotización-del-total-) |
 
 ## Abiertas
 
@@ -61,6 +62,6 @@ Es una **propuesta** para que backend y frontend la afinen antes de implementarl
 
 - `POST /orders/quote`, con sesión (el descuento premium depende del cliente del token).
 - Cuerpo: `items[{ isbn, quantity }]`, con las mismas validaciones que `POST /orders` (RN-10, RN-11, RN-14), sin `shippingAddress`, `cardToken` ni `customerId`.
-- Respuesta `200`: `{ currency, subtotal, discount, shipping, total }`, todos con el formato de RN-07 (`{ amount, currency }`), calculados con las mismas reglas del cobro (RN-02 a RN-06).
+- Respuesta `200`: `{ currency, lines[{ isbn, unitPrice, quantity, subtotal }], subtotal, discount, shipping, total }`, todos los montos con el formato de RN-07 (`{ amount, currency }`) y calculados con las mismas reglas del cobro (RN-02 a RN-06). Las líneas salen **ordenadas por ISBN**, con las repetidas ya sumadas, y su `subtotal` es `unitPrice × quantity`; la suma de los subtotales de línea es el `subtotal` del pedido.
 - No reserva stock ni cobra, y por lo tanto **no** avisa de falta de stock (se descubre al pagar).
 - Errores: los de forma del cuerpo (`400`), `NOT_FOUND`, `INVALID_ISBN`, `MAX_QUANTITY_EXCEEDED`, `CURRENCY_MISMATCH` y `UNSUPPORTED_CURRENCY`, igual que `POST /orders`.
