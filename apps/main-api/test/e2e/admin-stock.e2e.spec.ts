@@ -1,6 +1,8 @@
 import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
+import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { bearer } from '../support/auth.js';
 import { insertBook, insertStock, stockOf } from '../support/builders.js';
 import { query, resetDatabase } from '../support/database.js';
 import { createHttpApp } from '../support/http-app.js';
@@ -8,58 +10,12 @@ import { createHttpApp } from '../support/http-app.js';
 const ISBN = '9780132350884';
 
 describe('POST /admin/stock/:isbn/additions (e2e, aplicación y PostgreSQL reales)', () => {
-  describe('con ADMIN_API_ENABLED=false', () => {
+  describe('con un administrador', () => {
     let app: INestApplication;
+    let admin: { Authorization: string };
     beforeAll(async () => {
-      app = await createHttpApp([InventoryModule], {
-        ADMIN_API_ENABLED: 'false',
-      });
-    });
-    afterAll(async () => {
-      await app.close();
-    });
-    beforeEach(resetDatabase);
-
-    it('404 como una ruta que no existe, y no cambia el stock', async () => {
-      await insertBook({ isbn: ISBN });
-      await insertStock(ISBN, 5);
-
-      const res = await request(app.getHttpServer())
-        .post(`/admin/stock/${ISBN}/additions`)
-        .send({ quantity: 10 })
-        .expect(404);
-
-      expect(res.body).toEqual({
-        message: `Cannot POST /admin/stock/${ISBN}/additions`,
-        error: 'Not Found',
-        statusCode: 404,
-      });
-      expect(await stockOf(ISBN)).toEqual({ available: 5, reserved: 0 });
-    });
-
-    it('un cuerpo inválido también es 404, no 400', async () => {
-      await request(app.getHttpServer())
-        .post(`/admin/stock/${ISBN}/additions`)
-        .send({ nada: true })
-        .expect(404);
-    });
-
-    it('la documentación no la muestra', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/docs-json')
-        .expect(200);
-      expect(Object.keys(res.body.paths)).not.toContain(
-        '/admin/stock/{isbn}/additions',
-      );
-    });
-  });
-
-  describe('con ADMIN_API_ENABLED=true', () => {
-    let app: INestApplication;
-    beforeAll(async () => {
-      app = await createHttpApp([InventoryModule], {
-        ADMIN_API_ENABLED: 'true',
-      });
+      app = await createHttpApp([InventoryModule, IdentityModule]);
+      admin = await bearer(app, 'ADMIN');
     });
     afterAll(async () => {
       await app.close();
@@ -73,6 +29,7 @@ describe('POST /admin/stock/:isbn/additions (e2e, aplicación y PostgreSQL reale
     const post = (body: unknown, isbn = ISBN) =>
       request(app.getHttpServer())
         .post(`/admin/stock/${isbn}/additions`)
+        .set(admin)
         .send(body as object);
 
     it('201 con el nivel de stock resultante', async () => {
@@ -142,9 +99,11 @@ describe('POST /admin/stock/:isbn/additions (e2e, aplicación y PostgreSQL reale
     it('400 sin cuerpo y con JSON roto', async () => {
       await request(app.getHttpServer())
         .post(`/admin/stock/${ISBN}/additions`)
+        .set(admin)
         .expect(400);
       await request(app.getHttpServer())
         .post(`/admin/stock/${ISBN}/additions`)
+        .set(admin)
         .set('Content-Type', 'application/json')
         .send('{"quantity":')
         .expect(400);
@@ -167,7 +126,7 @@ describe('POST /admin/stock/:isbn/additions (e2e, aplicación y PostgreSQL reale
         operation.parameters.map((p: { name: string }) => p.name),
       ).toContain('isbn');
       expect(Object.keys(operation.responses)).toEqual(
-        expect.arrayContaining(['201', '400', '404', '422']),
+        expect.arrayContaining(['201', '400', '401', '403', '422']),
       );
       expect(
         Object.keys(res.body.components.schemas.AddStockDto.properties),
@@ -177,6 +136,39 @@ describe('POST /admin/stock/:isbn/additions (e2e, aplicación y PostgreSQL reale
           res.body.components.schemas.StockLevelResponse.properties,
         ).sort((a, b) => a.localeCompare(b)),
       ).toEqual(['available', 'isbn', 'reserved']);
+    });
+
+    describe('quién puede llamarla', () => {
+      it('sin token 401, también con un cuerpo inválido, y no cambia el stock', async () => {
+        for (const body of [{ quantity: 10 }, { nada: true }]) {
+          await request(app.getHttpServer())
+            .post(`/admin/stock/${ISBN}/additions`)
+            .send(body)
+            .expect(401);
+        }
+        expect(await stockOf(ISBN)).toEqual({ available: 5, reserved: 2 });
+      });
+
+      it('un comprador recibe 403 FORBIDDEN y no cambia el stock', async () => {
+        const res = await request(app.getHttpServer())
+          .post(`/admin/stock/${ISBN}/additions`)
+          .set(await bearer(app, 'BUYER'))
+          .send({ quantity: 10 })
+          .expect(403);
+        expect(res.body.errorCode).toBe('FORBIDDEN');
+        expect(await stockOf(ISBN)).toEqual({ available: 5, reserved: 2 });
+      });
+
+      it('la documentación la muestra con la etiqueta admin y sus errores de acceso', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/docs-json')
+          .expect(200);
+        const operation = res.body.paths['/admin/stock/{isbn}/additions'].post;
+        expect(operation.tags).toContain('admin');
+        expect(Object.keys(operation.responses)).toEqual(
+          expect.arrayContaining(['201', '400', '401', '403', '422']),
+        );
+      });
     });
   });
 });

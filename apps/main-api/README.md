@@ -46,7 +46,6 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `DB_NAME` | — (obligatoria) | Nombre de la base de datos |
 | `PORT` | `3000` | Puerto de la API |
 | `NODE_ENV` | `development` | `development`, `test` o `production` |
-| `ADMIN_API_ENABLED` | `false` | Abre los endpoints `/admin` (libros y stock) y el historial de pedidos de un cliente, solo para desarrollo, hasta que exista la autenticación. Cerrada, responden `404` como si no existieran. Con `NODE_ENV=production` no se permite `true` |
 | `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external`. Con `NODE_ENV=production` la API no arranca con `fake`, porque aprueba cualquier tarjeta |
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
 | `PAYMENT_SIMULATED_DELAY_MS` | `3000` | Solo con `PAYMENT_PROVIDER=fake`: lo que tarda la pasarela simulada en cobrar y en reembolsar, como un proveedor real. `0` quita la demora |
@@ -59,7 +58,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
 
-`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. `ADMIN_API_ENABLED` (corte 6) abre las rutas `/admin` y el historial de pedidos; cerrada, responden `404`. El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
 
 ## Base de datos
 
@@ -245,40 +244,46 @@ Pasado un segundo, el relay del Outbox entrega el evento: la reserva pasa a `CON
 
 ### El flujo de la tienda, de punta a punta
 
-Con la administración abierta: (1) `POST /admin/books` da de alta un libro; (2) un segundo después Inventario le crea su stock en cero; (3) `GET /books?q=` lo encuentra, pero comprarlo da `OUT_OF_STOCK`; (4) `POST /admin/stock/:isbn/additions` le carga unidades; (5) `POST /orders` lo compra, con la dirección de envío; (6) `GET /orders?customerId=` lo muestra en el historial, con la dirección. `PATCH /admin/books/:isbn` cambia el precio o lo desactiva. Está probado entero en `test/e2e/store-flow.e2e.spec.ts`.
+Con un administrador: (1) `POST /admin/books` da de alta un libro; (2) un segundo después Inventario le crea su stock en cero; (3) `GET /books?q=` lo encuentra, pero comprarlo da `OUT_OF_STOCK`; (4) `POST /admin/stock/:isbn/additions` le carga unidades; (5) `POST /orders` lo compra, con la dirección de envío; (6) `GET /admin/orders?customerId=` lo muestra en el historial de administración, y `GET /me/orders` en el del propio comprador, con la dirección. `PATCH /admin/books/:isbn` cambia el precio o lo desactiva. Está probado entero en `test/e2e/store-flow.e2e.spec.ts`.
 
 ### Probar la administración
 
-Las rutas `/admin` solo existen con `ADMIN_API_ENABLED=true` en tu `.env` (reinicia la API después). Con el valor por defecto, `false`, responden `404` como si no existieran y `/docs` no las muestra. Con `NODE_ENV=production` la API no arranca con `true`.
+Las rutas `/admin` exigen un token de un **administrador** (sin token dan `401`; con el de un comprador, `403`). El seed (`pnpm run db:seed`) crea a `admin@example.com`; para crear otro, o el primero en producción, `pnpm run admin:create -- --email=correo@dominio.com` (pide la contraseña sin mostrarla, o la toma de `ADMIN_PASSWORD`).
+
+```bash
+# Iniciar sesión como administrador (la contraseña de desarrollo del seed está en "Datos de ejemplo") y guardar el token
+TOKEN=$(curl -s -X POST http://localhost:3000/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"LibroYa-dev-2026"}' | jq -r .accessToken)
+```
 
 ```bash
 # Crear un libro: 201 con el libro; 409 BOOK_ALREADY_EXISTS si el ISBN ya existe
-curl -X POST http://localhost:3000/admin/books \
+curl -X POST http://localhost:3000/admin/books -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"isbn":"9780134494166","title":"Clean Architecture","author":"Robert C. Martin","price":{"amount":"55.00","currency":"PEN"}}'
 
 curl 'http://localhost:3000/books?q=architecture'    # el libro nuevo ya aparece en la búsqueda
 
 # Cambiar el precio (y/o el título, el autor): 200 con el libro. La moneda no se cambia
-curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"price":{"amount":"49.90"}}'
 
 # Desactivar el libro (no se borra): deja de verse en el catálogo y de poder comprarse. Con "active": true se reactiva
-curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"active":false}'
 ```
 
 ```bash
 # Historial de pedidos de un cliente, del más reciente al más antiguo, con su dirección de envío
-curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5'
+curl -H "Authorization: Bearer $TOKEN" 'http://localhost:3000/admin/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5'
 # Página siguiente: el nextCursor de la respuesta, tal cual (es opaco). Es null en la última página
-curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5&cursor=<nextCursor>'
+curl -H "Authorization: Bearer $TOKEN" 'http://localhost:3000/admin/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5&cursor=<nextCursor>'
 ```
 
 ```bash
 # Cargar stock: SUMA unidades a lo disponible (no fija un valor). 201 { isbn, available, reserved }
 # El libro nuevo tiene su stock en cero un segundo después de crearlo (lo crea Inventario al recibir el evento)
-curl -X POST http://localhost:3000/admin/stock/9780134494166/additions \
+curl -X POST http://localhost:3000/admin/stock/9780134494166/additions -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"quantity":25}'
 ```
 

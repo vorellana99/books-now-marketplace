@@ -20,7 +20,7 @@ describe('envSchema', () => {
     expect(env.DB_STATEMENT_TIMEOUT_MS).toBe(5000);
     expect(env.PAYMENT_SIMULATED_DELAY_MS).toBe(3000);
     expect(env.EMAIL_SIMULATED_DELAY_MS).toBe(3000);
-    expect(env.ADMIN_API_ENABLED).toBe(false);
+    expect(env).not.toHaveProperty('ADMIN_API_ENABLED'); // la administración se protege con el rol, no con una variable
   });
 
   it('DB_STATEMENT_TIMEOUT_MS se convierte a número', () => {
@@ -301,16 +301,6 @@ describe('envSchema', () => {
         envSchema.parse({ ...production, PAYMENT_PROVIDER: 'external' }),
       ).toThrow(/PAYMENT_API_URL/);
     });
-  });
-
-  it('rechaza ADMIN_API_ENABLED en producción', () => {
-    expect(() =>
-      envSchema.parse({
-        ...base,
-        NODE_ENV: 'production',
-        ADMIN_API_ENABLED: 'true',
-      }),
-    ).toThrow(/ADMIN_API_ENABLED/);
   });
 
   it('falla sin las variables de base de datos', () => {

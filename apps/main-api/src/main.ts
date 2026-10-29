@@ -27,7 +27,6 @@ async function bootstrap() {
     environment: config.getOrThrow<string>('NODE_ENV'),
     database: `${config.getOrThrow<string>('DB_HOST')}:${config.getOrThrow<number>('DB_PORT')}/${config.getOrThrow<string>('DB_NAME')}`,
     paymentProvider: config.getOrThrow<string>('PAYMENT_PROVIDER'),
-    adminApi: config.getOrThrow<boolean>('ADMIN_API_ENABLED'),
   };
   if (info.environment === 'production') {
     new Logger('Bootstrap').log({ message: 'LibroYa API lista', ...info });

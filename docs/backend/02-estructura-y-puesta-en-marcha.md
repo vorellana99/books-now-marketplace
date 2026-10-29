@@ -339,7 +339,6 @@ PASSWORD_HASH_LOG_N=15           # costo del hash de contraseñas (scrypt, N = 2
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
 DB_STATEMENT_TIMEOUT_MS=5000     # límite de cada sentencia SQL; mantiene acotada la duración de la compra
-ADMIN_API_ENABLED=false          # endpoints /admin solo en desarrollo, hasta tener autenticación (ver [07-fases-y-roadmap.md](07-fases-y-roadmap.md))
 ```
 
 **`platform/config/env.schema.ts`**: todo lo que llega de `.env` es texto; el schema lo convierte y valida al arrancar.
@@ -369,11 +368,6 @@ export const envSchema = z
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    ADMIN_API_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
-  })
-  .refine((e) => !(e.NODE_ENV === 'production' && e.ADMIN_API_ENABLED), {
-    path: ['ADMIN_API_ENABLED'],
-    message: 'Los endpoints /admin no pueden habilitarse en producción sin autenticación',
   })
   // La pasarela simulada aprueba cualquier tarjeta: en producción hay que elegir un proveedor de verdad
   .refine((e) => !(e.NODE_ENV === 'production' && e.PAYMENT_PROVIDER === 'fake'), {

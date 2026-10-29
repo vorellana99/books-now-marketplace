@@ -3,7 +3,6 @@ import { QueryBus } from '@nestjs/cqrs';
 import {
   ApiBadRequestResponse,
   ApiForbiddenResponse,
-  ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
@@ -18,8 +17,8 @@ import { ListOrdersDto } from './list-orders.dto.js';
 import { positionAfter } from './order-cursor.js';
 import { OrderHistoryResponse } from './order.response.js';
 
-// Administración de pedidos: el historial de cualquier cliente. Solo administradores (y, hasta la tarea 7.9, con
-// ADMIN_API_ENABLED=true): trae nombre, teléfono y dirección de la persona
+// Administración de pedidos: el historial de cualquier cliente. Solo administradores: trae nombre, teléfono y
+// dirección de la persona
 @AdminApi()
 @ApiTags('orders')
 @Controller('admin/orders')
@@ -30,7 +29,7 @@ export class AdminOrderController {
   @ApiOperation({
     summary: 'Historial de pedidos de un cliente (administración)',
     description:
-      'Del más reciente al más antiguo, paginado con un cursor opaco: pasa nextCursor tal cual en ?cursor= para pedir la página siguiente. Incluye la dirección de envío. Solo administradores, con ADMIN_API_ENABLED=true.',
+      'Del más reciente al más antiguo, paginado con un cursor opaco: pasa nextCursor tal cual en ?cursor= para pedir la página siguiente. Incluye la dirección de envío. Solo administradores.',
   })
   @ApiOkResponse({ type: OrderHistoryResponse })
   @ApiBadRequestResponse({
@@ -41,9 +40,6 @@ export class AdminOrderController {
     description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
   })
   @ApiForbiddenResponse({ description: 'FORBIDDEN: solo los administradores' })
-  @ApiNotFoundResponse({
-    description: 'La administración está cerrada (ADMIN_API_ENABLED=false)',
-  })
   list(
     @Query() { customerId, cursor, limit }: ListOrdersDto,
   ): Promise<OrderHistoryPage> {

@@ -47,15 +47,6 @@ export const envSchema = z
     NODE_ENV: z
       .enum(['development', 'test', 'production'])
       .default('development'),
-    ADMIN_API_ENABLED: z
-      .enum(['true', 'false'])
-      .default('false')
-      .transform((v) => v === 'true'),
-  })
-  .refine((e) => !(e.NODE_ENV === 'production' && e.ADMIN_API_ENABLED), {
-    path: ['ADMIN_API_ENABLED'],
-    message:
-      'Los endpoints /admin no pueden habilitarse en producción sin autenticación',
   })
   // La pasarela simulada aprueba cualquier tarjeta: en producción hay que elegir un proveedor de verdad
   .refine(

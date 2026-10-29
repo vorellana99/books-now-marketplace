@@ -28,6 +28,7 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
+    "admin:create": "tsx prisma/create-admin.ts",
     "prisma:generate": "prisma generate",
     "prebuild": "prisma generate",
     "pretest": "prisma generate"

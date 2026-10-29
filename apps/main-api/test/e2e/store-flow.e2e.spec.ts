@@ -70,14 +70,13 @@ async function waitFor(done: () => Promise<boolean>, timeoutMs = 15_000) {
 }
 
 describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y PostgreSQL real)', () => {
-  describe('con la administración abierta', () => {
+  describe('con un administrador', () => {
     let app: INestApplication;
     let relay: OutboxRelay;
     let logLines: string[];
 
     beforeAll(async () => {
       app = await createHttpApp(MODULES(), {
-        ADMIN_API_ENABLED: 'true',
         PAYMENT_PROVIDER: 'fake',
       });
       currentApp = app;
@@ -370,11 +369,10 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     });
   });
 
-  describe('con la administración cerrada (el valor por defecto)', () => {
+  describe('quién puede entrar', () => {
     let app: INestApplication;
     beforeAll(async () => {
       app = await createHttpApp(MODULES(), {
-        ADMIN_API_ENABLED: 'false',
         PAYMENT_PROVIDER: 'fake',
       });
       currentApp = app;
@@ -386,31 +384,43 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
     beforeEach(resetDatabase);
     const http = () => request(app.getHttpServer());
 
-    it('toda la administración y el historial responden 404, como si no existieran', async () => {
+    const adminCalls = (
+      ana: { id: string },
+      headers: Record<string, string>,
+    ) => [
+      () => http().post('/admin/books').set(headers).send(BOOK),
+      () =>
+        http()
+          .patch(`/admin/books/${ISBN}`)
+          .set(headers)
+          .send({ active: false }),
+      () =>
+        http()
+          .post(`/admin/stock/${ISBN}/additions`)
+          .set(headers)
+          .send({ quantity: 5 }),
+      () => http().get(`/admin/orders?customerId=${ana.id}`).set(headers),
+    ];
+    const noBooks = async () =>
+      (await query<{ n: string }>('SELECT count(*) AS n FROM catalog.books'))[0]
+        .n;
+
+    it('sin token toda la administración responde 401, y no se crea nada', async () => {
       const ana = await newCustomer();
-      for (const call of [
-        () => http().post('/admin/books').set(adminHeader).send(BOOK),
-        () =>
-          http()
-            .patch(`/admin/books/${ISBN}`)
-            .set(adminHeader)
-            .send({ active: false }),
-        () =>
-          http()
-            .post(`/admin/stock/${ISBN}/additions`)
-            .set(adminHeader)
-            .send({ quantity: 5 }),
-        () => http().get(`/admin/orders?customerId=${ana.id}`).set(adminHeader),
-      ]) {
-        const res = await call().expect(404);
-        expect(res.body).toMatchObject({ error: 'Not Found', statusCode: 404 });
-        expect(res.body).not.toHaveProperty('errorCode'); // el mismo cuerpo que una ruta inexistente
+      for (const call of adminCalls(ana, {})) {
+        const res = await call().expect(401);
+        expect(res.body.errorCode).toBe('UNAUTHENTICATED');
       }
-      expect(
-        (
-          await query<{ n: string }>('SELECT count(*) AS n FROM catalog.books')
-        )[0].n,
-      ).toBe('0');
+      expect(await noBooks()).toBe('0');
+    });
+
+    it('un comprador recibe 403 en toda la administración, y no se crea nada', async () => {
+      const ana = await newCustomer();
+      for (const call of adminCalls(ana, buyers.get(ana.id)!)) {
+        const res = await call().expect(403);
+        expect(res.body.errorCode).toBe('FORBIDDEN');
+      }
+      expect(await noBooks()).toBe('0');
     });
 
     it('lo público sigue funcionando: catálogo, búsqueda y compra', async () => {
@@ -440,10 +450,17 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
         .expect(201);
     });
 
-    it('la documentación no muestra ninguna ruta de administración ni el historial', async () => {
+    it('la documentación muestra las rutas de administración, con la etiqueta admin, y las públicas', async () => {
       const res = await http().get('/docs-json').expect(200);
-      const paths = Object.keys(res.body.paths);
-      expect(paths.filter((p) => p.startsWith('/admin'))).toEqual([]);
+      const adminPaths = Object.keys(res.body.paths).filter((p) =>
+        p.startsWith('/admin'),
+      );
+      expect(adminPaths.sort((x, y) => x.localeCompare(y))).toEqual([
+        '/admin/books',
+        '/admin/books/{isbn}',
+        '/admin/orders',
+        '/admin/stock/{isbn}/additions',
+      ]);
       expect(res.body.paths['/orders'].get).toBeUndefined();
       expect(res.body.paths['/orders'].post).toBeDefined();
       expect(res.body.paths['/books'].get).toBeDefined();
