@@ -39,6 +39,27 @@ export async function query<T extends object = Record<string, unknown>>(
 
 const APP_SCHEMAS = ['sales', 'catalog', 'inventory', 'messaging', 'identity'];
 
+const DEADLOCK = '40P01';
+
+// El TRUNCATE de `resetDatabase` toma bloqueos exclusivos sobre todas las tablas; si justo entonces el relay del outbox
+// de la aplicación del test anterior sigue entregando un evento, PostgreSQL puede elegir al TRUNCATE como víctima de un
+// interbloqueo (`deadlock detected`, 40P01). Es una carrera entre el test y su propio fondo, no un fallo del código: se
+// reintenta unas veces. Cualquier otro error sale tal cual
+export async function retryOnDeadlock<T>(
+  operation: () => Promise<T>,
+  { attempts = 5, delayMs = 100 }: { attempts?: number; delayMs?: number } = {},
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code !== DEADLOCK || attempt >= attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+}
+
 // Vacía los datos de los cuatro schemas y conserva las tablas y el historial de migraciones
 export async function resetDatabase(): Promise<void> {
   assertIsolatedDatabase();
@@ -51,8 +72,10 @@ export async function resetDatabase(): Promise<void> {
     [APP_SCHEMAS],
   );
   if (tables.length > 0) {
-    await query(
-      `TRUNCATE ${tables.map((t) => t.name).join(', ')} RESTART IDENTITY CASCADE`,
+    await retryOnDeadlock(() =>
+      query(
+        `TRUNCATE ${tables.map((t) => t.name).join(', ')} RESTART IDENTITY CASCADE`,
+      ),
     );
   }
 }
