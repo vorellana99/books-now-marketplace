@@ -4,7 +4,6 @@ import {
   OutOfStockError,
   StockItemNotFoundError,
 } from '../../../../contracts/inventory/stock.errors.js';
-import { Prisma } from '../../../../platform/prisma/generated/client.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import {
   ConflictError,
@@ -12,6 +11,7 @@ import {
 } from '../../../../shared-kernel/domain.errors.js';
 import { sortByIsbn } from './lock-order.js';
 import { assertOrderId } from './order-id.js';
+import { isUniqueViolation } from '../../../../platform/prisma/unique-violation.js';
 
 type Line = ReserveStockCommand['lines'][number];
 
@@ -66,10 +66,7 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
         });
       } catch (error) {
         // Otra petición reservó el mismo pedido justo después de la comprobación de arriba
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2002'
-        ) {
+        if (isUniqueViolation(error)) {
           throw alreadyReserved(orderId);
         }
         throw error;

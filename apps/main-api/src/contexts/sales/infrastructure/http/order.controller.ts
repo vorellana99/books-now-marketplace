@@ -2,30 +2,29 @@ import {
   BadRequestException,
   Body,
   Controller,
+  createParamDecorator,
+  type ExecutionContext,
   Get,
   Header,
   HttpCode,
-  Headers,
   Param,
   ParseUUIDPipe,
   Post,
 } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import type { Request } from 'express';
 import {
   ApiBadRequestResponse,
   ApiConflictResponse,
   ApiCreatedResponse,
-  ApiForbiddenResponse,
   ApiHeader,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiParam,
   ApiTags,
-  ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { isUUID } from 'class-validator';
 import {
   CurrentUser,
   requireUser,
@@ -51,6 +50,17 @@ import {
 } from './order.response.js';
 import { QuoteOrderDto } from './quote-order.dto.js';
 import { PlaceOrderDto } from './place-order.dto.js';
+import { ApiAuthErrors } from '../../../../platform/http/api-auth-errors.decorator.js';
+
+// El Idempotency-Key es obligatorio y un UUID: una sola forma de validarlo, la misma de los ids de la ruta
+const IdempotencyKey = createParamDecorator(
+  (_data: unknown, context: ExecutionContext): unknown =>
+    context.switchToHttp().getRequest<Request>().headers['idempotency-key'],
+);
+const IDEMPOTENCY_KEY_PIPE = new ParseUUIDPipe({
+  exceptionFactory: () =>
+    new BadRequestException('Falta el header Idempotency-Key, o no es un UUID'),
+});
 
 // Comprar es de los compradores, y el cliente es quien tiene la sesión: no viene en el cuerpo. Ver un pedido lo pueden su
 // dueño y los administradores
@@ -80,12 +90,7 @@ export class OrderController {
     description:
       'Falta o es inválido el Idempotency-Key, o el cuerpo no cumple el formato',
   })
-  @ApiUnauthorizedResponse({
-    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
-  })
-  @ApiForbiddenResponse({
-    description: 'FORBIDDEN: solo los compradores pueden comprar',
-  })
+  @ApiAuthErrors('FORBIDDEN: solo los compradores pueden comprar')
   @ApiNotFoundResponse({
     description:
       'NOT_FOUND: un libro no existe (o está inactivo), o el comprador aún no tiene su cliente en Ventas (se crea en alrededor de un segundo tras registrarse: reintente)',
@@ -100,15 +105,10 @@ export class OrderController {
   })
   place(
     @CurrentUser() user: AuthenticatedUser | undefined,
-    @Headers('idempotency-key') key: string | undefined,
+    @IdempotencyKey(undefined, IDEMPOTENCY_KEY_PIPE) key: string,
     @Body() dto: PlaceOrderDto,
   ): Promise<PlaceOrderResult> {
     const { userId } = requireUser(user);
-    if (!key || !isUUID(key)) {
-      throw new BadRequestException(
-        'Falta el header Idempotency-Key, o no es un UUID',
-      );
-    }
     return this.commandBus.execute(
       new PlaceOrderCommand(
         key,
@@ -143,12 +143,7 @@ export class OrderController {
     description:
       'El cuerpo no cumple el formato o trae campos de más (`customerId`, `shippingAddress`, `cardToken`…)',
   })
-  @ApiUnauthorizedResponse({
-    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
-  })
-  @ApiForbiddenResponse({
-    description: 'FORBIDDEN: solo los compradores pueden cotizar',
-  })
+  @ApiAuthErrors('FORBIDDEN: solo los compradores pueden cotizar')
   @ApiNotFoundResponse({
     description:
       'NOT_FOUND: un libro no existe (o está inactivo), o el comprador aún no tiene su cliente en Ventas',
@@ -180,9 +175,7 @@ export class OrderController {
   @ApiParam({ name: 'id', format: 'uuid' })
   @ApiOkResponse({ type: OrderDetailResponse })
   @ApiBadRequestResponse({ description: 'El id no es un UUID' })
-  @ApiUnauthorizedResponse({
-    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
-  })
+  @ApiAuthErrors()
   @ApiNotFoundResponse({
     description: 'NOT_FOUND: el pedido no existe o no es suyo',
   })

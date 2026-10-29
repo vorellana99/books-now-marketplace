@@ -9,6 +9,7 @@ import {
   type CheckoutRecord,
 } from '../../domain/order/checkout-log.port.js';
 import { Money } from '../../domain/shared/money.vo.js';
+import { isUniqueViolation } from '../../../../platform/prisma/unique-violation.js';
 
 @Injectable()
 export class PrismaCheckoutLog extends CheckoutLog {
@@ -33,10 +34,7 @@ export class PrismaCheckoutLog extends CheckoutLog {
       return true;
     } catch (error) {
       // La clave es única en la base: si dos peticiones llegan a la vez, solo una entra
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (isUniqueViolation(error)) {
         return false;
       }
       throw error;

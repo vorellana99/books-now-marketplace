@@ -13,9 +13,7 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
-  ApiForbiddenResponse,
   ApiOperation,
-  ApiUnauthorizedResponse,
   ApiParam,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -25,6 +23,7 @@ import type { AdminBook } from '../../application/book/admin-book.js';
 import { UpdateBookCommand } from '../../application/book/update-book.command.js';
 import { AdminBookResponse } from './book-price.response.js';
 import { CreateBookDto, UpdateBookDto } from './create-book.dto.js';
+import { ApiAuthErrors } from '../../../../platform/http/api-auth-errors.decorator.js';
 
 // Administración del catálogo. Solo administradores
 @AdminApi()
@@ -40,10 +39,7 @@ export class AdminBookController {
   })
   @ApiCreatedResponse({ type: AdminBookResponse })
   @ApiBadRequestResponse({ description: 'Un campo no cumple el formato' })
-  @ApiUnauthorizedResponse({
-    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
-  })
-  @ApiForbiddenResponse({ description: 'FORBIDDEN: solo los administradores' })
+  @ApiAuthErrors('FORBIDDEN: solo los administradores')
   @ApiConflictResponse({
     description: 'BOOK_ALREADY_EXISTS: ya hay un libro con ese ISBN',
   })
@@ -78,10 +74,7 @@ export class AdminBookController {
     description:
       'Un campo no cumple el formato, hay campos de más o no se indicó ningún cambio',
   })
-  @ApiUnauthorizedResponse({
-    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
-  })
-  @ApiForbiddenResponse({ description: 'FORBIDDEN: solo los administradores' })
+  @ApiAuthErrors('FORBIDDEN: solo los administradores')
   @ApiNotFoundResponse({ description: 'NOT_FOUND: el libro no existe' })
   @ApiUnprocessableEntityResponse({
     description:

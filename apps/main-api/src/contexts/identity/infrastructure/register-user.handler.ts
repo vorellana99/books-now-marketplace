@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { UserRegisteredEvent } from '../../../contracts/identity/user-registered.event.js';
 import { OutboxWriter } from '../../../platform/outbox/outbox.writer.js';
-import { Prisma } from '../../../platform/prisma/generated/client.js';
 import { PrismaService } from '../../../platform/prisma/prisma.service.js';
 import { ConflictError } from '../../../shared-kernel/domain.errors.js';
 import {
@@ -13,6 +12,7 @@ import { Email } from '../domain/email.vo.js';
 import { PasswordHasher } from '../domain/password-hasher.port.js';
 import { PasswordPolicy } from '../domain/password-policy.js';
 import { User } from '../domain/user.aggregate.js';
+import { isUniqueViolation } from '../../../platform/prisma/unique-violation.js';
 
 @CommandHandler(RegisterUserCommand)
 export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand> {
@@ -51,10 +51,7 @@ export class RegisterUserHandler implements ICommandHandler<RegisterUserCommand>
     } catch (error) {
       // El índice único decide, así que dos registros simultáneos del mismo correo no se pisan: uno entra y el otro
       // recibe este error (mirar antes de insertar dejaría una carrera)
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
+      if (isUniqueViolation(error)) {
         throw new ConflictError(
           'EMAIL_ALREADY_REGISTERED',
           'Ya existe una cuenta con ese correo',

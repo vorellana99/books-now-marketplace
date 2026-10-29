@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { Prisma } from '../../../platform/prisma/generated/client.js';
 import type { PrismaService } from '../../../platform/prisma/prisma.service.js';
 import { ConflictError } from '../../../shared-kernel/domain.errors.js';
 import { Email } from '../domain/email.vo.js';
 import type { PasswordHasher } from '../domain/password-hasher.port.js';
 import { PasswordPolicy } from '../domain/password-policy.js';
 import { User } from '../domain/user.aggregate.js';
+import { isUniqueViolation } from '../../../platform/prisma/unique-violation.js';
 
 // Crea un administrador. No hay ruta HTTP para esto: nadie se hace administrador por la API, ni siquiera otro
 // administrador. Lo usa el comando `pnpm run admin:create`. A diferencia del registro no escribe ningún evento: un
@@ -34,10 +34,7 @@ export async function createAdminUser(input: {
       },
     });
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
+    if (isUniqueViolation(error)) {
       throw new ConflictError(
         'EMAIL_ALREADY_REGISTERED',
         'Ya existe una cuenta con ese correo',

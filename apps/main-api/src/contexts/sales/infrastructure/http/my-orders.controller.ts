@@ -2,11 +2,9 @@ import { Controller, Get, Query } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import {
   ApiBadRequestResponse,
-  ApiForbiddenResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
-  ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import type { AuthenticatedUser } from '../../../../platform/auth/authenticated-user.js';
 import {
@@ -21,6 +19,7 @@ import {
 import { ListMyOrdersDto } from './list-orders.dto.js';
 import { positionAfter } from '../persistence/order-cursor.js';
 import { OrderHistoryResponse } from './order.response.js';
+import { ApiAuthErrors } from '../../../../platform/http/api-auth-errors.decorator.js';
 
 // Los pedidos de quien tiene la sesión. El cliente es el del token: no se puede pedir el de otro
 @ApiTags('orders')
@@ -40,12 +39,7 @@ export class MyOrdersController {
     description:
       'limit fuera de 1 a 50, el cursor no es válido o hay parámetros de más',
   })
-  @ApiUnauthorizedResponse({
-    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
-  })
-  @ApiForbiddenResponse({
-    description: 'FORBIDDEN: solo los compradores tienen pedidos',
-  })
+  @ApiAuthErrors('FORBIDDEN: solo los compradores tienen pedidos')
   list(
     @CurrentUser() user: AuthenticatedUser | undefined,
     @Query() { cursor, limit }: ListMyOrdersDto,
