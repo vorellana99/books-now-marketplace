@@ -13,10 +13,8 @@ import { FakeStockReservation } from '../fakes/fake-stock-reservation.js';
 import { InMemoryCheckoutLog } from '../fakes/in-memory-checkout-log.js';
 
 const MIN = 10;
-const config = (minutes?: number) =>
-  new ConfigService(
-    minutes === undefined ? {} : { CHECKOUT_RECOVERY_MINUTES: minutes },
-  );
+const config = (minutes = MIN) =>
+  new ConfigService({ CHECKOUT_RECOVERY_MINUTES: minutes });
 
 // Un checkout que quedó a medias hace `age` minutos: con reserva y, si `charged`, también con cobro hecho
 async function stuck(
@@ -262,8 +260,10 @@ describe('RecoverCheckoutsJob', () => {
       expect(await claimedWith(config(25))).toBe(25);
     });
 
-    it('sin la variable, 10 minutos', async () => {
-      expect(await claimedWith(config())).toBe(10);
+    it('sin la variable falla con un mensaje claro: no repite el valor por defecto del esquema', async () => {
+      await expect(claimedWith(new ConfigService({}))).rejects.toThrow(
+        /CHECKOUT_RECOVERY_MINUTES/,
+      );
     });
   });
 

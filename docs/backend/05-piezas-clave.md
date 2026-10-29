@@ -558,7 +558,7 @@ export class OutboxRelay {
         this.logger.warn(`Entrega ${d.consumer}/${d.eventId} reclamada por otra instancia; efecto revertido`);
         return;
       }
-      const max = this.config.get<number>('OUTBOX_MAX_ATTEMPTS', 8);
+      const max = this.config.getOrThrow<number>('OUTBOX_MAX_ATTEMPTS');
       const failed = d.attempts >= max;
       const backoffSeconds = Math.min(2 ** d.attempts, 5 * 60);   // 2 s, 4 s, 8 s… hasta 5 min
       // La hora del próximo intento sale del reloj de la base (el mismo del bloqueo), también con fencing por `attempts`

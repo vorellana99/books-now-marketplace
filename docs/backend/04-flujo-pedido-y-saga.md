@@ -239,7 +239,7 @@ export class RecoverCheckoutsJob {
 
   @Cron(CronExpression.EVERY_5_MINUTES)
   async run(): Promise<number> {
-    const stale = await this.checkouts.claimStale(this.config.get<number>('CHECKOUT_RECOVERY_MINUTES', 10));
+    const stale = await this.checkouts.claimStale(this.config.getOrThrow<number>('CHECKOUT_RECOVERY_MINUTES'));
     for (const { orderId, requestId } of stale) {
       // Los logs de la recuperación llevan el mismo requestId que la compra original
       await RequestContext.run(requestId ?? `recovery-${orderId}`, () => this.recover(orderId));
