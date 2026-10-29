@@ -4,6 +4,7 @@ import { AdminBookController } from './infrastructure/book/admin-book.controller
 import { BookController } from './infrastructure/book/book.controller.js';
 import { CreateBookHandler } from './infrastructure/book/create-book.handler.js';
 import { GetBookPriceHandler } from './infrastructure/book/get-book-price.handler.js';
+import { GetBooksPricesHandler } from './infrastructure/book/get-books-prices.handler.js';
 import { UpdateBookHandler } from './infrastructure/book/update-book.handler.js';
 import { SearchBooksHandler } from './infrastructure/book/search-books.handler.js';
 
@@ -12,6 +13,7 @@ import { SearchBooksHandler } from './infrastructure/book/search-books.handler.j
   controllers: [BookController, AdminBookController],
   providers: [
     GetBookPriceHandler,
+    GetBooksPricesHandler,
     SearchBooksHandler,
     CreateBookHandler,
     UpdateBookHandler,

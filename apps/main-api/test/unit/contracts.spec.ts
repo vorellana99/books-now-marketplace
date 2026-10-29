@@ -1,4 +1,5 @@
 import { GetBookPriceQuery } from '../../src/contracts/catalog/get-book-price.query.js';
+import { GetBooksPricesQuery } from '../../src/contracts/catalog/get-books-prices.query.js';
 import {
   OutOfStockError,
   StockItemNotFoundError,
@@ -72,6 +73,13 @@ describe('contracts/sales: OrderPlacedEvent', () => {
 describe('contracts/catalog: GetBookPriceQuery', () => {
   it('lleva el ISBN pedido', () => {
     expect(new GetBookPriceQuery('9780306406157').isbn).toBe('9780306406157');
+  });
+});
+
+describe('contracts/catalog: GetBooksPricesQuery', () => {
+  it('lleva los ISBN pedidos, en su orden', () => {
+    const isbns = ['9780306406157', '9780132350884'];
+    expect(new GetBooksPricesQuery(isbns).isbns).toEqual(isbns);
   });
 });
 

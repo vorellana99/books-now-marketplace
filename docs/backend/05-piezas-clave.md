@@ -160,11 +160,17 @@ export class CatalogInProcessAdapter extends CatalogPricing {
   constructor(private readonly queryBus: QueryBus) { super(); }
 
   async priceCart(items: CartItem[]): Promise<PricedCartItem[]> {
-    return Promise.all(items.map(async (i) => {
-      const book = await this.queryBus.execute(new GetBookPriceQuery(i.isbn)); // NotFoundError si no existe o está inactivo
+    if (items.length === 0) return [];
+    // Una sola consulta para todo el carrito (corte 9): cotizar 100 líneas no son 100 consultas. NotFoundError, con el
+    // primer ISBN según el orden pedido, si un libro no existe o está inactivo
+    const books = await this.queryBus.execute(new GetBooksPricesQuery(items.map((i) => i.isbn)));
+    const byIsbn = new Map(books.map((b) => [b.isbn, b]));
+    return items.map((i) => {
+      const book = byIsbn.get(i.isbn);
+      if (!book) throw new NotFoundError('Book', i.isbn);
       // book.price es { amount: "45.00", currency: "PEN" }: se toman ambos, sin pasar por number
       return { isbn: i.isbn, quantity: i.quantity, title: book.title, price: book.price.amount, currency: book.price.currency };
-    }));
+    });
   }
 }
 ```
