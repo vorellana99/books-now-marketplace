@@ -10,6 +10,7 @@ Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [
 - pnpm
 - PostgreSQL **18**, con Docker o instalado en tu máquina. No sirve una versión anterior: el Outbox usa `uuidv7()`.
 - Docker: para la base de desarrollo si eliges esa opción, y siempre para `pnpm run test:e2e` (levanta su propio PostgreSQL)
+- Para los ejemplos con `curl` de este README: `curl`, **`jq`** (extrae los tokens de las respuestas), `uuidgen` (paquete `uuid-runtime`, para el `Idempotency-Key`) y `openssl` (para generar `JWT_SECRET`). En Ubuntu o WSL: `sudo apt-get install -y jq curl uuid-runtime openssl`. La lista completa, con las herramientas del resto del repo, está en los [requisitos previos de la guía de desarrollo](../../docs/guia-de-desarrollo.md#requisitos-previos)
 
 ## Primer arranque
 
@@ -198,7 +199,7 @@ La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas p
 
 ### Probar la autenticación
 
-La API usa un **token de acceso** de vida corta (15 minutos, `ACCESS_TOKEN_TTL_SECONDS`) que se manda en `Authorization: Bearer <token>`, y un **token de refresco** opaco que se cambia por otro par de tokens y sirve **una sola vez**. Todas las rutas piden sesión salvo el catálogo (`GET /books…`), `/health/*` y `/auth/*`. Los roles son `BUYER` (compra y ve lo suyo) y `ADMIN` (la administración). Con los datos de ejemplo cargados hay tres usuarios, todos con la contraseña `LibroYa-dev-2026`: `ana@example.com`, `luis@example.com` (premium) y `admin@example.com`. Los ejemplos usan [`jq`](https://jqlang.org) para sacar el token; si no lo tienes, cópialo a mano de la respuesta.
+La API usa un **token de acceso** de vida corta (15 minutos, `ACCESS_TOKEN_TTL_SECONDS`) que se manda en `Authorization: Bearer <token>`, y un **token de refresco** opaco que se cambia por otro par de tokens y sirve **una sola vez**. Todas las rutas piden sesión salvo el catálogo (`GET /books…`), `/health/*` y `/auth/*`. Los roles son `BUYER` (compra y ve lo suyo) y `ADMIN` (la administración). Con los datos de ejemplo cargados hay tres usuarios, todos con la contraseña `LibroYa-dev-2026`: `ana@example.com`, `luis@example.com` (premium) y `admin@example.com`. Los ejemplos usan [`jq`](https://jqlang.org) (es un requisito previo: `sudo apt-get install -y jq`) para sacar el token; si no lo tienes, cópialo a mano de la respuesta.
 
 ```bash
 # Registrarse: 201 { id, email, role: "BUYER" }. No inicia sesión. 409 EMAIL_ALREADY_REGISTERED si el correo ya existe;

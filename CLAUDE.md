@@ -10,7 +10,7 @@ Monorepo `books-now-marketplace` (LibroYa, una librería online). La carpeta loc
 - `apps/store-web`: tienda web con React 19 + TanStack Router/Query + openapi-fetch + Tailwind 4 sobre Vite+ (CLI `vp`, sus convenciones están en su `AGENTS.md`). La guía y el avance por cortes `F0`–`F6` están en `docs/frontend/` (`00-avance.md`); el corte F0 está hecho y falta F1 en adelante; ninguna ruta del backend bloquea ya a la tienda (catálogo, cuenta, carrito, compra, pedidos). React Hook Form es la librería de formularios elegida, pero se instala en F2 con el primer formulario.
 - `docs/`: guía de diseño, contrato de la API (`api-contrato.md`, lo que consume el frontend) y `docs/product/`, la fuente de información del producto (visión, reglas de negocio `RN-nn`, historias `HU-nn`, pantallas `PA-nn`, decisiones `DP-nn`, y en `docs/product/diseno/` los tokens, componentes y wireframes de la interfaz); si algo ahí contradice a la API real, gana la API. `docs/backend/00-avance.md` es el control de avance.
 
-No hay `package.json` en la raíz; cada app tiene su propio `pnpm-lock.yaml`. Ejecuta los comandos desde la carpeta de la app.
+Herramientas de línea de comandos necesarias (`jq`, `curl`, `uuidgen`, `openssl`, `python3`, Docker…): [requisitos previos](docs/guia-de-desarrollo.md#requisitos-previos). No hay `package.json` en la raíz; cada app tiene su propio `pnpm-lock.yaml`. Ejecuta los comandos desde la carpeta de la app.
 
 ## Comandos (`apps/main-api`; pnpm 12.15, Node >= 24.15)
 

@@ -12,6 +12,8 @@
 | 7 comandos de Claude | `.claude/skills/<nombre>/SKILL.md` | El flujo y las listas de comprobación que Claude sigue |
 | Resumen para Claude | `CLAUDE.md` | Se carga solo en cada sesión y enlaza a esta documentación |
 
+Las herramientas que hay que tener instaladas (`docker`, `python3`, `jq`, `uuidgen`…) están en los [requisitos previos de la guía de desarrollo](guia-de-desarrollo.md#requisitos-previos).
+
 ## 2. La compuerta: `scripts/verify.sh`
 
 ```bash

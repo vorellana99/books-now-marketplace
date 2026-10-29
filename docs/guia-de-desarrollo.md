@@ -20,7 +20,7 @@ El trabajo se organiza en **cortes** y cada corte en **tareas**. En el backend, 
 
 ## 2. Primer arranque
 
-Requisitos: Node 24 (≥ 24.15), pnpm 12.15, Docker (la base de desarrollo y los e2e). PostgreSQL tiene que ser la 18: el Outbox usa `uuidv7()`.
+Requisitos: Node 24 (≥ 24.15), pnpm 12.15, Docker (la base de desarrollo y los e2e) y unas herramientas de línea de comandos, entre ellas **`jq`** (ver la tabla de [requisitos previos](#requisitos-previos)). PostgreSQL tiene que ser la 18: el Outbox usa `uuidv7()`.
 
 ```bash
 # Backend
@@ -40,6 +40,34 @@ vp dev                             # http://localhost:5173; reenvía /api al bac
 ```
 
 Comprueba el backend en <http://localhost:3000/health/ready>. Con el seed hay tres usuarios, todos con la contraseña `LibroYa-dev-2026`: `ana@example.com`, `luis@example.com` (premium) y `admin@example.com`. Detalles: [README del backend](../apps/main-api/README.md) y [02 de la tienda](frontend/02-estructura-y-puesta-en-marcha.md).
+
+### Requisitos previos
+
+Instálalos **antes** de seguir: sin ellos, los ejemplos del README, la compuerta o las mutaciones fallan con un «command not found» poco claro. Comprobación rápida: `command -v git node pnpm vp docker curl jq uuidgen openssl python3`; todos deben imprimir una ruta.
+
+| Herramienta | Versión | Para qué | Dónde se usa |
+|---|---|---|---|
+| Node.js | 24 (≥ 24.15) | Backend y tienda | Todo |
+| pnpm | 12.15 | Dependencias y scripts de cada app | Todo |
+| Vite+ (`vp`) | el de `apps/store-web` | `vp check`, `vp test`, `vp dev` | Tienda |
+| Docker | cualquiera reciente, con el daemon activo | La base de desarrollo (PostgreSQL **18**) y los e2e con Testcontainers | `pnpm run db:up`, `test:e2e`, `scripts/verify.sh` |
+| git | cualquiera | Commits por tarea; `verify.sh` mira lo que hay sin commitear | Todo |
+| Python 3 | 3.12 (la probada; sin paquetes extra) | `scripts/mutate.py`, `scripts/test_mutate.py` | Mutaciones |
+| `curl` | cualquiera | Los ejemplos del README del backend | Pruebas a mano |
+| **`jq`** | cualquiera | Sacar `accessToken` y `refreshToken` de las respuestas en los ejemplos de autenticación y de administración del README | Pruebas a mano |
+| `uuidgen` | paquete `uuid-runtime` | El `Idempotency-Key` de `POST /orders` en los ejemplos | Pruebas a mano |
+| `openssl` | cualquiera | Generar `JWT_SECRET` (`openssl rand -base64 48`) | Configuración |
+| Bibliotecas de Chromium | solo si usas Playwright | Revisión visual y e2e de la tienda (F6): `libnss3 libnspr4 libasound2t64` | Tienda |
+
+En Ubuntu o WSL (Debian y derivados), lo que suele faltar se instala así:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y jq curl uuid-runtime openssl python3 git     # las de línea de comandos
+sudo apt-get install -y libnss3 libnspr4 libasound2t64               # solo para Playwright / Chromium
+```
+
+Node, pnpm y `vp` no vienen de `apt`: instala Node con tu gestor de versiones (fnm, nvm…) y consulta [Vite+](../apps/store-web/AGENTS.md) para `vp`. En macOS: `brew install jq`; `uuidgen` y `curl` ya vienen con el sistema. Si falta `jq`, los ejemplos siguen sirviendo: copia el token a mano de la respuesta.
 
 ## 3. De dónde sale cada dato
 
