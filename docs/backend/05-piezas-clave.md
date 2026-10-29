@@ -6,6 +6,31 @@
 
 El código del dominio es el de la guía v5. Abajo solo va lo nuevo o lo que cambia.
 
+### Convención por contexto
+
+No todos los contextos tienen la misma forma, y es a propósito: la estructura sigue a las reglas de negocio que hay que proteger, no a una plantilla.
+
+| Contexto | Forma | Por qué |
+|---|---|---|
+| **Ventas** | **Hexagonal completa.** `domain/` con agregados, objetos de valor, specifications y **puertos** (clases abstractas: `OrderRepository`, `CheckoutLog`, `PaymentGateway`, `CatalogPricing`, `StockReservation`…); `application/` con los handlers y servicios (`PlaceOrderHandler`, `QuoteOrderHandler`, `OrderPricer`); `infrastructure/` dividida en `http/`, `persistence/`, `adapters/` y `consumers/` | Tiene reglas con ramas (precio, descuento premium, envío gratis, un solo redondeo) y una saga con compensaciones. Los puertos permiten probarlas sin base de datos, con fakes en memoria, y que el fake y la implementación real pasen el mismo contrato de pruebas |
+| **Catálogo, Inventario e Identidad** | **CQRS directo.** Los comandos y consultas son clases en `application/`; sus handlers viven en `infrastructure/` y hablan con `PrismaService` sin repositorio abstracto | Son CRUD o SQL atómico (la reserva de stock es un `UPDATE` condicional con un bloqueo de aviso; el refresco de tokens es una transacción con `FOR UPDATE`) donde una capa de repositorio no protegería ninguna regla y esconder el SQL empeoraría las cosas. Lo poco que es regla pura (`NewBook`, `BookChanges`, `Email`, `PasswordPolicy`, `User`) está en `domain/` y se prueba sin base |
+| **Inventario** | Sin `domain/` | Sus reglas son restricciones que solo la base puede garantizar bajo concurrencia (nunca negativo, una reserva por pedido); un objeto de dominio en memoria no las protegería |
+
+**Regla práctica para el que añada algo:** si aparece una regla de negocio con ramas, sube a `domain/` y gana un puerto; si es un alta, una lectura o una escritura atómica, queda como CQRS directo. **Lo que obliga a todos por igual** lo comprueba `test/unit/architecture/dependency-rules.spec.ts`: un contexto nunca importa de otro (se hablan por `contracts/`), `domain/` no depende de Nest ni de Prisma, y `application/` no usa Prisma (un consumidor del Outbox que necesita la transacción va en `infrastructure/`).
+
+### Límites conocidos
+
+Lo que hoy no escala o no está resuelto, para que nadie lo descubra en producción. Lo que sigue abierto está además en «Problemas abiertos» de [`00-avance.md`](00-avance.md).
+
+| Límite | Qué pasa | Qué hay que saber |
+|---|---|---|
+| **Ritmo del relay del Outbox** | Una vuelta por segundo y un lote de `BATCH` = 10 entregas: **hasta 10 entregas por segundo por instancia**, y solo si cada una es rápida | Las entregas de una vuelta se procesan una tras otra y no hay otra vuelta mientras una sigue en curso, así que con un consumidor lento el ritmo baja: con el correo simulado de 3 s es del orden de una entrega cada 3 s por instancia. Varias instancias se reparten el trabajo (`SKIP LOCKED`) |
+| **Lote y bloqueo van juntos** | Una entrega reclamada queda bloqueada `LEASE_MS` = 2 minutos | La regla del código es `BATCH × duración máxima por entrega < LEASE_MS` (10 × 10 s = 100 s < 120 s). **El relay no impone un tiempo máximo por entrega**: el 10 s es una suposición de los consumidores. Si uno tarda más (unos 12 s o más por entrega), el bloqueo vence a mitad del lote, otra instancia la toma y la primera pierde la entrega (`LeaseLostError`; un efecto de base se revierte, uno externo puede repetirse y por eso debe usar `eventId` como clave de idempotencia). No se sube `BATCH` sin revisar `LEASE_MS` |
+| **Retención de datos** | Cada noche se purga lo ya terminado (corte 9): `RETENTION_OUTBOX_DAYS` (30), `RETENTION_CHECKOUT_DAYS` (30), `RETENTION_RESERVATION_DAYS` (90) y `RETENTION_REFRESH_TOKEN_DAYS` (7) | **Nunca se purga** lo pendiente, en curso o fallido: un checkout `PENDING`, una reserva `HELD`, un mensaje con una entrega `PENDING` o `FAILED` ni un token vigente. Purgar un checkout olvida su `Idempotency-Key`; purgar un token usado hace que su reutilización se vea como un token desconocido (`401`) y no revoque la sesión. Las consultas de purga no tienen índice propio sobre sus fechas: hoy recorren la tabla cada noche |
+| **Límites de intentos en memoria** | Los de `/auth/*` viven en memoria de cada instancia | Con varias instancias el límite real es el de cada una por separado; haría falta un almacén compartido (Redis) |
+| **Cotización sin límite propio** | `POST /orders/quote` no tiene límite de intentos | La acotan la sesión de comprador, el máximo de 100 líneas y que ahora es **una sola consulta** al catálogo por cotización |
+| **Una sola base y una sola zona** | Las columnas `TIMESTAMP(3)` no llevan zona horaria | La base debe ejecutarse en UTC; con otra zona, las comparaciones con `now()` (relay, purga) se desfasan unas horas |
+
 ### Dominio: `Money` con decimal.js
 
 ```ts

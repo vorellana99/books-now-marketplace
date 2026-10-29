@@ -54,6 +54,8 @@ Los tests importan de `vite-plus/test` (no de `vitest`) y viven en `test/`. `src
 
 Monolito modular con DDD + CQRS (`@nestjs/cqrs`) + arquitectura hexagonal. Los bounded contexts viven en `contexts/` (`sales`, `catalog`, `inventory`, `identity`) y cada uno se divide en `domain/`, `application/` e `infrastructure/` (más `<contexto>.module.ts`). Lo transversal está en `platform/` (config, prisma, outbox, observability, http, health, auth) y en `shared-kernel/`.
 
+**Convención por contexto**: Ventas es hexagonal completa (dominio con puertos, handlers en `application/`, `infrastructure/` en `http/`, `persistence/`, `adapters/` y `consumers/`) porque tiene reglas con ramas y una saga; Catálogo, Inventario e Identidad usan CQRS directo (handlers con `PrismaService` en `infrastructure/`) porque son CRUD o SQL atómico. Detalle, y los límites conocidos del Outbox y la retención, en [`docs/backend/05-piezas-clave.md#convención-por-contexto`](docs/backend/05-piezas-clave.md#convención-por-contexto).
+
 **Reglas de dependencias**: las comprueba `test/unit/architecture/dependency-rules.spec.ts` (helpers en `test/support/architecture.ts`; una librería nueva permitida en `domain/` o `contracts/` hay que autorizarla ahí).
 - Un contexto nunca importa de otro contexto. Se hablan solo mediante `contracts/` (el "Published Language": comandos, queries y eventos) y `shared-kernel/`.
 - `domain/` solo importa `decimal.js` y `node:*` (nada de Nest, Prisma ni platform).
