@@ -59,7 +59,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │                                                      (el puerto del guard; lo implementa Identidad)
 │   │   │                                                   ✅ hecho (7.6): auth.guard.ts (global, denegado por defecto),
 │   │   │                                                      public.decorator.ts, roles.decorator.ts,
-│   │   │                                                      current-user.decorator.ts
+│   │   │                                                      current-user.decorator.ts, route-access.ts (7.11: quién puede
+│   │   │                                                      llamar a cada ruta; lo usan el guard y Swagger)
 │   │   ├── outbox/
 │   │   │   ├── outbox.module.ts                            ✅ hecho (4.1); importa DiscoveryModule, no ScheduleModule
 │   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer   ✅ hecho (4.1)
@@ -78,6 +79,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── configure-app.ts
 │   │   │   ├── configure-swagger.ts
 │   │   │   ├── domain-exception.filter.ts
+│   │   │   ├── configure-swagger.ts                        ✅ hecho (7.11): esquema Bearer y el acceso de cada ruta
 │   │   │   ├── configure-security.ts                       ✅ hecho (7.10): helmet, CORS, proxy y registro de accesos
 │   │   │   └── admin-api.decorator.ts                      ✅ hecho (6.4; 7.9): @AdminApi() = @Roles('ADMIN') + etiqueta `admin`
 │   │   └── health/

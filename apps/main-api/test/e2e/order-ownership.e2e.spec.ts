@@ -7,12 +7,11 @@ import { InventoryModule } from '../../src/contexts/inventory/inventory.module.j
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { OutboxRelay } from '../../src/platform/outbox/outbox.relay.js';
-import { bearer } from '../support/auth.js';
+import { bearer, signUp as signUpOn } from '../support/auth.js';
 import { insertBook, insertStock, stockOf } from '../support/builders.js';
 import { query, resetDatabase } from '../support/database.js';
 import { createHttpApp } from '../support/http-app.js';
 
-const PASSWORD = 'una contraseña larga y buena';
 const ADDRESS = {
   recipient: 'María Quispe',
   phone: '+51 987 654 321',
@@ -50,22 +49,8 @@ describe('Compra autenticada y pedidos de cada quien (e2e, aplicación y Postgre
   beforeEach(resetDatabase);
 
   const http = () => request(app.getHttpServer());
+  const signUp = (email: string) => signUpOn(app, email);
 
-  // Se registra e inicia sesión por la API, como lo haría un cliente de verdad
-  async function signUp(email: string) {
-    const registered = await http()
-      .post('/auth/register')
-      .send({ email, password: PASSWORD })
-      .expect(201);
-    const session = await http()
-      .post('/auth/login')
-      .send({ email, password: PASSWORD })
-      .expect(200);
-    return {
-      id: registered.body.id as string,
-      auth: { Authorization: `Bearer ${session.body.accessToken as string}` },
-    };
-  }
   const cartFor = (isbn: string, quantity = 1) => ({
     cardToken: 'tok_visa',
     items: [{ isbn, quantity }],

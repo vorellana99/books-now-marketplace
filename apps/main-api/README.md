@@ -196,17 +196,56 @@ curl 'http://localhost:3000/books?page=2&pageSize=2'  # el catálogo activo, de 
 
 La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas por dentro al comprar.
 
+### Probar la autenticación
+
+La API usa un **token de acceso** de vida corta (15 minutos, `ACCESS_TOKEN_TTL_SECONDS`) que se manda en `Authorization: Bearer <token>`, y un **token de refresco** opaco que se cambia por otro par de tokens y sirve **una sola vez**. Todas las rutas piden sesión salvo el catálogo (`GET /books…`), `/health/*` y `/auth/*`. Los roles son `BUYER` (compra y ve lo suyo) y `ADMIN` (la administración). Con los datos de ejemplo cargados hay tres usuarios, todos con la contraseña `LibroYa-dev-2026`: `ana@example.com`, `luis@example.com` (premium) y `admin@example.com`. Los ejemplos usan [`jq`](https://jqlang.org) para sacar el token; si no lo tienes, cópialo a mano de la respuesta.
+
+```bash
+# Registrarse: 201 { id, email, role: "BUYER" }. No inicia sesión. 409 EMAIL_ALREADY_REGISTERED si el correo ya existe;
+# 422 WEAK_PASSWORD si la contraseña no cumple (de 10 a 128 caracteres, sin una de las más comunes)
+curl -X POST http://localhost:3000/auth/register -H 'Content-Type: application/json' \
+  -d '{"email":"nueva@example.com","password":"una contraseña larga y buena"}'
+
+# Iniciar sesión: 200 { accessToken, tokenType: "Bearer", expiresIn, refreshToken, user }
+SESSION=$(curl -s -X POST http://localhost:3000/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"ana@example.com","password":"LibroYa-dev-2026"}')
+ANA=$(echo "$SESSION" | jq -r .accessToken)
+REFRESH=$(echo "$SESSION" | jq -r .refreshToken)
+
+curl -H "Authorization: Bearer $ANA" http://localhost:3000/me/orders   # 200: sus pedidos
+curl http://localhost:3000/me/orders                                   # 401 UNAUTHENTICATED: sin token
+
+# Renovar la sesión antes de que venza el token: 200 con un par nuevo. El REFRESH anterior ya no sirve
+NEXT=$(curl -s -X POST http://localhost:3000/auth/refresh -H 'Content-Type: application/json' \
+  -d "{\"refreshToken\":\"$REFRESH\"}")
+# Repetir el mismo REFRESH (señal de robo) da 401 INVALID_REFRESH_TOKEN y revoca la sesión entera
+
+# Cerrar la sesión: 204. Revoca el REFRESH (el token de acceso ya emitido vale hasta que venza)
+curl -X POST http://localhost:3000/auth/logout -H 'Content-Type: application/json' \
+  -d "{\"refreshToken\":\"$(echo "$NEXT" | jq -r .refreshToken)\"}"
+```
+
+| Qué pasa | Respuesta |
+|---|---|
+| Correo desconocido, mal escrito o contraseña equivocada | `401 INVALID_CREDENTIALS`, siempre el mismo mensaje |
+| Token de acceso vencido | `401 TOKEN_EXPIRED`: renueve la sesión con el de refresco |
+| Token ausente, mal formado o alterado | `401 UNAUTHENTICATED` |
+| Un comprador llama a una ruta de administrador (o al revés) | `403 FORBIDDEN` |
+| Demasiados intentos de login, registro o renovación | `429 TOO_MANY_REQUESTS` con `Retry-After` (límites en [Variables de entorno](#variables-de-entorno)) |
+
+El registro **no verifica el correo**: cualquiera puede registrar un correo ajeno, aunque no obtiene acceso a ninguna cuenta ajena. Un comprador recién registrado tiene su cliente en Ventas alrededor de un segundo después; si compra justo entonces recibe `404 NOT_FOUND` y puede reintentar.
+
 ### Probar una compra
 
-`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta, las líneas y la dirección de envío. Con la API en marcha y los datos de ejemplo:
+`POST /orders` reserva el stock, cobra y registra el pedido **a nombre de quien tiene la sesión** (solo compradores; el cuerpo no lleva `customerId`: sería un `400`). Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el token de la tarjeta, las líneas y la dirección de envío. Con la API en marcha, los datos de ejemplo y el `$ANA` de arriba:
 
 ```bash
 # Ana (normal) compra 2 Clean Code: 90.00 + 10.00 de envío → 201 { orderId, charged: { amount: "100.00", currency: "PEN" } }
 curl -X POST http://localhost:3000/orders \
+  -H "Authorization: Bearer $ANA" \
   -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "customerId": "11111111-1111-4111-8111-111111111111",
     "cardToken": "tok_visa",
     "items": [{ "isbn": "9780132350884", "quantity": 2 }],
     "shippingAddress": {
@@ -217,13 +256,16 @@ curl -X POST http://localhost:3000/orders \
     }
   }'
 
-# Consultar el pedido
-curl http://localhost:3000/orders/<orderId>
+# Consultar el pedido (su dueño o un administrador; para otro comprador es un 404, como si no existiera)
+curl -H "Authorization: Bearer $ANA" http://localhost:3000/orders/<orderId>
+
+# Todos mis pedidos, con la dirección, del más reciente al más antiguo (paginado con nextCursor)
+curl -H "Authorization: Bearer $ANA" http://localhost:3000/me/orders
 ```
 
 | Prueba | Cómo | Resultado |
 |---|---|---|
-| Cliente premium | `customerId` de Luis (`2222…`), 2 Clean Code | `201`, `81.00 PEN` (10 % de descuento y envío gratis) |
+| Cliente premium | Con el token de Luis (`luis@example.com`), 2 Clean Code | `201`, `81.00 PEN` (10 % de descuento y envío gratis) |
 | Pedido en dólares | Ana, 1 The Pragmatic Programmer | `201`, `18.00 USD` (15.00 + 3.00 de envío) |
 | Reintento | La misma `Idempotency-Key` y el mismo cuerpo | `201` con el mismo `orderId`, sin cobrar otra vez |
 | Clave reutilizada | La misma clave con otro carrito | `422 IDEMPOTENCY_KEY_REUSED` |

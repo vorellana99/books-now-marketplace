@@ -10,15 +10,13 @@ import {
   AuthenticationError,
   AuthorizationError,
 } from '../../shared-kernel/domain.errors.js';
-import type { Role } from '../../shared-kernel/role.js';
 import { RequestContext } from '../observability/request-context.js';
 import {
   AccessTokenVerifier,
   TokenVerificationError,
 } from './access-token-verifier.js';
 import type { AuthenticatedRequest } from './current-user.decorator.js';
-import { IS_PUBLIC_KEY } from './public.decorator.js';
-import { ROLES_KEY } from './roles.decorator.js';
+import { routeAccess } from './route-access.js';
 
 // RFC 6750: esquema Bearer y un token de caracteres de base64url, con el relleno opcional
 const BEARER = /^Bearer ([A-Za-z0-9\-._~+/]+=*)$/i;
@@ -37,7 +35,11 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const { isPublic, roles } = this.access(context);
+    const { isPublic, roles } = routeAccess(
+      this.reflector,
+      context.getHandler(),
+      context.getClass(),
+    );
     if (isPublic) return true;
 
     const http = context.switchToHttp();
@@ -90,22 +92,6 @@ export class AuthGuard implements CanActivate {
       );
     }
     return true;
-  }
-
-  // Lo más específico manda: lo que diga la ruta reemplaza a lo del controlador. En un mismo nivel, @Roles gana a
-  // @Public (lo más estricto)
-  private access(context: ExecutionContext): {
-    isPublic: boolean;
-    roles: Role[] | undefined;
-  } {
-    for (const target of [context.getHandler(), context.getClass()]) {
-      const roles = this.reflector.get<Role[] | undefined>(ROLES_KEY, target);
-      if (roles) return { isPublic: false, roles };
-      if (this.reflector.get<boolean | undefined>(IS_PUBLIC_KEY, target)) {
-        return { isPublic: true, roles: undefined };
-      }
-    }
-    return { isPublic: false, roles: undefined };
   }
 
   private deny<E extends AuthenticationError | AuthorizationError>(
