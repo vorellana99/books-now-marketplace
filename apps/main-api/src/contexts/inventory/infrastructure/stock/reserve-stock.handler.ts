@@ -9,7 +9,7 @@ import {
   ConflictError,
   DomainError,
 } from '../../../../shared-kernel/domain.errors.js';
-import { sortByIsbn } from './lock-order.js';
+import { sortByIsbn } from '../persistence/lock-order.js';
 import { assertOrderId } from './order-id.js';
 import { isUniqueViolation } from '../../../../platform/prisma/unique-violation.js';
 

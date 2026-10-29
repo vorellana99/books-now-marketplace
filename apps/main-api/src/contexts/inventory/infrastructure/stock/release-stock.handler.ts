@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { ReleaseStockCommand } from '../../../../contracts/inventory/release-stock.command.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
-import { sortByIsbn } from './lock-order.js';
+import { sortByIsbn } from '../persistence/lock-order.js';
 import { assertOrderId } from './order-id.js';
 
 // Idempotente y segura bajo concurrencia: devuelve el stock de las reservas HELD del pedido, una sola vez
