@@ -28,8 +28,8 @@ flowchart TB
 | PA-02 | Detalle del libro | `/libros/:isbn` | No | `GET /books/:isbn` | HU-11, HU-20 |
 | PA-03 | Registrarse | `/registro` | No (si ya hay sesión, redirige) | `POST /auth/register` | HU-01 |
 | PA-04 | Iniciar sesión | `/ingresar` | No (si ya hay sesión, redirige) | `POST /auth/login` | HU-02, HU-03 |
-| PA-05 | Carrito | `/carrito` | **Sí** | Carrito local, `GET /books/:isbn` por línea para validar precio y vigencia, y `POST /orders/quote` (pendiente) para el total | HU-20, HU-21, HU-22 |
-| PA-06 | Dirección y pago | `/compra` | **Sí** | `POST /orders/quote` (pendiente, corte 8) y `POST /orders` | HU-30, HU-31, HU-32, HU-33 |
+| PA-05 | Carrito | `/carrito` | **Sí** | Carrito local, `GET /books/:isbn` por línea para validar precio y vigencia, y `POST /orders/quote` para el total | HU-20, HU-21, HU-22 |
+| PA-06 | Dirección y pago | `/compra` | **Sí** | `POST /orders/quote` y `POST /orders` | HU-30, HU-31, HU-32, HU-33 |
 | PA-07 | Confirmación | `/pedidos/:id/gracias` | **Sí** | `GET /orders/:id` | HU-34 |
 | PA-08 | Mis pedidos | `/pedidos` | **Sí** | `GET /me/orders` | HU-40 |
 | PA-09 | Detalle del pedido | `/pedidos/:id` | **Sí** | `GET /orders/:id` | HU-41 |

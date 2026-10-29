@@ -14,7 +14,7 @@
 | [HU-11](#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ | ⬜ | Tienda MVP |
 | [HU-20](#hu-20-agregar-un-libro-al-carrito) | Agregar un libro al carrito | Carrito | — | ⬜ | Tienda MVP |
 | [HU-21](#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | — | ⬜ | Tienda MVP |
-| [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ⬜ (cotización) | ⬜ | Tienda MVP |
+| [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ | ⬜ | Tienda MVP |
 | [HU-30](#hu-30-indicar-la-dirección-de-envío) | Indicar la dirección de envío | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-31](#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-32](#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ | ⬜ | Tienda MVP |
@@ -27,7 +27,7 @@
 | [HU-52](#hu-52-cargar-stock) | Cargar stock | Administración | ✅ | ⬜ | Segunda etapa |
 | [HU-53](#hu-53-ver-los-pedidos-de-un-cliente) | Ver los pedidos de un cliente | Administración | ✅ | ⬜ | Segunda etapa |
 
-La columna **API** de las historias del corte 7 pasó a ✅ al cerrarse ese corte del backend (ver [00-avance](../backend/00-avance.md)); la única que queda es HU-22, a la espera de la cotización (corte 8).
+La columna **API** de las historias del corte 7 pasó a ✅ al cerrarse ese corte del backend (ver [00-avance](../backend/00-avance.md)); la de HU-22 pasó a ✅ al cerrarse el corte 8 (cotización). Ya ninguna historia espera al backend.
 
 ---
 
@@ -126,7 +126,7 @@ Reglas: RN-10, RN-11 · Pantallas: PA-05
 ### HU-22 Ver el carrito
 
 **Como** comprador, **quiero** ver mi carrito con el total que voy a pagar, **para** saber cuánto voy a gastar antes de pagar.
-Reglas: RN-01 a RN-08 · Pantallas: PA-05 · `POST /orders/quote` (pendiente, [DP-07](09-decisiones-y-preguntas.md))
+Reglas: RN-01 a RN-08 · Pantallas: PA-05 · `POST /orders/quote` (✅ corte 8, [DP-07](09-decisiones-y-preguntas.md))
 
 - **Dado** un carrito con libros, **cuando** lo abro, **entonces** veo por línea título, autor, precio unitario y cantidad (los libros salen del carrito de la tienda).
 - **Dado** un carrito con libros, **cuando** lo abro o cambio una cantidad, **entonces** la tienda pide la **cotización** al backend y muestra el **subtotal de cada línea**, el subtotal, el descuento (si lo hay), el envío y el **total a pagar**, en la moneda del carrito. La tienda nunca calcula estos montos (RN-08, DP-20).

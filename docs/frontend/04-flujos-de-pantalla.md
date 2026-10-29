@@ -66,7 +66,7 @@ El carrito es un mapa `{ [userId]: líneas[] }` persistido en `localStorage`. Ca
 | Comprar con éxito | Se vacía solo el carrito de ese usuario |
 | Cerrar sesión | El carrito **se conserva** (DP-04) |
 
-Los montos de la línea son los textos de la API. El **subtotal de cada línea** y todos los totales llegan en la cotización (corte 8, DP-20) y el frontend no los calcula; hasta que exista, PA-05 muestra precio unitario y cantidad.
+Los montos de la línea son los textos de la API. El **subtotal de cada línea** y todos los totales llegan en la cotización (`POST /orders/quote`, corte 8, DP-20) y el frontend no los calcula.
 
 ## 5. Pago (PA-06)
 

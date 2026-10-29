@@ -14,11 +14,11 @@ Cada corte trae un cuadro de **Tareas** que explica qué es cada una y para qué
 | F1 | Catálogo | HU-10, HU-11 | ⬜ | `feature/frontend-mvp` | — |
 | F2 | Cuenta y sesión | HU-01 a HU-04 | ⬜ | `feature/frontend-mvp` | — |
 | F3 | Carrito | HU-20 a HU-22 | ⬜ | `feature/frontend-mvp` | — |
-| F4 | Compra | HU-30 a HU-34 | ⬜ ⛔ (corte 8) | `feature/frontend-mvp` | — |
+| F4 | Compra | HU-30 a HU-34 | ⬜ (cotización ya en la API) | `feature/frontend-mvp` | — |
 | F5 | Pedidos | HU-40, HU-41 | ⬜ | `feature/frontend-mvp` | — |
 | F6 | Calidad y salida | — | ⬜ | `feature/frontend-mvp` | — |
 
-F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en adelante cada corte depende del anterior. **El corte 7 del backend (autenticación: `7.7`, `7.8`, `7.10`) ya está entregado**, así que F5 y la parte de F4 que no es la cotización se pueden construir y cerrar contra la API real. **F4 sigue ⛔ solo por el corte 8** (cotización, aún no existe: se construye contra MSW) ([07-fases-y-roadmap](07-fases-y-roadmap.md)). Una sola rama de trabajo, `feature/frontend-mvp`; el pull request lo abre el usuario cuando lo decida.
+F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en adelante cada corte depende del anterior. **El corte 7 del backend (autenticación: `7.7`, `7.8`, `7.10`) ya está entregado**, así que F5 y la parte de F4 que no es la cotización se pueden construir y cerrar contra la API real. **El corte 8 (cotización, `POST /orders/quote`) también está entregado**, así que F4 ya no está ⛔ y se construye contra la API real ([07-fases-y-roadmap](07-fases-y-roadmap.md)). Una sola rama de trabajo, `feature/frontend-mvp`; el pull request lo abre el usuario cuando lo decida.
 
 **Un corte está terminado cuando:** sus tareas están marcadas, `vp check`, `vp test` y `vp build` pasan, sus criterios de "listo cuando…" se cumplen ejecutándolos de verdad (en el navegador y contra la API real, no solo con MSW), y la guía, [producto](../product/04-historias-de-usuario.md) y el [diseño](../product/diseno/README.md) reflejan lo que realmente se hizo (el estado **Web** de cada historia).
 
@@ -130,7 +130,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 **Historias:** [HU-30 a HU-34](../product/04-historias-de-usuario.md#compra) y HU-22 completa · **Pantallas:** PA-06, PA-07 · **Guía:** [04 sección 5](04-flujos-de-pantalla.md#5-pago-pa-06) · [03 sección 5](03-integracion-con-la-api.md#5-idempotencia-de-la-compra)
 
-**Bloqueo para cerrarse:** corte 8 del backend (cotización). La compra con el cliente del token (`7.7`) ya está: el backend responde `400` si el cuerpo trae `customerId` y `403` si quien compra es un administrador.
+**Sin bloqueos:** la cotización (corte 8) ya existe en el backend. La compra con el cliente del token (`7.7`) ya está: el backend responde `400` si el cuerpo trae `customerId` y `403` si quien compra es un administrador.
 
 **Listo cuando:** contra el backend real, una persona con sesión ve su total antes de pagar, escribe su dirección, paga con una tarjeta simulada y ve la confirmación con el total realmente cobrado; **un reintento tras un corte de red no cobra dos veces**; cada fallo de negocio (sin stock, tarjeta rechazada, dirección inválida) muestra su mensaje y dice si se cobró; y el cuerpo de `POST /orders` ya no lleva `customerId`.
 
@@ -138,14 +138,14 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
-| 1 | Cotización | Hook de `POST /orders/quote`; totales en PA-05 y el resumen de PA-06 | HU-22 completa | ⬜ ⛔ |
+| 1 | Cotización | Hook de `POST /orders/quote`; totales en PA-05 y el resumen de PA-06 | HU-22 completa | ⬜ |
 | 2 | Formulario de dirección | RN-22, con errores del servidor junto al campo; vacío en cada compra | HU-30 | ⬜ |
 | 3 | Idempotencia y máquina de pago | Huella del intento, clave en `sessionStorage` y los estados `Cotizando`…`Confirmado` | HU-31, HU-32 | ⬜ |
 | 4 | Errores de la compra | Un mensaje por `errorCode` con su acción, y "no se pudo confirmar" sin afirmar que no se cobró | HU-33 | ⬜ |
 | 5 | PA-07 Confirmación | Número de pedido, libros, `charged` real y aviso del email | HU-34 | ⬜ |
 | 6 | Sin `customerId` | No enviar el cliente: `7.7` ya está en el backend y lo rechaza | Cumplir RN-23 y DP-09 | ⬜ |
 
-- [ ] F4.1 Cotización. Se comprueba: HU-22 (subtotal de cada línea, subtotal, descuento, envío y total de la respuesta, sin calcular nada; recotiza al cambiar una cantidad; si falla no se puede continuar). **No se cierra** hasta probarla contra la ruta real del corte 8
+- [ ] F4.1 Cotización. Se comprueba: HU-22 (subtotal de cada línea, subtotal, descuento, envío y total de la respuesta, sin calcular nada; recotiza al cambiar una cantidad; si falla no se puede continuar). Se prueba contra la ruta real del corte 8 (`POST /orders/quote`, con sesión de comprador)
 - [ ] F4.2 Dirección. Se comprueba: HU-30 (campos y largos, `INVALID_SHIPPING_ADDRESS` junto al campo, espacios recortados, empieza vacía, se conserva al ir y volver al carrito)
 - [ ] F4.3 Idempotencia y pago. Se comprueba: HU-31 y HU-32 (misma clave tras corte, `5xx` y `CHECKOUT_IN_PROGRESS`; clave nueva tras `PREVIOUS_ATTEMPT_FAILED`, `IDEMPOTENCY_KEY_REUSED` o un cambio; la clave sobrevive a una recarga; el botón no se pulsa dos veces; el `404` de cliente recién creado reintenta una vez)
 - [ ] F4.4 Errores. Se comprueba: HU-33 (cada código de [producto 07](../product/07-contenido-y-mensajes.md) tiene mensaje; red caída y `5xx` no afirman que no se cobró; una sesión vencida a mitad del pago se renueva y se reenvía con la misma clave)
@@ -178,7 +178,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 **Guía:** [06-tests](06-tests.md) · [producto 08](../product/08-requisitos-de-experiencia.md) · [02 sección 3](02-estructura-y-puesta-en-marcha.md#3-variables-de-entorno)
 
-**La salida a producción (DP-09)** ya no espera al backend: `7.7`, `7.8` y `7.10` están entregados. Falta la cotización (corte 8) para la compra completa, y configurar en el despliegue `CORS_ORIGINS` (o el proxy inverso), `TRUST_PROXY` y `JWT_SECRET`.
+**La salida a producción (DP-09)** ya no espera al backend: `7.7`, `7.8` y `7.10` están entregados. La cotización (corte 8) también está entregada. Falta configurar en el despliegue `CORS_ORIGINS` (o el proxy inverso), `TRUST_PROXY` y `JWT_SECRET`.
 
 **Listo cuando:** el recorrido completo (registro → compra → pedidos) pasa con Playwright contra el backend real; las pantallas pasan axe en nivel AA y se usan solo con teclado; el rendimiento cumple los objetivos de [producto 08](../product/08-requisitos-de-experiencia.md) en un teléfono de gama media; el frontend queda desplegable con su configuración de producción; y la revisión de seguridad está hecha.
 

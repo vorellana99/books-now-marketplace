@@ -18,7 +18,7 @@ Los números identifican el tema y no cambian; no siguen el orden en que se deci
 | DP-06 | Pago con tarjeta | El frontend usa un `cardToken` simulado hasta que se elija proveedor. Con la pasarela simulada, `tok_declined` da rechazo, `tok_error` da un error del servidor y cualquier otro token se aprueba | HU-31 |
 | DP-07 | Total antes de pagar | El backend ofrece una **cotización** (`POST /orders/quote`) que calcula subtotal, descuento, envío y total sin cobrar ni reservar. La tienda la muestra en el carrito y en el pago. El frontend **no** calcula precios (RN-08) | HU-22, HU-31, PA-05, PA-06, [03](03-reglas-de-negocio.md) |
 | DP-08 | SEO | No es prioridad del MVP: la tienda puede seguir siendo una SPA (Vite+) | [08](08-requisitos-de-experiencia.md) |
-| DP-09 | Salida a producción | La tienda se abre al público al cerrar `7.7` (compra con el cliente del token), `7.8` (`GET /me/orders`) y `7.10` (límites de intentos y CORS). **Las tres están hechas** (corte 7 cerrado); también `7.9`, así que la administración funciona en producción, solo para el rol `ADMIN`. Queda la cotización (corte 8) para el paso de pago | [00](00-vision-y-alcance.md) |
+| DP-09 | Salida a producción | La tienda se abre al público al cerrar `7.7` (compra con el cliente del token), `7.8` (`GET /me/orders`) y `7.10` (límites de intentos y CORS). **Las tres están hechas** (corte 7 cerrado); también `7.9`, así que la administración funciona en producción, solo para el rol `ADMIN`. La cotización (corte 8) también está hecha, así que la tienda puede abrirse con la compra completa | [00](00-vision-y-alcance.md) |
 | DP-10 | Distintivo premium | No se muestra si la persona es premium en el MVP | PA-05 |
 | DP-11 | Tras registrarse | La tienda inicia la sesión sola con las mismas credenciales | HU-01 |
 | DP-12 | Intención al pedir sesión | No se recuerda: tras entrar se vuelve al libro y la persona lo agrega | HU-20, [05](05-recorridos.md) |
@@ -54,16 +54,16 @@ Cosas que la tienda web necesita y que el backend no ofrece hoy. La columna **Bl
 | Dirección y teléfono en el detalle del pedido (DP-15) | ✅ Hecho: `GET /orders/:id` los devuelve a su dueño y a los administradores | — |
 | `GET /me/orders`, con la forma de DP-18 | ✅ Tarea `7.8` (hecha) | — |
 | Límite de intentos y CORS (`CORS_ORIGINS`) | ✅ Tarea `7.10` (hecha; `CORS_ORIGINS` vacío por defecto: hay que configurarlo en el despliegue o usar un proxy) | — |
-| **Cotización del total** (`POST /orders/quote`), ver abajo | No existe. Es el [corte 8 del backend](../backend/00-avance.md#corte-8-cotización-del-total-) (`8.1` a `8.4`); su dependencia, `7.7`, ya está hecha | **HU-22 y el paso de pago** (DP-07) |
+| **Cotización del total** (`POST /orders/quote`), ver abajo | ✅ [Corte 8 del backend](../backend/00-avance.md#corte-8-cotización-del-total-) (`8.1` a `8.4`) | — |
 | Roles en `/admin/*` | ✅ Tarea `7.9` (hecha) | — |
 | Portada, descripción y categorías del libro | No existen | No |
 | Stock visible o "últimas unidades" | La API no lo expone | No |
 | Distintivo premium (que el usuario traiga `premium`) | `user` solo trae `id`, `email` y `role` | No (DP-10) |
 | Recuperar o cambiar la contraseña, verificar el correo | Fuera del corte 7: no existe | No |
 
-### Contrato propuesto de la cotización
+### Contrato de la cotización
 
-Es una **propuesta** para que backend y frontend la afinen antes de implementarla:
+Implementado tal como se propuso (corte 8); el contrato exacto está en [`api-contrato.md`](../api-contrato.md):
 
 - `POST /orders/quote`, con sesión (el descuento premium depende del cliente del token).
 - Cuerpo: `items[{ isbn, quantity }]`, con las mismas validaciones que `POST /orders` (RN-10, RN-11, RN-14), sin `shippingAddress`, `cardToken` ni `customerId`.

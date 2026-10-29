@@ -169,6 +169,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orders/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cotizar: el total antes de pagar
+         * @description Calcula el subtotal, el descuento, el envío y el total de un carrito **con las mismas reglas del cobro**, sin reservar stock, cobrar ni guardar nada. El cliente es el del token (el descuento premium depende de él). No avisa de falta de stock: eso se descubre al pagar. Puede cambiar entre cotizar y pagar si cambia un precio o la condición premium; lo que manda es el `charged` del pedido.
+         */
+        post: operations["OrderController_quote"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders/{id}": {
         parameters: {
             query?: never;
@@ -471,6 +491,38 @@ export interface components {
             /** Format: uuid */
             orderId: string;
             charged: components["schemas"]["OrderMoneyResponse"];
+        };
+        QuoteOrderDto: {
+            items: components["schemas"]["CartItemDto"][];
+        };
+        QuoteLineResponse: {
+            /** @example 9780132350884 */
+            isbn: string;
+            unitPrice: components["schemas"]["OrderMoneyResponse"];
+            /**
+             * @description Las líneas repetidas ya vienen sumadas
+             * @example 2
+             */
+            quantity: number;
+            /** @description Precio unitario × cantidad, exacto */
+            subtotal: components["schemas"]["OrderMoneyResponse"];
+        };
+        OrderQuoteResponse: {
+            /**
+             * @example PEN
+             * @enum {string}
+             */
+            currency: "PEN" | "USD";
+            /** @description Ordenadas por ISBN */
+            lines: components["schemas"]["QuoteLineResponse"][];
+            /** @description Antes del descuento */
+            subtotal: components["schemas"]["OrderMoneyResponse"];
+            /** @description El descuento premium; 0.00 para un cliente normal */
+            discount: components["schemas"]["OrderMoneyResponse"];
+            /** @description 0.00 si el envío es gratis */
+            shipping: components["schemas"]["OrderMoneyResponse"];
+            /** @description Lo que se cobraría hoy con este carrito. Puede cambiar si cambia un precio o la condición premium: lo que manda es el `charged` del pedido */
+            total: components["schemas"]["OrderMoneyResponse"];
         };
         OrderLineResponse: {
             /** @example 9780132350884 */
@@ -1236,6 +1288,71 @@ export interface operations {
                 content?: never;
             };
             /** @description OUT_OF_STOCK, STOCK_ITEM_NOT_FOUND, PAYMENT_DECLINED, IDEMPOTENCY_KEY_REUSED, PREVIOUS_ATTEMPT_FAILED, INVALID_ISBN, INVALID_SHIPPING_ADDRESS, MAX_QUANTITY_EXCEEDED, CURRENCY_MISMATCH u otra regla del dominio */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    OrderController_quote: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Opcional; si falta, la API genera uno */
+                "X-Request-Id"?: unknown;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuoteOrderDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderQuoteResponse"];
+                };
+            };
+            /** @description El cuerpo no cumple el formato o trae campos de más (`customerId`, `shippingAddress`, `cardToken`…) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description FORBIDDEN: solo los compradores pueden cotizar */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description NOT_FOUND: un libro no existe (o está inactivo), o el comprador aún no tiene su cliente en Ventas */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description INVALID_ISBN, CURRENCY_MISMATCH, MAX_QUANTITY_EXCEEDED, UNSUPPORTED_CURRENCY u otra regla del dominio */
             422: {
                 headers: {
                     [name: string]: unknown;

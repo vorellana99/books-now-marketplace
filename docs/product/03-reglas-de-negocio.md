@@ -13,7 +13,7 @@
 | RN-05 | **Una sola moneda** | Todos los libros de un pedido deben tener la misma moneda (`CURRENCY_MISMATCH` si no). El mínimo de envío gratis y el costo de envío tienen un valor propio por moneda; no se convierten. El descuento premium, al ser un porcentaje, es igual en ambas |
 | RN-06 | **Redondeo** | El total se calcula con todos los decimales y se redondea **una sola vez**, a 2 decimales y con la mitad hacia arriba, justo antes de cobrar |
 | RN-07 | **Formato de montos** | En la API, todo monto es `{ "amount": "45.00", "currency": "PEN" }`: texto con 2 decimales, punto decimal, sin separador de miles. Nunca un número |
-| RN-08 | **El total antes de pagar lo calcula el backend** | La tienda muestra el subtotal, el descuento, el envío y el total que devuelve la **cotización** (`POST /orders/quote`, pendiente) y nunca los calcula ella. La cotización no reserva stock ni cobra, y el total puede cambiar antes de pagar si cambia un precio o la condición premium; lo que manda es el `charged` del pedido (DP-07) |
+| RN-08 | **El total antes de pagar lo calcula el backend** | La tienda muestra el subtotal, el descuento, el envío y el total que devuelve la **cotización** (`POST /orders/quote`) y nunca los calcula ella. La cotización no reserva stock ni cobra, y el total puede cambiar antes de pagar si cambia un precio o la condición premium; lo que manda es el `charged` del pedido (DP-07) |
 
 **Ejemplos del total cobrado:**
 

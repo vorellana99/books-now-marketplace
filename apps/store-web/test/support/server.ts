@@ -3,8 +3,9 @@ import type { RequestHandler } from "msw";
 
 // La API simulada de las pruebas. Cada prueba agrega sus handlers con `server.use(...)`;
 // `setup.ts` los reinicia después de cada una.
-// Los endpoints que aún no existen en el backend (POST /orders/quote, GET /me/orders) llevan el comentario
-// `// CONTRATO PROPUESTO: aún no existe en el backend` en su handler.
+// Todas las rutas que usa la tienda existen en el backend (también POST /orders/quote y GET /me/orders): los handlers
+// siguen la forma real de `docs/api-contrato.md`. Si alguna ruta faltara, su handler llevaría el comentario
+// `// CONTRATO PROPUESTO: aún no existe en el backend`.
 const handlers: RequestHandler[] = [];
 
 export const server = setupServer(...handlers);

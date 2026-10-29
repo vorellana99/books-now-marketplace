@@ -256,6 +256,13 @@ curl -X POST http://localhost:3000/orders \
     }
   }'
 
+# Cotizar antes de pagar: mismo cálculo que el cobro, sin reservar ni cobrar ni pedir dirección ni tarjeta
+# → 200 { currency, lines[{ isbn, unitPrice, quantity, subtotal }], subtotal, discount, shipping, total }
+curl -X POST http://localhost:3000/orders/quote \
+  -H "Authorization: Bearer $ANA" \
+  -H 'Content-Type: application/json' \
+  -d '{ "items": [{ "isbn": "9780132350884", "quantity": 2 }] }'
+
 # Consultar el pedido (su dueño o un administrador; para otro comprador es un 404, como si no existiera)
 curl -H "Authorization: Bearer $ANA" http://localhost:3000/orders/<orderId>
 

@@ -31,12 +31,12 @@ Con el paso 1, los tipos incluyen también las operaciones `/admin/*` (desde el 
 | Catálogo | `GET /books`, `GET /books/:isbn` | ✅ | HU-10, HU-11 |
 | Registro y login | `POST /auth/register`, `POST /auth/login` | ✅ | HU-01, HU-02 |
 | Sesión | `POST /auth/refresh`, `POST /auth/logout` | ✅ | HU-03, HU-04 |
-| Cotización | `POST /orders/quote` | ⬜ **corte 8** (`8.1` a `8.4`); su dependencia, `7.7`, ya está hecha | HU-22, HU-31 |
+| Cotización | `POST /orders/quote` | ✅ **corte 8**: solo compradores; cuerpo `{ items[{ isbn, quantity }] }`; devuelve `{ currency, lines[{ isbn, unitPrice, quantity, subtotal }], subtotal, discount, shipping, total }`. No reserva stock ni avisa de su falta | HU-22, HU-31 |
 | Compra | `POST /orders` (`Idempotency-Key`) | ✅ **`7.7`**: solo compradores; el cliente es el del token y un `customerId` en el cuerpo es `400`. Un administrador recibe `403`. Un comprador recién registrado recibe `404 NOT_FOUND` hasta que Ventas crea su cliente (alrededor de un segundo) | HU-30 a HU-33 |
 | Confirmación y detalle | `GET /orders/:id` | ✅ **`7.7`**: lo ve su dueño (o un administrador); para otro comprador es `404`, igual que uno inexistente. Incluye `shippingAddress` (las siete partes, o `null` en un pedido anterior a ella; DP-15) | HU-34, HU-41 |
 | Mis pedidos | `GET /me/orders?cursor=&limit=` | ✅ **`7.8`**, con la forma de DP-18: `{ items[{ id, status, charged, lines, createdAt, shippingAddress }], nextCursor }`, del más reciente al más antiguo. No admite `customerId` | HU-40 |
 
-Mientras una ruta no exista, el frontend trabaja contra **handlers de MSW que siguen el contrato propuesto** y que están marcados como tales ([06-tests](06-tests.md)). Esto permite avanzar sin esperar al backend, pero **no se cierra la historia** hasta probarla contra la ruta real.
+Todas las rutas que usa la tienda existen. Si alguna faltara, el frontend trabajaría contra **handlers de MSW que siguen el contrato propuesto** y marcados como tales ([06-tests](06-tests.md)), pero **no se cerraría la historia** hasta probarla contra la ruta real.
 
 ## 3. El cliente
 
@@ -108,11 +108,7 @@ flowchart LR
 
 ## 8. Lo que bloquea cada corte
 
-El corte 7 del backend (autenticación) está **cerrado**: `7.7`, `7.8` y `7.10` ya existen. Lo que queda pendiente:
-
-| Dependencia del backend | Bloquea | Mientras tanto |
-|---|---|---|
-| Corte 8, cotización (`POST /orders/quote`) | HU-22 completa y el paso de pago | El carrito muestra precios y cantidades, sin totales; MSW simula la cotización |
+Los cortes 7 (autenticación: `7.7`, `7.8`, `7.10`) y 8 (cotización, `POST /orders/quote`) del backend están **cerrados**: **nada del backend bloquea ya a la tienda.** Antes de construir HU-22 y el paso de pago, `vp run api:types` ya trae `/orders/quote` a `schema.d.ts`. La cotización se pide con sesión de comprador y se repite cuando cambia una cantidad; entre cotizar y pagar puede cambiar un precio, y entonces manda el `charged` del pedido (HU-34).
 
 **DP-15 resuelto: el detalle del pedido trae la dirección.** `GET /orders/:id` devuelve `shippingAddress` (`{ recipient, phone, line1, district, province, department, reference }`, o `null` en un pedido anterior a ella) a su dueño y a los administradores; para cualquier otro es un `404` sin rastro de ella. PA-09 muestra la sección de envío cuando `shippingAddress` no es `null`. `GET /me/orders` la trae también en cada ítem.
 
