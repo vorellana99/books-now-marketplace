@@ -4,7 +4,10 @@ import { PrismaService } from '../../../platform/prisma/prisma.service.js';
 import { AuthenticationError } from '../../../shared-kernel/domain.errors.js';
 import { RefreshSessionCommand } from '../application/refresh-session.command.js';
 import type { Session } from '../application/session.js';
-import { hashRefreshToken, isWellFormedRefreshToken } from './refresh-token.js';
+import {
+  hashRefreshToken,
+  isWellFormedRefreshToken,
+} from '../domain/session/refresh-token.js';
 import { SessionService } from './session.service.js';
 
 type Outcome =

@@ -5,7 +5,7 @@ import type { Prisma } from '../../../platform/prisma/generated/client.js';
 import type { Role } from '../../../shared-kernel/role.js';
 import { AccessTokenIssuer } from '../application/access-token-issuer.js';
 import type { Session } from '../application/session.js';
-import { generateRefreshToken } from './refresh-token.js';
+import { generateRefreshToken } from '../domain/session/refresh-token.js';
 
 const DAY_MS = 86_400_000;
 

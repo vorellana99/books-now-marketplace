@@ -1,7 +1,10 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { PrismaService } from '../../../platform/prisma/prisma.service.js';
 import { LogoutCommand } from '../application/logout.command.js';
-import { hashRefreshToken, isWellFormedRefreshToken } from './refresh-token.js';
+import {
+  hashRefreshToken,
+  isWellFormedRefreshToken,
+} from '../domain/session/refresh-token.js';
 
 @CommandHandler(LogoutCommand)
 export class LogoutHandler implements ICommandHandler<LogoutCommand> {
