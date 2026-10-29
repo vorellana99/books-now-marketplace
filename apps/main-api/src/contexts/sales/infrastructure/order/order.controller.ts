@@ -3,6 +3,8 @@ import {
   Body,
   Controller,
   Get,
+  Header,
+  HttpCode,
   Headers,
   Param,
   ParseUUIDPipe,
@@ -35,10 +37,19 @@ import {
   type OrderDetail,
 } from '../../application/order/get-order.query.js';
 import {
+  QuoteOrderQuery,
+  type OrderQuote,
+} from '../../application/order/quote-order.query.js';
+import {
   PlaceOrderCommand,
   type PlaceOrderResult,
 } from '../../application/order/place-order.command.js';
-import { OrderDetailResponse, PlaceOrderResponse } from './order.response.js';
+import {
+  OrderDetailResponse,
+  OrderQuoteResponse,
+  PlaceOrderResponse,
+} from './order.response.js';
+import { QuoteOrderDto } from './quote-order.dto.js';
 import { PlaceOrderDto } from './place-order.dto.js';
 
 // Comprar es de los compradores, y el cliente es quien tiene la sesión: no viene en el cuerpo. Ver un pedido lo pueden su
@@ -114,6 +125,48 @@ export class OrderController {
           reference: dto.shippingAddress.reference,
         },
         dto.cardToken,
+      ),
+    );
+  }
+
+  @Post('quote')
+  @HttpCode(200) // consulta: no crea nada
+  @Header('Cache-Control', 'no-store') // depende del cliente (descuento premium)
+  @Roles('BUYER')
+  @ApiOperation({
+    summary: 'Cotizar: el total antes de pagar',
+    description:
+      'Calcula el subtotal, el descuento, el envío y el total de un carrito **con las mismas reglas del cobro**, sin reservar stock, cobrar ni guardar nada. El cliente es el del token (el descuento premium depende de él). No avisa de falta de stock: eso se descubre al pagar. Puede cambiar entre cotizar y pagar si cambia un precio o la condición premium; lo que manda es el `charged` del pedido.',
+  })
+  @ApiOkResponse({ type: OrderQuoteResponse })
+  @ApiBadRequestResponse({
+    description:
+      'El cuerpo no cumple el formato o trae campos de más (`customerId`, `shippingAddress`, `cardToken`…)',
+  })
+  @ApiUnauthorizedResponse({
+    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
+  })
+  @ApiForbiddenResponse({
+    description: 'FORBIDDEN: solo los compradores pueden cotizar',
+  })
+  @ApiNotFoundResponse({
+    description:
+      'NOT_FOUND: un libro no existe (o está inactivo), o el comprador aún no tiene su cliente en Ventas',
+  })
+  @ApiUnprocessableEntityResponse({
+    description:
+      'INVALID_ISBN, CURRENCY_MISMATCH, MAX_QUANTITY_EXCEEDED, UNSUPPORTED_CURRENCY u otra regla del dominio',
+  })
+  quote(
+    @CurrentUser() user: AuthenticatedUser | undefined,
+    @Body() dto: QuoteOrderDto,
+  ): Promise<OrderQuote> {
+    const { userId } = requireUser(user);
+    return this.queryBus.execute(
+      new QuoteOrderQuery(
+        userId,
+        // objetos planos con solo isbn y quantity, no instancias del DTO
+        dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })),
       ),
     );
   }

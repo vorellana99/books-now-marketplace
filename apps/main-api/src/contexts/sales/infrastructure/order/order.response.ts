@@ -12,6 +12,60 @@ export class OrderMoneyResponse {
   currency!: 'PEN' | 'USD';
 }
 
+export class QuoteLineResponse {
+  @ApiProperty({ example: '9780132350884' })
+  isbn!: string;
+
+  @ApiProperty({ type: OrderMoneyResponse })
+  unitPrice!: OrderMoneyResponse;
+
+  @ApiProperty({
+    example: 2,
+    description: 'Las líneas repetidas ya vienen sumadas',
+  })
+  quantity!: number;
+
+  @ApiProperty({
+    type: OrderMoneyResponse,
+    description: 'Precio unitario × cantidad, exacto',
+  })
+  subtotal!: OrderMoneyResponse;
+}
+
+// El total antes de pagar. Todos los montos salen ya redondeados y suman: subtotal − discount + shipping = total
+export class OrderQuoteResponse {
+  @ApiProperty({ enum: ['PEN', 'USD'], example: 'PEN' })
+  currency!: 'PEN' | 'USD';
+
+  @ApiProperty({
+    type: [QuoteLineResponse],
+    description: 'Ordenadas por ISBN',
+  })
+  lines!: QuoteLineResponse[];
+
+  @ApiProperty({ type: OrderMoneyResponse, description: 'Antes del descuento' })
+  subtotal!: OrderMoneyResponse;
+
+  @ApiProperty({
+    type: OrderMoneyResponse,
+    description: 'El descuento premium; 0.00 para un cliente normal',
+  })
+  discount!: OrderMoneyResponse;
+
+  @ApiProperty({
+    type: OrderMoneyResponse,
+    description: '0.00 si el envío es gratis',
+  })
+  shipping!: OrderMoneyResponse;
+
+  @ApiProperty({
+    type: OrderMoneyResponse,
+    description:
+      'Lo que se cobraría hoy con este carrito. Puede cambiar si cambia un precio o la condición premium: lo que manda es el `charged` del pedido',
+  })
+  total!: OrderMoneyResponse;
+}
+
 export class PlaceOrderResponse {
   @ApiProperty({ format: 'uuid' })
   orderId!: string;

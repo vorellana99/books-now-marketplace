@@ -10,6 +10,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { GetOrderQuery } from '../../src/contexts/sales/application/order/get-order.query.js';
+import { QuoteOrderQuery } from '../../src/contexts/sales/application/order/quote-order.query.js';
 import { PlaceOrderCommand } from '../../src/contexts/sales/application/order/place-order.command.js';
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { OrderController } from '../../src/contexts/sales/infrastructure/order/order.controller.js';
@@ -420,6 +421,178 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
     });
   });
 
+  describe('POST /orders/quote', () => {
+    const QUOTE = {
+      currency: 'PEN',
+      lines: [
+        {
+          isbn: '9780132350884',
+          unitPrice: Money.of('45.00'),
+          quantity: 2,
+          subtotal: Money.of('90.00'),
+        },
+      ],
+      subtotal: Money.of('90.00'),
+      discount: Money.of('0.00'),
+      shipping: Money.of('10.00'),
+      total: Money.of('100.00'),
+    };
+    const quoteBody = (overrides: Record<string, unknown> = {}) => ({
+      items: [{ isbn: '9780132350884', quantity: 2 }],
+      ...overrides,
+    });
+    const quote = (payload: unknown = quoteBody()) =>
+      request(app.getHttpServer())
+        .post('/orders/quote')
+        .send(payload as object);
+
+    beforeEach(() => {
+      queryBus.execute.mockResolvedValue(QUOTE);
+    });
+
+    it('200 (no 201: no crea nada) con el desglose como { amount, currency }', async () => {
+      const res = await quote().expect(200);
+
+      expect(res.body).toEqual({
+        currency: 'PEN',
+        lines: [
+          {
+            isbn: '9780132350884',
+            unitPrice: { amount: '45.00', currency: 'PEN' },
+            quantity: 2,
+            subtotal: { amount: '90.00', currency: 'PEN' },
+          },
+        ],
+        subtotal: { amount: '90.00', currency: 'PEN' },
+        discount: { amount: '0.00', currency: 'PEN' },
+        shipping: { amount: '10.00', currency: 'PEN' },
+        total: { amount: '100.00', currency: 'PEN' },
+      });
+    });
+
+    it('no pide Idempotency-Key: cotizar no cobra', async () => {
+      await quote().expect(200);
+      expect(queryBus.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('no se guarda en cachés: depende del cliente (descuento premium)', async () => {
+      const res = await quote().expect(200);
+      expect(res.headers['cache-control']).toBe('no-store');
+    });
+
+    it('consulta con QuoteOrderQuery: el cliente es el de la sesión y las líneas son objetos planos', async () => {
+      sessionUser = { userId: ADMIN, role: 'BUYER' };
+
+      await quote(
+        quoteBody({ items: [{ isbn: '9780132350884', quantity: 2 }] }),
+      ).expect(200);
+
+      const q = queryBus.execute.mock.calls[0][0] as QuoteOrderQuery;
+      expect(q).toBeInstanceOf(QuoteOrderQuery);
+      expect(q.customerId).toBe(ADMIN);
+      expect(q.items).toStrictEqual([{ isbn: '9780132350884', quantity: 2 }]);
+    });
+
+    it('sin usuario en la petición (ruta mal configurada) da 401 y no consulta', async () => {
+      sessionUser = undefined;
+      const res = await quote().expect(401);
+      expect(res.body.errorCode).toBe('UNAUTHENTICATED');
+      expect(queryBus.execute).not.toHaveBeenCalled();
+    });
+
+    describe('validación del cuerpo (400, sin consultar)', () => {
+      it.each<[string, unknown]>([
+        ['falta items', {}],
+        ['items no es una lista', quoteBody({ items: 'libro' })],
+        ['items vacío', quoteBody({ items: [] })],
+        [
+          'más de 100 líneas',
+          quoteBody({
+            items: Array.from({ length: 101 }, (_, i) => ({
+              isbn: String(i),
+              quantity: 1,
+            })),
+          }),
+        ],
+        ['una línea sin isbn', quoteBody({ items: [{ quantity: 1 }] })],
+        ['isbn vacío', quoteBody({ items: [{ isbn: '', quantity: 1 }] })],
+        [
+          'isbn demasiado largo',
+          quoteBody({ items: [{ isbn: 'x'.repeat(33), quantity: 1 }] }),
+        ],
+        [
+          'cantidad 0',
+          quoteBody({ items: [{ isbn: '9780132350884', quantity: 0 }] }),
+        ],
+        [
+          'cantidad negativa',
+          quoteBody({ items: [{ isbn: '9780132350884', quantity: -1 }] }),
+        ],
+        [
+          'cantidad decimal',
+          quoteBody({ items: [{ isbn: '9780132350884', quantity: 1.5 }] }),
+        ],
+        [
+          'cantidad como texto',
+          quoteBody({ items: [{ isbn: '9780132350884', quantity: '2' }] }),
+        ],
+        [
+          'un customerId (el cliente es el de la sesión)',
+          quoteBody({ customerId: CUSTOMER }),
+        ],
+        ['una dirección', quoteBody({ shippingAddress: ADDRESS })],
+        ['un token de tarjeta', quoteBody({ cardToken: TOKEN })],
+        ['un precio', quoteBody({ total: '1.00' })],
+        [
+          'un precio en una línea',
+          quoteBody({
+            items: [{ isbn: '9780132350884', quantity: 1, price: '0.01' }],
+          }),
+        ],
+      ])('%s', async (_name, payload) => {
+        await quote(payload).expect(400);
+        expect(queryBus.execute).not.toHaveBeenCalled();
+      });
+
+      it('sin cuerpo', async () => {
+        // Sin pasar por `quote()`: su parámetro por defecto convertiría "sin cuerpo" en un cuerpo válido
+        await request(app.getHttpServer()).post('/orders/quote').expect(400);
+        expect(queryBus.execute).not.toHaveBeenCalled();
+      });
+
+      it('acepta de 1 a 100 líneas', async () => {
+        const items = Array.from({ length: 100 }, (_, i) => ({
+          isbn: String(9780000000000 + i),
+          quantity: 1,
+        }));
+        await quote(quoteBody({ items })).expect(200);
+      });
+    });
+
+    describe('errores', () => {
+      it('NotFoundError → 404 NOT_FOUND', async () => {
+        queryBus.execute.mockRejectedValue(new NotFoundError('Book', 'x'));
+        const res = await quote().expect(404);
+        expect(res.body.errorCode).toBe('NOT_FOUND');
+      });
+
+      it.each(['CURRENCY_MISMATCH', 'MAX_QUANTITY_EXCEEDED', 'INVALID_ISBN'])(
+        'DomainError %s → 422 con su código',
+        async (code) => {
+          queryBus.execute.mockRejectedValue(new DomainError(code, 'regla'));
+          const res = await quote().expect(422);
+          expect(res.body.errorCode).toBe(code);
+        },
+      );
+
+      it('un error inesperado no da detalles', async () => {
+        queryBus.execute.mockRejectedValue(new Error('secreto interno'));
+        const res = await quote().expect(500);
+        expect(JSON.stringify(res.body)).not.toContain('secreto interno');
+      });
+    });
+  });
+
   describe('GET /orders/:id', () => {
     const view = {
       id: ORDER,
@@ -516,6 +689,48 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       expect(
         Object.keys(get.responses).sort((a, b) => a.localeCompare(b)),
       ).toEqual(['200', '400', '401', '404']);
+    });
+
+    it('documenta POST /orders/quote: 200 con el desglose y los errores de acceso y de reglas', () => {
+      const doc = SwaggerModule.createDocument(
+        app,
+        new DocumentBuilder().build(),
+      );
+      const post = doc.paths['/orders/quote'].post!;
+      expect(
+        Object.keys(post.responses).sort((a, b) => a.localeCompare(b)),
+      ).toEqual(['200', '400', '401', '403', '404', '422']);
+      const ok = post.responses['200'] as {
+        content: Record<string, { schema: { $ref: string } }>;
+      };
+      expect(ok.content['application/json'].schema.$ref).toBe(
+        '#/components/schemas/OrderQuoteResponse',
+      );
+      const schemas = doc.components!.schemas as Record<
+        string,
+        { properties: Record<string, unknown> }
+      >;
+      expect(
+        Object.keys(schemas.OrderQuoteResponse.properties).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      ).toEqual([
+        'currency',
+        'discount',
+        'lines',
+        'shipping',
+        'subtotal',
+        'total',
+      ]);
+      expect(
+        Object.keys(schemas.QuoteLineResponse.properties).sort((a, b) =>
+          a.localeCompare(b),
+        ),
+      ).toEqual(['isbn', 'quantity', 'subtotal', 'unitPrice']);
+      expect(Object.keys(schemas.QuoteOrderDto.properties)).toEqual(['items']);
+      expect(post.parameters ?? []).not.toContainEqual(
+        expect.objectContaining({ name: 'Idempotency-Key' }),
+      );
     });
 
     it('documenta que GET /orders/{id} devuelve el pedido con su dirección (DP-15), que puede ser null', () => {
