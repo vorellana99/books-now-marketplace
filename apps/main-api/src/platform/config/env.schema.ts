@@ -10,6 +10,48 @@ const optionalSecret = z.preprocess(
     .optional(),
 );
 
+// Una lista de orígenes permitidos por CORS, separados por comas. Cada uno es esquema://host[:puerto], sin ruta, barra
+// final, consulta, fragmento ni credenciales, y sin comodines: se normaliza (minúsculas, sin el puerto por defecto) y se
+// quitan los repetidos. Vacía, no hay CORS
+const MAX_CORS_ORIGINS = 20;
+const ORIGIN_SHAPE = /^https?:\/\/[^/?#@\s]+$/i;
+const corsOrigins = z
+  .string()
+  .default('')
+  .transform((raw, ctx) => {
+    const origins = new Set<string>();
+    for (const item of raw.split(',').map((o) => o.trim())) {
+      if (item === '') continue;
+      let origin: string | undefined;
+      if (ORIGIN_SHAPE.test(item)) {
+        try {
+          origin = new URL(item).origin;
+        } catch {
+          origin = undefined; // por ejemplo, un puerto fuera de rango
+        }
+      }
+      if (origin === undefined || origin === 'null') {
+        ctx.addIssue({
+          code: 'custom',
+          message: `"${item}" no es un origen válido: use esquema://host[:puerto], sin ruta ni comodines`,
+        });
+        return z.NEVER;
+      }
+      origins.add(origin);
+    }
+    if (origins.size > MAX_CORS_ORIGINS) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `como máximo ${MAX_CORS_ORIGINS} orígenes`,
+      });
+      return z.NEVER;
+    }
+    return [...origins];
+  });
+
+const rateLimit = (fallback: number) =>
+  z.coerce.number().int().min(1).max(100_000).default(fallback);
+
 const optionalUrl = z.preprocess(
   (v) => (v === '' ? undefined : v),
   z.url().optional(),
@@ -38,6 +80,22 @@ export const envSchema = z
       .default(900),
     // Cuántos días vale un token de refresco sin usarse. Cada uso entrega uno nuevo con su plazo completo
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(14),
+    // Orígenes que pueden llamar a la API desde un navegador (CORS). Vacía por defecto: sin CORS. En producción, solo https
+    CORS_ORIGINS: corsOrigins,
+    // Cuántos proxies hay delante de la API (0 = ninguno). De ahí sale la dirección del cliente para el límite de intentos:
+    // con un valor de más se podría falsificar con X-Forwarded-For, y con uno de menos todos compartirían la del proxy
+    TRUST_PROXY: z.coerce.number().int().min(0).max(10).default(0),
+    // Límite de intentos, en memoria y por ventana. El de login se aplica por dirección y por cuenta
+    RATE_LIMIT_WINDOW_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(3600)
+      .default(60),
+    RATE_LIMIT_LOGIN_IP: rateLimit(20),
+    RATE_LIMIT_LOGIN_ACCOUNT: rateLimit(5),
+    RATE_LIMIT_REGISTER_IP: rateLimit(10),
+    RATE_LIMIT_REFRESH_IP: rateLimit(30), // también el cierre de sesión
     // Costo (log2 de N) del hash de contraseñas con scrypt. Los tests lo bajan; en producción no puede ser menor que 15
     PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15),
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
@@ -48,6 +106,18 @@ export const envSchema = z
       .enum(['development', 'test', 'production'])
       .default('development'),
   })
+  // En producción los navegadores solo deben hablar con la API por https
+  .refine(
+    (e) =>
+      !(
+        e.NODE_ENV === 'production' &&
+        e.CORS_ORIGINS.some((o) => !o.startsWith('https://'))
+      ),
+    {
+      path: ['CORS_ORIGINS'],
+      message: 'En producción CORS_ORIGINS solo admite orígenes https',
+    },
+  )
   // La pasarela simulada aprueba cualquier tarjeta: en producción hay que elegir un proveedor de verdad
   .refine(
     (e) => !(e.NODE_ENV === 'production' && e.PAYMENT_PROVIDER === 'fake'),

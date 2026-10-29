@@ -4,6 +4,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { Test } from '@nestjs/testing';
 import { envSchema } from '../../src/platform/config/env.schema.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
+import { configureSecurity } from '../../src/platform/http/configure-security.js';
 import { configureSwagger } from '../../src/platform/http/configure-swagger.js';
 import { PrismaModule } from '../../src/platform/prisma/prisma.module.js';
 import { withEnv } from './nest.js';
@@ -30,6 +31,7 @@ export async function createHttpApp(
   );
   const app = moduleRef.createNestApplication();
   configureApp(app);
+  configureSecurity(app);
   configureSwagger(app);
   await app.init();
   return app;

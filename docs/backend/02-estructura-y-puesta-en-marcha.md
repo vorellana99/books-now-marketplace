@@ -72,13 +72,14 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── request-context.ts
 │   │   │   ├── request-id.middleware.ts
 │   │   │   ├── request-context.interceptor.ts
-│   │   │   └── request-aware.logger.ts
+│   │   │   ├── request-aware.logger.ts
+│   │   │   └── access-log.middleware.ts                    ✅ hecho (7.10): una línea por petición, sin secretos
 │   │   ├── http/
 │   │   │   ├── configure-app.ts
 │   │   │   ├── configure-swagger.ts
 │   │   │   ├── domain-exception.filter.ts
-│   │   │   ├── admin-api-enabled.guard.ts                  ✅ hecho (6.4)
-│   │   │   └── admin-api.decorator.ts                      ✅ hecho (6.4): @AdminApi() = guard + etiqueta `admin`
+│   │   │   ├── configure-security.ts                       ✅ hecho (7.10): helmet, CORS, proxy y registro de accesos
+│   │   │   └── admin-api.decorator.ts                      ✅ hecho (6.4; 7.9): @AdminApi() = @Roles('ADMIN') + etiqueta `admin`
 │   │   └── health/
 │   │       ├── health.module.ts
 │   │       ├── health.controller.ts
@@ -190,7 +191,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │           │                                                  logout.command.ts (7.4)
 │           ├── domain/                                     ✅ hecho (7.1): email.vo.ts, password-policy.ts,
 │           │                                                  password-hasher.port.ts, user.aggregate.ts
-│           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1),
+│           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1), create-admin.ts (7.9),
+│                                                              auth-throttler.ts (7.10),
 │                                                              jwt-token.service.ts (7.2), register-user.handler.ts,
 │                                                              login.handler.ts, auth.controller.ts, auth.dto.ts,
 │                                                              auth.responses.ts (7.3), refresh-token.ts,
@@ -332,6 +334,13 @@ PAYMENT_PROVIDER=fake            # fake | external
 PAYMENT_API_URL=
 PAYMENT_SIMULATED_DELAY_MS=3000  # solo con fake: lo que tarda la pasarela simulada en cobrar y reembolsar (0 = sin demora)
 EMAIL_SIMULATED_DELAY_MS=3000    # lo que tarda el correo simulado en "enviarse" (0 = sin demora)
+CORS_ORIGINS=                    # orígenes permitidos por CORS, separados por comas (vacía: sin CORS)
+TRUST_PROXY=0                    # proxies delante de la API (de dónde sale la dirección del cliente)
+RATE_LIMIT_WINDOW_SECONDS=60     # límite de intentos de /auth: ventana y máximos (login por dirección y por correo, registro, renovación)
+RATE_LIMIT_LOGIN_IP=20
+RATE_LIMIT_LOGIN_ACCOUNT=5
+RATE_LIMIT_REGISTER_IP=10
+RATE_LIMIT_REFRESH_IP=30
 JWT_SECRET=                      # secreto de los tokens (≥ 32 caracteres variados); obligatorio en producción
 ACCESS_TOKEN_TTL_SECONDS=900     # vida del token de acceso (de 60 a 3600)
 REFRESH_TOKEN_TTL_DAYS=14        # días que vale un token de refresco sin usarse (de 1 a 90)

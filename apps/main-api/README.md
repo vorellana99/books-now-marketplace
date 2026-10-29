@@ -53,6 +53,13 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `JWT_SECRET` | — | Secreto con el que se firman los tokens de acceso (al menos 32 caracteres variados; `openssl rand -base64 48`). **Obligatorio con `NODE_ENV=production`**; sin él, en desarrollo, cada arranque usa uno aleatorio y los tokens dejan de valer al reiniciar |
 | `ACCESS_TOKEN_TTL_SECONDS` | `900` | Vida del token de acceso, en segundos (de 60 a 3600) |
 | `REFRESH_TOKEN_TTL_DAYS` | `14` | Días que vale un token de refresco sin usarse (de 1 a 90). Cada renovación entrega uno nuevo con el plazo completo |
+| `CORS_ORIGINS` | vacía | Orígenes que pueden llamar a la API desde un navegador, separados por comas (`https://app.libroya.pe,http://localhost:5173`). Cada uno es `esquema://host[:puerto]`, sin ruta ni comodines. Vacía, no se envía ninguna cabecera CORS. Con `NODE_ENV=production` solo se admite `https` |
+| `TRUST_PROXY` | `0` | Cuántos proxies hay delante de la API (de 0 a 10). De ahí sale la dirección del cliente para el límite de intentos: con un valor de más se puede falsificar con `X-Forwarded-For`; con uno de menos, todos comparten la del proxy |
+| `RATE_LIMIT_WINDOW_SECONDS` | `60` | Ventana, en segundos, del límite de intentos (de 1 a 3600). Superado el límite se responde `429` con `Retry-After`, y se recupera al pasar la ventana |
+| `RATE_LIMIT_LOGIN_IP` | `20` | Intentos de `POST /auth/login` por dirección y ventana (cuentan todos, también los correctos) |
+| `RATE_LIMIT_LOGIN_ACCOUNT` | `5` | Intentos de login contra el mismo correo por ventana, vengan de donde vengan |
+| `RATE_LIMIT_REGISTER_IP` | `10` | Registros por dirección y ventana |
+| `RATE_LIMIT_REFRESH_IP` | `30` | Renovaciones y cierres de sesión juntos, por dirección y ventana |
 | `PASSWORD_HASH_LOG_N` | `15` | Costo del hash de contraseñas (scrypt, N = 2^valor). Más alto es más lento y más seguro; los tests lo bajan. Con `NODE_ENV=production` no se permite menos de 15 |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |

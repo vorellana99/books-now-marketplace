@@ -303,6 +303,168 @@ describe('envSchema', () => {
     });
   });
 
+  describe('CORS, proxy y límites de intentos', () => {
+    const production = {
+      ...base,
+      NODE_ENV: 'production',
+      PAYMENT_PROVIDER: 'external',
+      PAYMENT_API_URL: 'https://pagos.example.com',
+      JWT_SECRET: SECRET,
+    };
+
+    describe('CORS_ORIGINS', () => {
+      it('por defecto está vacía: sin CORS', () => {
+        expect(envSchema.parse(base).CORS_ORIGINS).toEqual([]);
+        expect(
+          envSchema.parse({ ...base, CORS_ORIGINS: '' }).CORS_ORIGINS,
+        ).toEqual([]);
+        expect(
+          envSchema.parse({ ...base, CORS_ORIGINS: ' , ,' }).CORS_ORIGINS,
+        ).toEqual([]);
+      });
+
+      it('es una lista de orígenes separados por comas, sin espacios ni repetidos', () => {
+        expect(
+          envSchema.parse({
+            ...base,
+            CORS_ORIGINS:
+              ' https://libroya.pe , http://localhost:5173,https://libroya.pe ,https://admin.libroya.pe:8443',
+          }).CORS_ORIGINS,
+        ).toEqual([
+          'https://libroya.pe',
+          'http://localhost:5173',
+          'https://admin.libroya.pe:8443',
+        ]);
+      });
+
+      it('el origen se guarda en minúsculas y sin el puerto por defecto', () => {
+        expect(
+          envSchema.parse({
+            ...base,
+            CORS_ORIGINS: 'HTTPS://LibroYa.PE,https://x.pe:443,http://y.pe:80',
+          }).CORS_ORIGINS,
+        ).toEqual(['https://libroya.pe', 'https://x.pe', 'http://y.pe']);
+      });
+
+      it.each([
+        ['un comodín', '*'],
+        ['un comodín entre otros', 'https://libroya.pe,*'],
+        ['sin esquema', 'libroya.pe'],
+        ['sin esquema y con puerto', 'localhost:5173'],
+        ['con una ruta', 'https://libroya.pe/app'],
+        ['con barra final', 'https://libroya.pe/'],
+        ['con una consulta', 'https://libroya.pe?x=1'],
+        ['con un fragmento', 'https://libroya.pe#a'],
+        ['con credenciales', 'https://user:pass@libroya.pe'],
+        ['con otro esquema', 'ftp://libroya.pe'],
+        ['con esquema javascript', 'javascript:alert(1)'],
+        ['con un puerto fuera de rango', 'https://libroya.pe:70000'],
+        ['null', 'null'],
+        ['con espacios dentro', 'https://libr oya.pe'],
+      ])('rechaza un origen %s', (_why, value) => {
+        expect(() => envSchema.parse({ ...base, CORS_ORIGINS: value })).toThrow(
+          /CORS_ORIGINS/,
+        );
+      });
+
+      it('admite hasta 20 orígenes y no más', () => {
+        const origins = (n: number) =>
+          Array.from({ length: n }, (_, i) => `https://o${i}.libroya.pe`).join(
+            ',',
+          );
+        expect(
+          envSchema.parse({ ...base, CORS_ORIGINS: origins(20) }).CORS_ORIGINS,
+        ).toHaveLength(20);
+        expect(() =>
+          envSchema.parse({ ...base, CORS_ORIGINS: origins(21) }),
+        ).toThrow(/CORS_ORIGINS/);
+      });
+
+      it('en producción solo admite https: ni siquiera localhost', () => {
+        expect(
+          envSchema.parse({ ...production, CORS_ORIGINS: 'https://libroya.pe' })
+            .CORS_ORIGINS,
+        ).toEqual(['https://libroya.pe']);
+        expect(() =>
+          envSchema.parse({ ...production, CORS_ORIGINS: 'http://libroya.pe' }),
+        ).toThrow(/CORS_ORIGINS/);
+        expect(() =>
+          envSchema.parse({
+            ...production,
+            CORS_ORIGINS: 'https://libroya.pe,http://localhost:5173',
+          }),
+        ).toThrow(/CORS_ORIGINS/);
+      });
+    });
+
+    describe('TRUST_PROXY', () => {
+      it('por defecto es 0 saltos (no se confía en ningún proxy)', () => {
+        expect(envSchema.parse(base).TRUST_PROXY).toBe(0);
+      });
+
+      it('acepta de 0 a 10 saltos', () => {
+        expect(envSchema.parse({ ...base, TRUST_PROXY: '1' }).TRUST_PROXY).toBe(
+          1,
+        );
+        expect(
+          envSchema.parse({ ...base, TRUST_PROXY: '10' }).TRUST_PROXY,
+        ).toBe(10);
+      });
+
+      it.each(['-1', '11', '1.5', 'si', 'true'])('rechaza %j', (value) => {
+        expect(() => envSchema.parse({ ...base, TRUST_PROXY: value })).toThrow(
+          /TRUST_PROXY/,
+        );
+      });
+    });
+
+    describe('límites de intentos', () => {
+      it('tienen valores por defecto prudentes', () => {
+        const env = envSchema.parse(base);
+        expect(env.RATE_LIMIT_WINDOW_SECONDS).toBe(60);
+        expect(env.RATE_LIMIT_LOGIN_IP).toBe(20);
+        expect(env.RATE_LIMIT_LOGIN_ACCOUNT).toBe(5);
+        expect(env.RATE_LIMIT_REGISTER_IP).toBe(10);
+        expect(env.RATE_LIMIT_REFRESH_IP).toBe(30);
+      });
+
+      it.each([
+        'RATE_LIMIT_LOGIN_IP',
+        'RATE_LIMIT_LOGIN_ACCOUNT',
+        'RATE_LIMIT_REGISTER_IP',
+        'RATE_LIMIT_REFRESH_IP',
+      ])('%s acepta de 1 a 100000', (name) => {
+        expect(
+          envSchema.parse({ ...base, [name]: '1' })[name as 'TRUST_PROXY'],
+        ).toBe(1);
+        expect(
+          envSchema.parse({ ...base, [name]: '100000' })[name as 'TRUST_PROXY'],
+        ).toBe(100000);
+        for (const bad of ['0', '-1', '100001', '1.5', 'muchos']) {
+          expect(() => envSchema.parse({ ...base, [name]: bad })).toThrow(
+            new RegExp(name),
+          );
+        }
+      });
+
+      it('la ventana acepta de 1 a 3600 segundos', () => {
+        expect(
+          envSchema.parse({ ...base, RATE_LIMIT_WINDOW_SECONDS: '1' })
+            .RATE_LIMIT_WINDOW_SECONDS,
+        ).toBe(1);
+        expect(
+          envSchema.parse({ ...base, RATE_LIMIT_WINDOW_SECONDS: '3600' })
+            .RATE_LIMIT_WINDOW_SECONDS,
+        ).toBe(3600);
+        for (const bad of ['0', '3601', '1.5', 'x']) {
+          expect(() =>
+            envSchema.parse({ ...base, RATE_LIMIT_WINDOW_SECONDS: bad }),
+          ).toThrow(/RATE_LIMIT_WINDOW_SECONDS/);
+        }
+      });
+    });
+  });
+
   it('falla sin las variables de base de datos', () => {
     expect(() => envSchema.parse({})).toThrow(/DB_HOST/);
   });

@@ -40,6 +40,12 @@ export default async function setup(): Promise<() => Promise<void>> {
   // Los proveedores simulados tardan 3 s en desarrollo; los tests no deben esperarlos
   process.env.PAYMENT_SIMULATED_DELAY_MS = '0';
   process.env.EMAIL_SIMULATED_DELAY_MS = '0';
+  // Los límites de intentos no deben estorbar a los tests que se registran e inician sesión muchas veces desde la misma
+  // dirección; los tests del límite fijan los suyos
+  process.env.RATE_LIMIT_LOGIN_IP = '100000';
+  process.env.RATE_LIMIT_LOGIN_ACCOUNT = '100000';
+  process.env.RATE_LIMIT_REGISTER_IP = '100000';
+  process.env.RATE_LIMIT_REFRESH_IP = '100000';
   // El costo mínimo del hash de contraseñas: los tests crean muchos usuarios (el valor seguro se prueba aparte)
   process.env.PASSWORD_HASH_LOG_N = '4';
   // Un secreto fijo para que los tests puedan firmar tokens (cualquier valor de 32 o más caracteres variados sirve)
