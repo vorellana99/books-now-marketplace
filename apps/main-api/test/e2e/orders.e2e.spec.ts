@@ -5,7 +5,7 @@ import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
 import type { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
-import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/payment/simulated-payment-gateway.adapter.js';
+import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import { RequestAwareLogger } from '../../src/platform/observability/request-aware.logger.js';
 import { OutboxRelay } from '../../src/platform/outbox/outbox.relay.js';

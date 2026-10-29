@@ -10,7 +10,7 @@ import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import {
   ExternalPaymentAdapter,
   PAYMENT_TIMEOUT_MS,
-} from '../../src/contexts/sales/infrastructure/payment/external-payment.adapter.js';
+} from '../../src/contexts/sales/infrastructure/adapters/external-payment.adapter.js';
 
 const ORDER = '0196a000-0000-7000-8000-000000000001';
 const TOKEN = 'tok_secreto_123';

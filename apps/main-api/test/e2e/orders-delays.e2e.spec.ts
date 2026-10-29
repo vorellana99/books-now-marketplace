@@ -11,7 +11,7 @@ import { AUTH_MODULE } from '../support/auth-module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
-import type { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/payment/simulated-payment-gateway.adapter.js';
+import type { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 import { envSchema } from '../../src/platform/config/env.schema.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import { RequestAwareLogger } from '../../src/platform/observability/request-aware.logger.js';

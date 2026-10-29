@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/order/prisma-checkout-log.adapter.js';
-import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/customer/prisma-customer.repository.js';
+import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/persistence/prisma-checkout-log.adapter.js';
+import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/persistence/prisma-customer.repository.js';
 import {
   RECOVERY_BATCH,
   RECOVERY_LOCK_MINUTES,

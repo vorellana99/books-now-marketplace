@@ -1,4 +1,4 @@
-import { OrderMapper } from '../../src/contexts/sales/infrastructure/order/order.mapper.js';
+import { OrderMapper } from '../../src/contexts/sales/infrastructure/persistence/order.mapper.js';
 import { Order } from '../../src/contexts/sales/domain/order/order.aggregate.js';
 import { OrderFactory } from '../../src/contexts/sales/domain/order/order.factory.js';
 import { Prisma } from '../../src/platform/prisma/generated/client.js';

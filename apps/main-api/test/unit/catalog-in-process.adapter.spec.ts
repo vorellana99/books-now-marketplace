@@ -1,7 +1,7 @@
 import type { QueryBus } from '@nestjs/cqrs';
 import { type BookPrice } from '../../src/contracts/catalog/get-book-price.query.js';
 import { GetBooksPricesQuery } from '../../src/contracts/catalog/get-books-prices.query.js';
-import { CatalogInProcessAdapter } from '../../src/contexts/sales/infrastructure/order/catalog-in-process.adapter.js';
+import { CatalogInProcessAdapter } from '../../src/contexts/sales/infrastructure/adapters/catalog-in-process.adapter.js';
 import { NotFoundError } from '../../src/shared-kernel/domain.errors.js';
 
 const book = (isbn: string, amount: string, currency: 'PEN' | 'USD' = 'PEN') =>

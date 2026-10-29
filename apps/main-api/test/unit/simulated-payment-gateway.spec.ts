@@ -1,6 +1,6 @@
 import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
-import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/payment/simulated-payment-gateway.adapter.js';
+import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 
 const ORDER = '0196a000-0000-7000-8000-000000000001';
 

@@ -15,20 +15,20 @@ import { OrderRepository } from './domain/order/order.repository.js';
 import { StockReservation } from './domain/order/stock-reservation.port.js';
 import { PaymentGateway } from './domain/payment/payment-gateway.port.js';
 import { PricingService } from './domain/pricing/pricing.service.js';
-import { CreateCustomerConsumer } from './infrastructure/customer/create-customer.consumer.js';
-import { PrismaCustomerRepository } from './infrastructure/customer/prisma-customer.repository.js';
-import { CatalogInProcessAdapter } from './infrastructure/order/catalog-in-process.adapter.js';
-import { ConsoleNotifier } from './infrastructure/order/console-notifier.adapter.js';
-import { GetOrderHandler } from './infrastructure/order/get-order.handler.js';
-import { ListCustomerOrdersHandler } from './infrastructure/order/list-customer-orders.handler.js';
-import { InventoryInProcessAdapter } from './infrastructure/order/inventory-in-process.adapter.js';
-import { AdminOrderController } from './infrastructure/order/admin-order.controller.js';
-import { MyOrdersController } from './infrastructure/order/my-orders.controller.js';
-import { OrderController } from './infrastructure/order/order.controller.js';
-import { PrismaCheckoutLog } from './infrastructure/order/prisma-checkout-log.adapter.js';
-import { PrismaOrderRepository } from './infrastructure/order/prisma-order.repository.js';
-import { ExternalPaymentAdapter } from './infrastructure/payment/external-payment.adapter.js';
-import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-payment-gateway.adapter.js';
+import { CreateCustomerConsumer } from './infrastructure/consumers/create-customer.consumer.js';
+import { PrismaCustomerRepository } from './infrastructure/persistence/prisma-customer.repository.js';
+import { CatalogInProcessAdapter } from './infrastructure/adapters/catalog-in-process.adapter.js';
+import { ConsoleNotifier } from './infrastructure/adapters/console-notifier.adapter.js';
+import { GetOrderHandler } from './infrastructure/persistence/get-order.handler.js';
+import { ListCustomerOrdersHandler } from './infrastructure/persistence/list-customer-orders.handler.js';
+import { InventoryInProcessAdapter } from './infrastructure/adapters/inventory-in-process.adapter.js';
+import { AdminOrderController } from './infrastructure/http/admin-order.controller.js';
+import { MyOrdersController } from './infrastructure/http/my-orders.controller.js';
+import { OrderController } from './infrastructure/http/order.controller.js';
+import { PrismaCheckoutLog } from './infrastructure/persistence/prisma-checkout-log.adapter.js';
+import { PrismaOrderRepository } from './infrastructure/persistence/prisma-order.repository.js';
+import { ExternalPaymentAdapter } from './infrastructure/adapters/external-payment.adapter.js';
+import { SimulatedPaymentGateway } from './infrastructure/adapters/simulated-payment-gateway.adapter.js';
 
 // Los puertos son clases abstractas y se importan como valor: Nest necesita la clase en runtime para inyectarla
 @Module({

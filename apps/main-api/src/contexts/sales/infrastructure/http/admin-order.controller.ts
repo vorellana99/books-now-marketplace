@@ -14,7 +14,7 @@ import {
   type OrderHistoryPage,
 } from '../../application/order/list-customer-orders.query.js';
 import { ListOrdersDto } from './list-orders.dto.js';
-import { positionAfter } from './order-cursor.js';
+import { positionAfter } from '../persistence/order-cursor.js';
 import { OrderHistoryResponse } from './order.response.js';
 
 // Administración de pedidos: el historial de cualquier cliente. Solo administradores: trae nombre, teléfono y

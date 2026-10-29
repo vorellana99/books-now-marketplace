@@ -19,7 +19,7 @@ import {
   type OrderHistoryPage,
 } from '../../application/order/list-customer-orders.query.js';
 import { ListMyOrdersDto } from './list-orders.dto.js';
-import { positionAfter } from './order-cursor.js';
+import { positionAfter } from '../persistence/order-cursor.js';
 import { OrderHistoryResponse } from './order.response.js';
 
 // Los pedidos de quien tiene la sesión. El cliente es el del token: no se puede pedir el de otro

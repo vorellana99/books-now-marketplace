@@ -285,7 +285,7 @@ Lo que cambia en el comportamiento:
 - **Una pasarela lenta no abre una carrera nueva:** la simulada guarda la promesa del cobro en curso, así que dos cobros de la misma referencia dentro de la espera cuentan uno solo.
 
 ```ts
-// sales/infrastructure/order/prisma-checkout-log.adapter.ts (fragmento)
+// sales/infrastructure/persistence/prisma-checkout-log.adapter.ts (fragmento)
 async start(orderId: string, idempotencyKey: string, requestHash: string): Promise<boolean> {
   try {
     await this.prisma.checkout.create({

@@ -5,8 +5,8 @@ import {
   ListCustomerOrdersQuery,
   type OrderHistoryPage,
 } from '../../src/contexts/sales/application/order/list-customer-orders.query.js';
-import { ListCustomerOrdersHandler } from '../../src/contexts/sales/infrastructure/order/list-customer-orders.handler.js';
-import { OrderCursor } from '../../src/contexts/sales/infrastructure/order/order-cursor.js';
+import { ListCustomerOrdersHandler } from '../../src/contexts/sales/infrastructure/persistence/list-customer-orders.handler.js';
+import { OrderCursor } from '../../src/contexts/sales/infrastructure/persistence/order-cursor.js';
 import { insertCustomer, insertOrder } from '../support/builders.js';
 import { query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';

@@ -79,7 +79,7 @@ describe('checkRules: detecta las violaciones', () => {
       ],
       [
         'infrastructure/ del mismo contexto',
-        `import { R } from '../../infrastructure/order/r.js';`,
+        `import { R } from '../../infrastructure/persistence/r.js';`,
       ],
       [
         'otro contexto',

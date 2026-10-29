@@ -140,7 +140,7 @@ export class StockItemNotFoundError extends DomainError {       // → 422 (no 4
 ### Ventas llama a Catálogo e Inventario por `contracts/`
 
 ```ts
-// sales/infrastructure/order/inventory-in-process.adapter.ts
+// sales/infrastructure/adapters/inventory-in-process.adapter.ts
 @Injectable()
 export class InventoryInProcessAdapter extends StockReservation {
   constructor(private readonly commandBus: CommandBus) { super(); }
@@ -154,7 +154,7 @@ export class InventoryInProcessAdapter extends StockReservation {
 ```
 
 ```ts
-// sales/infrastructure/order/catalog-in-process.adapter.ts
+// sales/infrastructure/adapters/catalog-in-process.adapter.ts
 @Injectable()
 export class CatalogInProcessAdapter extends CatalogPricing {
   constructor(private readonly queryBus: QueryBus) { super(); }
@@ -176,7 +176,7 @@ export class CatalogInProcessAdapter extends CatalogPricing {
 ```
 
 ```ts
-// sales/infrastructure/order/console-notifier.adapter.ts
+// sales/infrastructure/adapters/console-notifier.adapter.ts
 export class ConsoleNotifier extends Notifier {
   private readonly logger = new Logger(ConsoleNotifier.name);
 
@@ -281,7 +281,7 @@ Las reservas `HELD` sin pedido ya no necesitan un job propio en Inventario: las 
 ### Ventas: guardar el pedido y su evento juntos
 
 ```ts
-// sales/infrastructure/order/prisma-order.repository.ts
+// sales/infrastructure/persistence/prisma-order.repository.ts
 @Injectable()
 export class PrismaOrderRepository extends OrderRepository {
   constructor(private readonly prisma: PrismaService, private readonly outbox: OutboxWriter) { super(); }
@@ -745,7 +745,7 @@ En JSON, una línea con petición en curso es `{"level":"log","pid":1,"timestamp
 ### HTTP, errores y arranque
 
 ```ts
-// sales/infrastructure/order/place-order.dto.ts: valida la forma; las reglas las protege el dominio
+// sales/infrastructure/http/place-order.dto.ts: valida la forma; las reglas las protege el dominio
 class CartItemDto {
   @ApiProperty({ example: '9780132350884' }) @IsString() @IsNotEmpty() @MaxLength(32) isbn!: string;   // el dominio lo normaliza: INVALID_ISBN → 422
   @ApiProperty({ example: 1 }) @IsInt() @Min(1) quantity!: number;
@@ -763,7 +763,7 @@ export class PlaceOrderDto {
 // ShippingAddressDto: recipient, phone, line1, district, province, department (@Transform(trim) @IsString @IsNotEmpty
 // @MaxLength(SHIPPING_LIMITS.x)) y reference (@IsOptional, @MaxLength). El cliente nunca manda precios ni totales
 
-// sales/infrastructure/order/order.controller.ts
+// sales/infrastructure/http/order.controller.ts
 @ApiTags('orders')
 @Controller('orders')   // sin @Public: toda ruta exige sesión por defecto (AuthGuard global)
 export class OrderController {
