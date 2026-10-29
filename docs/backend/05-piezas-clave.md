@@ -733,7 +733,7 @@ En JSON, una línea con petición en curso es `{"level":"log","pid":1,"timestamp
 - **El ID viaja guardado en la BD:** en `checkouts.request_id` (lo reutiliza el job de recuperación) y en `outbox.correlation_id` (lo restaura el relay). Va fuera del payload, porque es un dato técnico.
 - **Es diagnóstico, no lógica de negocio:** si en algún punto el contexto se perdiera, el log saldría sin `requestId`, pero ningún cobro, reserva o entrega cambia.
 - **Middleware e interceptor se registran en `configureApp`:** el middleware primero (para que toda respuesta lleve el header, incluso un 400), y el interceptor como global. El test e2e de abajo comprueba que el `requestId` llega hasta el handler y los consumidores en un `POST` con cuerpo.
-- **Los guards corren antes que los interceptores**, así que sus logs no llevarían `requestId`. Hoy el único guard es `AdminApiEnabledGuard` (ver [07-fases-y-roadmap.md](07-fases-y-roadmap.md)), que no escribe logs; cuando llegue la autenticación, leer `req.requestId` directamente o abrir el contexto también ahí.
+- **Los guards corren antes que los interceptores**, así que sus logs no llevarían `requestId`. `AuthGuard` y el guard del límite de intentos escriben avisos al denegar, y lo resuelven así: leen `req.requestId` (que ya puso el middleware) y abren el contexto con `RequestContext.run` solo para escribir ese aviso, sin cambiar nada más.
 - **Siguiente paso natural:** OpenTelemetry (`traceparent`), que además mide tiempos por paso. La idea es la misma, así que este diseño se puede migrar.
 
 ### HTTP, errores y arranque
@@ -745,7 +745,7 @@ class CartItemDto {
   @ApiProperty({ example: 1 }) @IsInt() @Min(1) quantity!: number;
 }
 export class PlaceOrderDto {
-  @ApiProperty() @IsUUID() customerId!: string;
+  // Sin customerId: el cliente es el sub del token. Un customerId en el cuerpo es un 400 (forbidNonWhitelisted)
   @ApiProperty() @IsString() @IsNotEmpty() @MaxLength(255) cardToken!: string;
   @ApiProperty({ type: [CartItemDto] })
   @IsArray() @ArrayMinSize(1) @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => CartItemDto)
@@ -759,23 +759,28 @@ export class PlaceOrderDto {
 
 // sales/infrastructure/order/order.controller.ts
 @ApiTags('orders')
-@Controller('orders')
+@Controller('orders')   // sin @Public: toda ruta exige sesión por defecto (AuthGuard global)
 export class OrderController {
   constructor(private readonly commandBus: CommandBus, private readonly queryBus: QueryBus) {}
 
   @Post()
+  @Roles('BUYER')   // solo compradores; 401 sin token, 403 con otro rol
   @ApiHeader({ name: 'Idempotency-Key', required: true, description: 'UUID generado por el cliente, uno por intento de compra' })
-  place(@Headers('idempotency-key') key: string | undefined, @Body() dto: PlaceOrderDto) {
+  place(@CurrentUser() user: AuthenticatedUser | undefined, @Headers('idempotency-key') key: string | undefined, @Body() dto: PlaceOrderDto) {
+    const { userId } = requireUser(user);   // el cliente es el sub del token
     if (!key || !isUUID(key)) throw new BadRequestException('Falta el header Idempotency-Key (UUID)');
     // Se copian solo isbn y quantity: el comando lleva objetos planos, no instancias del DTO
     return this.commandBus.execute(
-      new PlaceOrderCommand(key, dto.customerId, dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })), { ...dto.shippingAddress }, dto.cardToken),
+      new PlaceOrderCommand(key, userId, dto.items.map(({ isbn, quantity }) => ({ isbn, quantity })), { ...dto.shippingAddress }, dto.cardToken),
     );
   }
 
   @Get(':id')
-  get(@Param('id', ParseUUIDPipe) id: string) {
-    return this.queryBus.execute(new GetOrderQuery(id));   // lee directo con Prisma, sin agregado
+  get(@CurrentUser() user: AuthenticatedUser | undefined, @Param('id', ParseUUIDPipe) id: string) {
+    const { userId, role } = requireUser(user);
+    // lee directo con Prisma, sin agregado. Un comprador solo ve los suyos: la condición va dentro de la consulta y un
+    // pedido ajeno da el mismo NotFoundError que uno que no existe
+    return this.queryBus.execute(new GetOrderQuery(id, { userId, role }));
   }
 }
 ```

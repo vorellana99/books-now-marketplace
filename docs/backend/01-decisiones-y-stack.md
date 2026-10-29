@@ -15,7 +15,7 @@
 | Montos | **`Decimal` exacto en BD y dominio** (decimal.js en `Money`); en la API y los contratos, **texto con 2 decimales y moneda** (`{ amount: "90.00", currency: "PEN" }`) |
 | Pagos y email | **Simulados**, elegidos por variable de entorno |
 | Observabilidad | **Identificador de correlación** (`X-Request-Id`) en cada log, guardado en el checkout y en el outbox: una compra se sigue desde el `POST` hasta el último consumidor |
-| Seguridad | Sin autenticación ni autorización **solo durante el desarrollo** (`customerId` viaja en el body). Antes de exponer la API, el cliente debe salir del token del usuario autenticado, nunca del body |
+| Seguridad | **Autenticación y roles desde el corte 7**: JWT de acceso de 15 minutos (HS256, `jose`) más token de refresco opaco de un solo uso, contraseñas con `scrypt`, guard global que **deniega por defecto**, roles `BUYER` y `ADMIN`, y el cliente de cada compra sale siempre del token, nunca del body. Además: límite de intentos en `/auth`, `helmet`, CORS por lista de orígenes y registro de accesos sin secretos |
 
 | Pieza | Versión | Para qué |
 |---|---|---|
