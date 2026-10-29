@@ -60,3 +60,6 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # Prisma generated client
 /src/platform/prisma/generated/
+
+# Salida del último fallo de scripts/verify.sh
+.verify-last-failure.txt

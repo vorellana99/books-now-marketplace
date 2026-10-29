@@ -32,7 +32,7 @@ pnpm exec vitest run -t "texto del test"              # un test por nombre
 pnpm exec vitest run --config ./vitest.config.e2e.ts test/e2e/auth.e2e.spec.ts   # un archivo e2e
 ```
 
-El CI (`.github/workflows/main-api.yml`) ejecuta lint, format:check, build, test y test:e2e, además de `pnpm audit --prod`. Antes de subir cambios corre la misma cadena: `pnpm lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:e2e`.
+El CI (`.github/workflows/main-api.yml`) ejecuta lint, format:check, build, test y test:e2e, además de `pnpm audit --prod`. Antes de subir cambios corre la misma cadena (`scripts/verify.sh` la ejecuta, y detecta sola si tocaste el backend, la tienda o ambos): `pnpm lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:e2e`.
 
 El cliente de Prisma se genera en `src/platform/prisma/generated/` (no se sube a git); `build`, `test` y `test:e2e` lo regeneran. Si aparece `Cannot find module './generated/client.js'`, ejecuta `pnpm run prisma:generate`.
 
@@ -79,6 +79,22 @@ Monolito modular con DDD + CQRS (`@nestjs/cqrs`) + arquitectura hexagonal. Los b
 - Los tests viven en `test/`, no junto al código: `unit/` (sin BD), `integration/` y `e2e/` (PostgreSQL real con Testcontainers; el `global-setup` de `test/support/global-setup.ts` aplica las migraciones).
 - Los archivos de integración y e2e se ejecutan uno tras otro (comparten un contenedor). Cada archivo llama antes a `resetDatabase()` (`test/support/database.ts`), que solo funciona sobre ese contenedor.
 - `test/fakes/` tiene repositorios en memoria y puertos falsos (pago, notificador, stock, catálogo) para los unitarios; `test/support/` tiene builders, utilidades de autenticación y la fábrica de la app HTTP.
+
+## Cómo se trabaja una implementación
+
+**De dónde sale cada dato** (una sola fuente de verdad; si un documento contradice al código, gana el código y se corrige el documento en el mismo commit):
+
+| Pregunta | Fuente |
+|---|---|
+| ¿Qué tarea toca y qué se comprueba? | La fila y la casilla de la tarea en `docs/backend/00-avance.md` o `docs/frontend/00-avance.md` |
+| ¿Qué debe hacer el producto? | `docs/product/`: reglas `RN-nn`, historias `HU-nn`, decisiones `DP-nn` |
+| ¿Cuál es el contrato HTTP? | `docs/api-contrato.md` y `/docs-json` |
+| ¿Cómo está construido y por qué se apartó de la guía? | Este archivo, `docs/backend/05-piezas-clave.md` y «Decisiones y desvíos» de `00-avance.md` |
+| ¿Qué está abierto o por decidir? | «Problemas abiertos» de `00-avance.md` y `docs/product/09-decisiones-y-preguntas.md` |
+
+**El ciclo de cada tarea:** leer su fila y las reglas que cita → **pruebas primero** (verlas fallar) → implementar → compuerta (`scripts/verify.sh`, o `pnpm run verify` en la app) → **mutaciones si el código es crítico** → documentos en el mismo commit → **un commit por tarea** con prefijo `N.M:`. Pruebas primero, siempre. Mutaciones obligatorias en dominio, seguridad, dinero, concurrencia y restricciones de la base; opcionales en el resto. Una decisión que no esté en los documentos se pregunta al usuario con opciones y una recomendada, y se espera la respuesta antes de aplicar. No se abren PR ni se sube nada sin que lo pida.
+
+**Comandos de Claude** (`.claude/skills/`): `/tarea` (el flujo completo y las trampas aprendidas), `/mutar` (pruebas de mutación con `scripts/mutate.py`), `/nueva-ruta`, `/nueva-variable-entorno`, `/nueva-migracion`, `/nuevo-evento` y `/cambio-de-contrato` (propagar un cambio de la API a la tienda). La compuerta y la herramienta de mutaciones están versionadas en `scripts/` (`python3 -m unittest test_mutate` las prueba).
 
 ## Convenciones de trabajo
 
