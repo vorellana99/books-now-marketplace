@@ -1,16 +1,12 @@
 import { Command } from '@nestjs/cqrs';
+import type { StockLevel } from '../../domain/stock/stock-rules.js';
 
-// Unidades por carga: una carga enorme casi siempre es un cero de más
-export const MAX_ADDITION = 100_000;
-// Tope de lo disponible de un libro. `available` es un entero de 32 bits en la base: sin un tope, una carga muy grande
-// lo desbordaría y el error saldría como un 500. Un millón de ejemplares de un título queda muy por encima de lo real
-export const MAX_AVAILABLE = 1_000_000;
-
-export interface StockLevel {
-  isbn: string;
-  available: number;
-  reserved: number;
-}
+// Los límites y la forma del nivel de stock son del dominio; se reexportan aquí para quien ya los importaba de este archivo
+export {
+  MAX_ADDITION,
+  MAX_AVAILABLE,
+  type StockLevel,
+} from '../../domain/stock/stock-rules.js';
 
 // Suma unidades al stock de un libro que ya tiene registro. Es una suma y no un "fijar en N": una carga y una reserva
 // al mismo tiempo no se pisan. Falla con INVALID_QUANTITY, STOCK_LIMIT_EXCEEDED o StockItemNotFoundError
