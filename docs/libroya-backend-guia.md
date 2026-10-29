@@ -1,6 +1,6 @@
 # LibroYa API: guía de implementación en NestJS
 
-API REST de LibroYa construida con DDD, CQRS y arquitectura hexagonal. Los conceptos y el código del dominio son los de la guía DDD v5. Esta guía solo cubre lo necesario para construir el backend. Este archivo es el índice: el contenido está repartido en los documentos de abajo. El producto se explica en [producto.md](producto.md), para cualquier lector; el resto de la guía es técnica.
+API REST de LibroYa construida con DDD, CQRS y arquitectura hexagonal. Los conceptos y el código del dominio son los de la guía DDD v5. Esta guía solo cubre lo necesario para construir el backend. Este archivo es el índice: el contenido está repartido en los documentos de abajo. El producto se explica en [la carpeta de producto](product/README.md), para cualquier lector; el resto de la guía es técnica.
 
 > [!caution] Estado de esta guía
 > El diseño está revisado, pero **el código se está ejecutando por cortes** (ver el estado más abajo). Hasta ahora está validada la base: migración, configuración, observabilidad y health contra PostgreSQL 18 real. La validación pendiente son los tests de integración y e2e del resto (ver [backend/06-tests.md](backend/06-tests.md)). Hasta que pasen, considérala una base para implementar, no una implementación lista para producción.
@@ -28,7 +28,7 @@ La guía se divide por audiencia: lo que comparten backend y frontend vive en `d
 
 | Documento | Contenido | Quién lo lee |
 |---|---|---|
-| [producto.md](producto.md) | Qué es LibroYa, actores, recorrido de compra, reglas del negocio y glosario | Todos |
+| [product/](product/README.md) | **Fuente de información del producto**: visión y alcance, actores, glosario, reglas del negocio, historias de usuario, recorridos, pantallas, textos y decisiones abiertas | Todos |
 | [api-contrato.md](api-contrato.md) | Endpoints, respuestas, errores y formato de montos | Backend y frontend |
 | [backend/00-avance.md](backend/00-avance.md) | **Control de avance** de la implementación, por cortes, con tareas, desvíos de la guía y bitácora | Backend |
 | [backend/01-decisiones-y-stack.md](backend/01-decisiones-y-stack.md) | Decisiones, stack y versiones · arquitectura, módulos y reglas de dependencia | Backend |
