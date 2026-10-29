@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OutboxModule } from '../../platform/outbox/outbox.module.js';
+import { OrderPricer } from './application/order/order-pricer.js';
 import { PlaceOrderHandler } from './application/order/place-order.handler.js';
 import { QuoteOrderHandler } from './application/order/quote-order.handler.js';
 import { PurgeCheckoutsJob } from './application/order/purge-checkouts.job.js';
@@ -43,6 +44,7 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
     RecoverCheckoutsJob,
     PurgeCheckoutsJob,
     PricingService,
+    OrderPricer,
     { provide: OrderRepository, useClass: PrismaOrderRepository },
     { provide: CheckoutLog, useClass: PrismaCheckoutLog },
     { provide: CustomerRepository, useClass: PrismaCustomerRepository },

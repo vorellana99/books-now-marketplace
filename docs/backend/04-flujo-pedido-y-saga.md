@@ -115,18 +115,16 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
   constructor(
     private readonly orders: OrderRepository,
-    private readonly customers: CustomerRepository,
-    private readonly catalog: CatalogPricing,
+    private readonly pricer: OrderPricer,
     private readonly stock: StockReservation,
     private readonly checkouts: CheckoutLog,
-    private readonly pricing: PricingService,
     private readonly payments: PaymentGateway,
   ) {}
 
   async execute(cmd: PlaceOrderCommand) {
     // 0. Idempotencia: un reintento con la misma clave nunca crea otro pedido ni cobra otra vez
     // Los ISBN se normalizan antes: "978-0-…" y "978…" son el mismo libro y deben dar el mismo hash
-    const items = cmd.items.map((i) => ({ isbn: Isbn.create(i.isbn).value, quantity: i.quantity }));
+    const items = normalizeCart(cmd.items);
     // La dirección se valida y normaliza antes de la huella y de cualquier efecto: una inválida es un 422 sin reservar
     // ni cobrar nada, y los espacios sobrantes no hacen pasar por otra compra un reintento
     const address = ShippingAddress.create(cmd.shippingAddress);
@@ -134,11 +132,10 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     const previous = await this.checkouts.findByKey(cmd.idempotencyKey);
     if (previous) return this.replay(previous, requestHash);
 
-    // 1. Sin efectos: validar, pedir precios, armar el pedido y calcular el total
-    const customer = await this.customers.findById(cmd.customerId);
-    if (!customer) throw new NotFoundError('Customer', cmd.customerId);
-    const order = OrderFactory.fromCart(this.orders.nextId(), customer.id, await this.catalog.priceCart(items));
-    const finalPrice = this.pricing.calculateFinalPrice(order, customer, freeShippingSpec.isSatisfiedBy({ order, customer })).toFinal();
+    // 1. Sin efectos: cargar al cliente, pedir precios, armar el pedido y calcular el total. Lo hace `OrderPricer`, el mismo
+    // servicio que usa la cotización (`POST /orders/quote`) (corte 9): el total cotizado y el cobrado no pueden divergir
+    const { order, breakdown } = await this.pricer.price({ orderId: this.orders.nextId(), customerId: cmd.customerId, items, address });
+    const finalPrice = breakdown.total.toFinal();
     const lines = order.getLines().map((l) => ({ isbn: l.isbn.value, quantity: l.quantity }));
 
     // 2. Efectos, en orden; si algo falla, se deshace lo hecho

@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import { PlaceOrderCommand } from '../../src/contexts/sales/application/order/place-order.command.js';
+import { OrderPricer } from '../../src/contexts/sales/application/order/order-pricer.js';
 import { PlaceOrderHandler } from '../../src/contexts/sales/application/order/place-order.handler.js';
 import { hashRequest } from '../../src/contexts/sales/application/order/request-hash.js';
 import type { CatalogPricing } from '../../src/contexts/sales/domain/order/catalog-pricing.port.js';
@@ -40,13 +41,16 @@ function setup(options: Setup = {}) {
   const orders = options.orders ?? new InMemoryOrderRepository();
   const stock = options.stock ?? new FakeStockReservation();
   const payments = options.payments ?? new FakePaymentGateway();
-  const handler = new PlaceOrderHandler(
-    orders,
+  const pricer = new OrderPricer(
     options.customers ?? customersWithPremium(),
     options.catalog ?? fixedCatalog(),
+    new PricingService(),
+  );
+  const handler = new PlaceOrderHandler(
+    orders,
+    pricer,
     stock,
     orders.checkoutLog,
-    new PricingService(),
     payments,
   );
   return { handler, orders, stock, payments, checkouts: orders.checkoutLog };

@@ -1,4 +1,5 @@
 import { PlaceOrderCommand } from '../../src/contexts/sales/application/order/place-order.command.js';
+import { OrderPricer } from '../../src/contexts/sales/application/order/order-pricer.js';
 import { PlaceOrderHandler } from '../../src/contexts/sales/application/order/place-order.handler.js';
 import { QuoteOrderHandler } from '../../src/contexts/sales/application/order/quote-order.handler.js';
 import { QuoteOrderQuery } from '../../src/contexts/sales/application/order/quote-order.query.js';
@@ -35,16 +36,15 @@ function setup(
 ) {
   const catalog = new FixedCatalog(books);
   const repo = customers();
-  const quote = new QuoteOrderHandler(repo, catalog, new PricingService());
+  const pricer = new OrderPricer(repo, catalog, new PricingService());
+  const quote = new QuoteOrderHandler(pricer);
   // La compra real, con los mismos ports, para comparar lo cotizado con lo cobrado
   const orders = new InMemoryOrderRepository();
   const place = new PlaceOrderHandler(
     orders,
-    repo,
-    catalog,
+    pricer,
     new FakeStockReservation(),
     orders.checkoutLog,
-    new PricingService(),
     new FakePaymentGateway(),
   );
   const ask = (

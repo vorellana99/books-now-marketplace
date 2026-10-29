@@ -3,26 +3,21 @@ import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import {
   ConflictError,
   DomainError,
-  NotFoundError,
 } from '../../../../shared-kernel/domain.errors.js';
-import { Isbn } from '../../../../shared-kernel/isbn.vo.js';
-import { CustomerRepository } from '../../domain/customer/customer.repository.js';
-import { CatalogPricing } from '../../domain/order/catalog-pricing.port.js';
 import {
   CheckoutLog,
   type CheckoutRecord,
 } from '../../domain/order/checkout-log.port.js';
-import { OrderFactory } from '../../domain/order/order.factory.js';
 import { ShippingAddress } from '../../domain/order/shipping-address.vo.js';
 import { OrderRepository } from '../../domain/order/order.repository.js';
 import { StockReservation } from '../../domain/order/stock-reservation.port.js';
 import { PaymentGateway } from '../../domain/payment/payment-gateway.port.js';
-import { freeShippingSpec } from '../../domain/pricing/free-shipping.specification.js';
-import { PricingService } from '../../domain/pricing/pricing.service.js';
 import {
   PlaceOrderCommand,
   type PlaceOrderResult,
 } from './place-order.command.js';
+import { normalizeCart } from './normalize-cart.js';
+import { OrderPricer } from './order-pricer.js';
 import { hashRequest } from './request-hash.js';
 
 @CommandHandler(PlaceOrderCommand)
@@ -31,21 +26,16 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
 
   constructor(
     private readonly orders: OrderRepository,
-    private readonly customers: CustomerRepository,
-    private readonly catalog: CatalogPricing,
+    private readonly pricer: OrderPricer,
     private readonly stock: StockReservation,
     private readonly checkouts: CheckoutLog,
-    private readonly pricing: PricingService,
     private readonly payments: PaymentGateway,
   ) {}
 
   async execute(cmd: PlaceOrderCommand): Promise<PlaceOrderResult> {
     // 0. Idempotencia: un reintento con la misma clave nunca crea otro pedido ni cobra otra vez.
     // Los ISBN se normalizan antes: "978-0-…" y "978…" son el mismo libro y deben dar el mismo hash
-    const items = cmd.items.map((i) => ({
-      isbn: Isbn.create(i.isbn).value,
-      quantity: i.quantity,
-    }));
+    const items = normalizeCart(cmd.items);
     // La dirección se valida y se normaliza antes de la huella y de cualquier efecto: una inválida es un 422 sin
     // reservar ni cobrar nada, y los espacios sobrantes no hacen pasar por otra compra un reintento
     const address = ShippingAddress.create(cmd.shippingAddress);
@@ -54,21 +44,13 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
     if (previous) return this.replay(previous, requestHash);
 
     // 1. Sin efectos: validar, pedir precios, armar el pedido y calcular el total
-    const customer = await this.customers.findById(cmd.customerId);
-    if (!customer) throw new NotFoundError('Customer', cmd.customerId);
-    const order = OrderFactory.fromCart(
-      this.orders.nextId(),
-      customer.id,
-      await this.catalog.priceCart(items),
+    const { order, breakdown } = await this.pricer.price({
+      orderId: this.orders.nextId(),
+      customerId: cmd.customerId,
+      items,
       address,
-    );
-    const finalPrice = this.pricing
-      .calculateFinalPrice(
-        order,
-        customer,
-        freeShippingSpec.isSatisfiedBy({ order, customer }),
-      )
-      .toFinal();
+    });
+    const finalPrice = breakdown.total.toFinal();
     const lines = order
       .getLines()
       .map((l) => ({ isbn: l.isbn.value, quantity: l.quantity }));
