@@ -11,7 +11,7 @@
 | **F2** Cuenta y sesión | Registro, login, renovación, cierre de sesión y guardia de rutas | HU-01 a HU-04 | PA-03, PA-04 | ✅ Ya existe |
 | **F3** Carrito | Carrito persistido por usuario y PA-05 | HU-20, HU-21, HU-22 (sin totales) | PA-05 | Corte 8 para los totales |
 | **F4** Compra | Dirección, cotización, pago con reintento seguro, errores y confirmación | HU-30 a HU-34, y HU-22 completa | PA-06, PA-07 | **Corte 8** (`7.7` ya está) |
-| **F5** Pedidos | Mis pedidos y su detalle | HU-40, HU-41 | PA-08, PA-09 | Nada (`7.7` y `7.8` ya están); la dirección en el detalle es DP-15, pendiente de producto |
+| **F5** Pedidos | Mis pedidos y su detalle | HU-40, HU-41 | PA-08, PA-09 | Nada (`7.7`, `7.8` y la dirección en el detalle, DP-15, ya están) |
 | **F6** Calidad y salida | Auditoría de accesibilidad, e2e con Playwright, rendimiento, despliegue y README | — | — | Nada (`7.10` ya está): configurar `CORS_ORIGINS` o el proxy inverso |
 
 La administración (`HU-50` a `HU-53`) queda **fuera** de este plan: es la segunda etapa del producto (DP-03).
@@ -58,7 +58,7 @@ Si al verla en el navegador una pantalla no funciona como su wireframe, se corri
 
 | Cambio | Acción en el frontend |
 |---|---|
-| `7.7` (ya llegó) | Quitar `customerId` del cuerpo de `POST /orders` (la API responde `400` si va); actualizar los handlers de MSW. La dirección en PA-09 depende de DP-15: `GET /orders/:id` no la devuelve |
+| `7.7` (ya llegó) | Quitar `customerId` del cuerpo de `POST /orders` (la API responde `400` si va); actualizar los handlers de MSW. PA-09 puede mostrar la dirección: `GET /orders/:id` la devuelve (DP-15) |
 | Llega el corte 8 | Sustituir el handler de MSW de la cotización por la ruta real; completar HU-22 y el paso de pago |
 | `7.8` (ya llegó) | Apuntar PA-08 a `GET /me/orders` con la forma de DP-18 (ya existe) |
 | `7.10` (ya llegó) | Quitar la dependencia del proxy de desarrollo si se usa CORS (poniendo el origen de la tienda en `CORS_ORIGINS`); manejar `429` con `Retry-After` |

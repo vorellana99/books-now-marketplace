@@ -21,7 +21,7 @@
 | [HU-33](#hu-33-entender-por-qué-falló-la-compra) | Entender por qué falló la compra | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-34](#hu-34-ver-la-confirmación) | Ver la confirmación | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-40](#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ✅ | ⬜ | Tienda MVP |
-| [HU-41](#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ (sin dirección, DP-15) | ⬜ | Tienda MVP |
+| [HU-41](#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ | ⬜ | Tienda MVP |
 | [HU-50](#hu-50-crear-un-libro) | Crear un libro | Administración | ✅ | ⬜ | Segunda etapa |
 | [HU-51](#hu-51-editar-o-desactivar-un-libro) | Editar o desactivar un libro | Administración | ✅ | ⬜ | Segunda etapa |
 | [HU-52](#hu-52-cargar-stock) | Cargar stock | Administración | ✅ | ⬜ | Segunda etapa |
@@ -219,8 +219,8 @@ Reglas: RN-01, RN-36, RN-42 · Pantallas: PA-09 · `GET /orders/:id`
 - **Dado** un pedido mío, **cuando** lo abro, **entonces** veo estado, total cobrado y por línea ISBN, título, precio unitario **del momento de la compra** y cantidad.
 - **Dado** un pedido que no es mío o no existe (`NOT_FOUND`), **cuando** abro la página, **entonces** veo "Pedido no encontrado".
 - **Dado** que el id no es un UUID (`400`), **cuando** abro la página, **entonces** veo el mismo "Pedido no encontrado".
-- **Dado** que la dirección y el teléfono se mostrarían a su dueño ([DP-15](09-decisiones-y-preguntas.md), **por decidir**: `GET /orders/:id` no los devuelve hoy; sí los trae cada ítem de `GET /me/orders`), **cuando** el pedido trae `shippingAddress`, **entonces** la pantalla muestra una sección "Envío" con destinatario, teléfono y dirección.
-- **Dado** que hoy el endpoint **no** la devuelve (o el pedido es anterior a la dirección y viene `null`), **cuando** se muestra el pedido, **entonces** no hay sección de envío.
+- **Dado** que `GET /orders/:id` devuelve la dirección y el teléfono a su dueño y a los administradores ([DP-15](09-decisiones-y-preguntas.md)), **cuando** el pedido trae `shippingAddress`, **entonces** la pantalla muestra una sección "Envío" con destinatario, teléfono y dirección.
+- **Dado** que el pedido es anterior a la dirección y viene `shippingAddress: null`, **cuando** se muestra el pedido, **entonces** no hay sección de envío.
 
 ---
 

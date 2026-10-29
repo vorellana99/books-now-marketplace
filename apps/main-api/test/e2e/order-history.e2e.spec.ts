@@ -160,7 +160,7 @@ describe('GET /admin/orders?customerId= (historial, e2e, aplicación y PostgreSQ
         .set(admin)
         .expect(200);
       expect(res.body.id).toBe(order.id);
-      expect(res.body).not.toHaveProperty('shippingAddress'); // decisión D2: solo el historial de administración la lleva
+      expect(res.body.shippingAddress).toBeNull(); // el pedido de prueba es anterior a la dirección (DP-15: el detalle también la trae)
     });
 
     it('lo documenta con las etiquetas orders y admin, sus parámetros y respuestas', async () => {

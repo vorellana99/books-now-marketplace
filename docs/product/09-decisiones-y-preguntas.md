@@ -24,7 +24,7 @@ Los números identifican el tema y no cambian; no siguen el orden en que se deci
 | DP-12 | Intención al pedir sesión | No se recuerda: tras entrar se vuelve al libro y la persona lo agrega | HU-20, [05](05-recorridos.md) |
 | DP-13 | Dirección de envío | **No se recuerda**: se escribe en cada compra. La API no guarda direcciones y la tienda tampoco las guarda en el navegador | HU-30 |
 | DP-14 | `Idempotency-Key` del intento en curso | Se guarda en `sessionStorage`, hasta confirmar la compra o hasta que cambie el carrito o la dirección | HU-32 |
-| DP-15 | Dirección en el detalle del pedido | **Por decidir.** Se esperaba que `GET /orders/:id` devolviera la dirección y el teléfono a su dueño cuando `7.7` lo limitara a su dueño o a un administrador. El backend lo limitó, pero **mantuvo** que ese endpoint no los devuelva (`{ id, status, charged, lines }`); la dirección va en cada ítem de `GET /me/orders`. Opciones: (A) el backend añade `shippingAddress` al detalle para su dueño y los administradores (un cambio pequeño y coherente con la intención original), (B) PA-09 la toma del pedido de la lista cuando se llega desde PA-08 y no la muestra si no, (C) no se muestra en el detalle | HU-41, PA-09 |
+| DP-15 | Dirección en el detalle del pedido | **Resuelto (opción A):** `GET /orders/:id` devuelve `shippingAddress` (las siete partes, o `null` en un pedido anterior a la dirección) a su dueño y a los administradores; para cualquier otro es el mismo `404`. Se había esperado desde `7.7`, pero el backend cerró el corte 7 sin ella (la devolvía solo en `GET /me/orders`) y se añadió después | HU-41, PA-09 |
 | DP-16 | Tokens de la sesión | Token de acceso **en memoria** y token de refresco en **`localStorage`**: la sesión sobrevive a cerrar el navegador y el token corto no persiste | HU-02, HU-03, [08](08-requisitos-de-experiencia.md) |
 | DP-17 | Proveedores reales de pago y de email | El MVP sigue con los simulados. La elección de proveedor se decide después; el frontend queda preparado para cambiar el `cardToken` | HU-31, RN-25 |
 | DP-18 | Forma de `GET /me/orders` | La misma de cada ítem del historial actual (`id`, `status`, `charged`, `lines`, `createdAt`, `shippingAddress`) y el mismo cursor: un solo contrato para el comprador y el administrador | HU-40 |
@@ -51,7 +51,7 @@ Cosas que la tienda web necesita y que el backend no ofrece hoy. La columna **Bl
 | Necesidad | Hoy | Bloquea |
 |---|---|---|
 | Compra con el cliente tomado del token y pedido visible solo para su dueño | ✅ Tarea `7.7` (hecha) | — |
-| Dirección y teléfono en el detalle del pedido (DP-15) | **Por decidir.** Hoy solo vienen en `GET /me/orders` | La sección de envío de HU-41 |
+| Dirección y teléfono en el detalle del pedido (DP-15) | ✅ Hecho: `GET /orders/:id` los devuelve a su dueño y a los administradores | — |
 | `GET /me/orders`, con la forma de DP-18 | ✅ Tarea `7.8` (hecha) | — |
 | Límite de intentos y CORS (`CORS_ORIGINS`) | ✅ Tarea `7.10` (hecha; `CORS_ORIGINS` vacío por defecto: hay que configurarlo en el despliegue o usar un proxy) | — |
 | **Cotización del total** (`POST /orders/quote`), ver abajo | No existe. Es el [corte 8 del backend](../backend/00-avance.md#corte-8-cotización-del-total-) (`8.1` a `8.4`); su dependencia, `7.7`, ya está hecha | **HU-22 y el paso de pago** (DP-07) |

@@ -59,13 +59,8 @@ export class ShippingAddressResponse {
     string | null;
 }
 
-export class OrderHistoryItemResponse extends OrderResponse {
-  @ApiProperty({
-    example: '2026-10-28T10:00:00.000Z',
-    description: 'ISO 8601, en UTC',
-  })
-  createdAt!: string;
-
+// El pedido con su dirección: lo que ve su dueño o un administrador
+export class OrderDetailResponse extends OrderResponse {
   @ApiProperty({
     type: ShippingAddressResponse,
     nullable: true,
@@ -73,6 +68,14 @@ export class OrderHistoryItemResponse extends OrderResponse {
       'null en un pedido anterior a que existiera la dirección de envío',
   })
   shippingAddress!: ShippingAddressResponse | null;
+}
+
+export class OrderHistoryItemResponse extends OrderDetailResponse {
+  @ApiProperty({
+    example: '2026-10-28T10:00:00.000Z',
+    description: 'ISO 8601, en UTC',
+  })
+  createdAt!: string;
 }
 
 export class OrderHistoryResponse {

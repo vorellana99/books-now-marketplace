@@ -1,21 +1,12 @@
 import { Query } from '@nestjs/cqrs';
-import type { OrderView } from './get-order.query.js';
+import type { OrderDetail, ShippingAddressView } from './get-order.query.js';
 
-export interface ShippingAddressView {
-  recipient: string;
-  phone: string;
-  line1: string;
-  district: string;
-  province: string;
-  department: string;
-  reference: string | null;
-}
+export type { ShippingAddressView };
 
-// Un pedido en el historial de administración: la vista del pedido más su fecha y la dirección de envío (que
-// GET /orders/:id no devuelve, porque no tiene autenticación). null en un pedido anterior a que existiera la dirección
-export interface OrderHistoryItem extends OrderView {
+// Un pedido en un historial (el del comprador o el de administración): el detalle del pedido, con su dirección de envío,
+// más su fecha
+export interface OrderHistoryItem extends OrderDetail {
   createdAt: string; // ISO 8601, en UTC
-  shippingAddress: ShippingAddressView | null;
 }
 
 export interface OrderHistoryPage {

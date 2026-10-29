@@ -1,9 +1,10 @@
 import type { Prisma } from '../../../../platform/prisma/generated/client.js';
-import type { OrderView } from '../../application/order/get-order.query.js';
 import type {
-  OrderHistoryItem,
+  OrderDetail,
+  OrderView,
   ShippingAddressView,
-} from '../../application/order/list-customer-orders.query.js';
+} from '../../application/order/get-order.query.js';
+import type { OrderHistoryItem } from '../../application/order/list-customer-orders.query.js';
 
 type OrderRow = Prisma.OrderGetPayload<{ include: { lines: true } }>;
 
@@ -46,10 +47,14 @@ function addressOf(order: OrderRow): ShippingAddressView | null {
   };
 }
 
+// El pedido con su dirección: lo que ve su dueño o un administrador
+export function toOrderDetail(order: OrderRow): OrderDetail {
+  return { ...toOrderView(order), shippingAddress: addressOf(order) };
+}
+
 export function toHistoryItem(order: OrderRow): OrderHistoryItem {
   return {
-    ...toOrderView(order),
+    ...toOrderDetail(order),
     createdAt: order.createdAt.toISOString(),
-    shippingAddress: addressOf(order),
   };
 }

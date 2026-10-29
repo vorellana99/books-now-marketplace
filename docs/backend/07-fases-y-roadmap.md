@@ -135,7 +135,7 @@ new PlaceOrderCommand(key, userId /* el sub del token */, dto.items, dto.shippin
 hashRequest(customerId, items, address);
 ```
 - **`OrderPlacedEvent` pasa a `eventVersion = 2`** e incluye la dirección, porque Envíos la necesitará. Los consumidores actuales ignoran el campo nuevo. Los eventos ya guardados siguen siendo de la versión 1 y los consumidores los leen igual (hay un test que lo comprueba).
-- **`GET /orders/:id` no la devuelve** (decisión D2): el endpoint no tiene autenticación, y la calle y el teléfono son datos personales. La dirección viaja en el evento y, más adelante, en el historial de administración.
+- **`GET /orders/:id` no la devolvía** (decisión D2): sin autenticación, la calle y el teléfono eran datos personales al alcance de cualquiera con el UUID. **Desde el corte 7 sí la devuelve** a su dueño y a los administradores (DP-15), porque el endpoint ya está limitado a ellos: un pedido ajeno da `404` sin nada de la dirección. Viaja además en el evento y en `GET /me/orders` y `GET /admin/orders`.
 - **Cambiar `hashRequest` invalida las claves de idempotencia en vuelo:** una compra a medias iniciada antes de esta versión, reintentada después, daría `IDEMPOTENCY_KEY_REUSED`. Es aceptable antes de desplegar.
 
 ### Fase 12: Administrar libros y precios

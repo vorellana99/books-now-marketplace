@@ -36,4 +36,4 @@
 
 Primera versión, escrita a partir de [`../api-contrato.md`](../api-contrato.md), de las guías del backend y del código existente. Después se centralizará aquí toda la información de producto; mientras tanto, si algo de esta carpeta contradice a la API real, gana la API y se corrige esta carpeta.
 
-El corte 7 del backend (autenticación, tareas `7.1` a `7.12`) está **cerrado**; las marcas con su tarea (`7.7`, `7.8`…) que quedan en los documentos son el historial de cuándo se hizo cada cosa. Lo que sigue pendiente del backend es el corte 8 (cotización) y la decisión DP-15. Estado: [`../backend/00-avance.md`](../backend/00-avance.md).
+El corte 7 del backend (autenticación, tareas `7.1` a `7.12`) está **cerrado**; las marcas con su tarea (`7.7`, `7.8`…) que quedan en los documentos son el historial de cuándo se hizo cada cosa. Lo que sigue pendiente del backend es el corte 8 (cotización). Estado: [`../backend/00-avance.md`](../backend/00-avance.md).

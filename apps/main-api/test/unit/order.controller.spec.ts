@@ -518,6 +518,33 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       ).toEqual(['200', '400', '401', '404']);
     });
 
+    it('documenta que GET /orders/{id} devuelve el pedido con su dirección (DP-15), que puede ser null', () => {
+      const doc = SwaggerModule.createDocument(
+        app,
+        new DocumentBuilder().build(),
+      );
+      const get = doc.paths['/orders/{id}'].get!;
+      const ok = get.responses['200'] as {
+        content: Record<string, { schema: { $ref: string } }>;
+      };
+      expect(ok.content['application/json'].schema.$ref).toBe(
+        '#/components/schemas/OrderDetailResponse',
+      );
+      const schemas = doc.components!.schemas as Record<
+        string,
+        {
+          properties: Record<string, { nullable?: boolean }>;
+          required?: string[];
+        }
+      >;
+      const detail = schemas.OrderDetailResponse;
+      expect(
+        Object.keys(detail.properties).sort((a, b) => a.localeCompare(b)),
+      ).toEqual(['charged', 'id', 'lines', 'shippingAddress', 'status']);
+      expect(detail.properties.shippingAddress.nullable).toBe(true);
+      expect(detail.required).toContain('shippingAddress');
+    });
+
     it('documenta la dirección de envío con sus siete campos, la referencia opcional', () => {
       const doc = SwaggerModule.createDocument(
         app,

@@ -32,13 +32,13 @@ import type { AuthenticatedUser } from '../../../../platform/auth/authenticated-
 import { Roles } from '../../../../platform/auth/roles.decorator.js';
 import {
   GetOrderQuery,
-  type OrderView,
+  type OrderDetail,
 } from '../../application/order/get-order.query.js';
 import {
   PlaceOrderCommand,
   type PlaceOrderResult,
 } from '../../application/order/place-order.command.js';
-import { OrderResponse, PlaceOrderResponse } from './order.response.js';
+import { OrderDetailResponse, PlaceOrderResponse } from './order.response.js';
 import { PlaceOrderDto } from './place-order.dto.js';
 
 // Comprar es de los compradores, y el cliente es quien tiene la sesión: no viene en el cuerpo. Ver un pedido lo pueden su
@@ -122,10 +122,10 @@ export class OrderController {
   @ApiOperation({
     summary: 'Consultar un pedido',
     description:
-      'Su dueño o un administrador. Para cualquier otro es un 404, igual que un pedido que no existe.',
+      'Su dueño o un administrador. Incluye la dirección de envío (null en un pedido anterior a ella). Para cualquier otro es un 404, igual que un pedido que no existe.',
   })
   @ApiParam({ name: 'id', format: 'uuid' })
-  @ApiOkResponse({ type: OrderResponse })
+  @ApiOkResponse({ type: OrderDetailResponse })
   @ApiBadRequestResponse({ description: 'El id no es un UUID' })
   @ApiUnauthorizedResponse({
     description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
@@ -136,7 +136,7 @@ export class OrderController {
   get(
     @CurrentUser() user: AuthenticatedUser | undefined,
     @Param('id', ParseUUIDPipe) id: string,
-  ): Promise<OrderView> {
+  ): Promise<OrderDetail> {
     const { userId, role } = requireUser(user);
     return this.queryBus.execute(new GetOrderQuery(id, { userId, role }));
   }

@@ -33,7 +33,7 @@ Con el paso 1, los tipos incluyen también las operaciones `/admin/*` (desde el 
 | Sesión | `POST /auth/refresh`, `POST /auth/logout` | ✅ | HU-03, HU-04 |
 | Cotización | `POST /orders/quote` | ⬜ **corte 8** (`8.1` a `8.4`); su dependencia, `7.7`, ya está hecha | HU-22, HU-31 |
 | Compra | `POST /orders` (`Idempotency-Key`) | ✅ **`7.7`**: solo compradores; el cliente es el del token y un `customerId` en el cuerpo es `400`. Un administrador recibe `403`. Un comprador recién registrado recibe `404 NOT_FOUND` hasta que Ventas crea su cliente (alrededor de un segundo) | HU-30 a HU-33 |
-| Confirmación y detalle | `GET /orders/:id` | ✅ **`7.7`**: lo ve su dueño (o un administrador); para otro comprador es `404`, igual que uno inexistente. ⚠️ **No devuelve la dirección ni el teléfono** (DP-15, ver abajo) | HU-34, HU-41 |
+| Confirmación y detalle | `GET /orders/:id` | ✅ **`7.7`**: lo ve su dueño (o un administrador); para otro comprador es `404`, igual que uno inexistente. Incluye `shippingAddress` (las siete partes, o `null` en un pedido anterior a ella; DP-15) | HU-34, HU-41 |
 | Mis pedidos | `GET /me/orders?cursor=&limit=` | ✅ **`7.8`**, con la forma de DP-18: `{ items[{ id, status, charged, lines, createdAt, shippingAddress }], nextCursor }`, del más reciente al más antiguo. No admite `customerId` | HU-40 |
 
 Mientras una ruta no exista, el frontend trabaja contra **handlers de MSW que siguen el contrato propuesto** y que están marcados como tales ([06-tests](06-tests.md)). Esto permite avanzar sin esperar al backend, pero **no se cierra la historia** hasta probarla contra la ruta real.
@@ -113,9 +113,8 @@ El corte 7 del backend (autenticación) está **cerrado**: `7.7`, `7.8` y `7.10`
 | Dependencia del backend | Bloquea | Mientras tanto |
 |---|---|---|
 | Corte 8, cotización (`POST /orders/quote`) | HU-22 completa y el paso de pago | El carrito muestra precios y cantidades, sin totales; MSW simula la cotización |
-| `shippingAddress` en `GET /orders/:id` (**DP-15 sin resolver**) | La sección de envío de HU-41 | Ver abajo |
 
-**DP-15: el backend no añadió la dirección al detalle.** Cuando se planeó se esperaba que `GET /orders/:id`, ya limitado a su dueño, devolviera la dirección y el teléfono. Al implementarlo, el backend mantuvo la decisión anterior de que ese endpoint **no los devuelve** (`GET /orders/:id` sigue con `{ id, status, charged, lines }`), y los puso en `GET /me/orders`, donde cada pedido trae su `shippingAddress`. Hasta que producto decida (ver [producto 09](../product/09-decisiones-y-preguntas.md)), PA-09 no muestra la sección de envío, o la toma del pedido ya cargado en la lista de PA-08 si la persona llegó desde ahí.
+**DP-15 resuelto: el detalle del pedido trae la dirección.** `GET /orders/:id` devuelve `shippingAddress` (`{ recipient, phone, line1, district, province, department, reference }`, o `null` en un pedido anterior a ella) a su dueño y a los administradores; para cualquier otro es un `404` sin rastro de ella. PA-09 muestra la sección de envío cuando `shippingAddress` no es `null`. `GET /me/orders` la trae también en cada ítem.
 
 Lo que antes bloqueaba y ya no: `7.7` (`customerId` fuera del cuerpo), `7.8` (`GET /me/orders`) y `7.10` (límites de intentos y CORS: la API responde cabeceras CORS para los orígenes de `CORS_ORIGINS`, vacío por defecto; se puede seguir usando el proxy de Vite en desarrollo).
 

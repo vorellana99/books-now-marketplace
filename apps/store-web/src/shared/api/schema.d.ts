@@ -89,6 +89,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/books": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Crear un libro
+         * @description El libro nace activo, con su stock en cero (lo crea Inventario al recibir el evento). Solo administradores.
+         */
+        post: operations["AdminBookController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/books/{isbn}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Cambiar un libro: título, autor, precio y/o si está activo
+         * @description Cualquier subconjunto de campos, pero al menos uno; se aplican todos o ninguno. `active: false` desactiva el libro (no se borra: otros contextos lo referencian por su ISBN) y `true` lo reactiva. La moneda no se cambia. Un cambio de precio no afecta a pedidos ya hechos.
+         */
+        patch: operations["AdminBookController_update"];
+        trace?: never;
+    };
+    "/admin/stock/{isbn}/additions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cargar stock: suma unidades a lo disponible de un libro
+         * @description Es una suma, no un valor final: una carga y una reserva a la vez no se pisan. El libro debe tener registro de stock (lo crea Inventario cuando se crea el libro).
+         */
+        post: operations["AdminStockController_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/orders": {
         parameters: {
             query?: never;
@@ -100,7 +160,7 @@ export interface paths {
         put?: never;
         /**
          * Comprar: reserva el stock, cobra y registra el pedido
-         * @description Idempotente: repetir la misma clave y el mismo carrito devuelve el mismo resultado sin cobrar de nuevo.
+         * @description Compra a nombre de quien tiene la sesión (el cliente es el `sub` del token; el cuerpo no lleva `customerId`). Solo compradores. Idempotente: repetir la misma clave y el mismo carrito devuelve el mismo resultado sin cobrar de nuevo.
          */
         post: operations["OrderController_place"];
         delete?: never;
@@ -116,8 +176,51 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Consultar un pedido */
+        /**
+         * Consultar un pedido
+         * @description Su dueño o un administrador. Incluye la dirección de envío (null en un pedido anterior a ella). Para cualquier otro es un 404, igual que un pedido que no existe.
+         */
         get: operations["OrderController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Mis pedidos
+         * @description Del más reciente al más antiguo, paginado con un cursor opaco: pasa nextCursor tal cual en ?cursor= para pedir la página siguiente. Incluye la dirección de envío de cada pedido.
+         */
+        get: operations["MyOrdersController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Historial de pedidos de un cliente (administración)
+         * @description Del más reciente al más antiguo, paginado con un cursor opaco: pasa nextCursor tal cual en ?cursor= para pedir la página siguiente. Incluye la dirección de envío. Solo administradores.
+         */
+        get: operations["AdminOrderController_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -344,8 +447,6 @@ export interface components {
             reference?: Record<string, never> | null;
         };
         PlaceOrderDto: {
-            /** Format: uuid */
-            customerId: string;
             /**
              * @description Token de la tarjeta. Solo viaja a la pasarela: no se guarda ni se registra
              * @example tok_visa
@@ -396,6 +497,16 @@ export interface components {
             /** @example Casa de rejas verdes */
             reference: Record<string, never> | null;
         };
+        OrderDetailResponse: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            status: "PLACED";
+            charged: components["schemas"]["OrderMoneyResponse"];
+            lines: components["schemas"]["OrderLineResponse"][];
+            /** @description null en un pedido anterior a que existiera la dirección de envío */
+            shippingAddress: components["schemas"]["ShippingAddressResponse"] | null;
+        };
         OrderHistoryItemResponse: {
             /** Format: uuid */
             id: string;
@@ -403,26 +514,18 @@ export interface components {
             status: "PLACED";
             charged: components["schemas"]["OrderMoneyResponse"];
             lines: components["schemas"]["OrderLineResponse"][];
+            /** @description null en un pedido anterior a que existiera la dirección de envío */
+            shippingAddress: components["schemas"]["ShippingAddressResponse"] | null;
             /**
              * @description ISO 8601, en UTC
              * @example 2026-10-28T10:00:00.000Z
              */
             createdAt: string;
-            /** @description null en un pedido anterior a que existiera la dirección de envío */
-            shippingAddress: components["schemas"]["ShippingAddressResponse"] | null;
         };
         OrderHistoryResponse: {
             items: components["schemas"]["OrderHistoryItemResponse"][];
             /** @description Cursor de la página siguiente; null en la última. Se pasa tal cual en ?cursor= */
             nextCursor: Record<string, never> | null;
-        };
-        OrderResponse: {
-            /** Format: uuid */
-            id: string;
-            /** @enum {string} */
-            status: "PLACED";
-            charged: components["schemas"]["OrderMoneyResponse"];
-            lines: components["schemas"]["OrderLineResponse"][];
         };
         CredentialsDto: {
             /**
@@ -461,6 +564,13 @@ export interface components {
         RefreshTokenDto: {
             /** @example b3JpZ2luYWw5X3Rva2VuLWRlLXJlZnJlc2NvLTQzY2g */
             refreshToken: string;
+        };
+        ErrorResponse: {
+            /** @example 401 */
+            statusCode: number;
+            /** @example UNAUTHENTICATED */
+            errorCode: string;
+            message: string;
         };
     };
     responses: never;
@@ -866,6 +976,200 @@ export interface operations {
             };
         };
     };
+    AdminBookController_create: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Opcional; si falta, la API genera uno */
+                "X-Request-Id"?: unknown;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBookDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBookResponse"];
+                };
+            };
+            /** @description Un campo no cumple el formato */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description FORBIDDEN: solo los administradores */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description BOOK_ALREADY_EXISTS: ya hay un libro con ese ISBN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description INVALID_ISBN, INVALID_PRICE (cero o más del máximo), INVALID_CURRENCY o INVALID_BOOK (título o autor con caracteres de control) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminBookController_update: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Opcional; si falta, la API genera uno */
+                "X-Request-Id"?: unknown;
+            };
+            path: {
+                /** @description ISBN-13, con o sin guiones */
+                isbn: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBookDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminBookResponse"];
+                };
+            };
+            /** @description Un campo no cumple el formato, hay campos de más o no se indicó ningún cambio */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description FORBIDDEN: solo los administradores */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description NOT_FOUND: el libro no existe */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description INVALID_ISBN, INVALID_PRICE, INVALID_CURRENCY, INVALID_BOOK o CURRENCY_CANNOT_CHANGE */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    AdminStockController_add: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Opcional; si falta, la API genera uno */
+                "X-Request-Id"?: unknown;
+            };
+            path: {
+                /** @description ISBN-13, con o sin guiones */
+                isbn: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddStockDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockLevelResponse"];
+                };
+            };
+            /** @description quantity falta, no es un entero de 1 a 100000, o hay campos de más */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description FORBIDDEN: solo los administradores */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description INVALID_ISBN, STOCK_ITEM_NOT_FOUND (el libro no tiene registro de stock) o STOCK_LIMIT_EXCEEDED (lo disponible pasaría de 1 000 000) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     OrderController_place: {
         parameters: {
             query?: never;
@@ -899,7 +1203,25 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description NOT_FOUND: el cliente o un libro no existe (o está inactivo) */
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description FORBIDDEN: solo los compradores pueden comprar */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description NOT_FOUND: un libro no existe (o está inactivo), o el comprador aún no tiene su cliente en Ventas (se crea en alrededor de un segundo tras registrarse: reintente) */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -941,7 +1263,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrderResponse"];
+                    "application/json": components["schemas"]["OrderDetailResponse"];
                 };
             };
             /** @description El id no es un UUID */
@@ -951,12 +1273,125 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description NOT_FOUND: el pedido no existe */
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description NOT_FOUND: el pedido no existe o no es suyo */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    MyOrdersController_list: {
+        parameters: {
+            query?: {
+                /** @description nextCursor de la página anterior. Es opaco: se devuelve tal cual, sin interpretarlo */
+                cursor?: string;
+                limit?: number;
+            };
+            header?: {
+                /** @description Opcional; si falta, la API genera uno */
+                "X-Request-Id"?: unknown;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderHistoryResponse"];
+                };
+            };
+            /** @description limit fuera de 1 a 50, el cursor no es válido o hay parámetros de más */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description FORBIDDEN: solo los compradores tienen pedidos */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AdminOrderController_list: {
+        parameters: {
+            query: {
+                /** @description nextCursor de la página anterior. Es opaco: se devuelve tal cual, sin interpretarlo */
+                cursor?: string;
+                limit?: number;
+                /** @description Cliente cuyos pedidos se listan */
+                customerId: string;
+            };
+            header?: {
+                /** @description Opcional; si falta, la API genera uno */
+                "X-Request-Id"?: unknown;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderHistoryResponse"];
+                };
+            };
+            /** @description customerId falta o no es un UUID, limit fuera de 1 a 50, o el cursor no es válido */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description FORBIDDEN: solo los administradores */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
             };
         };
     };

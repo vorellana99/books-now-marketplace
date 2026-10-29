@@ -185,8 +185,8 @@ describe('El flujo de la tienda de punta a punta (e2e, aplicación completa y Po
         .get(`/orders/${bought.body.orderId}`)
         .set(adminHeader)
         .expect(200);
-      expect(single.body).not.toHaveProperty('shippingAddress');
-      expect(JSON.stringify(single.body)).not.toContain('Quispe');
+      // DP-15: el detalle de un pedido lo ve su dueño o un administrador, y trae la dirección
+      expect(single.body.shippingAddress).toEqual(ADDRESS);
     });
 
     it('un cambio de precio vale para las compras siguientes y no toca las ya hechas', async () => {
