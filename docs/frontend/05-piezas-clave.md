@@ -50,7 +50,7 @@ const withSession: Middleware = {
 api.use(withSession);
 ```
 
-> `shared/` no puede importar de `features/` (regla 2 de [01](01-decisiones-y-stack.md#3-arquitectura)). En el código real, `shared/api` recibe las funciones de la sesión por **inyección** al arrancar (`configureApi({ getAccessToken, refreshSession })`) y no las importa. El boceto las importa solo para que se vea el flujo.
+> `shared/` no puede importar de `features/` (regla 2 de [01](01-decisiones-y-stack.md#3-arquitectura)). En el código real, `shared/api` recibe las funciones de la sesión por **inyección** al arrancar (`configureApi({ getAccessToken, refreshSession })`) y no las importa. El boceto las importa solo para que se vea el flujo. `getAccessToken`, `refreshSession` y `toApiError` son **funciones sueltas**, sin depender de `openapi-fetch`, para poder enchufarlas en un interceptor o un *mutator* si algún día se migra a un generador completo ([01 sección 4](01-decisiones-y-stack.md#4-del-cliente-de-hoy-a-un-generador-completo-camino-futuro)).
 
 ## 3. Sesión con renovación serializada (`features/auth/session.ts`)
 

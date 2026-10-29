@@ -39,7 +39,9 @@ apps/store-web/
 │   └── shared/
 │       ├── api/                    cliente, esquema generado, errores     (F0)
 │       │   ├── schema.d.ts         generado por `api:types`; se sube a git
+│       │   ├── types.ts            reexporta los tipos de la API: lo único que importan las funcionalidades
 │       │   ├── client.ts
+│       │   ├── errors.ts           `ApiError` y `toApiError`
 │       │   └── error-messages.ts   `errorCode` → texto (de producto 07)
 │       ├── ui/                     componentes de shadcn/ui y propios    (F0)
 │       ├── lib/                    formato de montos y fechas, utilidades (F0)

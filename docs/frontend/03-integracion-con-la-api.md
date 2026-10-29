@@ -19,6 +19,7 @@ Con el paso 1, las operaciones `/admin/*` pueden no aparecer en los tipos si el 
 
 | Hueco | Qué hace el frontend mientras tanto |
 |---|---|
+| Los `operationId` de Nest salen como `BookController_get`, ilegibles | Con `openapi-fetch` no importa (se llama por ruta y método). Es un pendiente del backend (`operationIdFactory`) para cuando se migre a un generador ([01 sección 4](01-decisiones-y-stack.md#4-del-cliente-de-hoy-a-un-generador-completo-camino-futuro)) |
 | El formato de error (`{ statusCode, errorCode, message }`) no está en el esquema | `shared/api/errors.ts` lo declara a mano y se cubre con una prueba |
 | Los `errorCode` solo aparecen en texto de las descripciones | `shared/api/error-messages.ts` lista los de [producto 07](../product/07-contenido-y-mensajes.md); un código desconocido muestra el mensaje genérico |
 | Las respuestas de Swagger son clases que "describen" lo que devuelven los handlers, sin estar atadas a ellos | Las pruebas con MSW usan fábricas tipadas con el esquema, y el e2e (F6) comprueba contra el backend real |

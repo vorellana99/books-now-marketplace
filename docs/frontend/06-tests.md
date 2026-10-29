@@ -41,7 +41,7 @@ vp test -t "texto del test"          # un test por nombre
 | **Pago e idempotencia** | El cuerpo lleva solo ISBN y cantidad, la dirección y el `cardToken`; la huella normaliza ISBN y espacios; **misma clave** tras un corte, `5xx` y `CHECKOUT_IN_PROGRESS`; **clave nueva** tras `PREVIOUS_ATTEMPT_FAILED`, `IDEMPOTENCY_KEY_REUSED` o cambiar el carrito o la dirección; la clave sobrevive a una recarga y se borra tras el `201`; el botón no se puede pulsar dos veces; el `404` de cliente recién creado reintenta una vez con la misma clave | HU-31, HU-32 |
 | **Confirmación** | Muestra el `charged` real (aunque difiera de la cotización); recargar muestra lo mismo; vacía solo el carrito del usuario | HU-34 |
 | **Pedidos** | Lista del más reciente al más antiguo con `nextCursor` tal cual; vacío; detalle con precio **del momento de la compra**; pedido ajeno o inexistente y `id` que no es UUID → "no encontrado"; la sección de envío solo si viene `shippingAddress` | HU-40, HU-41 |
-| **Dependencias** | Un archivo de `features/<x>` no importa las entrañas de otra; `shared/` no importa de `features/` ni `routes/`; solo `shared/api/` usa `fetch` | [01](01-decisiones-y-stack.md#3-arquitectura) |
+| **Dependencias** | Un archivo de `features/<x>` no importa las entrañas de otra; `shared/` no importa de `features/` ni `routes/`; solo `shared/api/` usa `fetch`; ni `openapi-fetch` ni el tipo `Response` se usan fuera de `shared/api/` y de los `api.ts`; los tipos de la API se importan de `shared/api/types.ts` y no de `schema.d.ts` | [01](01-decisiones-y-stack.md#3-arquitectura) |
 
 ## Reglas de dependencia
 
