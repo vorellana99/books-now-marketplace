@@ -5,6 +5,8 @@ description: Implementar una tarea de un corte (backend 7.x/8.x o frontend F0–
 
 # Implementar una tarea
 
+Guía completa para personas: `docs/guia-de-desarrollo.md`. Las herramientas, con ejemplos: `docs/herramientas-de-trabajo.md`.
+
 ## 1. Entender qué se pide y de dónde sale cada dato
 
 | Pregunta | Fuente de verdad |

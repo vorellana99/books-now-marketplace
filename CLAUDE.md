@@ -82,19 +82,12 @@ Monolito modular con DDD + CQRS (`@nestjs/cqrs`) + arquitectura hexagonal. Los b
 
 ## Cómo se trabaja una implementación
 
-**De dónde sale cada dato** (una sola fuente de verdad; si un documento contradice al código, gana el código y se corrige el documento en el mismo commit):
+La guía completa está en [`docs/guia-de-desarrollo.md`](docs/guia-de-desarrollo.md) y las herramientas (scripts y comandos), con ejemplos, en [`docs/herramientas-de-trabajo.md`](docs/herramientas-de-trabajo.md). En resumen:
 
-| Pregunta | Fuente |
-|---|---|
-| ¿Qué tarea toca y qué se comprueba? | La fila y la casilla de la tarea en `docs/backend/00-avance.md` o `docs/frontend/00-avance.md` |
-| ¿Qué debe hacer el producto? | `docs/product/`: reglas `RN-nn`, historias `HU-nn`, decisiones `DP-nn` |
-| ¿Cuál es el contrato HTTP? | `docs/api-contrato.md` y `/docs-json` |
-| ¿Cómo está construido y por qué se apartó de la guía? | Este archivo, `docs/backend/05-piezas-clave.md` y «Decisiones y desvíos» de `00-avance.md` |
-| ¿Qué está abierto o por decidir? | «Problemas abiertos» de `00-avance.md` y `docs/product/09-decisiones-y-preguntas.md` |
-
-**El ciclo de cada tarea:** leer su fila y las reglas que cita → **pruebas primero** (verlas fallar) → implementar → compuerta (`scripts/verify.sh`, o `pnpm run verify` en la app) → **mutaciones si el código es crítico** → documentos en el mismo commit → **un commit por tarea** con prefijo `N.M:`. Pruebas primero, siempre. Mutaciones obligatorias en dominio, seguridad, dinero, concurrencia y restricciones de la base; opcionales en el resto. Una decisión que no esté en los documentos se pregunta al usuario con opciones y una recomendada, y se espera la respuesta antes de aplicar. No se abren PR ni se sube nada sin que lo pida.
-
-**Comandos de Claude** (`.claude/skills/`): `/tarea` (el flujo completo y las trampas aprendidas), `/mutar` (pruebas de mutación con `scripts/mutate.py`), `/nueva-ruta`, `/nueva-variable-entorno`, `/nueva-migracion`, `/nuevo-evento` y `/cambio-de-contrato` (propagar un cambio de la API a la tienda). La compuerta y la herramienta de mutaciones están versionadas en `scripts/` (`python3 -m unittest test_mutate` las prueba).
+- **Fuentes de verdad:** la tarea y su «Se comprueba» en `docs/backend/00-avance.md` o `docs/frontend/00-avance.md`; el producto en `docs/product/` (`RN`, `HU`, `DP`); el contrato en `docs/api-contrato.md`; lo decidido y lo abierto al final de cada `00-avance.md`. Si un documento contradice al código, gana el código y se corrige en el mismo commit.
+- **Ciclo por tarea:** leer su fila → **pruebas primero** → implementar → compuerta (`scripts/verify.sh`) → **mutaciones si es crítico** (dominio, seguridad, dinero, concurrencia, restricciones de la base) → documentos en el mismo commit → **un commit** `N.M:`.
+- **Preguntar** (opciones con una recomendada, y esperar) lo que no esté decidido en los documentos. **No** abrir PR ni subir nada sin que lo pida el usuario.
+- **Comandos de Claude** (`.claude/skills/`): `/tarea`, `/mutar`, `/nueva-ruta`, `/nueva-variable-entorno`, `/nueva-migracion`, `/nuevo-evento`, `/cambio-de-contrato`.
 
 ## Convenciones de trabajo
 
