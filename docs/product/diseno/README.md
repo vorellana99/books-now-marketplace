@@ -6,7 +6,8 @@
 |---|---|
 | [01-tokens](01-tokens.md) | Colores (con sus contrastes calculados), tipografía, espaciado, bordes y movimiento, escritos como variables |
 | [02-componentes](02-componentes.md) | Qué componentes de shadcn/ui se usan, cuáles son propios y cómo se comportan |
-| [03-wireframes](03-wireframes.md) | Las diez pantallas (`PA-01` a `PA-10`) en móvil, con sus estados y las diferencias en escritorio |
+| [mockups/](mockups/index.html) | **Mockups HTML** hechos con los tokens reales: 32 pantallas en móvil (360 px) con sus estados y 4 vistas de escritorio. Se abren en el navegador |
+| [03-wireframes](03-wireframes.md) | Las diez pantallas (`PA-01` a `PA-10`): qué muestra cada una, sus estados y las diferencias en escritorio, con enlace a su mockup |
 
 ## Dirección visual
 
@@ -41,11 +42,11 @@ Lo mínimo antes de empezar y cada pantalla **justo antes** de construirla en su
 | `F4` Compra | `PA-06` y `PA-07` |
 | `F5` Pedidos | `PA-08` y `PA-09` |
 
-Los wireframes de todas las pantallas ya están en esta primera versión. Antes de construir cada una se **revisan**: si al verla en el navegador algo no funciona, se corrige aquí y no solo en el código.
+Los mockups y la descripción de todas las pantallas ya están en esta primera versión. Antes de construir cada una se **revisan**: si al verla en el navegador algo no funciona, se corrige aquí y no solo en el código.
 
 ## Cómo se cambia el diseño
 
 1. **Colores, tipografía, espaciado:** se cambian en [01-tokens](01-tokens.md) y en el único archivo de estilos del frontend (`src/styles.css`). Los componentes no llevan colores propios.
 2. **Un componente:** se cambia en [02-componentes](02-componentes.md) y en `shared/ui/`.
-3. **Una pantalla:** se cambia su wireframe en [03-wireframes](03-wireframes.md), y se actualizan sus historias en [04](../04-historias-de-usuario.md) si cambia el comportamiento.
+3. **Una pantalla:** se cambia su mockup (`mockups/index.html`) y su descripción en [03-wireframes](03-wireframes.md), y se actualizan sus historias en [04](../04-historias-de-usuario.md) si cambia el comportamiento.
 4. **Si llega una marca real** (logotipo, paleta, tipografía), solo cambian los valores de los tokens y el logotipo de la cabecera.
