@@ -2,6 +2,8 @@
 
 > Lo que la tienda web debe cumplir más allá de las funciones: dispositivos, accesibilidad, rendimiento, idioma y privacidad. Es una **propuesta de partida** ([DP-19](09-decisiones-y-preguntas.md)): no hay marca ni diseño aprobados todavía, así que estos requisitos se pueden ajustar.
 
+Cómo se traducen a lo visual (colores con sus contrastes, tipografía, componentes y wireframes): [diseño](diseno/README.md).
+
 ## Dispositivos
 
 | Requisito | Detalle |

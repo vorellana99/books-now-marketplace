@@ -11,6 +11,7 @@ apps/store-web/
 ├── tsconfig.json                   existe; (F0) añade `jsx` y el alias `@/*`
 ├── pnpm-workspace.yaml             catálogo de Vite+ (ya existe)
 ├── index.html                      (F0) `lang="es"` y el título
+├── src/styles.css                  (F0) tokens de diseño (`@theme`) y tipografías autoalojadas
 ├── components.json                 (F0) configuración de shadcn/ui
 ├── .env.example                    (F0) variables de entorno
 ├── public/

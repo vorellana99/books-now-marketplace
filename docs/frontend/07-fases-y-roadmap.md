@@ -45,6 +45,21 @@ flowchart LR
 - **No hay que esperar al backend para empezar:** F0 a F2 usan rutas que ya existen, y F3 a F5 avanzan con MSW siguiendo el contrato propuesto. Lo que **no se puede** es cerrar una historia hasta probarla contra la ruta real.
 - **Puede construirse ya, pero no abrirse al público,** hasta cerrar `7.7`, `7.8` y `7.10` (DP-09). Hasta `7.7`, `POST /orders` lleva el `customerId` en el cuerpo: el frontend manda el `id` del usuario con sesión.
 
+## Diseño antes de cada corte
+
+Los [tokens y la cabecera](../product/diseno/README.md#cuándo-se-diseña) están listos antes de `F0`, y cada pantalla se revisa justo antes de construirla (DP-23):
+
+| Corte | Wireframes que se revisan antes de empezar |
+|---|---|
+| F0 | [Cabecera y navegación](../product/diseno/03-wireframes.md#cabecera-y-navegación) y [PA-10](../product/diseno/03-wireframes.md#pa-10-no-encontrado--error) |
+| F1 | [PA-01](../product/diseno/03-wireframes.md#pa-01-catálogo-y-búsqueda) y [PA-02](../product/diseno/03-wireframes.md#pa-02-detalle-del-libro) |
+| F2 | [PA-03](../product/diseno/03-wireframes.md#pa-03-registrarse) y [PA-04](../product/diseno/03-wireframes.md#pa-04-iniciar-sesión) |
+| F3 | [PA-05](../product/diseno/03-wireframes.md#pa-05-carrito) |
+| F4 | [PA-06](../product/diseno/03-wireframes.md#pa-06-dirección-y-pago) y [PA-07](../product/diseno/03-wireframes.md#pa-07-confirmación) |
+| F5 | [PA-08](../product/diseno/03-wireframes.md#pa-08-mis-pedidos) y [PA-09](../product/diseno/03-wireframes.md#pa-09-detalle-del-pedido) |
+
+Si al verla en el navegador una pantalla no funciona como su wireframe, se corrige **el wireframe** y no solo el código.
+
 ## Qué hacer cuando el backend cambia
 
 | Cambio | Acción en el frontend |

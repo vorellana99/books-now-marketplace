@@ -15,6 +15,7 @@
 | Saber qué pantallas hay y qué muestra cada una | [06-pantallas-y-navegacion](06-pantallas-y-navegacion.md) |
 | Escribir un texto, un mensaje de error o dar formato a un monto | [07-contenido-y-mensajes](07-contenido-y-mensajes.md) |
 | Conocer los requisitos de móvil, accesibilidad, rendimiento y privacidad | [08-requisitos-de-experiencia](08-requisitos-de-experiencia.md) |
+| Ver cómo se ve la tienda: colores, tipografía, componentes y wireframes | [diseno/](diseno/README.md) |
 | Ver qué se decidió y qué sigue abierto | [09-decisiones-y-preguntas](09-decisiones-y-preguntas.md) |
 
 ## Convenciones

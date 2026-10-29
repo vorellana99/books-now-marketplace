@@ -17,6 +17,7 @@ Los comandos se ejecutan desde `apps/store-web`. Las herramientas son las de Vit
 | [05-piezas-clave](05-piezas-clave.md) | Bocetos de las piezas difíciles: cliente, sesión, carrito, clave de idempotencia y errores |
 | [06-tests](06-tests.md) | Estrategia de pruebas y casos mínimos, por historia |
 | [07-fases-y-roadmap](07-fases-y-roadmap.md) | Orden de los cortes y su dependencia con el backend |
+| [`../product/diseno/`](../product/diseno/README.md) | **Diseño**: tokens, componentes y wireframes de las diez pantallas (fuente visual de esta guía) |
 
 ## Del producto al código
 

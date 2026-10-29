@@ -12,7 +12,7 @@
 | Cliente de API | **openapi-typescript + openapi-fetch**, con los tipos generados del contrato del backend |
 | Formularios | **React Hook Form + Zod 4** (Zod ya es la librería de validación del backend) |
 | Estado del cliente | **Zustand** con `persist` para el carrito (DP-04). Todo lo demás es estado de servidor o de la URL |
-| Estilos y componentes | **Tailwind CSS 4 + shadcn/ui** (Radix): accesibilidad AA lista (foco, teclado, ARIA) |
+| Estilos y componentes | **Tailwind CSS 4 + shadcn/ui** (Radix): accesibilidad AA lista (foco, teclado, ARIA). Los valores visuales (colores, tipografía, espaciado) son los [tokens de diseño](../product/diseno/01-tokens.md), en un solo archivo, `src/styles.css`; los componentes propios, los de [02-componentes](../product/diseno/02-componentes.md) |
 | Pruebas | **Vitest** (el de Vite+) + **Testing Library + MSW**; Playwright cuando el flujo de compra esté armado |
 | Montos | **Nunca se calculan ni se convierten a número** (RN-08): se muestran los textos de la API |
 | Sesión | Token de acceso **en memoria** y token de refresco en **`localStorage`** (DP-16), con renovación serializada entre pestañas |
