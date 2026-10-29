@@ -11,15 +11,15 @@ import {
   ApiUnauthorizedResponse,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
-import { Public } from '../../../platform/auth/public.decorator.js';
-import { LoginCommand } from '../application/login.command.js';
-import { LogoutCommand } from '../application/logout.command.js';
-import { RefreshSessionCommand } from '../application/refresh-session.command.js';
-import type { Session } from '../application/session.js';
+import { Public } from '../../../../platform/auth/public.decorator.js';
+import { LoginCommand } from '../../application/login.command.js';
+import { LogoutCommand } from '../../application/logout.command.js';
+import { RefreshSessionCommand } from '../../application/refresh-session.command.js';
+import type { Session } from '../../application/session.js';
 import {
   RegisterUserCommand,
   type RegisteredUser,
-} from '../application/register-user.command.js';
+} from '../../application/register-user.command.js';
 import { CredentialsDto, RefreshTokenDto } from './auth.dto.js';
 import { LoginResponse, UserResponse } from './auth.responses.js';
 

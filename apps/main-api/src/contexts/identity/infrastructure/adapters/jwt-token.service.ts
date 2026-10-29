@@ -3,13 +3,13 @@ import { errors, jwtVerify, SignJWT } from 'jose';
 import {
   TokenVerificationError,
   type AccessTokenVerifier,
-} from '../../../platform/auth/access-token-verifier.js';
-import type { AuthenticatedUser } from '../../../platform/auth/authenticated-user.js';
-import { ROLES, type Role } from '../../../shared-kernel/role.js';
+} from '../../../../platform/auth/access-token-verifier.js';
+import type { AuthenticatedUser } from '../../../../platform/auth/authenticated-user.js';
+import { ROLES, type Role } from '../../../../shared-kernel/role.js';
 import {
   AccessTokenIssuer,
   type IssuedAccessToken,
-} from '../application/access-token-issuer.js';
+} from '../../application/access-token-issuer.js';
 
 export const TOKEN_ISSUER = 'libroya';
 export const TOKEN_AUDIENCE = 'libroya-api';

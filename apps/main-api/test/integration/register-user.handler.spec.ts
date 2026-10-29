@@ -3,7 +3,8 @@ import { CommandBus } from '@nestjs/cqrs';
 import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
 import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
-import { RegisterUserHandler } from '../../src/contexts/identity/infrastructure/register-user.handler.js';
+import { PrismaUserRepository } from '../../src/contexts/identity/infrastructure/persistence/prisma-user.repository.js';
+import { RegisterUserHandler } from '../../src/contexts/identity/application/register-user.handler.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { OutboxWriter } from '../../src/platform/outbox/outbox.writer.js';
@@ -283,11 +284,14 @@ describe('RegisterUserHandler (PostgreSQL real, por el CommandBus)', () => {
 
     // El usuario y su evento se confirman juntos: sin el evento, Ventas nunca crearía a su cliente
     it('si falla el guardado del evento, no queda el usuario', async () => {
-      const failing = new RegisterUserHandler(prisma, hasher, {
-        append: async () => {
-          throw new Error('falló el outbox');
-        },
-      } as unknown as OutboxWriter);
+      const failing = new RegisterUserHandler(
+        new PrismaUserRepository(prisma, {
+          append: async () => {
+            throw new Error('falló el outbox');
+          },
+        }),
+        hasher,
+      );
 
       await expect(
         failing.execute(new RegisterUserCommand('ana@example.com', PASSWORD)),
@@ -298,12 +302,15 @@ describe('RegisterUserHandler (PostgreSQL real, por el CommandBus)', () => {
 
     it('si el outbox escribe el evento y luego falla, el evento también se deshace', async () => {
       const real = app.get(OutboxWriter);
-      const failing = new RegisterUserHandler(prisma, hasher, {
-        append: async (tx: never, events: never) => {
-          await real.append(tx, events);
-          throw new Error('falló tras escribir');
-        },
-      } as unknown as OutboxWriter);
+      const failing = new RegisterUserHandler(
+        new PrismaUserRepository(prisma, {
+          append: async (tx, events) => {
+            await real.append(tx, events);
+            throw new Error('falló tras escribir');
+          },
+        }),
+        hasher,
+      );
 
       await expect(
         failing.execute(new RegisterUserCommand('ana@example.com', PASSWORD)),

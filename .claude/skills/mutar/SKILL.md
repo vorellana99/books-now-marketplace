@@ -15,7 +15,7 @@ Una prueba que pasa aunque el código esté roto no protege nada. Esto lo compru
 ```python
 import sys; sys.path.insert(0, '/ruta/al/repo/scripts')
 from mutate import mutate, report
-SRC = 'src/contexts/identity/infrastructure/login.handler.ts'      # relativa a apps/main-api
+SRC = 'src/contexts/identity/application/login.handler.ts'      # relativa a apps/main-api
 T = ['test/integration/login.handler.spec.ts']
 mutate('L1 contraseña no se comprueba', SRC, [('if (!user || !valid)', 'if (!user)')], T)
 mutate('L2 usuario no se comprueba',   SRC, [('if (!user || !valid)', 'if (!valid)')], T)

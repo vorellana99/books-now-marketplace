@@ -7,19 +7,23 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
 import { AccessTokenIssuer } from './application/access-token-issuer.js';
 import { PasswordHasher } from './domain/ports/password-hasher.port.js';
-import { AuthController } from './infrastructure/auth.controller.js';
+import { SessionRepository } from './domain/ports/session.repository.js';
+import { UserRepository } from './domain/ports/user.repository.js';
+import { PrismaSessionRepository } from './infrastructure/persistence/prisma-session.repository.js';
+import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository.js';
+import { AuthController } from './infrastructure/http/auth.controller.js';
 import {
   AuthThrottlerGuard,
   authThrottlers,
-} from './infrastructure/auth-throttler.js';
-import { JwtTokenService } from './infrastructure/jwt-token.service.js';
-import { LoginHandler } from './infrastructure/login.handler.js';
-import { LogoutHandler } from './infrastructure/logout.handler.js';
-import { PurgeRefreshTokensJob } from './infrastructure/purge-refresh-tokens.job.js';
-import { RefreshSessionHandler } from './infrastructure/refresh-session.handler.js';
-import { RegisterUserHandler } from './infrastructure/register-user.handler.js';
-import { ScryptPasswordHasher } from './infrastructure/scrypt-password-hasher.js';
-import { SessionService } from './infrastructure/session.service.js';
+} from './infrastructure/http/auth-throttler.js';
+import { JwtTokenService } from './infrastructure/adapters/jwt-token.service.js';
+import { LoginHandler } from './application/login.handler.js';
+import { LogoutHandler } from './application/logout.handler.js';
+import { PurgeRefreshTokensJob } from './application/purge-refresh-tokens.job.js';
+import { RefreshSessionHandler } from './application/refresh-session.handler.js';
+import { RegisterUserHandler } from './application/register-user.handler.js';
+import { ScryptPasswordHasher } from './infrastructure/adapters/scrypt-password-hasher.js';
+import { SessionService } from './application/session.service.js';
 
 @Module({
   imports: [
@@ -36,6 +40,8 @@ import { SessionService } from './infrastructure/session.service.js';
   providers: [
     // El límite de intentos va antes que el resto de los guards: un intento cortado no gasta ni la verificación del token
     { provide: APP_GUARD, useClass: AuthThrottlerGuard },
+    { provide: SessionRepository, useClass: PrismaSessionRepository },
+    { provide: UserRepository, useClass: PrismaUserRepository },
     SessionService,
     RegisterUserHandler,
     LoginHandler,

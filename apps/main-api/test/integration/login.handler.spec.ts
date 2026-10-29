@@ -2,9 +2,9 @@ import { Module, type INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { LoginCommand } from '../../src/contexts/identity/application/login.command.js';
 import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
-import { SessionService } from '../../src/contexts/identity/infrastructure/session.service.js';
-import { LoginHandler } from '../../src/contexts/identity/infrastructure/login.handler.js';
-import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
+import { SessionService } from '../../src/contexts/identity/application/session.service.js';
+import { UserRepository } from '../../src/contexts/identity/domain/ports/user.repository.js';
+import { LoginHandler } from '../../src/contexts/identity/application/login.handler.js';
 import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { AccessTokenVerifier } from '../../src/platform/auth/access-token-verifier.js';
@@ -267,7 +267,7 @@ describe('LoginHandler (PostgreSQL real, por el CommandBus)', () => {
       it('si calcular el hash de relleno falla, el siguiente intento lo calcula de nuevo', async () => {
         // Un manejador nuevo: el de la aplicación ya tiene su hash de relleno guardado de otros tests
         const fresh = new LoginHandler(
-          app.get(PrismaService),
+          app.get(UserRepository),
           hasher,
           app.get(SessionService),
         );

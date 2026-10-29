@@ -96,6 +96,7 @@ export async function resetDatabase(): Promise<void> {
   assertIsolatedDatabase();
   await removeSlowStockUpdates(); // por si un test falló antes de quitar el retardo
   await removeSlowRefreshTokenUpdates();
+  await removeFailRefreshTokenInserts();
   await resetDatabaseTimeZone(); // por si un test falló antes de restaurar la zona horaria
   const tables = await query<{ name: string }>(
     `SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) AS name
@@ -152,6 +153,27 @@ export async function slowDownRefreshTokenUpdates(
     CREATE OR REPLACE TRIGGER test_slow_update BEFORE UPDATE ON identity.refresh_tokens
     FOR EACH ROW EXECUTE FUNCTION identity.test_slow_update()`);
   return removeSlowRefreshTokenUpdates;
+}
+
+// Hace que insertar un token de refresco falle (un `INSERT` que la base rechaza), para comprobar que una operación que ya
+// marcó el token viejo como usado se deshace entera. Devuelve la función que lo quita
+export async function failRefreshTokenInserts(): Promise<() => Promise<void>> {
+  assertIsolatedDatabase();
+  await query(`
+    CREATE OR REPLACE FUNCTION identity.test_fail_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'falló el guardado del token nuevo'; END $$`);
+  await query(`
+    CREATE OR REPLACE TRIGGER test_fail_insert BEFORE INSERT ON identity.refresh_tokens
+    FOR EACH ROW EXECUTE FUNCTION identity.test_fail_insert()`);
+  return removeFailRefreshTokenInserts;
+}
+
+export async function removeFailRefreshTokenInserts(): Promise<void> {
+  assertIsolatedDatabase();
+  await query(
+    'DROP TRIGGER IF EXISTS test_fail_insert ON identity.refresh_tokens',
+  );
+  await query('DROP FUNCTION IF EXISTS identity.test_fail_insert()');
 }
 
 export async function removeSlowRefreshTokenUpdates(): Promise<void> {

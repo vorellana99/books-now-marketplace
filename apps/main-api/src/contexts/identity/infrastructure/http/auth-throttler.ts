@@ -6,8 +6,8 @@ import {
   type ThrottlerOptions,
 } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
-import { RequestContext } from '../../../platform/observability/request-context.js';
-import { TooManyRequestsError } from '../../../shared-kernel/domain.errors.js';
+import { RequestContext } from '../../../../platform/observability/request-context.js';
+import { TooManyRequestsError } from '../../../../shared-kernel/domain.errors.js';
 import { AuthController } from './auth.controller.js';
 
 const MAX_EMAIL_KEY = 254;

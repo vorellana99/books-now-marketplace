@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Logger, type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PurgeRefreshTokensJob } from '../../src/contexts/identity/infrastructure/purge-refresh-tokens.job.js';
+import { PrismaSessionRepository } from '../../src/contexts/identity/infrastructure/persistence/prisma-session.repository.js';
+import { PurgeRefreshTokensJob } from '../../src/contexts/identity/application/purge-refresh-tokens.job.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { PURGE_BATCH } from '../../src/platform/retention/purge-in-batches.js';
 import { holdRowLock, query, resetDatabase } from '../support/database.js';
@@ -20,7 +21,7 @@ describe('PurgeRefreshTokensJob (PostgreSQL real)', () => {
   let userId: string;
   const job = (days = 7) =>
     new PurgeRefreshTokensJob(
-      prisma,
+      new PrismaSessionRepository(prisma),
       new ConfigService({ RETENTION_REFRESH_TOKEN_DAYS: days }),
     );
 

@@ -1,6 +1,7 @@
 import { UserRepository } from '../../src/contexts/identity/domain/ports/user.repository.js';
 import type { Email } from '../../src/contexts/identity/domain/email.vo.js';
-import type { User } from '../../src/contexts/identity/domain/user.aggregate.js';
+import { User } from '../../src/contexts/identity/domain/user.aggregate.js';
+import type { Role } from '../../src/shared-kernel/role.js';
 import { ConflictError } from '../../src/shared-kernel/domain.errors.js';
 
 export interface PublishedEvent {
@@ -51,6 +52,21 @@ export class InMemoryUserRepository extends UserRepository {
   // Ayudas para las pruebas
   published(): PublishedEvent[] {
     return [...this.events];
+  }
+
+  // Cambia el rol de un usuario ya guardado, como haría un administrador de la base
+  setRole(id: string, role: Role): void {
+    const user = this.users.get(id);
+    if (!user) throw new Error(`no hay un usuario ${id}`);
+    this.users.set(
+      id,
+      User.create({
+        id,
+        email: user.email,
+        passwordHash: user.passwordHash,
+        role,
+      }),
+    );
   }
 
   count(): number {

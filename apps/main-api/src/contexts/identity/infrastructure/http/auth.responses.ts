@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { ROLES, type Role } from '../../../shared-kernel/role.js';
+import { ROLES, type Role } from '../../../../shared-kernel/role.js';
 
 export class UserResponse {
   @ApiProperty({ format: 'uuid' })

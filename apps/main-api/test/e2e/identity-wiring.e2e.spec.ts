@@ -1,9 +1,9 @@
 import { Logger, type INestApplication } from '@nestjs/common';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
-import { ScryptPasswordHasher } from '../../src/contexts/identity/infrastructure/scrypt-password-hasher.js';
+import { ScryptPasswordHasher } from '../../src/contexts/identity/infrastructure/adapters/scrypt-password-hasher.js';
 import { AccessTokenIssuer } from '../../src/contexts/identity/application/access-token-issuer.js';
-import { JwtTokenService } from '../../src/contexts/identity/infrastructure/jwt-token.service.js';
+import { JwtTokenService } from '../../src/contexts/identity/infrastructure/adapters/jwt-token.service.js';
 import {
   AccessTokenVerifier,
   TokenVerificationError,

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import { OutboxWriter } from '../../../../platform/outbox/outbox.writer.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import { isUniqueViolation } from '../../../../platform/prisma/unique-violation.js';
@@ -18,7 +18,7 @@ interface UserRow {
 export class PrismaUserRepository extends UserRepository {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly outbox: Pick<OutboxWriter, 'append'>,
+    @Inject(OutboxWriter) private readonly outbox: Pick<OutboxWriter, 'append'>,
   ) {
     super();
   }

@@ -4,7 +4,7 @@ import { PasswordHasher } from '../../../src/contexts/identity/domain/ports/pass
 import {
   DEFAULT_LOG_N,
   ScryptPasswordHasher,
-} from '../../../src/contexts/identity/infrastructure/scrypt-password-hasher.js';
+} from '../../../src/contexts/identity/infrastructure/adapters/scrypt-password-hasher.js';
 
 // Costo mínimo para que los tests no esperen: el valor por defecto (seguro) se comprueba aparte
 const fast = () => new ScryptPasswordHasher({ logN: 4 });

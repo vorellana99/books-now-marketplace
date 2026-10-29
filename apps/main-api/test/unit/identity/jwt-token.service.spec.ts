@@ -4,7 +4,7 @@ import {
   JwtTokenService,
   TOKEN_AUDIENCE,
   TOKEN_ISSUER,
-} from '../../../src/contexts/identity/infrastructure/jwt-token.service.js';
+} from '../../../src/contexts/identity/infrastructure/adapters/jwt-token.service.js';
 import {
   AccessTokenVerifier,
   TokenVerificationError,

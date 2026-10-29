@@ -4,7 +4,7 @@ import {
   timingSafeEqual,
   type ScryptOptions,
 } from 'node:crypto';
-import { PasswordHasher } from '../domain/ports/password-hasher.port.js';
+import { PasswordHasher } from '../../domain/ports/password-hasher.port.js';
 
 // Parámetros de OWASP para scrypt con poca memoria: N = 2^15 (32 MiB), r = 8, p = 3. El costo (N) se puede subir con el
 // tiempo: cada hash guarda sus propios parámetros, así que los antiguos siguen verificando
