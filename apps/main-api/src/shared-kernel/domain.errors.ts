@@ -24,3 +24,6 @@ export class AuthenticationError extends DomainError {}
 
 // → 403. Se sabe quién llama, pero no puede hacer esto
 export class AuthorizationError extends DomainError {}
+
+// → 429. Demasiados intentos seguidos
+export class TooManyRequestsError extends DomainError {}

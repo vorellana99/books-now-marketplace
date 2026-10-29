@@ -19,6 +19,8 @@ import { ConsoleNotifier } from './infrastructure/order/console-notifier.adapter
 import { GetOrderHandler } from './infrastructure/order/get-order.handler.js';
 import { ListCustomerOrdersHandler } from './infrastructure/order/list-customer-orders.handler.js';
 import { InventoryInProcessAdapter } from './infrastructure/order/inventory-in-process.adapter.js';
+import { AdminOrderController } from './infrastructure/order/admin-order.controller.js';
+import { MyOrdersController } from './infrastructure/order/my-orders.controller.js';
 import { OrderController } from './infrastructure/order/order.controller.js';
 import { PrismaCheckoutLog } from './infrastructure/order/prisma-checkout-log.adapter.js';
 import { PrismaOrderRepository } from './infrastructure/order/prisma-order.repository.js';
@@ -28,7 +30,7 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
 // Los puertos son clases abstractas y se importan como valor: Nest necesita la clase en runtime para inyectarla
 @Module({
   imports: [OutboxModule], // PrismaOrderRepository guarda el evento con OutboxWriter
-  controllers: [OrderController],
+  controllers: [OrderController, MyOrdersController, AdminOrderController],
   providers: [
     PlaceOrderHandler,
     GetOrderHandler,

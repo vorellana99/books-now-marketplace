@@ -6,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
+import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
@@ -23,6 +24,7 @@ import {
   reservationsOf,
   stockOf,
 } from '../support/builders.js';
+import { bearer } from '../support/auth.js';
 import { query, resetDatabase } from '../support/database.js';
 import { withEnv } from '../support/nest.js';
 
@@ -57,6 +59,7 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
             CatalogModule,
             InventoryModule,
             SalesModule,
+            IdentityModule,
           ],
         }).compile(),
     );
@@ -92,6 +95,8 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
   });
   afterEach(() => vi.restoreAllMocks());
 
+  // Cada comprador compra con su token: se firma al crear al cliente (en setup) y se busca aquí
+  const tokens = new Map<string, { Authorization: string }>();
   const post = (
     customerId: string,
     isbn: string,
@@ -100,9 +105,9 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
   ) =>
     request(app.getHttpServer())
       .post('/orders')
+      .set(tokens.get(customerId)!)
       .set('Idempotency-Key', key)
       .send({
-        customerId,
         cardToken,
         items: [{ isbn, quantity: 1 }],
         shippingAddress: {
@@ -117,6 +122,7 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
 
   async function setup() {
     const customer = await insertCustomer({ email: 'lenta@example.com' });
+    tokens.set(customer.id, await bearer(app, 'BUYER', customer.id));
     const book = await insertBook({ price: '100.00' });
     await insertStock(book.isbn, 10);
     return { customer, book };

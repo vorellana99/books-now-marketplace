@@ -59,7 +59,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │                                                      (el puerto del guard; lo implementa Identidad)
 │   │   │                                                   ✅ hecho (7.6): auth.guard.ts (global, denegado por defecto),
 │   │   │                                                      public.decorator.ts, roles.decorator.ts,
-│   │   │                                                      current-user.decorator.ts
+│   │   │                                                      current-user.decorator.ts, route-access.ts (7.11: quién puede
+│   │   │                                                      llamar a cada ruta; lo usan el guard y Swagger)
 │   │   ├── outbox/
 │   │   │   ├── outbox.module.ts                            ✅ hecho (4.1); importa DiscoveryModule, no ScheduleModule
 │   │   │   ├── outbox-consumer.ts    DeliveryContext, DbOutboxConsumer, ExternalOutboxConsumer   ✅ hecho (4.1)
@@ -72,13 +73,15 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │   │   ├── request-context.ts
 │   │   │   ├── request-id.middleware.ts
 │   │   │   ├── request-context.interceptor.ts
-│   │   │   └── request-aware.logger.ts
+│   │   │   ├── request-aware.logger.ts
+│   │   │   └── access-log.middleware.ts                    ✅ hecho (7.10): una línea por petición, sin secretos
 │   │   ├── http/
 │   │   │   ├── configure-app.ts
 │   │   │   ├── configure-swagger.ts
 │   │   │   ├── domain-exception.filter.ts
-│   │   │   ├── admin-api-enabled.guard.ts                  ✅ hecho (6.4)
-│   │   │   └── admin-api.decorator.ts                      ✅ hecho (6.4): @AdminApi() = guard + etiqueta `admin`
+│   │   │   ├── configure-swagger.ts                        ✅ hecho (7.11): esquema Bearer y el acceso de cada ruta
+│   │   │   ├── configure-security.ts                       ✅ hecho (7.10): helmet, CORS, proxy y registro de accesos
+│   │   │   └── admin-api.decorator.ts                      ✅ hecho (6.4; 7.9): @AdminApi() = @Roles('ADMIN') + etiqueta `admin`
 │   │   └── health/
 │   │       ├── health.module.ts
 │   │       ├── health.controller.ts
@@ -190,7 +193,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │           │                                                  logout.command.ts (7.4)
 │           ├── domain/                                     ✅ hecho (7.1): email.vo.ts, password-policy.ts,
 │           │                                                  password-hasher.port.ts, user.aggregate.ts
-│           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1),
+│           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1), create-admin.ts (7.9),
+│                                                              auth-throttler.ts (7.10),
 │                                                              jwt-token.service.ts (7.2), register-user.handler.ts,
 │                                                              login.handler.ts, auth.controller.ts, auth.dto.ts,
 │                                                              auth.responses.ts (7.3), refresh-token.ts,
@@ -332,6 +336,13 @@ PAYMENT_PROVIDER=fake            # fake | external
 PAYMENT_API_URL=
 PAYMENT_SIMULATED_DELAY_MS=3000  # solo con fake: lo que tarda la pasarela simulada en cobrar y reembolsar (0 = sin demora)
 EMAIL_SIMULATED_DELAY_MS=3000    # lo que tarda el correo simulado en "enviarse" (0 = sin demora)
+CORS_ORIGINS=                    # orígenes permitidos por CORS, separados por comas (vacía: sin CORS)
+TRUST_PROXY=0                    # proxies delante de la API (de dónde sale la dirección del cliente)
+RATE_LIMIT_WINDOW_SECONDS=60     # límite de intentos de /auth: ventana y máximos (login por dirección y por correo, registro, renovación)
+RATE_LIMIT_LOGIN_IP=20
+RATE_LIMIT_LOGIN_ACCOUNT=5
+RATE_LIMIT_REGISTER_IP=10
+RATE_LIMIT_REFRESH_IP=30
 JWT_SECRET=                      # secreto de los tokens (≥ 32 caracteres variados); obligatorio en producción
 ACCESS_TOKEN_TTL_SECONDS=900     # vida del token de acceso (de 60 a 3600)
 REFRESH_TOKEN_TTL_DAYS=14        # días que vale un token de refresco sin usarse (de 1 a 90)
@@ -339,7 +350,6 @@ PASSWORD_HASH_LOG_N=15           # costo del hash de contraseñas (scrypt, N = 2
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
 DB_STATEMENT_TIMEOUT_MS=5000     # límite de cada sentencia SQL; mantiene acotada la duración de la compra
-ADMIN_API_ENABLED=false          # endpoints /admin solo en desarrollo, hasta tener autenticación (ver [07-fases-y-roadmap.md](07-fases-y-roadmap.md))
 ```
 
 **`platform/config/env.schema.ts`**: todo lo que llega de `.env` es texto; el schema lo convierte y valida al arrancar.
@@ -369,11 +379,6 @@ export const envSchema = z
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-    ADMIN_API_ENABLED: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
-  })
-  .refine((e) => !(e.NODE_ENV === 'production' && e.ADMIN_API_ENABLED), {
-    path: ['ADMIN_API_ENABLED'],
-    message: 'Los endpoints /admin no pueden habilitarse en producción sin autenticación',
   })
   // La pasarela simulada aprueba cualquier tarjeta: en producción hay que elegir un proveedor de verdad
   .refine((e) => !(e.NODE_ENV === 'production' && e.PAYMENT_PROVIDER === 'fake'), {

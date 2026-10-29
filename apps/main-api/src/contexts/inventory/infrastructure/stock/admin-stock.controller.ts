@@ -3,7 +3,8 @@ import { CommandBus } from '@nestjs/cqrs';
 import {
   ApiBadRequestResponse,
   ApiCreatedResponse,
-  ApiNotFoundResponse,
+  ApiForbiddenResponse,
+  ApiUnauthorizedResponse,
   ApiOperation,
   ApiParam,
   ApiUnprocessableEntityResponse,
@@ -15,7 +16,7 @@ import {
 } from '../../application/stock/add-stock.command.js';
 import { AddStockDto, StockLevelResponse } from './add-stock.dto.js';
 
-// Administración del stock. Solo funciona con ADMIN_API_ENABLED=true, hasta que exista la autenticación
+// Administración del stock. Solo administradores
 @AdminApi()
 @Controller('admin/stock')
 export class AdminStockController {
@@ -37,9 +38,10 @@ export class AdminStockController {
     description:
       'quantity falta, no es un entero de 1 a 100000, o hay campos de más',
   })
-  @ApiNotFoundResponse({
-    description: 'La administración está cerrada (ADMIN_API_ENABLED=false)',
+  @ApiUnauthorizedResponse({
+    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
   })
+  @ApiForbiddenResponse({ description: 'FORBIDDEN: solo los administradores' })
   @ApiUnprocessableEntityResponse({
     description:
       'INVALID_ISBN, STOCK_ITEM_NOT_FOUND (el libro no tiene registro de stock) o STOCK_LIMIT_EXCEEDED (lo disponible pasaría de 1 000 000)',

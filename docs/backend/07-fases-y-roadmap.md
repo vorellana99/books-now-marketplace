@@ -51,33 +51,17 @@ flowchart LR
 | 11 | Dirección de envío en el pedido | `POST /orders` (campo nuevo `shippingAddress`) | Ventas | Cambio del comando |
 | 12 | Crear libro, editar datos y precio, desactivar | `POST /admin/books`, `PATCH /admin/books/:isbn` | Catálogo | Comandos |
 | 13 | Cargar stock | `POST /admin/stock/:isbn/additions` | Inventario | Comando |
-| 14 | Historial de pedidos | `GET /orders?customerId=&cursor=` (solo con `ADMIN_API_ENABLED`, hasta tener autenticación) | Ventas | Query |
+| 14 | Historial de pedidos | `GET /admin/orders?customerId=&cursor=` (administrador; antes `GET /orders?customerId=` con `ADMIN_API_ENABLED`) y `GET /me/orders` (comprador) | Ventas | Query |
 
-> [!warning] Los endpoints `/admin` y el historial no pueden quedar abiertos
-> Mientras no haya autenticación, solo funcionan con **`ADMIN_API_ENABLED=true`** (por defecto `false`, y rechazado por el schema de Zod cuando `NODE_ENV=production`). Si está desactivado, responden **404**, como si no existieran. Así sirven en desarrollo sin quedar expuestos en un despliegue.
+> [!success] Resuelto en el corte 7: los endpoints `/admin` exigen el rol `ADMIN`
+> Hasta el corte 6 solo funcionaban con `ADMIN_API_ENABLED=true` (rechazado en producción) y respondían 404 como si no existieran. Desde el corte 7 esa variable, su guard y el 404 disimulado ya no existen: toda ruta `/admin/*` pide un token de administrador (**`401`** sin token, **`403`** con el de un comprador) y funciona igual en cualquier entorno.
 
 ```ts
-// platform/http/admin-api-enabled.guard.ts
-@Injectable()
-export class AdminApiEnabledGuard implements CanActivate {
-  constructor(private readonly config: ConfigService) {}
-
-  canActivate(context: ExecutionContext): boolean {
-    if (this.config.get<boolean>('ADMIN_API_ENABLED') !== true) {   // solo `true` abre: ausente o texto, no
-      const req = context.switchToHttp().getRequest();
-      throw new NotFoundException(`Cannot ${req.method} ${req.originalUrl ?? req.url}`);   // el mismo cuerpo que una ruta inexistente
-    }
-    return true;
-  }
-}
-
-// platform/http/admin-api.decorator.ts: el guard y la etiqueta `admin` de Swagger, en una sola anotación
-export const AdminApi = () => applyDecorators(UseGuards(AdminApiEnabledGuard), ApiTags('admin'));
+// platform/http/admin-api.decorator.ts: el rol y la etiqueta `admin` de Swagger, en una sola anotación
+export const AdminApi = () => applyDecorators(Roles('ADMIN'), ApiTags('admin'));
 ```
 
-`@AdminApi()` va en la clase de cada controlador de `/admin`, y en el historial solo en su método (`OrderController` también tiene `POST /orders`, que no lleva guard).
-
-- **El 404 es idéntico al de una ruta que no existe** (`{ message: "Cannot GET /admin/books", error: "Not Found", statusCode: 404 }`), salvo la ruta que menciona: con el `NotFoundException()` sin mensaje, el cuerpo sería distinto y delataría que la ruta existe.
+`@AdminApi()` va en la clase de cada controlador de `/admin` (`AdminBookController`, `AdminStockController` y `AdminOrderController`). Los administradores no se crean por la API: `pnpm run admin:create` (ver [README](../../apps/main-api/README.md)).
 - **Los guards corren antes que los pipes:** con la administración cerrada, un cuerpo inválido da 404 y no 400, que también delataría la ruta.
 - **Swagger tampoco las muestra** cuando está cerrada: `configureSwagger` quita las operaciones con la etiqueta `admin` del documento. El documento se calcula una vez, al primer acceso a `/docs`; como la variable no cambia en caliente, no importa.
 
@@ -144,7 +128,7 @@ model Order {
 
 ```ts
 // PlaceOrderCommand agrega la dirección (sin validar: el handler la normaliza con ShippingAddress.create)
-new PlaceOrderCommand(key, dto.customerId, dto.items, dto.shippingAddress, dto.cardToken);
+new PlaceOrderCommand(key, userId /* el sub del token */, dto.items, dto.shippingAddress, dto.cardToken);
 
 // hashRequest la recibe ya normalizada (recortada; una referencia vacía es null) y la incluye como lista JSON.
 // El código completo está en 04-flujo-pedido-y-saga.md
@@ -205,7 +189,7 @@ export class AddStockHandler implements ICommandHandler<AddStockCommand> {
 - **Dos topes que la guía no tenía:** `available` es un entero de 32 bits y una carga enorme lo desbordaría con un `500` de la base. Una carga admite de 1 a **100 000** unidades (`INVALID_QUANTITY` fuera de ese rango; el DTO responde `400` antes), y lo disponible de un libro no pasa de **1 000 000** (`422 STOCK_LIMIT_EXCEEDED`). El tope se mide solo con lo disponible, no con lo reservado.
 - **El libro debe tener registro de stock** (lo crea Inventario al recibir `catalog.book.created`): sin él, `422 STOCK_ITEM_NOT_FOUND` y no se crea. Un libro desactivado sí se puede reabastecer antes de reactivarlo.
 - **Toca una sola fila**, así que no rompe la regla de bloquear en orden de ISBN.
-- **No se guarda un historial de cargas** (decisión D6): sin autenticación no se sabría quién la hizo; la tabla de movimientos puede añadirse con la fase 15.
+- **No se guarda un historial de cargas** (decisión D6): sin autenticación no se sabría quién la hizo; la tabla de movimientos puede añadirse ahora que existe la fase 15 (corte 7), con el id del administrador del token.
 
 ### Fase 14: Historial de pedidos
 
@@ -233,17 +217,24 @@ export class ListCustomerOrdersHandler implements IQueryHandler<ListCustomerOrde
 }
 ```
 
-`GET /orders?customerId=&cursor=&limit=` responde `{ items[…], nextCursor }`. Cada pedido trae lo mismo que `GET /orders/:id` más `createdAt` (ISO, UTC) y **`shippingAddress`** (la dirección de envío; `null` en un pedido anterior a ella): por eso el endpoint es de administración.
+`GET /admin/orders?customerId=&cursor=&limit=` (administrador) y `GET /me/orders?cursor=&limit=` (comprador, el cliente es el del token) responden `{ items[…], nextCursor }`, con la misma consulta y el mismo cursor. Cada pedido trae lo mismo que `GET /orders/:id` más `createdAt` (ISO, UTC) y **`shippingAddress`** (la dirección de envío; `null` en un pedido anterior a ella): por eso el endpoint es de administración.
 
 - **Paginación por cursor** (no por número de página): el historial solo crece, y con páginas numeradas un pedido nuevo desplazaría a los demás.
 - **El cursor es la posición (fecha, id), no el cursor de Prisma por id** (la guía usaba `cursor: { id }, skip: 1`): es **opaco** para el cliente (`base64url` de `fecha|id`, que se devuelve tal cual) y sigue valiendo aunque el pedido al que apunta ya no exista, aunque lleguen pedidos nuevos entre una página y otra y con pedidos del mismo instante repartidos entre páginas (el id desempata). `OrderCursor.decode` devuelve `null` con cualquier cosa que no sea un cursor canónico (caracteres que Node ignoraría, fechas que JS normalizaría como el 31 de febrero, un id que no sea UUID) y el controlador lo responde con `400`.
 - **El índice es `@@index([customerId, createdAt(sort: Desc), id(sort: Desc)])`** (la guía decía `[customerId, createdAt]`): coincide con el orden de la consulta. Hay un test que la prueba también sin el índice, donde los empates salen en el orden físico.
 - **`limit`** de 1 a 50 (20 por defecto). Un cliente sin pedidos, o que no existe, recibe una lista vacía y no un `404`. La última página trae `nextCursor: null`, y si el total es múltiplo del límite no hay una página final vacía.
-- **Hoy el `customerId` llega como parámetro**, y cualquiera que lo conozca vería los pedidos de ese cliente, con nombre, teléfono y dirección. Por eso, hasta tener autenticación, el método `list` de `OrderController` usa `@AdminApi()` (el guard de `AdminApiEnabledGuard`), **en el método y no en la clase**, para que `POST /orders` y `GET /orders/:id` sigan abiertos. Con la autenticación, el `customerId` saldrá del token y el endpoint pasará a `GET /me/orders`, sin el guard.
+- **El `customerId` ya no viaja en el cuerpo de las compras** (corte 7): `GET /me/orders` lo toma del token, y el historial de cualquier cliente pasó a `GET /admin/orders?customerId=`, solo para administradores. Un cursor de otro comprador no sirve para saltar de cliente: el filtro por cliente es siempre el del token.
 
-### Fase 15: Autenticación (fase aparte)
+### Fase 15: Autenticación ✅ (corte 7)
 
-Es la funcionalidad más grande y **bloquea el despliegue público**: sin ella, cualquiera puede comprar a nombre de otro cliente o usar los endpoints de administración. Se trabaja en una fase propia: un contexto de Identidad, roles (comprador, administrador), guards de Nest y el `customerId` tomado del token. Cuando llegue, recuerda que los guards corren antes que el interceptor de correlación (ver [05-piezas-clave.md](05-piezas-clave.md)).
+Era la funcionalidad más grande y **bloqueaba el despliegue público**. Está hecha en el corte 7 ([avance](00-avance.md)): un contexto de Identidad con usuarios, roles (`BUYER`, `ADMIN`) y sesiones; un guard global que **deniega por defecto** (`@Public()`, `@Roles()`, `@CurrentUser()`); el cliente de cada compra sale del token; los pedidos son privados (`404` para el ajeno); y límite de intentos, `helmet`, CORS y registro de accesos. Resumen de lo que se decidió:
+
+- **Tokens.** Acceso: JWT HS256 (`jose`) de 15 minutos con solo `sub` y `role`. Refresco: opaco, de un solo uso, guardado como SHA-256 y con detección de reutilización por familia; el cierre de sesión revoca la familia.
+- **Contraseñas.** `scrypt` de `node:crypto` (N = 2^15, r = 8, p = 3, sal propia, parámetros dentro del hash), de 10 a 128 caracteres sin reglas de composición, y un login que no revela qué correos existen (verifica un hash de relleno).
+- **Usuario y cliente.** Mismo `id`: Identidad publica `identity.user.registered` por el Outbox y Ventas crea al cliente con un consumidor. Hay una ventana de alrededor de un segundo en la que el comprador ya puede iniciar sesión pero aún no comprar (`404`, reintentar).
+- **Fuera del corte**: recuperación de contraseña, verificación del correo, cambio de contraseña, doble factor e inicio de sesión con terceros; el límite de intentos vive en memoria de cada instancia.
+
+El guard corre antes que el interceptor de correlación, así que abre él mismo el `RequestContext` para escribir sus avisos con el `requestId` (ver [05-piezas-clave.md](05-piezas-clave.md)).
 
 | Fase | Listo cuando… |
 |---|---|
@@ -251,4 +242,4 @@ Es la funcionalidad más grande y **bloquea el despliegue público**: sin ella, 
 | 11 ✅ | `POST /orders` sin dirección responde 400; con dirección, la guarda en el pedido y en `OrderPlacedEvent` v2 |
 | 12 ✅ | Se crea un libro con `POST /admin/books`, aparece en la búsqueda, y su stock en cero existe en Inventario |
 | 13 ✅ | `POST /admin/stock/:isbn/additions` suma unidades, y una compra posterior las reserva |
-| 14 ✅ | `GET /orders?customerId=` devuelve los pedidos del cliente, del más reciente al más antiguo, con cursor |
+| 14 ✅ | `GET /admin/orders?customerId=` (antes `GET /orders?customerId=`) devuelve los pedidos del cliente, del más reciente al más antiguo, con cursor |

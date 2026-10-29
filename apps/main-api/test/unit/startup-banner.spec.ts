@@ -5,7 +5,6 @@ const info = {
   environment: 'development',
   database: 'localhost:5433/libroya',
   paymentProvider: 'fake',
-  adminApi: false,
 };
 
 describe('formatStartupBanner', () => {
@@ -19,10 +18,7 @@ describe('formatStartupBanner', () => {
     expect(banner).toContain('fake');
   });
 
-  it('indica si la API de administración está habilitada', () => {
-    expect(formatStartupBanner(info)).toContain('deshabilitada');
-    expect(formatStartupBanner({ ...info, adminApi: true })).toContain(
-      'habilitada',
-    );
+  it('ya no habla de una API de administración habilitada o no: la protege el rol', () => {
+    expect(formatStartupBanner(info)).not.toMatch(/Admin|habilitada/);
   });
 });

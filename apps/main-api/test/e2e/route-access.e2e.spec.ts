@@ -5,9 +5,10 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
+import { configureSwagger } from '../../src/platform/http/configure-swagger.js';
 import { bearer } from '../support/auth.js';
 
-type Access = 'public' | 'authenticated' | 'ADMIN';
+type Access = 'public' | 'authenticated' | 'BUYER' | 'ADMIN';
 
 // Cada ruta de la aplicación y quién puede llamarla. Si se añade una ruta, este test falla hasta que se decida aquí:
 // con el denegado por defecto, olvidarse nunca deja una ruta abierta, pero tampoco pasa inadvertida
@@ -21,8 +22,9 @@ const EXPECTED: Record<string, Access> = {
   'POST /auth/login': 'public',
   'POST /auth/refresh': 'public',
   'POST /auth/logout': 'public',
-  'POST /orders': 'authenticated',
-  'GET /orders': 'ADMIN',
+  'POST /orders': 'BUYER',
+  'GET /me/orders': 'BUYER',
+  'GET /admin/orders': 'ADMIN',
   'GET /orders/:id': 'authenticated',
   'POST /admin/books': 'ADMIN',
   'PATCH /admin/books/:isbn': 'ADMIN',
@@ -69,6 +71,7 @@ describe('Acceso a las rutas (e2e, aplicación completa)', () => {
     }).compile();
     app = moduleRef.createNestApplication();
     configureApp(app);
+    configureSwagger(app);
     await app.init();
   });
   afterAll(async () => {
@@ -103,7 +106,7 @@ describe('Acceso a las rutas (e2e, aplicación completa)', () => {
     expect(anonymous.status, route).toBe(401);
     expect(anonymous.body.errorCode).toBe('UNAUTHENTICATED');
 
-    // Un comprador: entra (autenticada) o recibe 403 (solo ADMIN)
+    // Un comprador: entra, salvo en las de administrador (403)
     const buyer = await call(route, await bearer(app, 'BUYER'));
     if (access === 'ADMIN') {
       expect(buyer.status, route).toBe(403);
@@ -113,10 +116,14 @@ describe('Acceso a las rutas (e2e, aplicación completa)', () => {
       expect(buyer.status, route).not.toBe(403);
     }
 
-    // Un administrador entra siempre (la respuesta puede ser un 400 o un 404 por los datos de prueba, nunca 401 ni 403)
+    // Un administrador entra, salvo en las de comprador (403). Lo demás puede ser un 400 o un 404 por los datos de prueba
     const admin = await call(route, await bearer(app, 'ADMIN'));
     expect(admin.status, route).not.toBe(401);
-    expect(admin.status, route).not.toBe(403);
+    if (access === 'BUYER') {
+      expect(admin.status, route).toBe(403);
+    } else {
+      expect(admin.status, route).not.toBe(403);
+    }
   });
 
   it('un token vencido, alterado o de otro tipo no abre ninguna ruta cerrada', async () => {
@@ -135,5 +142,79 @@ describe('Acceso a las rutas (e2e, aplicación completa)', () => {
         );
       }
     }
+  });
+
+  describe('la documentación de Swagger refleja el acceso de cada ruta', () => {
+    let doc: {
+      components: {
+        securitySchemes: Record<string, unknown>;
+        schemas: Record<string, { properties: Record<string, unknown> }>;
+      };
+      paths: Record<
+        string,
+        Record<
+          string,
+          {
+            security?: unknown[];
+            responses: Record<
+              string,
+              { content?: Record<string, { schema: { $ref?: string } }> }
+            >;
+          }
+        >
+      >;
+    };
+    beforeAll(async () => {
+      doc = (await request(app.getHttpServer()).get('/docs-json').expect(200))
+        .body;
+    });
+    const operationOf = (route: string) => {
+      const [method, path] = route.split(' ');
+      return doc.paths[path.replaceAll(/:(\w+)/g, '{$1}')][
+        method.toLowerCase()
+      ];
+    };
+
+    it('declara el esquema Bearer con JWT', () => {
+      expect(doc.components.securitySchemes.bearer).toMatchObject({
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+      });
+    });
+
+    it.each(Object.entries(EXPECTED))('%s (%s)', (route, access) => {
+      const operation = operationOf(route);
+      if (access === 'public') {
+        expect(operation.security, route).toEqual([]);
+        return;
+      }
+      expect(operation.security, route).toEqual([{ bearer: [] }]);
+      expect(Object.keys(operation.responses), route).toContain('401');
+      if (access === 'ADMIN' || access === 'BUYER') {
+        expect(Object.keys(operation.responses), route).toContain('403');
+      }
+    });
+
+    it('las respuestas 401 y 403 añadidas describen el cuerpo de error de la API', () => {
+      const added = operationOf('GET /me/orders').responses['401'];
+      expect(added.content?.['application/json'].schema.$ref).toBe(
+        '#/components/schemas/ErrorResponse',
+      );
+      expect(
+        Object.keys(doc.components.schemas.ErrorResponse.properties),
+      ).toEqual(['statusCode', 'errorCode', 'message']);
+    });
+
+    it('las rutas públicas no prometen un 401 que no pueden dar', () => {
+      for (const [route, access] of Object.entries(EXPECTED)) {
+        if (access !== 'public') continue;
+        const codes = Object.keys(operationOf(route).responses);
+        // login responde 401 por credenciales y refresh por un token de refresco inválido: es otro 401, ya documentado
+        if (route === 'POST /auth/login' || route === 'POST /auth/refresh')
+          continue;
+        expect(codes, route).not.toContain('401');
+      }
+    });
   });
 });

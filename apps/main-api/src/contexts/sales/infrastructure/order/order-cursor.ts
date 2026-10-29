@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+
 const MAX_LENGTH = 200;
 const URL_SAFE = /^[A-Za-z0-9_-]+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
@@ -39,3 +41,14 @@ export const OrderCursor = {
     return { createdAt, id };
   },
 };
+
+// La posición de la que sigue la página, o undefined en la primera. Un cursor que no es válido es un 400
+export function positionAfter(
+  cursor: string | undefined,
+): OrderPosition | undefined {
+  if (cursor === undefined) return undefined;
+  const position = OrderCursor.decode(cursor);
+  if (position === null)
+    throw new BadRequestException('El cursor no es válido');
+  return position;
+}

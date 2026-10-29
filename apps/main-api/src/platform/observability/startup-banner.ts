@@ -5,7 +5,6 @@ export interface StartupInfo {
   environment: string;
   database: string;
   paymentProvider: string;
-  adminApi: boolean;
 }
 
 // `styleText` ya omite los colores si la salida no es un terminal o si hay NO_COLOR
@@ -21,12 +20,6 @@ export function formatStartupBanner(info: StartupInfo): string {
     ['Entorno', styleText('yellow', info.environment)],
     ['Base', styleText('green', info.database)],
     ['Pagos', info.paymentProvider],
-    [
-      'Admin',
-      info.adminApi
-        ? styleText('yellow', 'habilitada')
-        : styleText('dim', 'deshabilitada'),
-    ],
   ];
   const title = styleText(['bold', 'green'], '✔ LibroYa API lista');
   return [

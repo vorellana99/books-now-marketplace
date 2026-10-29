@@ -2,14 +2,22 @@ import { randomUUID } from 'node:crypto';
 import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
+import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
+import { bearer } from '../support/auth.js';
 import { insertCustomer, insertOrder } from '../support/builders.js';
 import { query, resetDatabase } from '../support/database.js';
 import { createHttpApp } from '../support/http-app.js';
 
-const MODULES = [OutboxModule, CatalogModule, InventoryModule, SalesModule];
+const MODULES = [
+  OutboxModule,
+  CatalogModule,
+  InventoryModule,
+  SalesModule,
+  IdentityModule, // el guard global: las rutas exigen sesión
+];
 const BASE = Date.parse('2026-10-28T10:00:00.000Z');
 
 async function orderAt(customerId: string, minutes: number) {
@@ -21,75 +29,13 @@ async function orderAt(customerId: string, minutes: number) {
   return order;
 }
 
-describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL reales)', () => {
-  describe('con ADMIN_API_ENABLED=false', () => {
+describe('GET /admin/orders?customerId= (historial, e2e, aplicación y PostgreSQL reales)', () => {
+  describe('con un administrador', () => {
     let app: INestApplication;
+    let admin: { Authorization: string };
     beforeAll(async () => {
-      app = await createHttpApp(MODULES, {
-        ADMIN_API_ENABLED: 'false',
-        PAYMENT_PROVIDER: 'fake',
-      });
-    });
-    afterAll(async () => {
-      await app.close();
-    });
-    beforeEach(resetDatabase);
-
-    it('el historial responde 404 como una ruta que no existe, aunque el cliente tenga pedidos', async () => {
-      const ana = await insertCustomer();
-      await orderAt(ana.id, 1);
-
-      const res = await request(app.getHttpServer())
-        .get(`/orders?customerId=${ana.id}`)
-        .expect(404);
-
-      expect(res.body).toEqual({
-        message: `Cannot GET /orders?customerId=${ana.id}`,
-        error: 'Not Found',
-        statusCode: 404,
-      });
-    });
-
-    it('y también con parámetros inválidos: 404 y no 400', async () => {
-      await request(app.getHttpServer()).get('/orders').expect(404);
-      await request(app.getHttpServer())
-        .get('/orders?customerId=nada&limit=999')
-        .expect(404);
-    });
-
-    // El guard va en el método y no en la clase: el resto de OrderController sigue abierto
-    it('POST /orders y GET /orders/:id siguen abiertos', async () => {
-      const post = await request(app.getHttpServer())
-        .post('/orders')
-        .set('Idempotency-Key', randomUUID())
-        .send({})
-        .expect(400);
-      expect(post.body.statusCode).toBe(400); // la validación responde: la ruta existe
-      const ana = await insertCustomer();
-      const order = await orderAt(ana.id, 1);
-      await request(app.getHttpServer()).get(`/orders/${order.id}`).expect(200);
-      await request(app.getHttpServer())
-        .get(`/orders/${randomUUID()}`)
-        .expect(404);
-    });
-
-    it('la documentación no muestra el historial pero sí POST /orders y GET /orders/{id}', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/docs-json')
-        .expect(200);
-      expect(res.body.paths['/orders'].post).toBeDefined();
-      expect(res.body.paths['/orders'].get).toBeUndefined();
-      expect(res.body.paths['/orders/{id}'].get).toBeDefined();
-    });
-  });
-
-  describe('con ADMIN_API_ENABLED=true', () => {
-    let app: INestApplication;
-    beforeAll(async () => {
-      app = await createHttpApp(MODULES, {
-        ADMIN_API_ENABLED: 'true',
-        PAYMENT_PROVIDER: 'fake',
-      });
+      app = await createHttpApp(MODULES, { PAYMENT_PROVIDER: 'fake' });
+      admin = await bearer(app, 'ADMIN');
     });
     afterAll(async () => {
       await app.close();
@@ -97,7 +43,9 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
     beforeEach(resetDatabase);
 
     const get = (queryString: string) =>
-      request(app.getHttpServer()).get(`/orders${queryString}`);
+      request(app.getHttpServer())
+        .get(`/admin/orders${queryString}`)
+        .set(admin);
 
     it('200 con los pedidos del cliente, del más reciente al más antiguo', async () => {
       const ana = await insertCustomer();
@@ -209,6 +157,7 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
       const order = await orderAt(ana.id, 1);
       const res = await request(app.getHttpServer())
         .get(`/orders/${order.id}`)
+        .set(admin)
         .expect(200);
       expect(res.body.id).toBe(order.id);
       expect(res.body).not.toHaveProperty('shippingAddress'); // decisión D2: solo el historial de administración la lleva
@@ -218,7 +167,7 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
       const res = await request(app.getHttpServer())
         .get('/docs-json')
         .expect(200);
-      const operation = res.body.paths['/orders'].get;
+      const operation = res.body.paths['/admin/orders'].get;
       expect(operation.tags).toEqual(
         expect.arrayContaining(['orders', 'admin']),
       );
@@ -226,9 +175,47 @@ describe('GET /orders?customerId= (historial, e2e, aplicación y PostgreSQL real
         expect.arrayContaining(['customerId', 'cursor', 'limit']),
       );
       expect(Object.keys(operation.responses)).toEqual(
-        expect.arrayContaining(['200', '400', '404']),
+        expect.arrayContaining(['200', '400', '401', '403']),
       );
       expect(res.body.paths['/orders'].post.tags).not.toContain('admin');
+      expect(res.body.paths['/orders']).not.toHaveProperty('get'); // el historial vive en /admin/orders
+    });
+
+    it('un comprador no puede verlo: 403, y sin token 401', async () => {
+      await request(app.getHttpServer())
+        .get(`/admin/orders?customerId=${randomUUID()}`)
+        .set(await bearer(app, 'BUYER'))
+        .expect(403);
+      await request(app.getHttpServer())
+        .get(`/admin/orders?customerId=${randomUUID()}`)
+        .expect(401);
+    });
+
+    it('POST /orders (comprador) y GET /orders/:id (administrador) siguen disponibles', async () => {
+      const post = await request(app.getHttpServer())
+        .post('/orders')
+        .set(await bearer(app, 'BUYER'))
+        .set('Idempotency-Key', randomUUID())
+        .send({})
+        .expect(400);
+      expect(post.body.statusCode).toBe(400); // la validación responde: la ruta existe
+      const ana = await insertCustomer();
+      const order = await orderAt(ana.id, 1);
+      await request(app.getHttpServer())
+        .get(`/orders/${order.id}`)
+        .set(admin)
+        .expect(200);
+      await request(app.getHttpServer())
+        .get(`/orders/${randomUUID()}`)
+        .set(admin)
+        .expect(404);
+    });
+
+    it('la ruta antigua GET /orders ya no existe: 404 incluso para un administrador', async () => {
+      await request(app.getHttpServer())
+        .get(`/orders?customerId=${randomUUID()}`)
+        .set(admin)
+        .expect(404);
     });
   });
 });

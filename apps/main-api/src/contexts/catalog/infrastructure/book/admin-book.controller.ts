@@ -13,7 +13,9 @@ import {
   ApiCreatedResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
+  ApiForbiddenResponse,
   ApiOperation,
+  ApiUnauthorizedResponse,
   ApiParam,
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
@@ -24,7 +26,7 @@ import { UpdateBookCommand } from '../../application/book/update-book.command.js
 import { AdminBookResponse } from './book-price.response.js';
 import { CreateBookDto, UpdateBookDto } from './create-book.dto.js';
 
-// Administración del catálogo. Solo funciona con ADMIN_API_ENABLED=true, hasta que exista la autenticación
+// Administración del catálogo. Solo administradores
 @AdminApi()
 @Controller('admin/books')
 export class AdminBookController {
@@ -34,13 +36,14 @@ export class AdminBookController {
   @ApiOperation({
     summary: 'Crear un libro',
     description:
-      'El libro nace activo, con su stock en cero (lo crea Inventario al recibir el evento). Solo con ADMIN_API_ENABLED=true.',
+      'El libro nace activo, con su stock en cero (lo crea Inventario al recibir el evento). Solo administradores.',
   })
   @ApiCreatedResponse({ type: AdminBookResponse })
   @ApiBadRequestResponse({ description: 'Un campo no cumple el formato' })
-  @ApiNotFoundResponse({
-    description: 'La administración está cerrada (ADMIN_API_ENABLED=false)',
+  @ApiUnauthorizedResponse({
+    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
   })
+  @ApiForbiddenResponse({ description: 'FORBIDDEN: solo los administradores' })
   @ApiConflictResponse({
     description: 'BOOK_ALREADY_EXISTS: ya hay un libro con ese ISBN',
   })
@@ -75,10 +78,11 @@ export class AdminBookController {
     description:
       'Un campo no cumple el formato, hay campos de más o no se indicó ningún cambio',
   })
-  @ApiNotFoundResponse({
-    description:
-      'La administración está cerrada, o NOT_FOUND: el libro no existe',
+  @ApiUnauthorizedResponse({
+    description: 'UNAUTHENTICATED o TOKEN_EXPIRED: falta un token válido',
   })
+  @ApiForbiddenResponse({ description: 'FORBIDDEN: solo los administradores' })
+  @ApiNotFoundResponse({ description: 'NOT_FOUND: el libro no existe' })
   @ApiUnprocessableEntityResponse({
     description:
       'INVALID_ISBN, INVALID_PRICE, INVALID_CURRENCY, INVALID_BOOK o CURRENCY_CANNOT_CHANGE',

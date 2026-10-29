@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
 import { configureApp } from './platform/http/configure-app.js';
+import { configureSecurity } from './platform/http/configure-security.js';
 import { configureSwagger } from './platform/http/configure-swagger.js';
 import { formatStartupBanner } from './platform/observability/startup-banner.js';
 import { RequestAwareLogger } from './platform/observability/request-aware.logger.js';
@@ -15,6 +16,7 @@ async function bootstrap() {
     }),
   });
   configureApp(app);
+  configureSecurity(app);
 
   configureSwagger(app);
 
@@ -27,7 +29,6 @@ async function bootstrap() {
     environment: config.getOrThrow<string>('NODE_ENV'),
     database: `${config.getOrThrow<string>('DB_HOST')}:${config.getOrThrow<number>('DB_PORT')}/${config.getOrThrow<string>('DB_NAME')}`,
     paymentProvider: config.getOrThrow<string>('PAYMENT_PROVIDER'),
-    adminApi: config.getOrThrow<boolean>('ADMIN_API_ENABLED'),
   };
   if (info.environment === 'production') {
     new Logger('Bootstrap').log({ message: 'LibroYa API lista', ...info });

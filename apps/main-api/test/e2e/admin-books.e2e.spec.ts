@@ -1,6 +1,8 @@
 import { Module, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
+import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { bearer } from '../support/auth.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { insertBook } from '../support/builders.js';
 import { outboxRows } from '../support/builders.js';
@@ -25,74 +27,17 @@ const count = async () =>
   );
 
 describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
-  describe('con ADMIN_API_ENABLED=false', () => {
+  describe('con un administrador', () => {
     let app: INestApplication;
+    let admin: { Authorization: string };
     beforeAll(async () => {
-      app = await createHttpApp([OutboxModule, CatalogModule], {
-        ADMIN_API_ENABLED: 'false',
-      });
-    });
-    afterAll(async () => {
-      await app.close();
-    });
-    beforeEach(resetDatabase);
-
-    it('404 como una ruta que no existe, y no crea nada', async () => {
-      const res = await request(app.getHttpServer())
-        .post('/admin/books')
-        .send(BODY)
-        .expect(404);
-
-      expect(res.body).toEqual({
-        message: 'Cannot POST /admin/books',
-        error: 'Not Found',
-        statusCode: 404,
-      });
-      expect(await count()).toBe(0);
-    });
-
-    it('un cuerpo inválido también es 404, no 400', async () => {
-      await request(app.getHttpServer())
-        .post('/admin/books')
-        .send({ nada: true })
-        .expect(404);
-    });
-
-    it('PATCH también es 404 y no cambia el libro', async () => {
-      await insertBook({ isbn: '9780132350884', title: 'Igual' });
-
-      const res = await request(app.getHttpServer())
-        .patch('/admin/books/9780132350884')
-        .send({ title: 'Distinto', active: false })
-        .expect(404);
-
-      expect(res.body).toEqual({
-        message: 'Cannot PATCH /admin/books/9780132350884',
-        error: 'Not Found',
-        statusCode: 404,
-      });
-      const [row] = await query<{ title: string; active: boolean }>(
-        'SELECT title, active FROM catalog.books',
-      );
-      expect(row).toEqual({ title: 'Igual', active: true });
-    });
-
-    it('la documentación no muestra /admin/books', async () => {
-      const res = await request(app.getHttpServer())
-        .get('/docs-json')
-        .expect(200);
-      expect(Object.keys(res.body.paths)).not.toContain('/admin/books');
-      expect(Object.keys(res.body.paths)).not.toContain('/admin/books/{isbn}');
-      expect(Object.keys(res.body.paths)).toContain('/books');
-    });
-  });
-
-  describe('con ADMIN_API_ENABLED=true', () => {
-    let app: INestApplication;
-    beforeAll(async () => {
-      app = await createHttpApp([OutboxModule, CatalogModule, Probes], {
-        ADMIN_API_ENABLED: 'true',
-      });
+      app = await createHttpApp([
+        OutboxModule,
+        CatalogModule,
+        Probes,
+        IdentityModule,
+      ]);
+      admin = await bearer(app, 'ADMIN');
     });
     afterAll(async () => {
       await app.close();
@@ -102,6 +47,7 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
     const post = (body: unknown = BODY) =>
       request(app.getHttpServer())
         .post('/admin/books')
+        .set(admin)
         .send(body as object);
 
     it('201 con el libro creado', async () => {
@@ -250,19 +196,25 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
     });
 
     it('400 sin cuerpo (ni content-type) y con un cuerpo que no es JSON', async () => {
-      await request(app.getHttpServer()).post('/admin/books').expect(400);
       await request(app.getHttpServer())
         .post('/admin/books')
+        .set(admin)
+        .expect(400);
+      await request(app.getHttpServer())
+        .post('/admin/books')
+        .set(admin)
         .set('Content-Type', 'application/json')
         .send('{"isbn":')
         .expect(400);
       await request(app.getHttpServer())
         .post('/admin/books')
+        .set(admin)
         .set('Content-Type', 'application/json')
         .send('[]')
         .expect(400);
       await request(app.getHttpServer())
         .post('/admin/books')
+        .set(admin)
         .set('Content-Type', 'application/json')
         .send('null')
         .expect(400);
@@ -279,6 +231,7 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
       const patch = (body: unknown, path = isbn) =>
         request(app.getHttpServer())
           .patch(`/admin/books/${path}`)
+          .set(admin)
           .send(body as object);
       const rowOf = async () =>
         (
@@ -455,14 +408,17 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
       it('400 sin cuerpo y con JSON roto', async () => {
         await request(app.getHttpServer())
           .patch(`/admin/books/${isbn}`)
+          .set(admin)
           .expect(400);
         await request(app.getHttpServer())
           .patch(`/admin/books/${isbn}`)
+          .set(admin)
           .set('Content-Type', 'application/json')
           .send('{"title":')
           .expect(400);
         await request(app.getHttpServer())
           .patch(`/admin/books/${isbn}`)
+          .set(admin)
           .set('Content-Type', 'application/json')
           .send('[]')
           .expect(400);
@@ -484,7 +440,7 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
           operation.parameters.map((p: { name: string }) => p.name),
         ).toContain('isbn');
         expect(Object.keys(operation.responses)).toEqual(
-          expect.arrayContaining(['200', '400', '404', '422']),
+          expect.arrayContaining(['200', '400', '401', '403', '404', '422']),
         );
         const schemas = res.body.components.schemas;
         expect(
@@ -504,7 +460,7 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
       const operation = res.body.paths['/admin/books'].post;
       expect(operation.tags).toContain('admin');
       expect(Object.keys(operation.responses)).toEqual(
-        expect.arrayContaining(['201', '400', '404', '409', '422']),
+        expect.arrayContaining(['201', '400', '401', '403', '409', '422']),
       );
     });
 
@@ -522,6 +478,54 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
         'amount',
         'currency',
       ]);
+    });
+
+    describe('quién puede llamarla', () => {
+      it('sin token 401 UNAUTHENTICATED, también con un cuerpo inválido, y no crea nada', async () => {
+        for (const body of [BODY, { nada: true }]) {
+          const res = await request(app.getHttpServer())
+            .post('/admin/books')
+            .send(body)
+            .expect(401);
+          expect(res.body.errorCode).toBe('UNAUTHENTICATED');
+        }
+        await request(app.getHttpServer())
+          .patch('/admin/books/9780132350884')
+          .send({ active: false })
+          .expect(401);
+        expect(await count()).toBe(0);
+      });
+
+      it('un comprador recibe 403 FORBIDDEN y no cambia nada', async () => {
+        const buyer = await bearer(app, 'BUYER');
+        const res = await request(app.getHttpServer())
+          .post('/admin/books')
+          .set(buyer)
+          .send(BODY)
+          .expect(403);
+        expect(res.body.errorCode).toBe('FORBIDDEN');
+        await request(app.getHttpServer())
+          .patch('/admin/books/9780132350884')
+          .set(buyer)
+          .send({ active: false })
+          .expect(403);
+        expect(await count()).toBe(0);
+      });
+
+      it('la documentación muestra las rutas de administración con la etiqueta admin', async () => {
+        const res = await request(app.getHttpServer())
+          .get('/docs-json')
+          .expect(200);
+        expect(res.body.paths['/admin/books'].post.tags).toContain('admin');
+        expect(res.body.paths['/admin/books/{isbn}'].patch.tags).toContain(
+          'admin',
+        );
+        expect(
+          Object.keys(res.body.paths['/admin/books'].post.responses),
+        ).toEqual(
+          expect.arrayContaining(['201', '400', '401', '403', '409', '422']),
+        );
+      });
     });
   });
 });

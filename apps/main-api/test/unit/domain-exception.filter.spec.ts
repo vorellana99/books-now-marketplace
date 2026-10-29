@@ -7,6 +7,7 @@ import { DomainExceptionFilter } from '../../src/platform/http/domain-exception.
 import {
   AuthenticationError,
   AuthorizationError,
+  TooManyRequestsError,
   ConflictError,
   DomainError,
   NotFoundError,
@@ -68,6 +69,19 @@ describe('DomainExceptionFilter', () => {
         },
       },
     );
+  });
+
+  it('TooManyRequestsError → 429, con su código', () => {
+    expect(
+      respond(new TooManyRequestsError('TOO_MANY_REQUESTS', 'despacio')),
+    ).toEqual({
+      status: 429,
+      body: {
+        statusCode: 429,
+        errorCode: 'TOO_MANY_REQUESTS',
+        message: 'despacio',
+      },
+    });
   });
 
   it('OutOfStockError (de Inventario) → 422 OUT_OF_STOCK', () => {

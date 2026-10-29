@@ -1,6 +1,11 @@
-import { Logger, type INestApplication } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import {
+  Logger,
+  type CanActivate,
+  type ExecutionContext,
+  type INestApplication,
+} from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
+import { APP_GUARD } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
@@ -9,7 +14,7 @@ import { PlaceOrderCommand } from '../../src/contexts/sales/application/order/pl
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { OrderController } from '../../src/contexts/sales/infrastructure/order/order.controller.js';
 import { OutOfStockError } from '../../src/contracts/inventory/stock.errors.js';
-import { AdminApiEnabledGuard } from '../../src/platform/http/admin-api-enabled.guard.js';
+import type { AuthenticatedUser } from '../../src/platform/auth/authenticated-user.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import {
   ConflictError,
@@ -20,6 +25,7 @@ import {
 const KEY = '0196a000-0000-7000-8000-0000000000aa';
 const CUSTOMER = '0196a000-0000-7000-8000-0000000000bb';
 const ORDER = '0196a000-0000-7000-8000-0000000000cc';
+const ADMIN = '0196a000-0000-7000-8000-0000000000dd';
 const TOKEN = 'tok_secreto_123';
 
 const ADDRESS = {
@@ -33,12 +39,21 @@ const ADDRESS = {
 };
 
 const body = (overrides: Record<string, unknown> = {}) => ({
-  customerId: CUSTOMER,
   cardToken: TOKEN,
   items: [{ isbn: '9780132350884', quantity: 2 }],
   shippingAddress: ADDRESS,
   ...overrides,
 });
+
+// Quien tiene la sesión en cada test. Hace de AuthGuard (que se prueba aparte): el guard real pone aquí `req.user`
+let sessionUser: AuthenticatedUser | undefined;
+class FakeSessionGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    context.switchToHttp().getRequest<{ user?: AuthenticatedUser }>().user =
+      sessionUser;
+    return true;
+  }
+}
 
 describe('OrderController (capa HTTP, con los buses simulados)', () => {
   let app: INestApplication;
@@ -51,10 +66,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       providers: [
         { provide: CommandBus, useValue: commandBus },
         { provide: QueryBus, useValue: queryBus },
-        // El historial lleva el guard de administración, que lee ADMIN_API_ENABLED; aquí está cerrada (lo probado
-        // es POST y GET /orders/:id, que no deben depender de él)
-        AdminApiEnabledGuard,
-        { provide: ConfigService, useValue: { get: () => false } },
+        { provide: APP_GUARD, useClass: FakeSessionGuard },
       ],
     }).compile();
     app = moduleRef.createNestApplication();
@@ -66,6 +78,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
   });
   afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
+    sessionUser = { userId: CUSTOMER, role: 'BUYER' };
     commandBus.execute.mockReset();
     queryBus.execute.mockReset();
     commandBus.execute.mockResolvedValue({
@@ -81,6 +94,21 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
   };
 
   describe('POST /orders', () => {
+    it('el cliente del comando es el de la sesión, sea quien sea', async () => {
+      sessionUser = { userId: ADMIN, role: 'BUYER' };
+      await place().expect(201);
+      expect(
+        (commandBus.execute.mock.calls[0][0] as PlaceOrderCommand).customerId,
+      ).toBe(ADMIN);
+    });
+
+    it('sin usuario en la petición (ruta mal configurada) da 401 y no compra', async () => {
+      sessionUser = undefined;
+      const res = await place().expect(401);
+      expect(res.body.errorCode).toBe('UNAUTHENTICATED');
+      expect(commandBus.execute).not.toHaveBeenCalled();
+    });
+
     it('201 con el orderId y el monto cobrado como { amount, currency }', async () => {
       const res = await place().expect(201);
       expect(res.body).toEqual({
@@ -206,8 +234,11 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
 
     describe('validación del cuerpo (400, sin ejecutar nada)', () => {
       it.each<[string, unknown]>([
-        ['customerId no es UUID', body({ customerId: 'c-1' })],
-        ['falta customerId', body({ customerId: undefined })],
+        [
+          'viene un customerId (el cliente es el de la sesión)',
+          body({ customerId: CUSTOMER }),
+        ],
+        ['viene un customerId que no es UUID', body({ customerId: 'c-1' })],
         ['falta cardToken', body({ cardToken: undefined })],
         ['cardToken vacío', body({ cardToken: '' })],
         ['cardToken no es texto', body({ cardToken: 123 })],
@@ -337,7 +368,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       });
 
       it('la respuesta de error nunca repite el token de la tarjeta', async () => {
-        const res = await place(body({ customerId: 'no-uuid' })).expect(400);
+        const res = await place(body({ cardToken: 123 })).expect(400);
         expect(JSON.stringify(res.body)).not.toContain(TOKEN);
       });
     });
@@ -412,12 +443,31 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       expect(res.body).toEqual(view);
     });
 
-    it('consulta con GetOrderQuery y el id', async () => {
+    it('consulta con GetOrderQuery, el id y quién pregunta (su id y su rol, del token)', async () => {
       queryBus.execute.mockResolvedValue(view);
       await request(app.getHttpServer()).get(`/orders/${ORDER}`).expect(200);
       const query = queryBus.execute.mock.calls[0][0] as GetOrderQuery;
       expect(query).toBeInstanceOf(GetOrderQuery);
       expect(query.id).toBe(ORDER);
+      expect(query.requester).toEqual({ userId: CUSTOMER, role: 'BUYER' });
+    });
+
+    it('un administrador pregunta con su rol', async () => {
+      sessionUser = { userId: ADMIN, role: 'ADMIN' };
+      queryBus.execute.mockResolvedValue(view);
+      await request(app.getHttpServer()).get(`/orders/${ORDER}`).expect(200);
+      expect(
+        (queryBus.execute.mock.calls[0][0] as GetOrderQuery).requester,
+      ).toEqual({ userId: ADMIN, role: 'ADMIN' });
+    });
+
+    it('sin usuario en la petición (ruta mal configurada) da 401 y no consulta', async () => {
+      sessionUser = undefined;
+      const res = await request(app.getHttpServer())
+        .get(`/orders/${ORDER}`)
+        .expect(401);
+      expect(res.body.errorCode).toBe('UNAUTHENTICATED');
+      expect(queryBus.execute).not.toHaveBeenCalled();
     });
 
     it('400 si el id no es un UUID, sin consultar', async () => {
@@ -454,7 +504,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       });
       expect(
         Object.keys(post.responses).sort((a, b) => a.localeCompare(b)),
-      ).toEqual(['201', '400', '404', '409', '422']);
+      ).toEqual(['201', '400', '401', '403', '404', '409', '422']);
     });
 
     it('documenta GET /orders/{id} con 200, 400 y 404', () => {
@@ -465,7 +515,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       const get = doc.paths['/orders/{id}'].get!;
       expect(
         Object.keys(get.responses).sort((a, b) => a.localeCompare(b)),
-      ).toEqual(['200', '400', '404']);
+      ).toEqual(['200', '400', '401', '404']);
     });
 
     it('documenta la dirección de envío con sus siete campos, la referencia opcional', () => {
@@ -515,7 +565,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
         Object.keys(schemas.PlaceOrderDto.properties).sort((a, b) =>
           a.localeCompare(b),
         ),
-      ).toEqual(['cardToken', 'customerId', 'items', 'shippingAddress']);
+      ).toEqual(['cardToken', 'items', 'shippingAddress']);
       expect(schemas.OrderMoneyResponse.properties.amount.type).toBe('string');
     });
   });

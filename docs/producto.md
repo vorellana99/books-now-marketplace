@@ -88,8 +88,8 @@ Para el comprador, todo ocurre en una sola acción: o la compra sale completa (p
 | Email de confirmación | Cargar stock (Fase 13) | Envíos, factura electrónica (SUNAT) y puntos: el diseño ya los prevé como reacciones a la compra |
 | Reintentos seguros y recuperación ante caídas | Historial de pedidos (Fase 14) · Inicio de sesión y roles (Fase 15) | |
 
-> [!warning] Antes de abrirlo al público
-> Mientras no exista el inicio de sesión (Fase 15), la API identifica al comprador por el `customerId` que viene en la petición. Sirve para desarrollar y probar, pero **no para producción**: cualquiera podría comprar a nombre de otro.
+> [!success] Inicio de sesión y roles (Fase 15, hecha en el corte 7)
+> El comprador se registra, inicia sesión y compra con su token; la API ya no acepta un `customerId` en la petición, y cada comprador solo ve sus propios pedidos. La administración exige el rol de administrador.
 
 ### Cómo se reparte el producto en el sistema
 

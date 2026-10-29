@@ -7,15 +7,20 @@ import {
 } from '../../application/order/get-order.query.js';
 import { toOrderView } from './order-view.js';
 
-// Lado de lectura de CQRS: consulta con Prisma y arma la vista, sin reconstruir el agregado. No devuelve la dirección de
-// envío: el endpoint no tiene autenticación (decisión D2)
+// Lado de lectura de CQRS: consulta con Prisma y arma la vista, sin reconstruir el agregado. Un comprador solo ve sus
+// pedidos: el de otro cliente da el mismo NotFoundError que uno que no existe. No devuelve la dirección de envío (decisión
+// D2 del corte 5: la vista pública del pedido no la lleva)
 @QueryHandler(GetOrderQuery)
 export class GetOrderHandler implements IQueryHandler<GetOrderQuery> {
   constructor(private readonly prisma: PrismaService) {}
 
-  async execute({ id }: GetOrderQuery): Promise<OrderView> {
-    const order = await this.prisma.order.findUnique({
-      where: { id },
+  async execute({ id, requester }: GetOrderQuery): Promise<OrderView> {
+    // La condición va en la consulta y no después: el pedido ajeno no llega ni a leerse
+    const order = await this.prisma.order.findFirst({
+      where:
+        requester.role === 'ADMIN'
+          ? { id }
+          : { id, customerId: requester.userId },
       include: { lines: true },
     });
     if (!order) throw new NotFoundError('Order', id);

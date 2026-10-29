@@ -5,6 +5,7 @@ import {
   ConflictError,
   DomainError,
   NotFoundError,
+  TooManyRequestsError,
 } from '../../shared-kernel/domain.errors.js';
 
 @Catch(DomainError)
@@ -19,7 +20,9 @@ export class DomainExceptionFilter implements ExceptionFilter {
             ? 401
             : error instanceof AuthorizationError
               ? 403
-              : 422;
+              : error instanceof TooManyRequestsError
+                ? 429
+                : 422;
     host.switchToHttp().getResponse().status(status).json({
       statusCode: status,
       errorCode: error.code,

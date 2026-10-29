@@ -46,7 +46,6 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `DB_NAME` | — (obligatoria) | Nombre de la base de datos |
 | `PORT` | `3000` | Puerto de la API |
 | `NODE_ENV` | `development` | `development`, `test` o `production` |
-| `ADMIN_API_ENABLED` | `false` | Abre los endpoints `/admin` (libros y stock) y el historial de pedidos de un cliente, solo para desarrollo, hasta que exista la autenticación. Cerrada, responden `404` como si no existieran. Con `NODE_ENV=production` no se permite `true` |
 | `PAYMENT_PROVIDER` | `fake` | Pasarela de pago: `fake` (simulada) o `external`. Con `NODE_ENV=production` la API no arranca con `fake`, porque aprueba cualquier tarjeta |
 | `PAYMENT_API_URL` | vacía | Obligatoria solo si `PAYMENT_PROVIDER=external` |
 | `PAYMENT_SIMULATED_DELAY_MS` | `3000` | Solo con `PAYMENT_PROVIDER=fake`: lo que tarda la pasarela simulada en cobrar y en reembolsar, como un proveedor real. `0` quita la demora |
@@ -54,12 +53,19 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `JWT_SECRET` | — | Secreto con el que se firman los tokens de acceso (al menos 32 caracteres variados; `openssl rand -base64 48`). **Obligatorio con `NODE_ENV=production`**; sin él, en desarrollo, cada arranque usa uno aleatorio y los tokens dejan de valer al reiniciar |
 | `ACCESS_TOKEN_TTL_SECONDS` | `900` | Vida del token de acceso, en segundos (de 60 a 3600) |
 | `REFRESH_TOKEN_TTL_DAYS` | `14` | Días que vale un token de refresco sin usarse (de 1 a 90). Cada renovación entrega uno nuevo con el plazo completo |
+| `CORS_ORIGINS` | vacía | Orígenes que pueden llamar a la API desde un navegador, separados por comas (`https://app.libroya.pe,http://localhost:5173`). Cada uno es `esquema://host[:puerto]`, sin ruta ni comodines. Vacía, no se envía ninguna cabecera CORS. Con `NODE_ENV=production` solo se admite `https` |
+| `TRUST_PROXY` | `0` | Cuántos proxies hay delante de la API (de 0 a 10). De ahí sale la dirección del cliente para el límite de intentos: con un valor de más se puede falsificar con `X-Forwarded-For`; con uno de menos, todos comparten la del proxy |
+| `RATE_LIMIT_WINDOW_SECONDS` | `60` | Ventana, en segundos, del límite de intentos (de 1 a 3600). Superado el límite se responde `429` con `Retry-After`, y se recupera al pasar la ventana |
+| `RATE_LIMIT_LOGIN_IP` | `20` | Intentos de `POST /auth/login` por dirección y ventana (cuentan todos, también los correctos) |
+| `RATE_LIMIT_LOGIN_ACCOUNT` | `5` | Intentos de login contra el mismo correo por ventana, vengan de donde vengan |
+| `RATE_LIMIT_REGISTER_IP` | `10` | Registros por dirección y ventana |
+| `RATE_LIMIT_REFRESH_IP` | `30` | Renovaciones y cierres de sesión juntos, por dirección y ventana |
 | `PASSWORD_HASH_LOG_N` | `15` | Costo del hash de contraseñas (scrypt, N = 2^valor). Más alto es más lento y más seguro; los tests lo bajan. Con `NODE_ENV=production` no se permite menos de 15 |
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
 
-`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. `ADMIN_API_ENABLED` (corte 6) abre las rutas `/admin` y el historial de pedidos; cerrada, responden `404`. El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
 
 ## Base de datos
 
@@ -190,17 +196,56 @@ curl 'http://localhost:3000/books?page=2&pageSize=2'  # el catálogo activo, de 
 
 La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas por dentro al comprar.
 
+### Probar la autenticación
+
+La API usa un **token de acceso** de vida corta (15 minutos, `ACCESS_TOKEN_TTL_SECONDS`) que se manda en `Authorization: Bearer <token>`, y un **token de refresco** opaco que se cambia por otro par de tokens y sirve **una sola vez**. Todas las rutas piden sesión salvo el catálogo (`GET /books…`), `/health/*` y `/auth/*`. Los roles son `BUYER` (compra y ve lo suyo) y `ADMIN` (la administración). Con los datos de ejemplo cargados hay tres usuarios, todos con la contraseña `LibroYa-dev-2026`: `ana@example.com`, `luis@example.com` (premium) y `admin@example.com`. Los ejemplos usan [`jq`](https://jqlang.org) para sacar el token; si no lo tienes, cópialo a mano de la respuesta.
+
+```bash
+# Registrarse: 201 { id, email, role: "BUYER" }. No inicia sesión. 409 EMAIL_ALREADY_REGISTERED si el correo ya existe;
+# 422 WEAK_PASSWORD si la contraseña no cumple (de 10 a 128 caracteres, sin una de las más comunes)
+curl -X POST http://localhost:3000/auth/register -H 'Content-Type: application/json' \
+  -d '{"email":"nueva@example.com","password":"una contraseña larga y buena"}'
+
+# Iniciar sesión: 200 { accessToken, tokenType: "Bearer", expiresIn, refreshToken, user }
+SESSION=$(curl -s -X POST http://localhost:3000/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"ana@example.com","password":"LibroYa-dev-2026"}')
+ANA=$(echo "$SESSION" | jq -r .accessToken)
+REFRESH=$(echo "$SESSION" | jq -r .refreshToken)
+
+curl -H "Authorization: Bearer $ANA" http://localhost:3000/me/orders   # 200: sus pedidos
+curl http://localhost:3000/me/orders                                   # 401 UNAUTHENTICATED: sin token
+
+# Renovar la sesión antes de que venza el token: 200 con un par nuevo. El REFRESH anterior ya no sirve
+NEXT=$(curl -s -X POST http://localhost:3000/auth/refresh -H 'Content-Type: application/json' \
+  -d "{\"refreshToken\":\"$REFRESH\"}")
+# Repetir el mismo REFRESH (señal de robo) da 401 INVALID_REFRESH_TOKEN y revoca la sesión entera
+
+# Cerrar la sesión: 204. Revoca el REFRESH (el token de acceso ya emitido vale hasta que venza)
+curl -X POST http://localhost:3000/auth/logout -H 'Content-Type: application/json' \
+  -d "{\"refreshToken\":\"$(echo "$NEXT" | jq -r .refreshToken)\"}"
+```
+
+| Qué pasa | Respuesta |
+|---|---|
+| Correo desconocido, mal escrito o contraseña equivocada | `401 INVALID_CREDENTIALS`, siempre el mismo mensaje |
+| Token de acceso vencido | `401 TOKEN_EXPIRED`: renueve la sesión con el de refresco |
+| Token ausente, mal formado o alterado | `401 UNAUTHENTICATED` |
+| Un comprador llama a una ruta de administrador (o al revés) | `403 FORBIDDEN` |
+| Demasiados intentos de login, registro o renovación | `429 TOO_MANY_REQUESTS` con `Retry-After` (límites en [Variables de entorno](#variables-de-entorno)) |
+
+El registro **no verifica el correo**: cualquiera puede registrar un correo ajeno, aunque no obtiene acceso a ninguna cuenta ajena. Un comprador recién registrado tiene su cliente en Ventas alrededor de un segundo después; si compra justo entonces recibe `404 NOT_FOUND` y puede reintentar.
+
 ### Probar una compra
 
-`POST /orders` reserva el stock, cobra y registra el pedido. Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el cliente, el token de la tarjeta, las líneas y la dirección de envío. Con la API en marcha y los datos de ejemplo:
+`POST /orders` reserva el stock, cobra y registra el pedido **a nombre de quien tiene la sesión** (solo compradores; el cuerpo no lleva `customerId`: sería un `400`). Lleva un header `Idempotency-Key` (un UUID nuevo por intento de compra) y un cuerpo con el token de la tarjeta, las líneas y la dirección de envío. Con la API en marcha, los datos de ejemplo y el `$ANA` de arriba:
 
 ```bash
 # Ana (normal) compra 2 Clean Code: 90.00 + 10.00 de envío → 201 { orderId, charged: { amount: "100.00", currency: "PEN" } }
 curl -X POST http://localhost:3000/orders \
+  -H "Authorization: Bearer $ANA" \
   -H 'Content-Type: application/json' \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{
-    "customerId": "11111111-1111-4111-8111-111111111111",
     "cardToken": "tok_visa",
     "items": [{ "isbn": "9780132350884", "quantity": 2 }],
     "shippingAddress": {
@@ -211,13 +256,16 @@ curl -X POST http://localhost:3000/orders \
     }
   }'
 
-# Consultar el pedido
-curl http://localhost:3000/orders/<orderId>
+# Consultar el pedido (su dueño o un administrador; para otro comprador es un 404, como si no existiera)
+curl -H "Authorization: Bearer $ANA" http://localhost:3000/orders/<orderId>
+
+# Todos mis pedidos, con la dirección, del más reciente al más antiguo (paginado con nextCursor)
+curl -H "Authorization: Bearer $ANA" http://localhost:3000/me/orders
 ```
 
 | Prueba | Cómo | Resultado |
 |---|---|---|
-| Cliente premium | `customerId` de Luis (`2222…`), 2 Clean Code | `201`, `81.00 PEN` (10 % de descuento y envío gratis) |
+| Cliente premium | Con el token de Luis (`luis@example.com`), 2 Clean Code | `201`, `81.00 PEN` (10 % de descuento y envío gratis) |
 | Pedido en dólares | Ana, 1 The Pragmatic Programmer | `201`, `18.00 USD` (15.00 + 3.00 de envío) |
 | Reintento | La misma `Idempotency-Key` y el mismo cuerpo | `201` con el mismo `orderId`, sin cobrar otra vez |
 | Clave reutilizada | La misma clave con otro carrito | `422 IDEMPOTENCY_KEY_REUSED` |
@@ -245,40 +293,46 @@ Pasado un segundo, el relay del Outbox entrega el evento: la reserva pasa a `CON
 
 ### El flujo de la tienda, de punta a punta
 
-Con la administración abierta: (1) `POST /admin/books` da de alta un libro; (2) un segundo después Inventario le crea su stock en cero; (3) `GET /books?q=` lo encuentra, pero comprarlo da `OUT_OF_STOCK`; (4) `POST /admin/stock/:isbn/additions` le carga unidades; (5) `POST /orders` lo compra, con la dirección de envío; (6) `GET /orders?customerId=` lo muestra en el historial, con la dirección. `PATCH /admin/books/:isbn` cambia el precio o lo desactiva. Está probado entero en `test/e2e/store-flow.e2e.spec.ts`.
+Con un administrador: (1) `POST /admin/books` da de alta un libro; (2) un segundo después Inventario le crea su stock en cero; (3) `GET /books?q=` lo encuentra, pero comprarlo da `OUT_OF_STOCK`; (4) `POST /admin/stock/:isbn/additions` le carga unidades; (5) `POST /orders` lo compra, con la dirección de envío; (6) `GET /admin/orders?customerId=` lo muestra en el historial de administración, y `GET /me/orders` en el del propio comprador, con la dirección. `PATCH /admin/books/:isbn` cambia el precio o lo desactiva. Está probado entero en `test/e2e/store-flow.e2e.spec.ts`.
 
 ### Probar la administración
 
-Las rutas `/admin` solo existen con `ADMIN_API_ENABLED=true` en tu `.env` (reinicia la API después). Con el valor por defecto, `false`, responden `404` como si no existieran y `/docs` no las muestra. Con `NODE_ENV=production` la API no arranca con `true`.
+Las rutas `/admin` exigen un token de un **administrador** (sin token dan `401`; con el de un comprador, `403`). El seed (`pnpm run db:seed`) crea a `admin@example.com`; para crear otro, o el primero en producción, `pnpm run admin:create -- --email=correo@dominio.com` (pide la contraseña sin mostrarla, o la toma de `ADMIN_PASSWORD`).
+
+```bash
+# Iniciar sesión como administrador (la contraseña de desarrollo del seed está en "Datos de ejemplo") y guardar el token
+TOKEN=$(curl -s -X POST http://localhost:3000/auth/login -H 'Content-Type: application/json' \
+  -d '{"email":"admin@example.com","password":"LibroYa-dev-2026"}' | jq -r .accessToken)
+```
 
 ```bash
 # Crear un libro: 201 con el libro; 409 BOOK_ALREADY_EXISTS si el ISBN ya existe
-curl -X POST http://localhost:3000/admin/books \
+curl -X POST http://localhost:3000/admin/books -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"isbn":"9780134494166","title":"Clean Architecture","author":"Robert C. Martin","price":{"amount":"55.00","currency":"PEN"}}'
 
 curl 'http://localhost:3000/books?q=architecture'    # el libro nuevo ya aparece en la búsqueda
 
 # Cambiar el precio (y/o el título, el autor): 200 con el libro. La moneda no se cambia
-curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"price":{"amount":"49.90"}}'
 
 # Desactivar el libro (no se borra): deja de verse en el catálogo y de poder comprarse. Con "active": true se reactiva
-curl -X PATCH http://localhost:3000/admin/books/9780134494166 \
+curl -X PATCH http://localhost:3000/admin/books/9780134494166 -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"active":false}'
 ```
 
 ```bash
 # Historial de pedidos de un cliente, del más reciente al más antiguo, con su dirección de envío
-curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5'
+curl -H "Authorization: Bearer $TOKEN" 'http://localhost:3000/admin/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5'
 # Página siguiente: el nextCursor de la respuesta, tal cual (es opaco). Es null en la última página
-curl 'http://localhost:3000/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5&cursor=<nextCursor>'
+curl -H "Authorization: Bearer $TOKEN" 'http://localhost:3000/admin/orders?customerId=11111111-1111-4111-8111-111111111111&limit=5&cursor=<nextCursor>'
 ```
 
 ```bash
 # Cargar stock: SUMA unidades a lo disponible (no fija un valor). 201 { isbn, available, reserved }
 # El libro nuevo tiene su stock en cero un segundo después de crearlo (lo crea Inventario al recibir el evento)
-curl -X POST http://localhost:3000/admin/stock/9780134494166/additions \
+curl -X POST http://localhost:3000/admin/stock/9780134494166/additions -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -d '{"quantity":25}'
 ```
 
