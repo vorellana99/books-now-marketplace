@@ -93,6 +93,19 @@ export class PrismaCheckoutLog extends CheckoutLog {
     return rows.map((r) => ({ orderId: r.order_id, requestId: r.request_id }));
   }
 
+  // SKIP LOCKED: dos instancias a la vez no se pisan. Solo estados terminados; un PENDING no se toca nunca
+  async purgeFinished(olderThanDays: number, limit: number): Promise<number> {
+    return this.prisma.$executeRaw`
+      DELETE FROM sales.checkouts
+      WHERE order_id IN (
+        SELECT order_id FROM sales.checkouts
+        WHERE status IN ('COMPLETED', 'ABORTED')
+          AND started_at < now() - make_interval(days => ${olderThanDays})
+        ORDER BY started_at
+        LIMIT ${limit}
+        FOR UPDATE SKIP LOCKED)`;
+  }
+
   private chargedOf(row: {
     orderId: string;
     chargedAmount: Prisma.Decimal | null;

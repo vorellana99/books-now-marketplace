@@ -16,6 +16,7 @@ import {
 import { JwtTokenService } from './infrastructure/jwt-token.service.js';
 import { LoginHandler } from './infrastructure/login.handler.js';
 import { LogoutHandler } from './infrastructure/logout.handler.js';
+import { PurgeRefreshTokensJob } from './infrastructure/purge-refresh-tokens.job.js';
 import { RefreshSessionHandler } from './infrastructure/refresh-session.handler.js';
 import { RegisterUserHandler } from './infrastructure/register-user.handler.js';
 import { ScryptPasswordHasher } from './infrastructure/scrypt-password-hasher.js';
@@ -44,6 +45,7 @@ import { SessionService } from './infrastructure/session.service.js';
     LoginHandler,
     RefreshSessionHandler,
     LogoutHandler,
+    PurgeRefreshTokensJob,
     {
       provide: PasswordHasher,
       inject: [ConfigService],

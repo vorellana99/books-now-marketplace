@@ -13,6 +13,10 @@ const optionalSecret = z.preprocess(
 // Una lista de orígenes permitidos por CORS, separados por comas. Cada uno es esquema://host[:puerto], sin ruta, barra
 // final, consulta, fragmento ni credenciales, y sin comodines: se normaliza (minúsculas, sin el puerto por defecto) y se
 // quitan los repetidos. Vacía, no hay CORS
+// Un plazo de retención en días: entre 1 y 10 años
+const retentionDays = (defaultDays: number) =>
+  z.coerce.number().int().min(1).max(3650).default(defaultDays);
+
 const MAX_CORS_ORIGINS = 20;
 const ORIGIN_SHAPE = /^https?:\/\/[^/?#@\s]+$/i;
 const corsOrigins = z
@@ -101,6 +105,13 @@ export const envSchema = z
     EMAIL_SIMULATED_DELAY_MS: z.coerce.number().int().min(0).default(3000), // lo que tarda el correo simulado
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
+    // Cuántos días se guardan los datos ya terminados antes de purgarlos (cada noche, a las 3). Lo pendiente, en curso o
+    // fallido nunca se purga. Ojo: purgar un checkout olvida su Idempotency-Key, así que su plazo debe superar cualquier
+    // reintento razonable del cliente
+    RETENTION_OUTBOX_DAYS: retentionDays(30), // mensajes del outbox con todas sus entregas hechas
+    RETENTION_CHECKOUT_DAYS: retentionDays(30), // checkouts COMPLETED o ABORTED
+    RETENTION_RESERVATION_DAYS: retentionDays(90), // reservas CONFIRMED
+    RETENTION_REFRESH_TOKEN_DAYS: retentionDays(7), // tokens de refresco, tras vencer, usarse o revocarse
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z
       .enum(['development', 'test', 'production'])

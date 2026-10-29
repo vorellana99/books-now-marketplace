@@ -97,6 +97,21 @@ export class InMemoryCheckoutLog extends CheckoutLog {
     return Promise.resolve(claimed);
   }
 
+  purgeFinished(olderThanDays: number, limit: number): Promise<number> {
+    const cutoff = this.now().getTime() - olderThanDays * 24 * 60 * MINUTE;
+    const expired = [...this.rows.values()]
+      .filter((r) => r.status !== 'PENDING' && r.startedAt.getTime() < cutoff)
+      .sort((x, y) => x.startedAt.getTime() - y.startedAt.getTime())
+      .slice(0, limit);
+    for (const row of expired) {
+      this.rows.delete(row.orderId);
+      for (const [key, orderId] of this.orderByKey) {
+        if (orderId === row.orderId) this.orderByKey.delete(key);
+      }
+    }
+    return Promise.resolve(expired.length);
+  }
+
   // Ayudas para los tests y para el repositorio en memoria
   expireLock(orderId: string): void {
     const row = this.rows.get(orderId);

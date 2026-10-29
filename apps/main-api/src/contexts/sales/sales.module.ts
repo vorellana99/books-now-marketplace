@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { OutboxModule } from '../../platform/outbox/outbox.module.js';
 import { PlaceOrderHandler } from './application/order/place-order.handler.js';
 import { QuoteOrderHandler } from './application/order/quote-order.handler.js';
+import { PurgeCheckoutsJob } from './application/order/purge-checkouts.job.js';
 import { RecoverCheckoutsJob } from './application/order/recover-checkouts.job.js';
 import { SendOrderConfirmationConsumer } from './application/order/send-order-confirmation.consumer.js';
 import { CustomerRepository } from './domain/customer/customer.repository.js';
@@ -40,6 +41,7 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
     SendOrderConfirmationConsumer,
     CreateCustomerConsumer,
     RecoverCheckoutsJob,
+    PurgeCheckoutsJob,
     PricingService,
     { provide: OrderRepository, useClass: PrismaOrderRepository },
     { provide: CheckoutLog, useClass: PrismaCheckoutLog },

@@ -350,6 +350,10 @@ PASSWORD_HASH_LOG_N=15           # costo del hash de contraseñas (scrypt, N = 2
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
 DB_STATEMENT_TIMEOUT_MS=5000     # límite de cada sentencia SQL; mantiene acotada la duración de la compra
+RETENTION_OUTBOX_DAYS=30         # corte 9: días que se guardan los datos terminados antes de purgarlos (outbox, checkouts, reservas y tokens de refresco)
+RETENTION_CHECKOUT_DAYS=30
+RETENTION_RESERVATION_DAYS=90
+RETENTION_REFRESH_TOKEN_DAYS=7
 ```
 
 **`platform/config/env.schema.ts`**: todo lo que llega de `.env` es texto; el schema lo convierte y valida al arrancar.
@@ -377,6 +381,7 @@ export const envSchema = z
     PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15), // costo del hash de contraseñas (en producción, ≥ 15)
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
+    RETENTION_OUTBOX_DAYS: z.coerce.number().int().min(1).max(3650).default(30), // y las otras tres RETENTION_*_DAYS (corte 9)
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   })

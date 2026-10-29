@@ -474,6 +474,43 @@ describe('envSchema', () => {
     expect(envSchema.parse({ ...base, DB_PORT: '5433' }).DB_PORT).toBe(5433);
   });
 
+  describe('plazos de retención (purga de datos viejos)', () => {
+    const VARS = [
+      ['RETENTION_OUTBOX_DAYS', 30],
+      ['RETENTION_CHECKOUT_DAYS', 30],
+      ['RETENTION_RESERVATION_DAYS', 90],
+      ['RETENTION_REFRESH_TOKEN_DAYS', 7],
+    ] as const;
+
+    it.each(VARS)('%s vale %i días por defecto', (name, days) => {
+      expect(envSchema.parse(base)[name]).toBe(days);
+    });
+
+    it.each(VARS)('%s se convierte a número', (name) => {
+      expect(envSchema.parse({ ...base, [name]: '45' })[name]).toBe(45);
+    });
+
+    it.each(VARS)(
+      '%s acepta 1 y 3650 y rechaza 0, 3651 y lo que no es entero',
+      (name) => {
+        expect(envSchema.parse({ ...base, [name]: '1' })[name]).toBe(1);
+        expect(envSchema.parse({ ...base, [name]: '3650' })[name]).toBe(3650);
+        for (const bad of ['0', '-1', '3651', '1.5', 'abc']) {
+          expect(() => envSchema.parse({ ...base, [name]: bad })).toThrow();
+        }
+      },
+    );
+
+    it.each(VARS)(
+      '%s: el error de un valor inválido nombra la variable',
+      (name) => {
+        const result = envSchema.safeParse({ ...base, [name]: '0' });
+        expect(result.success).toBe(false);
+        expect(JSON.stringify(result.error?.issues)).toContain(name);
+      },
+    );
+  });
+
   it('exige que CHECKOUT_RECOVERY_MINUTES sea al menos 2', () => {
     expect(() =>
       envSchema.parse({ ...base, CHECKOUT_RECOVERY_MINUTES: '1' }),

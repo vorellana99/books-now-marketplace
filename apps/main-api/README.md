@@ -65,8 +65,18 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
+| `RETENTION_OUTBOX_DAYS` | `30` | Días que se guarda un mensaje del outbox con todas sus entregas hechas antes de purgarlo (de 1 a 3650) |
+| `RETENTION_CHECKOUT_DAYS` | `30` | Días que se guarda un checkout `COMPLETED` o `ABORTED`. Purgarlo olvida su `Idempotency-Key` |
+| `RETENTION_RESERVATION_DAYS` | `90` | Días que se guarda una reserva `CONFIRMED` |
+| `RETENTION_REFRESH_TOKEN_DAYS` | `7` | Días que se guarda un token de refresco después de vencer, usarse o revocarse |
 
 `OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
+
+### Retención de datos
+
+Cada noche a las 3 (hora del servidor) corren cuatro jobs que borran, por lotes de 1000 y como mucho 100 lotes por vuelta, lo que ya terminó y superó su plazo: los mensajes del outbox con todas sus entregas hechas, los checkouts `COMPLETED` o `ABORTED`, las reservas `CONFIRMED` y los tokens de refresco vencidos, usados o revocados. **Nunca** borran lo pendiente, en curso o fallido: un checkout `PENDING` (lo necesita la recuperación), una reserva `HELD` (retiene stock), un mensaje con una entrega `PENDING` o `FAILED` (un evento sin entregar no se oculta por ser viejo) ni un token vigente. Varias instancias pueden correrlos a la vez sin pisarse (`FOR UPDATE SKIP LOCKED`). Cada job que borra algo lo anota en el log (`Purga de checkouts: 120 filas con más de 30 días`).
+
+Dos consecuencias a tener presentes: pasado `RETENTION_CHECKOUT_DAYS`, repetir una `Idempotency-Key` ya no devuelve el pedido original (por eso el plazo debe superar lo que tarde un cliente razonable en reintentar), y pasado `RETENTION_REFRESH_TOKEN_DAYS`, un token de refresco robado y ya usado se ve como desconocido (`401`) en vez de revocar la sesión.
 
 ## Base de datos
 
