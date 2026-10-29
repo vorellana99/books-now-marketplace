@@ -231,6 +231,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
         └── orders.e2e.spec.ts
 ```
 
+Desde el corte 9 (tarea `9.13`) `apps/main-api/` tiene un `Dockerfile` genérico de varias etapas y su `.dockerignore`: la imagen de la API (por defecto, sin root ni pruebas) y la etapa `migrate` para `prisma migrate deploy` como paso previo del despliegue. Se explica en el README del backend.
+
 Los tests unitarios van en `test/unit/`, no junto al código, y desde el corte 9 (tarea `9.12`) **repartidos por carpeta**, según dónde vive el código que prueban: `sales/`, `catalog/`, `identity/`, `inventory/`, `platform/` y `shared-kernel/`; `architecture/` para las reglas que cruzan contextos (`dependency-rules`, `contracts`, el uso de la configuración) y `tooling/` para los fakes, los builders, el seed y las ayudas de las propias pruebas. Una prueba suelta en la raíz de `test/unit/` hace fallar `architecture/test-layout.spec.ts`. Las de integración y e2e siguen planas.
 
 Las **specifications** del dominio usan el sufijo `.specification.ts` (en la guía v5 era `.spec.ts`). Con `.spec.ts`, Vitest las tomaría por archivos de test. Las clases no cambian de nombre (`MinimumSubtotalSpec`, `freeShippingSpec`).

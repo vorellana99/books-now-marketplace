@@ -356,6 +356,23 @@ curl -X POST http://localhost:3000/admin/stock/9780134494166/additions -H "Autho
 
 El precio entra como sale: `{ "amount": "55.00", "currency": "PEN" }`, con el monto en texto.
 
+## Imagen de contenedor (despliegue)
+
+El `Dockerfile` de esta carpeta es genérico: sirve en cualquier plataforma que corra contenedores. Tiene dos imágenes, y **las migraciones no corren al arrancar la API** (para que varias instancias no migren a la vez):
+
+```bash
+docker build -t libroya-api .                         # la API: sin pnpm, sin pruebas ni código fuente, usuario `node`
+docker build --target migrate -t libroya-migrate .    # solo `prisma migrate deploy`
+
+# 1. Las migraciones, una vez por despliegue y antes de arrancar la API (necesita las variables DB_*)
+docker run --rm --env-file produccion.env libroya-migrate
+
+# 2. La API (con las variables de producción: ver «Variables de entorno»)
+docker run -d --env-file produccion.env -p 3000:3000 libroya-api
+```
+
+La imagen trae `NODE_ENV=production`, así que la validación de producción se aplica: sin `JWT_SECRET`, con `PAYMENT_PROVIDER=fake` o con `CORS_ORIGINS` que no sean https, **no arranca**. Su `HEALTHCHECK` consulta `/health/live`; el balanceador debe usar `/health/ready`. Las migraciones crean la extensión `pg_trgm`: el rol de la base debe poder (ver «Problemas frecuentes»). La imagen de la API pesa unos 560 MB. No hay un trabajo de CI que la construya: se construye a mano.
+
 ## Levantar la API
 
 ```bash
