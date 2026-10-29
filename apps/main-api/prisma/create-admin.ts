@@ -2,10 +2,12 @@ import 'dotenv/config';
 import { createInterface } from 'node:readline';
 import { Writable } from 'node:stream';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { createAdminUser } from '../src/contexts/identity/infrastructure/create-admin.js';
+import { createAdminUser } from '../src/contexts/identity/application/create-admin.js';
 import { ScryptPasswordHasher } from '../src/contexts/identity/infrastructure/scrypt-password-hasher.js';
 import { buildDatabaseUrl } from '../src/platform/config/database-url.js';
 import { PrismaClient } from '../src/platform/prisma/generated/client.js';
+import type { PrismaService } from '../src/platform/prisma/prisma.service.js';
+import { PrismaUserRepository } from '../src/contexts/identity/infrastructure/persistence/prisma-user.repository.js';
 import { DomainError } from '../src/shared-kernel/domain.errors.js';
 
 // Un error del propio comando (no del dominio ni de la base): su mensaje es seguro de mostrar
@@ -83,7 +85,13 @@ async function main(): Promise<void> {
   });
   try {
     const created = await createAdminUser({
-      prisma,
+      users: new PrismaUserRepository(prisma as unknown as PrismaService, {
+        // un administrador no publica eventos: si alguna vez dejara uno, es un error y no se pierde en silencio
+        append: (_tx, events) =>
+          events.length === 0
+            ? Promise.resolve()
+            : Promise.reject(new Error('un administrador no publica eventos')),
+      }),
       hasher: new ScryptPasswordHasher({
         logN: Number(process.env.PASSWORD_HASH_LOG_N) || undefined,
       }),

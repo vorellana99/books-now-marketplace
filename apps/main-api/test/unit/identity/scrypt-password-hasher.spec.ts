@@ -1,6 +1,6 @@
 import crypto, { randomBytes, scryptSync } from 'node:crypto';
 import { syncBuiltinESMExports } from 'node:module';
-import { PasswordHasher } from '../../../src/contexts/identity/domain/password-hasher.port.js';
+import { PasswordHasher } from '../../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import {
   DEFAULT_LOG_N,
   ScryptPasswordHasher,

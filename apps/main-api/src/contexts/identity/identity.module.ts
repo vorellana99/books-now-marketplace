@@ -6,7 +6,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
 import { AccessTokenIssuer } from './application/access-token-issuer.js';
-import { PasswordHasher } from './domain/password-hasher.port.js';
+import { PasswordHasher } from './domain/ports/password-hasher.port.js';
 import { AuthController } from './infrastructure/auth.controller.js';
 import {
   AuthThrottlerGuard,

@@ -1,7 +1,7 @@
 import { Module, type INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
 import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
-import { PasswordHasher } from '../../src/contexts/identity/domain/password-hasher.port.js';
+import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { RegisterUserHandler } from '../../src/contexts/identity/infrastructure/register-user.handler.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';

@@ -109,3 +109,62 @@ describe('User', () => {
     expect(JSON.stringify(json)).not.toContain('scrypt');
   });
 });
+
+describe('User.register (el alta de un comprador)', () => {
+  const email = Email.create('ana@example.com');
+
+  it('crea un comprador con el rol BUYER, que no se elige', () => {
+    const user = User.register({ id: ID, email, passwordHash: HASH });
+
+    expect(user).toMatchObject({ id: ID, role: 'BUYER', passwordHash: HASH });
+  });
+
+  it('deja pendiente un solo evento identity.user.registered, con su id, correo y rol', () => {
+    const user = User.register({ id: ID, email, passwordHash: HASH });
+
+    const events = user.pullEvents();
+
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      eventName: 'identity.user.registered',
+      aggregateId: ID,
+      userId: ID,
+      email: 'ana@example.com',
+      role: 'BUYER',
+    });
+  });
+
+  it('el evento no lleva la contraseña ni su hash', () => {
+    const user = User.register({ id: ID, email, passwordHash: HASH });
+
+    expect(JSON.stringify(user.pullEvents())).not.toContain(HASH);
+  });
+
+  it('pullEvents vacía la lista: la segunda vez no hay nada', () => {
+    const user = User.register({ id: ID, email, passwordHash: HASH });
+    user.pullEvents();
+
+    expect(user.pullEvents()).toEqual([]);
+  });
+
+  it('create (un administrador, o un usuario que se carga) no deja eventos', () => {
+    const user = User.create({
+      id: ID,
+      email,
+      passwordHash: HASH,
+      role: 'ADMIN',
+    });
+
+    expect(user.pullEvents()).toEqual([]);
+  });
+
+  it('valida igual que create: un id que no es UUID o un hash vacío son errores', () => {
+    expect(
+      failure(() => User.register({ id: 'x', email, passwordHash: HASH }))
+        ?.code,
+    ).toBe('INVALID_USER');
+    expect(
+      failure(() => User.register({ id: ID, email, passwordHash: ' ' }))?.code,
+    ).toBe('INVALID_USER');
+  });
+});

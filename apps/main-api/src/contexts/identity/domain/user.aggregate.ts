@@ -1,3 +1,5 @@
+import { UserRegisteredEvent } from '../../../contracts/identity/user-registered.event.js';
+import type { DomainEvent } from '../../../shared-kernel/domain-event.js';
 import { DomainError } from '../../../shared-kernel/domain.errors.js';
 import { ROLES, type Role } from '../../../shared-kernel/role.js';
 import type { Email } from './email.vo.js';
@@ -7,6 +9,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Quien puede iniciar sesión. Guarda el hash de la contraseña, nunca la contraseña, y no lo muestra al serializarse
 export class User {
+  private events: DomainEvent[] = [];
+
   private constructor(
     readonly id: string,
     readonly email: Email,
@@ -39,6 +43,28 @@ export class User {
       throw new DomainError('INVALID_ROLE', 'El rol debe ser BUYER o ADMIN');
     }
     return new User(data.id, data.email, data.passwordHash, data.role);
+  }
+
+  // El alta de un comprador: siempre con el rol BUYER (el rol no se elige) y con su evento identity.user.registered, que
+  // Ventas usa para crear a su cliente. Un administrador, o un usuario que se carga de la base, se crea con `create` y no
+  // deja eventos: un administrador no es un cliente
+  static register(data: {
+    id: string;
+    email: Email;
+    passwordHash: string;
+  }): User {
+    const user = User.create({ ...data, role: 'BUYER' });
+    user.events.push(
+      new UserRegisteredEvent(user.id, user.email.value, user.role),
+    );
+    return user;
+  }
+
+  // Los eventos que quedaron por publicar; quien guarda al usuario los toma una sola vez
+  pullEvents(): DomainEvent[] {
+    const pending = this.events;
+    this.events = [];
+    return pending;
   }
 
   isAdmin(): boolean {

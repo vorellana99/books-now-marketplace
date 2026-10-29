@@ -1,7 +1,10 @@
 import { spawnSync } from 'node:child_process';
-import { PasswordHasher } from '../../src/contexts/identity/domain/password-hasher.port.js';
+import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { ScryptPasswordHasher } from '../../src/contexts/identity/infrastructure/scrypt-password-hasher.js';
-import { createAdminUser } from '../../src/contexts/identity/infrastructure/create-admin.js';
+import { createAdminUser } from '../../src/contexts/identity/application/create-admin.js';
+import { PrismaUserRepository } from '../../src/contexts/identity/infrastructure/persistence/prisma-user.repository.js';
+import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
+import { OutboxWriter } from '../../src/platform/outbox/outbox.writer.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import {
   ConflictError,
@@ -23,7 +26,7 @@ describe('createAdminUser (PostgreSQL real)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
   beforeAll(async () => {
-    app = await createTestApp();
+    app = await createTestApp(OutboxModule);
     prisma = app.get(PrismaService);
   });
   afterAll(async () => {
@@ -32,7 +35,12 @@ describe('createAdminUser (PostgreSQL real)', () => {
   beforeEach(resetDatabase);
 
   const create = (email = 'root@example.com', password = PASSWORD) =>
-    createAdminUser({ prisma, hasher, email, password });
+    createAdminUser({
+      users: new PrismaUserRepository(prisma, app.get(OutboxWriter)),
+      hasher,
+      email,
+      password,
+    });
 
   it('crea un usuario con el rol ADMIN y el correo normalizado, y devuelve su id y correo', async () => {
     const created = await create('  Root@Example.COM ');

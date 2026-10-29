@@ -5,7 +5,7 @@ import { RegisterUserCommand } from '../../src/contexts/identity/application/reg
 import { SessionService } from '../../src/contexts/identity/infrastructure/session.service.js';
 import { LoginHandler } from '../../src/contexts/identity/infrastructure/login.handler.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
-import { PasswordHasher } from '../../src/contexts/identity/domain/password-hasher.port.js';
+import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { AccessTokenVerifier } from '../../src/platform/auth/access-token-verifier.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';

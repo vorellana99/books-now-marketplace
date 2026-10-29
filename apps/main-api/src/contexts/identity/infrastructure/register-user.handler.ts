@@ -9,7 +9,7 @@ import {
   type RegisteredUser,
 } from '../application/register-user.command.js';
 import { Email } from '../domain/email.vo.js';
-import { PasswordHasher } from '../domain/password-hasher.port.js';
+import { PasswordHasher } from '../domain/ports/password-hasher.port.js';
 import { PasswordPolicy } from '../domain/password-policy.js';
 import { User } from '../domain/user.aggregate.js';
 import { isUniqueViolation } from '../../../platform/prisma/unique-violation.js';

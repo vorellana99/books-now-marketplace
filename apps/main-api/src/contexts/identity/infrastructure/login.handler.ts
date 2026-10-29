@@ -5,7 +5,7 @@ import { AuthenticationError } from '../../../shared-kernel/domain.errors.js';
 import { LoginCommand } from '../application/login.command.js';
 import type { Session } from '../application/session.js';
 import { Email } from '../domain/email.vo.js';
-import { PasswordHasher } from '../domain/password-hasher.port.js';
+import { PasswordHasher } from '../domain/ports/password-hasher.port.js';
 import { SessionService } from './session.service.js';
 
 const invalidCredentials = () =>
