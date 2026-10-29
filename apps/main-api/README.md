@@ -487,6 +487,7 @@ El workflow [`.github/workflows/main-api.yml`](../../.github/workflows/main-api.
 |---|---|
 | `No se pudo iniciar PostgreSQL en un contenedor` al correr `test:e2e` | Docker no está en marcha. Compruébalo con `docker info`. `pnpm test` (unitarios) funciona sin Docker |
 | `function uuidv7() does not exist` al migrar | La base no es PostgreSQL 18 |
+| `permission denied to create extension "pg_trgm"` al migrar | La migración `books_search_trigram_indexes` crea la extensión `pg_trgm` (índices de la búsqueda de libros). En un PostgreSQL administrado, habilítala desde su consola o con un rol que pueda crear extensiones; en el contenedor `postgres:18` ya está disponible |
 | `P3014: Prisma Migrate could not create the shadow database` | El usuario no tiene `CREATEDB`: `ALTER ROLE libroya CREATEDB;` |
 | `permission denied for schema public` al migrar | El usuario no es dueño de la base: `ALTER DATABASE libroya OWNER TO libroya;` |
 | `P1000: Authentication failed` | Usuario o contraseña de `DB_USER` / `DB_PASSWORD` incorrectos (o la base se creó con otros: ver el aviso de Docker) |
