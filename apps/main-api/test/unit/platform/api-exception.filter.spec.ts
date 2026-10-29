@@ -2,6 +2,8 @@ import {
   ArgumentsHost,
   BadRequestException,
   ForbiddenException,
+  HttpException,
+  InternalServerErrorException,
   Logger,
   MethodNotAllowedException,
   NotFoundException,
@@ -138,6 +140,39 @@ describe('ApiExceptionFilter', () => {
         status: 503,
         body: health,
       });
+    });
+  });
+
+  describe('un 500 que no es un error inesperado de programación (9.15: lo que las mutaciones encontraron)', () => {
+    it('una InternalServerErrorException de Nest responde INTERNAL_ERROR sin revelar su texto', () => {
+      const { status, body } = respond(
+        new InternalServerErrorException('secreto interno'),
+      );
+      expect(status).toBe(500);
+      expect(body).toEqual({
+        statusCode: 500,
+        errorCode: 'INTERNAL_ERROR',
+        message: 'Error interno del servidor',
+      });
+      expect(JSON.stringify(body)).not.toContain('secreto');
+    });
+
+    it('un error de Express con status 500 no se toma por un error del cliente: es un 500 genérico', () => {
+      vi.spyOn(Logger.prototype, 'error').mockImplementation(() => undefined);
+      const { status, body } = respond({
+        status: 500,
+        message: 'detalle interno',
+      });
+      expect(status).toBe(500);
+      expect(body.errorCode).toBe('INTERNAL_ERROR');
+      expect(JSON.stringify(body)).not.toContain('detalle interno');
+    });
+
+    it('un HttpException sin mensaje nunca deja `message` vacío', () => {
+      const { body } = respond(new HttpException({}, 400));
+      expect(body.errorCode).toBe('VALIDATION_ERROR');
+      expect(body.message).toBe('VALIDATION_ERROR');
+      expect(body.message.length).toBeGreaterThan(0);
     });
   });
 

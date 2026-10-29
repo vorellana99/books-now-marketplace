@@ -28,13 +28,18 @@ describe('Dockerfile', () => {
     expect(dockerfile).toMatch(/prisma.*migrate deploy/);
   });
 
-  it('usa Node 24 y la versión de pnpm del proyecto', () => {
-    expect(has(/^FROM node:24/)).toBe(true);
+  it('todas las etapas usan Node 24, y pnpm tiene la versión del proyecto', () => {
+    const nodeStages = lines.filter((l) => /^FROM node:/i.test(l));
+    expect(nodeStages.length).toBeGreaterThanOrEqual(2);
+    for (const stage of nodeStages) expect(stage).toMatch(/^FROM node:24/);
     expect(dockerfile).toContain('pnpm@12.15.0');
   });
 
-  it('instala con el lockfile congelado', () => {
-    expect(dockerfile).toContain('--frozen-lockfile');
+  it('toda instalación de dependencias usa el lockfile congelado', () => {
+    const installs = lines.filter((l) => /\bpnpm install\b/.test(l));
+    expect(installs.length).toBeGreaterThanOrEqual(2);
+    for (const install of installs)
+      expect(install).toContain('--frozen-lockfile');
   });
 
   it('la etapa de ejecución instala solo dependencias de producción', () => {

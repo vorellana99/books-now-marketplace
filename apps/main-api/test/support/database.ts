@@ -39,6 +39,37 @@ export async function query<T extends object = Record<string, unknown>>(
 
 const APP_SCHEMAS = ['sales', 'catalog', 'inventory', 'messaging', 'identity'];
 
+// Mantiene bloqueada una fila (`SELECT … FOR UPDATE` en una transacción abierta) hasta que se llama a la función que
+// devuelve. Sirve para probar que una operación con `SKIP LOCKED` pasa de largo por lo bloqueado en vez de esperar: sin
+// él, se quedaría esperando y la sentencia caería por `statement_timeout`
+export async function holdRowLock(
+  selectForUpdate: string,
+  params: unknown[] = [],
+): Promise<() => Promise<void>> {
+  assertIsolatedDatabase();
+  const client = new Client({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    options: '-c timezone=UTC',
+  });
+  await client.connect();
+  await client.query('BEGIN');
+  const result = await client.query(selectForUpdate, params);
+  if (result.rowCount === 0) {
+    await client.end();
+    throw new Error(
+      'holdRowLock: la consulta no encontró la fila que debía bloquear',
+    );
+  }
+  return async () => {
+    await client.query('ROLLBACK');
+    await client.end();
+  };
+}
+
 const DEADLOCK = '40P01';
 
 // El TRUNCATE de `resetDatabase` toma bloqueos exclusivos sobre todas las tablas; si justo entonces el relay del outbox

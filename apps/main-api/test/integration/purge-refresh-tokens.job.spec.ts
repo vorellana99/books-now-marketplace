@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { PurgeRefreshTokensJob } from '../../src/contexts/identity/infrastructure/purge-refresh-tokens.job.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { PURGE_BATCH } from '../../src/platform/retention/purge-in-batches.js';
-import { query, resetDatabase } from '../support/database.js';
+import { holdRowLock, query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 
 interface TokenSpec {
@@ -130,6 +130,23 @@ describe('PurgeRefreshTokensJob (PostgreSQL real)', () => {
       (await query('SELECT 1 FROM identity.users WHERE id = $1', [userId]))
         .length,
     ).toBe(1);
+  });
+
+  it('pasa de largo por un token que otra transacción tiene bloqueado, en vez de esperarla (SKIP LOCKED)', async () => {
+    const free = await token({ usedDaysAgo: 30 });
+    const busy = await token({ usedDaysAgo: 30 });
+    const release = await holdRowLock(
+      'SELECT 1 FROM identity.refresh_tokens WHERE id = $1 FOR UPDATE',
+      [busy],
+    );
+    try {
+      expect(await job().run()).toBe(1);
+      expect(await exists(free)).toBe(false);
+      expect(await exists(busy)).toBe(true);
+    } finally {
+      await release();
+    }
+    expect(await job().run()).toBe(1);
   });
 
   it('vacía más de un lote en una sola vuelta', async () => {

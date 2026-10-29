@@ -579,6 +579,28 @@ describe('PlaceOrderHandler (la saga, con fakes en memoria)', () => {
     });
   });
 
+  describe('la carrera de dos peticiones con la misma clave (9.15)', () => {
+    it('si la clave ya existe pero la otra petición todavía no se ve, es CHECKOUT_IN_PROGRESS y no cobra ni reserva', async () => {
+      const s = setup();
+      const key = randomUUID();
+      await s.checkouts.start(
+        randomUUID(),
+        key,
+        hashRequest('c-1', cart(), ADDRESS),
+      ); // la otra petición ya empezó
+      // y esta no la ve ni al principio ni al registrar su intento
+      vi.spyOn(s.checkouts, 'findByKey').mockResolvedValue(null);
+
+      const error = await s.handler
+        .execute(command(cart(), { key }))
+        .catch((e: Error) => e);
+
+      expect((error as ConflictError).code).toBe('CHECKOUT_IN_PROGRESS');
+      expect(s.stock.reserved).toEqual([]);
+      expect(s.payments.attempts).toEqual([]);
+    });
+  });
+
   describe('la dirección de envío', () => {
     const otherAddress = { ...ADDRESS_DATA, line1: 'Otra calle 456' };
 

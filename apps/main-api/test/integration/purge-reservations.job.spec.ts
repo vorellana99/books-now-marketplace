@@ -5,7 +5,7 @@ import { PurgeReservationsJob } from '../../src/contexts/inventory/infrastructur
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { PURGE_BATCH } from '../../src/platform/retention/purge-in-batches.js';
 import { uniqueIsbn } from '../support/builders.js';
-import { query, resetDatabase } from '../support/database.js';
+import { holdRowLock, query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 
 describe('PurgeReservationsJob (PostgreSQL real)', () => {
@@ -103,6 +103,42 @@ describe('PurgeReservationsJob (PostgreSQL real)', () => {
       [isbn],
     );
     expect(stock).toEqual({ available: 7, reserved: 3 });
+  });
+
+  it('de un pedido con dos libros borra solo la línea que cumple, no todas las del pedido (la clave es pedido + ISBN)', async () => {
+    const orderId = randomUUID();
+    const [done, held] = [uniqueIsbn(), uniqueIsbn()];
+    await query(
+      `INSERT INTO inventory.reservations (order_id, isbn, quantity, status, created_at) VALUES
+         ($1, $2, 1, 'CONFIRMED', now() - interval '200 days'),
+         ($1, $3, 1, 'HELD', now() - interval '200 days')`,
+      [orderId, done, held],
+    );
+
+    expect(await job().run()).toBe(1);
+
+    const left = await query<{ isbn: string }>(
+      'SELECT isbn FROM inventory.reservations WHERE order_id = $1',
+      [orderId],
+    );
+    expect(left.map((r) => r.isbn)).toEqual([held]);
+  });
+
+  it('pasa de largo por una reserva que otra transacción tiene bloqueada, en vez de esperarla (SKIP LOCKED)', async () => {
+    const free = await reservation(120, 'CONFIRMED');
+    const busy = await reservation(120, 'CONFIRMED');
+    const release = await holdRowLock(
+      'SELECT 1 FROM inventory.reservations WHERE order_id = $1 FOR UPDATE',
+      [busy],
+    );
+    try {
+      expect(await job().run()).toBe(1);
+      expect(await exists(free)).toBe(false);
+      expect(await exists(busy)).toBe(true);
+    } finally {
+      await release();
+    }
+    expect(await job().run()).toBe(1);
   });
 
   it('vacía más de un lote en una sola vuelta', async () => {

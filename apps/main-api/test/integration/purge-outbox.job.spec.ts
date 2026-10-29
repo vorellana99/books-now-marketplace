@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { OutboxPurgeJob } from '../../src/platform/outbox/outbox-purge.job.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { PURGE_BATCH } from '../../src/platform/retention/purge-in-batches.js';
-import { query, resetDatabase } from '../support/database.js';
+import { holdRowLock, query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 
 type DeliveryStatus = 'PENDING' | 'DONE' | 'FAILED';
@@ -134,6 +134,26 @@ describe('OutboxPurgeJob (PostgreSQL real)', () => {
     expect(await exists(pending)).toBe(true);
     expect(await exists(failed)).toBe(true);
     expect(await exists(recent)).toBe(true);
+  });
+
+  it('pasa de largo por un mensaje que otra transacción tiene bloqueado, en vez de esperarla (SKIP LOCKED)', async () => {
+    const free1 = await message(40, ['DONE']);
+    const free2 = await message(40, ['DONE']);
+    const busy = await message(40, ['DONE']);
+    const release = await holdRowLock(
+      'SELECT 1 FROM messaging.outbox WHERE id = $1 FOR UPDATE',
+      [busy],
+    );
+    try {
+      expect(await job().run()).toBe(2);
+      expect(await exists(free1)).toBe(false);
+      expect(await exists(free2)).toBe(false);
+      expect(await exists(busy)).toBe(true);
+    } finally {
+      await release();
+    }
+    expect(await job().run()).toBe(1); // ya liberado, el siguiente pase lo borra
+    expect(await exists(busy)).toBe(false);
   });
 
   it('vacía más de un lote en una sola vuelta', async () => {

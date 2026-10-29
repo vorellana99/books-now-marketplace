@@ -40,6 +40,13 @@ describe('purgeInBatches', () => {
     expect(batch).toHaveBeenCalledTimes(2);
   });
 
+  it('un lote con uno menos del máximo ya es el último: no pide otro (9.15)', async () => {
+    const batch = vi.fn(() => Promise.resolve(9));
+
+    expect(await purgeInBatches(batch, { batch: 10, maxBatches: 50 })).toBe(9);
+    expect(batch).toHaveBeenCalledTimes(1);
+  });
+
   it('se detiene en el máximo de lotes aunque siga habiendo más', async () => {
     const batch = vi.fn((limit: number) => Promise.resolve(limit));
 
@@ -85,6 +92,19 @@ describe('runPurge', () => {
     expect(line).toContain('checkouts');
     expect(line).toContain('3');
     expect(line).toContain('30');
+  });
+
+  it('con varios lotes suma todos (9.15): lo borrado en total, no solo en el último', async () => {
+    const results = [PURGE_BATCH, PURGE_BATCH, 7];
+
+    const total = await runPurge(logger, 'outbox', 30, () =>
+      Promise.resolve(results.shift() ?? 0),
+    );
+
+    expect(total).toBe(PURGE_BATCH * 2 + 7);
+    expect(String(log.mock.calls[0]?.[0])).toContain(
+      String(PURGE_BATCH * 2 + 7),
+    );
   });
 
   it('si no había nada que borrar, no escribe en el log', async () => {

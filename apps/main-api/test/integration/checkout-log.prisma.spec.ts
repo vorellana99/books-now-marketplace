@@ -16,6 +16,7 @@ import {
   type CheckoutLogSubject,
 } from '../support/checkout-log.contract.js';
 import {
+  holdRowLock,
   query,
   resetDatabase,
   useDatabaseTimeZone,
@@ -91,6 +92,28 @@ describe('PrismaCheckoutLog: lo que solo se puede probar con PostgreSQL real', (
       'SELECT count(*) AS n FROM sales.checkouts',
     );
     expect(Number(n)).toBe(1);
+  });
+
+  it('purgeFinished pasa de largo por un checkout que otra transacción tiene bloqueado, en vez de esperarla (SKIP LOCKED)', async () => {
+    const log = new PrismaCheckoutLog(prisma);
+    const ids = [randomUUID(), randomUUID(), randomUUID()];
+    for (const id of ids) {
+      await log.start(id, randomUUID(), 'h');
+      await log.abort(id);
+    }
+    await query(
+      "UPDATE sales.checkouts SET started_at = now() - interval '40 days'",
+    );
+    const release = await holdRowLock(
+      'SELECT 1 FROM sales.checkouts WHERE order_id = $1 FOR UPDATE',
+      [ids[2]],
+    );
+    try {
+      expect(await log.purgeFinished(30, 100)).toBe(2);
+    } finally {
+      await release();
+    }
+    expect(await log.purgeFinished(30, 100)).toBe(1);
   });
 
   it('guarda el requestId de la petición en la columna request_id', async () => {
