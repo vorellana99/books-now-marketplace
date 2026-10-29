@@ -187,7 +187,7 @@ prueba con mutaciones el login
 
 **Cómo pedirlo:** `/nueva-variable-entorno CORS_ORIGINS` (o simplemente «añade una variable para…»).
 
-**Qué comprueba la lista:** el esquema Zod con un valor por defecto **seguro** y límites → una regla de producción si un valor inseguro nunca debe llegar allí (la app no arranca) → leerla con `ConfigService.getOrThrow` → pruebas en `test/unit/env.schema.spec.ts` (por defecto, cada borde, valores no válidos, regla de producción) → ajuste en `global-setup.ts` si estorba a otras pruebas → `.env.example`, tabla del README y guía 02.
+**Qué comprueba la lista:** el esquema Zod con un valor por defecto **seguro** y límites → una regla de producción si un valor inseguro nunca debe llegar allí (la app no arranca) → leerla con `ConfigService.getOrThrow` → pruebas en `test/unit/platform/env.schema.spec.ts` (por defecto, cada borde, valores no válidos, regla de producción) → ajuste en `global-setup.ts` si estorba a otras pruebas → `.env.example`, tabla del README y guía 02.
 
 **Ejemplo real (7.10, `CORS_ORIGINS`):** vacía por defecto (sin CORS), hasta 20 orígenes normalizados, sin comodines ni rutas, solo `https` en producción; 32 pruebas del esquema (junto con `TRUST_PROXY` y los límites de intentos).
 

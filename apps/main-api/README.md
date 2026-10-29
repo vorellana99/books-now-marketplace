@@ -392,7 +392,7 @@ pnpm test                                        # unitarios
 pnpm run test:e2e                                # e2e e integración (levantan su propio PostgreSQL; requiere Docker)
 pnpm run test:watch                              # unitarios en modo observación
 pnpm run test:cov                                # unitarios con cobertura
-pnpm exec vitest run test/unit/env.schema.spec.ts   # un solo archivo
+pnpm exec vitest run test/unit/platform/env.schema.spec.ts   # un solo archivo
 pnpm exec vitest run -t "texto del test"             # un test por nombre
 ```
 

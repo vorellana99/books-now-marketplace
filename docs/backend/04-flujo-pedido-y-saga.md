@@ -270,7 +270,7 @@ export class RecoverCheckoutsJob {
 
 #### Con proveedores lentos (3 s por operación)
 
-Mientras no haya proveedores reales, la pasarela y el correo simulados tardan 3 s (`PAYMENT_SIMULATED_DELAY_MS` y `EMAIL_SIMULATED_DELAY_MS`), y el diseño tiene que aguantarlo. Los márgenes, con los valores por defecto (los comprueba `test/unit/delay-margins.spec.ts`):
+Mientras no haya proveedores reales, la pasarela y el correo simulados tardan 3 s (`PAYMENT_SIMULATED_DELAY_MS` y `EMAIL_SIMULATED_DELAY_MS`), y el diseño tiene que aguantarlo. Los márgenes, con los valores por defecto (los comprueba `test/unit/sales/delay-margins.spec.ts`):
 
 | Margen | Cuenta | Resultado |
 |---|---|---|

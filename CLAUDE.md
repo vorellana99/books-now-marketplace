@@ -27,7 +27,7 @@ pnpm run format:check              # comprueba Prettier (pnpm format reescribe l
 pnpm run build
 pnpm test                          # solo unitarios, sin base de datos
 pnpm run test:e2e                  # integración + e2e; levanta su propio postgres:18 con Testcontainers, requiere Docker
-pnpm exec vitest run test/unit/env.schema.spec.ts     # un archivo unitario
+pnpm exec vitest run test/unit/platform/env.schema.spec.ts     # un archivo unitario
 pnpm exec vitest run -t "texto del test"              # un test por nombre
 pnpm exec vitest run --config ./vitest.config.e2e.ts test/e2e/auth.e2e.spec.ts   # un archivo e2e
 ```
@@ -54,7 +54,7 @@ Los tests importan de `vite-plus/test` (no de `vitest`) y viven en `test/`. `src
 
 Monolito modular con DDD + CQRS (`@nestjs/cqrs`) + arquitectura hexagonal. Los bounded contexts viven en `contexts/` (`sales`, `catalog`, `inventory`, `identity`) y cada uno se divide en `domain/`, `application/` e `infrastructure/` (más `<contexto>.module.ts`). Lo transversal está en `platform/` (config, prisma, outbox, observability, http, health, auth) y en `shared-kernel/`.
 
-**Reglas de dependencias**: las comprueba `test/unit/dependency-rules.spec.ts` (helpers en `test/support/architecture.ts`; una librería nueva permitida en `domain/` o `contracts/` hay que autorizarla ahí).
+**Reglas de dependencias**: las comprueba `test/unit/architecture/dependency-rules.spec.ts` (helpers en `test/support/architecture.ts`; una librería nueva permitida en `domain/` o `contracts/` hay que autorizarla ahí).
 - Un contexto nunca importa de otro contexto. Se hablan solo mediante `contracts/` (el "Published Language": comandos, queries y eventos) y `shared-kernel/`.
 - `domain/` solo importa `decimal.js` y `node:*` (nada de Nest, Prisma ni platform).
 - `application/` puede usar Nest pero no Prisma; el código que necesita la transacción (`tx`) va en `infrastructure/`.
