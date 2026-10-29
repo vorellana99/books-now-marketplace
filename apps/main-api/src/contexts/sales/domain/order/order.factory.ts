@@ -18,7 +18,7 @@ export class OrderFactory {
     id: string,
     customerId: string,
     items: PricedCartItem[],
-    shippingAddress: ShippingAddress,
+    shippingAddress: ShippingAddress | null = null, // sin dirección solo para cotizar: `place()` la exige
   ): Order {
     if (items.length === 0) {
       throw new DomainError('EMPTY_ORDER', 'El carrito no tiene libros');
