@@ -64,8 +64,8 @@
 | RN-33 | **Inicio de sesión** | El error es el mismo con un correo desconocido que con una contraseña equivocada (`INVALID_CREDENTIALS`): la pantalla no puede revelar qué correos existen |
 | RN-34 | **Vida de la sesión** | El token de acceso vale 15 minutos. El de refresco vale 14 días sin usarse y **sirve una sola vez**: cada renovación entrega uno nuevo. Si se presenta uno ya usado, se asume robo y se cierra la sesión entera (`INVALID_REFRESH_TOKEN`) |
 | RN-35 | **Cerrar sesión** | Cierra la sesión de ese dispositivo; las de otros dispositivos siguen. El token de acceso ya emitido vale hasta que vence |
-| RN-36 | **Cada quien ve lo suyo** | Un comprador ve solo sus pedidos; un pedido ajeno da `404`. El administrador ve cualquiera (rige desde `7.7`) |
-| RN-37 | **Límite de intentos** | Login, registro y renovación tendrán límite de intentos (`429`) (tarea `7.10`, pendiente) |
+| RN-36 | **Cada quien ve lo suyo** | Un comprador ve solo sus pedidos; un pedido ajeno da `404`. El administrador ve cualquiera. Rige en el backend desde `7.7` |
+| RN-37 | **Límite de intentos** | Login (por dirección y por correo), registro, y renovación junto con cierre de sesión (por dirección) tienen límite de intentos por ventana (60 segundos por defecto): al pasarse, `429 TOO_MANY_REQUESTS` con la cabecera `Retry-After` en segundos. Cuentan todos los intentos, también los correctos. Tarea `7.10`, hecha |
 
 ## Historial de pedidos
 

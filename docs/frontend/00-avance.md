@@ -14,11 +14,11 @@ Cada corte trae un cuadro de **Tareas** que explica qué es cada una y para qué
 | F1 | Catálogo | HU-10, HU-11 | ⬜ | `feature/frontend-mvp` | — |
 | F2 | Cuenta y sesión | HU-01 a HU-04 | ⬜ | `feature/frontend-mvp` | — |
 | F3 | Carrito | HU-20 a HU-22 | ⬜ | `feature/frontend-mvp` | — |
-| F4 | Compra | HU-30 a HU-34 | ⬜ ⛔ | `feature/frontend-mvp` | — |
-| F5 | Pedidos | HU-40, HU-41 | ⬜ ⛔ | `feature/frontend-mvp` | — |
+| F4 | Compra | HU-30 a HU-34 | ⬜ ⛔ (corte 8) | `feature/frontend-mvp` | — |
+| F5 | Pedidos | HU-40, HU-41 | ⬜ | `feature/frontend-mvp` | — |
 | F6 | Calidad y salida | — | ⬜ | `feature/frontend-mvp` | — |
 
-F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en adelante cada corte depende del anterior. **F4 y F5 se pueden construir contra la API simulada (MSW), pero quedan ⛔ para cerrarse** hasta que el backend entregue `7.7`, el corte 8 y `7.8` ([07-fases-y-roadmap](07-fases-y-roadmap.md)). Una sola rama de trabajo, `feature/frontend-mvp`; el pull request lo abre el usuario cuando lo decida.
+F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en adelante cada corte depende del anterior. **El corte 7 del backend (autenticación: `7.7`, `7.8`, `7.10`) ya está entregado**, así que F5 y la parte de F4 que no es la cotización se pueden construir y cerrar contra la API real. **F4 sigue ⛔ solo por el corte 8** (cotización, aún no existe: se construye contra MSW) ([07-fases-y-roadmap](07-fases-y-roadmap.md)). Una sola rama de trabajo, `feature/frontend-mvp`; el pull request lo abre el usuario cuando lo decida.
 
 **Un corte está terminado cuando:** sus tareas están marcadas, `vp check`, `vp test` y `vp build` pasan, sus criterios de "listo cuando…" se cumplen ejecutándolos de verdad (en el navegador y contra la API real, no solo con MSW), y la guía, [producto](../product/04-historias-de-usuario.md) y el [diseño](../product/diseno/README.md) reflejan lo que realmente se hizo (el estado **Web** de cada historia).
 
@@ -130,7 +130,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 **Historias:** [HU-30 a HU-34](../product/04-historias-de-usuario.md#compra) y HU-22 completa · **Pantallas:** PA-06, PA-07 · **Guía:** [04 sección 5](04-flujos-de-pantalla.md#5-pago-pa-06) · [03 sección 5](03-integracion-con-la-api.md#5-idempotencia-de-la-compra)
 
-**Bloqueo para cerrarse:** corte 8 del backend (cotización) y `7.7` (compra con el cliente del token).
+**Bloqueo para cerrarse:** corte 8 del backend (cotización). La compra con el cliente del token (`7.7`) ya está: el backend responde `400` si el cuerpo trae `customerId` y `403` si quien compra es un administrador.
 
 **Listo cuando:** contra el backend real, una persona con sesión ve su total antes de pagar, escribe su dirección, paga con una tarjeta simulada y ve la confirmación con el total realmente cobrado; **un reintento tras un corte de red no cobra dos veces**; cada fallo de negocio (sin stock, tarjeta rechazada, dirección inválida) muestra su mensaje y dice si se cobró; y el cuerpo de `POST /orders` ya no lleva `customerId`.
 
@@ -143,22 +143,22 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 | 3 | Idempotencia y máquina de pago | Huella del intento, clave en `sessionStorage` y los estados `Cotizando`…`Confirmado` | HU-31, HU-32 | ⬜ |
 | 4 | Errores de la compra | Un mensaje por `errorCode` con su acción, y "no se pudo confirmar" sin afirmar que no se cobró | HU-33 | ⬜ |
 | 5 | PA-07 Confirmación | Número de pedido, libros, `charged` real y aviso del email | HU-34 | ⬜ |
-| 6 | Quitar `customerId` | Dejar de enviar el cliente cuando llegue `7.7` | Cumplir RN-23 y DP-09 | ⬜ ⛔ |
+| 6 | Sin `customerId` | No enviar el cliente: `7.7` ya está en el backend y lo rechaza | Cumplir RN-23 y DP-09 | ⬜ |
 
 - [ ] F4.1 Cotización. Se comprueba: HU-22 (subtotal de cada línea, subtotal, descuento, envío y total de la respuesta, sin calcular nada; recotiza al cambiar una cantidad; si falla no se puede continuar). **No se cierra** hasta probarla contra la ruta real del corte 8
 - [ ] F4.2 Dirección. Se comprueba: HU-30 (campos y largos, `INVALID_SHIPPING_ADDRESS` junto al campo, espacios recortados, empieza vacía, se conserva al ir y volver al carrito)
 - [ ] F4.3 Idempotencia y pago. Se comprueba: HU-31 y HU-32 (misma clave tras corte, `5xx` y `CHECKOUT_IN_PROGRESS`; clave nueva tras `PREVIOUS_ATTEMPT_FAILED`, `IDEMPOTENCY_KEY_REUSED` o un cambio; la clave sobrevive a una recarga; el botón no se pulsa dos veces; el `404` de cliente recién creado reintenta una vez)
 - [ ] F4.4 Errores. Se comprueba: HU-33 (cada código de [producto 07](../product/07-contenido-y-mensajes.md) tiene mensaje; red caída y `5xx` no afirman que no se cobró; una sesión vencida a mitad del pago se renueva y se reenvía con la misma clave)
 - [ ] F4.5 Confirmación. Se comprueba: HU-34 (muestra el `charged` aunque difiera de la cotización; recargar muestra lo mismo; vacía solo el carrito del usuario)
-- [ ] F4.6 Sin `customerId`. Se comprueba: el cuerpo de `POST /orders` no lo incluye y la compra funciona contra la API real
+- [ ] F4.6 Sin `customerId`. Se comprueba: el cuerpo de `POST /orders` no lo incluye y la compra funciona contra la API real (se puede cerrar ya; si el cuerpo lo llevara, la API responde `400`)
 
 ---
 
-## Corte F5: Pedidos ⬜ ⛔
+## Corte F5: Pedidos ⬜
 
 **Historias:** [HU-40, HU-41](../product/04-historias-de-usuario.md#pedidos) · **Pantallas:** PA-08, PA-09
 
-**Bloqueo para cerrarse:** `7.8` (`GET /me/orders`) y `7.7` (el pedido solo para su dueño y, con DP-15, con su dirección).
+**Sin bloqueo del backend:** `7.8` (`GET /me/orders`) y `7.7` (el pedido solo para su dueño) ya están entregados. **Pendiente de producto, DP-15:** `GET /orders/:id` **no** devuelve la dirección ni el teléfono; vienen en cada ítem de `GET /me/orders`. Hasta que se decida, PA-09 muestra la sección de envío solo con lo que ya trae el pedido cargado de la lista.
 
 **Listo cuando:** una persona ve sus pedidos del más reciente al más antiguo, con paginación por cursor, y abre cada uno con el precio de la compra; un pedido ajeno o inexistente muestra "no encontrado"; y la dirección aparece cuando la API la devuelve.
 
@@ -166,10 +166,10 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
-| 1 | PA-08 Mis pedidos | Lista paginada con `nextCursor` tal cual, con la forma de DP-18 | HU-40 | ⬜ ⛔ |
+| 1 | PA-08 Mis pedidos | Lista paginada con `nextCursor` tal cual, con la forma de DP-18 | HU-40 | ⬜ |
 | 2 | PA-09 Detalle del pedido | Estado, total, líneas con el precio del momento y, si viene, la sección de envío | HU-41 | ⬜ |
 
-- [ ] F5.1 Mis pedidos. Se comprueba: HU-40 (orden, cursor, vacío). **No se cierra** hasta probarla contra `GET /me/orders`
+- [ ] F5.1 Mis pedidos. Se comprueba: HU-40 (orden, cursor, vacío). Se prueba contra `GET /me/orders`, que ya existe
 - [ ] F5.2 Detalle. Se comprueba: HU-41 (pedido propio; ajeno, inexistente y `id` no UUID dan el mismo "no encontrado"; la dirección solo si `shippingAddress` no es `null`)
 
 ---
@@ -178,7 +178,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 **Guía:** [06-tests](06-tests.md) · [producto 08](../product/08-requisitos-de-experiencia.md) · [02 sección 3](02-estructura-y-puesta-en-marcha.md#3-variables-de-entorno)
 
-**Bloqueo para la salida a producción:** `7.7`, `7.8` y `7.10` del backend (DP-09).
+**La salida a producción (DP-09)** ya no espera al backend: `7.7`, `7.8` y `7.10` están entregados. Falta la cotización (corte 8) para la compra completa, y configurar en el despliegue `CORS_ORIGINS` (o el proxy inverso), `TRUST_PROXY` y `JWT_SECRET`.
 
 **Listo cuando:** el recorrido completo (registro → compra → pedidos) pasa con Playwright contra el backend real; las pantallas pasan axe en nivel AA y se usan solo con teclado; el rendimiento cumple los objetivos de [producto 08](../product/08-requisitos-de-experiencia.md) en un teléfono de gama media; el frontend queda desplegable con su configuración de producción; y la revisión de seguridad está hecha.
 
@@ -257,3 +257,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-29 | Corte F0 (Fundaciones): la plantilla pasa a React 19 + TanStack Router y Query + Tailwind 4 con los tokens de diseño + `shared/ui` (botón, aviso, esqueleto, hoja lateral y paneles de estado); cliente `openapi-fetch` con tipos generados del backend real, renovación tras un `401`, `ApiError` y mensajes por `errorCode`; cabecera, buscador y PA-10; proxy `/api` al backend; CI. 55 pruebas pasan (unitarias de montos, fechas, errores, cliente con MSW y reglas de dependencia; de componente con axe). Falta la revisión visual en un navegador |
 | 2026-10-29 | Decisión: formularios con React Hook Form + Zod 4. Se cierra el problema abierto 5; la librería se instala en F2.2 |
 | 2026-10-29 | Revisión visual de F0 con Playwright (Chromium 156) contra los mockups, en móvil y escritorio. Se corrigieron cuatro diferencias reales (serif sin tamaño óptico, foco invisible del buscador, botón de enviar oculto, color de la X del menú) y una del propio mockup (enlaces de navegación). 56 pruebas pasan (se agregó una que impide un botón oculto en el buscador). El corte F0 queda ✅ |
+| 2026-10-29 | Alineación con el backend tras traer `feature/backend-mvp` (corte 7 cerrado). Solo documentación; no se tocó el código de la tienda. `7.7`, `7.8` y `7.10` ya existen: se actualizaron esta guía, `03`, `07`, `02` y `06` de frontend, los documentos de producto (`00`, `01`, `03`, `04`, `06`, `07`, `09`, `README`) y `CLAUDE.md`. F5 deja de estar ⛔ y F4 queda ⛔ solo por la cotización (corte 8). **Hallazgo:** `GET /orders/:id` **no devuelve la dirección ni el teléfono** (DP-15 esperaba que sí tras `7.7`); sí vienen en cada ítem de `GET /me/orders`. DP-15 queda **por decidir** con tres opciones en [producto 09](../product/09-decisiones-y-preguntas.md). **Pendiente de código** (no hecho aquí): `src/shared/api/schema.d.ts` es del backend anterior (todavía tiene `customerId` en `POST /orders` y no tiene `/me/orders` ni `/admin/orders`); hay que regenerarlo con `vp run api:types` con el backend nuevo levantado, y revisar los handlers de MSW |

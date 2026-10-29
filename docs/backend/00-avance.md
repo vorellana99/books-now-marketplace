@@ -434,7 +434,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 **Por qué:** la tienda web debe mostrar el total real antes de pagar, y hoy el descuento y el envío solo se calculan al cobrar (`PlaceOrderHandler`). Con la cotización, las reglas de precio siguen en un solo lugar, el backend, y el frontend no las duplica. Sin ella, la tienda no puede mostrar el carrito completo (historia HU-22) ni el paso de pago.
 
-**Depende de:** la tarea `7.7` (el cliente sale del token, no del cuerpo; el descuento premium depende de él).
+**Depende de:** la tarea `7.7` (el cliente sale del token, no del cuerpo; el descuento premium depende de él). **Ya está hecha** (corte 7 cerrado): `@CurrentUser()` y `@Roles('BUYER')` están disponibles.
 
 **Listo cuando:** `POST /orders/quote`, con el token de un comprador, devuelve `{ currency, lines[{ isbn, unitPrice, quantity, subtotal }], subtotal, discount, shipping, total }` y, para cada uno de los ocho ejemplos de [producto](../product/03-reglas-de-negocio.md), el `total` es **exactamente** el `charged` que devuelve `POST /orders` con el mismo carrito; la cotización no deja nada en la base (ni checkout, ni reserva de stock, ni evento del outbox) y no cobra; la suma `subtotal − discount + shipping` coincide con `total` en lo que se muestra, y la suma de los subtotales de línea es el `subtotal`; un token ausente o inválido da `401`; y el contrato, las guías y los tests están al día.
 
@@ -457,7 +457,7 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 - **El redondeo (RN-06) es uno solo, sobre el total.** Si el descuento y el envío se redondean cada uno por su lado, `subtotal − descuento + envío` puede diferir del total en un centavo (un descuento de 10 % sobre 9.99 es 0.999). Regla propuesta: el `total` es el único redondeado, el `shipping` es exacto (ya tiene 2 decimales) y el `discount` se deriva como `subtotal − (total − shipping)`, de modo que las partes mostradas siempre suman el total. Se confirma en 8.1 con un test sobre muchos precios.
 - **La cotización puede dejar de valer.** Un precio o la condición premium pueden cambiar entre cotizar y pagar. Lo que manda es el `charged` del pedido (RN-08); la tienda lo muestra en la confirmación.
 - **No avisa de falta de stock.** Cotizar no reserva, así que `OUT_OF_STOCK` se descubre al pagar. Es intencional: reservar al cotizar bloquearía unidades de quien solo mira el carrito.
-- **Abuso:** es una ruta autenticada que consulta el catálogo por cada línea. El límite de intentos de la `7.10` debería cubrirla; si no, se anota como pendiente allí.
+- **Abuso:** es una ruta autenticada que consulta el catálogo por cada línea. El límite de intentos de la `7.10` **no la cubre** (solo limita `/auth/*`): hay que añadirle uno en esta tarea 8.3, o anotarlo como pendiente.
 - **Dos copias del cálculo:** si la cotización y `PlaceOrderHandler` armaran el precio por separado podrían desviarse. Por eso 8.1 va primero y ambos usan el mismo desglose; un test compara los dos caminos.
 
 **Fuera de este corte:** reservar stock o fijar el precio cotizado durante unos minutos, cupones, y mostrar el desglose en el historial de pedidos.

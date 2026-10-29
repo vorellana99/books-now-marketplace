@@ -23,7 +23,7 @@ vp test -t "texto del test"          # un test por nombre
 ## La API simulada (MSW)
 
 - Los handlers se tipan con el esquema generado (`schema.d.ts`), así que un cambio de contrato del backend rompe la compilación de las pruebas.
-- Los endpoints que **aún no existen** (`POST /orders/quote`, `GET /me/orders`, y el `shippingAddress` de `GET /orders/:id`) tienen handlers que siguen el contrato propuesto y llevan el comentario `// CONTRATO PROPUESTO: aún no existe en el backend`. Una historia que depende de ellos **no se marca terminada** hasta probarla contra la ruta real ([00-avance](00-avance.md)).
+- El endpoint que **aún no existe** (`POST /orders/quote`, corte 8) tiene handlers que siguen el contrato propuesto y llevan el comentario `// CONTRATO PROPUESTO: aún no existe en el backend`. Una historia que depende de él **no se marca terminada** hasta probarla contra la ruta real ([00-avance](00-avance.md)).
 - Cada prueba parte de un estado limpio de MSW y de `localStorage`/`sessionStorage`. Una petición sin handler falla la prueba (`onUnhandledFrame: "error"`).
 
 ## Casos mínimos, por funcionalidad

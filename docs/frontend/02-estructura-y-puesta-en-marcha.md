@@ -97,7 +97,7 @@ Se validan una sola vez en `shared/config/` (con Zod), y la app no arranca si fa
 
 ### Proxy de desarrollo
 
-La API todavía no tiene CORS (tarea `7.10` del backend). Mientras tanto, el navegador llama a su propio origen y Vite reenvía:
+La API ya admite CORS (tarea `7.10` del backend), pero **vacío por defecto**: solo responde las cabeceras CORS a los orígenes de `CORS_ORIGINS` (por ejemplo `CORS_ORIGINS=http://localhost:5173`, separados por comas, sin comodines). Por eso en desarrollo se sigue usando el proxy: el navegador llama a su propio origen y Vite reenvía, sin configurar nada en el backend:
 
 ```ts
 // vite.config.ts (fragmento)
@@ -111,8 +111,8 @@ server: {
 },
 ```
 
-En producción el frontend y la API quedan en el **mismo origen** detrás de un proxy inverso que enruta `/api` al backend; si no fuera así, se necesita `CORS_ORIGINS` en el backend (`7.10`). Ver [00-avance](00-avance.md), F6.
+En producción el frontend y la API quedan en el **mismo origen** detrás de un proxy inverso que enruta `/api` al backend; si no fuera así, se necesita `CORS_ORIGINS` en el backend, con el origen exacto de la tienda y solo `https` (en producción el backend rechaza otros). Si hay un proxy delante de la API, el backend necesita además `TRUST_PROXY` con el número de proxies, o el límite de intentos contará la dirección del proxy y no la de cada cliente. Ver [00-avance](00-avance.md), F6.
 
 ## 4. Usuarios de prueba
 
-El seed del backend crea compradores de ejemplo (Ana y Luis) con una contraseña de desarrollo que documenta el README del backend (tarea `7.11`). No se copian aquí: se consultan allí. Hasta esa tarea, se registra una cuenta con el formulario de PA-03 o con `POST /auth/register`.
+El seed del backend crea compradores de ejemplo (Ana y Luis) con una contraseña de desarrollo que documenta el README del backend (tarea `7.11`, ya hecha; también crea un administrador). No se copian aquí: se consultan allí. Hace falta cargar el seed (`pnpm run db:seed` en el backend); si no, se registra una cuenta con el formulario de PA-03 o con `POST /auth/register`.

@@ -10,9 +10,9 @@
 | **F1** Catálogo | Buscar, listar y ver un libro | HU-10, HU-11 | PA-01, PA-02, PA-10 | ✅ Ya existe |
 | **F2** Cuenta y sesión | Registro, login, renovación, cierre de sesión y guardia de rutas | HU-01 a HU-04 | PA-03, PA-04 | ✅ Ya existe |
 | **F3** Carrito | Carrito persistido por usuario y PA-05 | HU-20, HU-21, HU-22 (sin totales) | PA-05 | Corte 8 para los totales |
-| **F4** Compra | Dirección, cotización, pago con reintento seguro, errores y confirmación | HU-30 a HU-34, y HU-22 completa | PA-06, PA-07 | **`7.7`** y **corte 8** |
-| **F5** Pedidos | Mis pedidos y su detalle | HU-40, HU-41 | PA-08, PA-09 | **`7.8`** (y `7.7` para la dirección) |
-| **F6** Calidad y salida | Auditoría de accesibilidad, e2e con Playwright, rendimiento, despliegue y README | — | — | **`7.10`** (límites y CORS), o el proxy inverso |
+| **F4** Compra | Dirección, cotización, pago con reintento seguro, errores y confirmación | HU-30 a HU-34, y HU-22 completa | PA-06, PA-07 | **Corte 8** (`7.7` ya está) |
+| **F5** Pedidos | Mis pedidos y su detalle | HU-40, HU-41 | PA-08, PA-09 | Nada (`7.7` y `7.8` ya están); la dirección en el detalle es DP-15, pendiente de producto |
+| **F6** Calidad y salida | Auditoría de accesibilidad, e2e con Playwright, rendimiento, despliegue y README | — | — | Nada (`7.10` ya está): configurar `CORS_ORIGINS` o el proxy inverso |
 
 La administración (`HU-50` a `HU-53`) queda **fuera** de este plan: es la segunda etapa del producto (DP-03).
 
@@ -29,21 +29,15 @@ flowchart LR
         F5 --> F6
     end
     subgraph BE["Backend"]
-        B7["7.7 compra con token"]
-        B8["7.8 GET /me/orders"]
-        B10["7.10 límites y CORS"]
-        B81["corte 8 cotización"]
+        B81["corte 8 cotización (pendiente)"]
     end
     B81 -. "totales" .-> F3
-    B7 -. "cliente del token" .-> F4
     B81 -. "pago" .-> F4
-    B8 -. "mis pedidos" .-> F5
-    B10 -. "salida a producción" .-> F6
 ```
 
 - **Ruta crítica:** `F0 → F2 → F3 → F4`. F1 y F2 pueden ir en paralelo tras F0.
 - **No hay que esperar al backend para empezar:** F0 a F2 usan rutas que ya existen, y F3 a F5 avanzan con MSW siguiendo el contrato propuesto. Lo que **no se puede** es cerrar una historia hasta probarla contra la ruta real.
-- **Puede construirse ya, pero no abrirse al público,** hasta cerrar `7.7`, `7.8` y `7.10` (DP-09). Hasta `7.7`, `POST /orders` lleva el `customerId` en el cuerpo: el frontend manda el `id` del usuario con sesión.
+- **El corte 7 del backend está cerrado** (`7.7`, `7.8`, `7.10` y también `7.9`, `7.11`): ya se cumplen las condiciones de DP-09 para abrirla al público, salvo la cotización (corte 8), que bloquea el paso de pago. `POST /orders` ya no admite `customerId`.
 
 ## Diseño antes de cada corte
 
@@ -64,8 +58,8 @@ Si al verla en el navegador una pantalla no funciona como su wireframe, se corri
 
 | Cambio | Acción en el frontend |
 |---|---|
-| Llega `7.7` | Quitar `customerId` del cuerpo de `POST /orders`; actualizar los handlers de MSW; mostrar la dirección en PA-09 si viene (DP-15) |
+| `7.7` (ya llegó) | Quitar `customerId` del cuerpo de `POST /orders` (la API responde `400` si va); actualizar los handlers de MSW. La dirección en PA-09 depende de DP-15: `GET /orders/:id` no la devuelve |
 | Llega el corte 8 | Sustituir el handler de MSW de la cotización por la ruta real; completar HU-22 y el paso de pago |
-| Llega `7.8` | Apuntar PA-08 a `GET /me/orders` con la forma de DP-18 |
-| Llega `7.10` | Quitar la dependencia del proxy de desarrollo si se usa CORS; manejar `429` |
+| `7.8` (ya llegó) | Apuntar PA-08 a `GET /me/orders` con la forma de DP-18 (ya existe) |
+| `7.10` (ya llegó) | Quitar la dependencia del proxy de desarrollo si se usa CORS (poniendo el origen de la tienda en `CORS_ORIGINS`); manejar `429` con `Retry-After` |
 | Cambia el contrato | `vp run api:types` y corregir lo que deje de compilar |

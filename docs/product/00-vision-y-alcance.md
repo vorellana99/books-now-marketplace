@@ -34,7 +34,7 @@ Cada área es dueña de sus datos y solo se comunica con las demás por su API p
 
 | Etapa | Qué incluye | Estado |
 |---|---|---|
-| **Backend MVP** | Catálogo y búsqueda, compra con pago simulado, dirección de envío, administración de libros y stock, historial de pedidos, registro e inicio de sesión | Casi completo; falta la parte del corte 7 que liga la compra y los pedidos al usuario autenticado (`7.7` a `7.12`) y la **cotización del total** antes de pagar (corte 8, DP-07) |
+| **Backend MVP** | Catálogo y búsqueda, compra con pago simulado, dirección de envío, administración de libros y stock, historial de pedidos, registro e inicio de sesión | Casi completo: el corte 7 (autenticación) está cerrado; falta la **cotización del total** antes de pagar (corte 8, DP-07) |
 | **Tienda web MVP** (`apps/store-web`) | Todo lo que hace una persona compradora, **con cuenta desde el inicio**: registrarse, entrar, explorar el catálogo, armar el carrito, comprar, ver sus pedidos. Ver [historias](04-historias-de-usuario.md) | Pendiente |
 | **Panel de administración** | Crear y editar libros, cargar stock, consultar pedidos de un cliente. Las historias ya están escritas (épica de administración), pero **no forman parte de la tienda web MVP** | Segunda etapa, por definir (DP-03) |
 
@@ -53,4 +53,4 @@ Cada área es dueña de sus datos y solo se comunica con las demás por su API p
 
 ## Estado actual de la seguridad
 
-La API ya tiene registro, inicio de sesión, renovación y cierre de sesión, y toda ruta exige un token salvo las públicas (catálogo, autenticación y salud). Pero, mientras no estén hechas las tareas `7.7` a `7.9` del corte 7, **el cliente de una compra sigue viniendo en el cuerpo de `POST /orders`** y `GET /orders/:id` no comprueba de quién es el pedido. La tienda web puede construirse ya contra eso (enviando como `customerId` el `id` del usuario con sesión), pero **no se abre al público** hasta cerrar `7.7`, `7.8` (`GET /me/orders`) y `7.10` (límites de intentos y CORS). La administración puede esperar a `7.9`: en producción queda cerrada. Ver [DP-09](09-decisiones-y-preguntas.md).
+La API ya tiene registro, inicio de sesión, renovación y cierre de sesión, y toda ruta exige un token salvo las públicas (catálogo, autenticación y salud). Desde el corte 7 (cerrado), **el cliente de una compra sale del token** (un `customerId` en el cuerpo de `POST /orders` es un `400`), un pedido solo lo ve su dueño o un administrador (para otro es `404`), el comprador tiene `GET /me/orders`, el login, el registro y la renovación tienen límite de intentos (`429` con `Retry-After`), y la API admite CORS para los orígenes que se configuren. La administración exige el rol de administrador (`403` para un comprador). Se cumplen así las condiciones de [DP-09](09-decisiones-y-preguntas.md) para abrir la tienda al público, salvo la cotización del total (corte 8), que bloquea el paso de pago.

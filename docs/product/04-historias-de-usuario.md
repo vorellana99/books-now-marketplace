@@ -16,18 +16,18 @@
 | [HU-21](#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | — | ⬜ | Tienda MVP |
 | [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ⬜ (cotización) | ⬜ | Tienda MVP |
 | [HU-30](#hu-30-indicar-la-dirección-de-envío) | Indicar la dirección de envío | Compra | ✅ | ⬜ | Tienda MVP |
-| [HU-31](#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | 🔄 (`7.7`) | ⬜ | Tienda MVP |
+| [HU-31](#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-32](#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-33](#hu-33-entender-por-qué-falló-la-compra) | Entender por qué falló la compra | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-34](#hu-34-ver-la-confirmación) | Ver la confirmación | Compra | ✅ | ⬜ | Tienda MVP |
-| [HU-40](#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ⬜ (`7.8`) | ⬜ | Tienda MVP |
-| [HU-41](#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | 🔄 (`7.7`) | ⬜ | Tienda MVP |
-| [HU-50](#hu-50-crear-un-libro) | Crear un libro | Administración | 🔄 (`7.9`) | ⬜ | Segunda etapa |
-| [HU-51](#hu-51-editar-o-desactivar-un-libro) | Editar o desactivar un libro | Administración | 🔄 (`7.9`) | ⬜ | Segunda etapa |
-| [HU-52](#hu-52-cargar-stock) | Cargar stock | Administración | 🔄 (`7.9`) | ⬜ | Segunda etapa |
-| [HU-53](#hu-53-ver-los-pedidos-de-un-cliente) | Ver los pedidos de un cliente | Administración | 🔄 (`7.8`, `7.9`) | ⬜ | Segunda etapa |
+| [HU-40](#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ✅ | ⬜ | Tienda MVP |
+| [HU-41](#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ (sin dirección, DP-15) | ⬜ | Tienda MVP |
+| [HU-50](#hu-50-crear-un-libro) | Crear un libro | Administración | ✅ | ⬜ | Segunda etapa |
+| [HU-51](#hu-51-editar-o-desactivar-un-libro) | Editar o desactivar un libro | Administración | ✅ | ⬜ | Segunda etapa |
+| [HU-52](#hu-52-cargar-stock) | Cargar stock | Administración | ✅ | ⬜ | Segunda etapa |
+| [HU-53](#hu-53-ver-los-pedidos-de-un-cliente) | Ver los pedidos de un cliente | Administración | ✅ | ⬜ | Segunda etapa |
 
-`🔄 (7.x)`: el endpoint existe pero hoy se comporta distinto a como lo exige la historia; la tarea del corte 7 del backend lo cierra (ver [00-avance](../backend/00-avance.md)).
+La columna **API** de las historias del corte 7 pasó a ✅ al cerrarse ese corte del backend (ver [00-avance](../backend/00-avance.md)); la única que queda es HU-22, a la espera de la cotización (corte 8).
 
 ---
 
@@ -164,7 +164,7 @@ Reglas: RN-20, RN-21, RN-23, RN-24, RN-25 · Pantallas: PA-06 · `POST /orders` 
 - **Dado** que la pasarela tarda (la simulada demora unos 3 segundos), **cuando** espero, **entonces** veo el estado de procesando y no puedo salir sin confirmar.
 - **Dado** que compro justo después de registrarme (`404 NOT_FOUND` por cliente aún no creado), **cuando** ocurre, **entonces** la tienda reintenta sola una vez tras un par de segundos con **la misma clave**; si persiste, muestra el error genérico de HU-33.
 - **Dado** que la tarjeta se ingresa en la tienda, **cuando** pago, **entonces** el número de la tarjeta nunca se envía a LibroYa: solo el `cardToken` ([DP-06](09-decisiones-y-preguntas.md)). Mientras la pasarela sea simulada, la tienda usa un token fijo de desarrollo.
-- **Dado** que hasta `7.7` el cliente de la compra viene en el cuerpo, **cuando** la tienda compra, **entonces** envía como `customerId` el `id` de mi usuario; tras `7.7` ese campo se elimina.
+- **Dado** que el cliente de la compra es el de mi sesión, **cuando** la tienda compra, **entonces** **no** envía `customerId` (la API lo rechaza con `400`: lo toma del token) y solo un comprador puede comprar (un administrador recibe `403`).
 
 ### HU-32 Reintentar sin cobrar dos veces
 
@@ -204,12 +204,12 @@ Reglas: RN-25 · Pantallas: PA-07 · `GET /orders/:id`
 ### HU-40 Ver mis pedidos
 
 **Como** comprador, **quiero** ver mi historial de pedidos, **para** consultar qué compré y cuánto pagué.
-Reglas: RN-36, RN-40, RN-41, RN-42 · Pantallas: PA-08 · `GET /me/orders` (pendiente, `7.8`)
+Reglas: RN-36, RN-40, RN-41, RN-42 · Pantallas: PA-08 · `GET /me/orders`
 
 - **Dado** que tengo pedidos, **cuando** abro "Mis pedidos", **entonces** los veo del más reciente al más antiguo, con fecha, total cobrado y cantidad de libros.
 - **Dado** que hay más de una página, **cuando** llego al final, **entonces** puedo pedir más y la tienda usa `nextCursor` tal cual.
 - **Dado** que no tengo pedidos, **cuando** abro la lista, **entonces** veo un estado vacío con un enlace al catálogo.
-- **Dado** que la API aún no ofrece la ruta del comprador (`7.8`), **cuando** se construye esta pantalla, **entonces** se hace contra el contrato acordado en [DP-18](09-decisiones-y-preguntas.md) (la forma de cada ítem del historial actual) y no contra `GET /orders?customerId=` (que es de administración).
+- **Dado** que la ruta del comprador existe (`GET /me/orders`, desde `7.8`), **cuando** se construye esta pantalla, **entonces** se hace contra ella, con la forma de [DP-18](09-decisiones-y-preguntas.md), y no contra `GET /admin/orders?customerId=` (que es de administración).
 
 ### HU-41 Ver el detalle de un pedido
 
@@ -219,7 +219,7 @@ Reglas: RN-01, RN-36, RN-42 · Pantallas: PA-09 · `GET /orders/:id`
 - **Dado** un pedido mío, **cuando** lo abro, **entonces** veo estado, total cobrado y por línea ISBN, título, precio unitario **del momento de la compra** y cantidad.
 - **Dado** un pedido que no es mío o no existe (`NOT_FOUND`), **cuando** abro la página, **entonces** veo "Pedido no encontrado".
 - **Dado** que el id no es un UUID (`400`), **cuando** abro la página, **entonces** veo el mismo "Pedido no encontrado".
-- **Dado** que `GET /orders/:id` devolverá la dirección y el teléfono a su dueño cuando `7.7` lo limite a su dueño o a un administrador ([DP-15](09-decisiones-y-preguntas.md)), **cuando** el pedido trae `shippingAddress`, **entonces** la pantalla muestra una sección "Envío" con destinatario, teléfono y dirección.
+- **Dado** que la dirección y el teléfono se mostrarían a su dueño ([DP-15](09-decisiones-y-preguntas.md), **por decidir**: `GET /orders/:id` no los devuelve hoy; sí los trae cada ítem de `GET /me/orders`), **cuando** el pedido trae `shippingAddress`, **entonces** la pantalla muestra una sección "Envío" con destinatario, teléfono y dirección.
 - **Dado** que hoy el endpoint **no** la devuelve (o el pedido es anterior a la dirección y viene `null`), **cuando** se muestra el pedido, **entonces** no hay sección de envío.
 
 ---
@@ -255,6 +255,6 @@ Reglas: RN-52 · `POST /admin/stock/:isbn/additions`
 ### HU-53 Ver los pedidos de un cliente
 
 **Como** administrador, **quiero** consultar los pedidos de cualquier cliente, **para** atender sus consultas.
-Reglas: RN-40, RN-41 · `GET /admin/orders?customerId=` (ruta nueva prevista en `7.8`)
+Reglas: RN-40, RN-41 · `GET /admin/orders?customerId=` (desde `7.8`; exige rol de administrador)
 
 - **Dado** un cliente, **cuando** consulto sus pedidos, **entonces** los veo del más reciente al más antiguo, con la dirección de envío, paginados por cursor.

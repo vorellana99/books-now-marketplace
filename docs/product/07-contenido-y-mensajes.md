@@ -33,7 +33,7 @@ Códigos que la tienda web puede recibir y qué mostrar. Un código no listado m
 | `WEAK_PASSWORD` (`422`) | Elige una contraseña más segura: al menos 10 caracteres y que no sea una de las más comunes. | PA-03 |
 | `INVALID_REFRESH_TOKEN` (`401`) | Tu sesión terminó. Entra de nuevo para continuar. | PA-04 |
 | `401` sin sesión | Entra para continuar. | PA-04 |
-| `429` (límite de intentos, `7.10`) | Hiciste demasiados intentos. Espera unos minutos e inténtalo de nuevo. | PA-03, PA-04 |
+| `429` (límite de intentos, `7.10`) | Hiciste demasiados intentos. Espera un momento e inténtalo de nuevo. | PA-03, PA-04 |
 
 ### Catálogo y pedidos
 

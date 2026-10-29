@@ -18,13 +18,13 @@ Los números identifican el tema y no cambian; no siguen el orden en que se deci
 | DP-06 | Pago con tarjeta | El frontend usa un `cardToken` simulado hasta que se elija proveedor. Con la pasarela simulada, `tok_declined` da rechazo, `tok_error` da un error del servidor y cualquier otro token se aprueba | HU-31 |
 | DP-07 | Total antes de pagar | El backend ofrece una **cotización** (`POST /orders/quote`) que calcula subtotal, descuento, envío y total sin cobrar ni reservar. La tienda la muestra en el carrito y en el pago. El frontend **no** calcula precios (RN-08) | HU-22, HU-31, PA-05, PA-06, [03](03-reglas-de-negocio.md) |
 | DP-08 | SEO | No es prioridad del MVP: la tienda puede seguir siendo una SPA (Vite+) | [08](08-requisitos-de-experiencia.md) |
-| DP-09 | Salida a producción | La tienda se abre al público al cerrar `7.7` (compra con el cliente del token), `7.8` (`GET /me/orders`) y `7.10` (límites de intentos y CORS). La administración puede esperar: en producción queda cerrada hasta `7.9` | [00](00-vision-y-alcance.md) |
+| DP-09 | Salida a producción | La tienda se abre al público al cerrar `7.7` (compra con el cliente del token), `7.8` (`GET /me/orders`) y `7.10` (límites de intentos y CORS). **Las tres están hechas** (corte 7 cerrado); también `7.9`, así que la administración funciona en producción, solo para el rol `ADMIN`. Queda la cotización (corte 8) para el paso de pago | [00](00-vision-y-alcance.md) |
 | DP-10 | Distintivo premium | No se muestra si la persona es premium en el MVP | PA-05 |
 | DP-11 | Tras registrarse | La tienda inicia la sesión sola con las mismas credenciales | HU-01 |
 | DP-12 | Intención al pedir sesión | No se recuerda: tras entrar se vuelve al libro y la persona lo agrega | HU-20, [05](05-recorridos.md) |
 | DP-13 | Dirección de envío | **No se recuerda**: se escribe en cada compra. La API no guarda direcciones y la tienda tampoco las guarda en el navegador | HU-30 |
 | DP-14 | `Idempotency-Key` del intento en curso | Se guarda en `sessionStorage`, hasta confirmar la compra o hasta que cambie el carrito o la dirección | HU-32 |
-| DP-15 | Dirección en el detalle del pedido | `GET /orders/:id` devolverá la dirección y el teléfono a su dueño cuando `7.7` lo limite a su dueño o a un administrador. Hasta entonces no se muestran | HU-41, PA-09 |
+| DP-15 | Dirección en el detalle del pedido | **Por decidir.** Se esperaba que `GET /orders/:id` devolviera la dirección y el teléfono a su dueño cuando `7.7` lo limitara a su dueño o a un administrador. El backend lo limitó, pero **mantuvo** que ese endpoint no los devuelva (`{ id, status, charged, lines }`); la dirección va en cada ítem de `GET /me/orders`. Opciones: (A) el backend añade `shippingAddress` al detalle para su dueño y los administradores (un cambio pequeño y coherente con la intención original), (B) PA-09 la toma del pedido de la lista cuando se llega desde PA-08 y no la muestra si no, (C) no se muestra en el detalle | HU-41, PA-09 |
 | DP-16 | Tokens de la sesión | Token de acceso **en memoria** y token de refresco en **`localStorage`**: la sesión sobrevive a cerrar el navegador y el token corto no persiste | HU-02, HU-03, [08](08-requisitos-de-experiencia.md) |
 | DP-17 | Proveedores reales de pago y de email | El MVP sigue con los simulados. La elección de proveedor se decide después; el frontend queda preparado para cambiar el `cardToken` | HU-31, RN-25 |
 | DP-18 | Forma de `GET /me/orders` | La misma de cada ítem del historial actual (`id`, `status`, `charged`, `lines`, `createdAt`, `shippingAddress`) y el mismo cursor: un solo contrato para el comprador y el administrador | HU-40 |
@@ -50,15 +50,16 @@ Cosas que la tienda web necesita y que el backend no ofrece hoy. La columna **Bl
 
 | Necesidad | Hoy | Bloquea |
 |---|---|---|
-| Compra con el cliente tomado del token y pedido visible solo para su dueño (y, con DP-15, con su dirección y teléfono) | Tarea `7.7` | **La salida a producción** (DP-09) |
-| `GET /me/orders`, con la forma de DP-18 | Tarea `7.8` | **La salida a producción** y HU-40 |
-| Límite de intentos y CORS (`CORS_ORIGINS`) | Tarea `7.10` | **La salida a producción**: sin CORS el navegador no puede llamar a la API desde otro origen |
-| **Cotización del total** (`POST /orders/quote`), ver abajo | No existe. Es el [corte 8 del backend](../backend/00-avance.md#corte-8-cotización-del-total-) (`8.1` a `8.4`) y depende de `7.7` | **HU-22 y el paso de pago** (DP-07) |
-| Roles en `/admin/*` | Tarea `7.9` | Solo la segunda etapa |
+| Compra con el cliente tomado del token y pedido visible solo para su dueño | ✅ Tarea `7.7` (hecha) | — |
+| Dirección y teléfono en el detalle del pedido (DP-15) | **Por decidir.** Hoy solo vienen en `GET /me/orders` | La sección de envío de HU-41 |
+| `GET /me/orders`, con la forma de DP-18 | ✅ Tarea `7.8` (hecha) | — |
+| Límite de intentos y CORS (`CORS_ORIGINS`) | ✅ Tarea `7.10` (hecha; `CORS_ORIGINS` vacío por defecto: hay que configurarlo en el despliegue o usar un proxy) | — |
+| **Cotización del total** (`POST /orders/quote`), ver abajo | No existe. Es el [corte 8 del backend](../backend/00-avance.md#corte-8-cotización-del-total-) (`8.1` a `8.4`); su dependencia, `7.7`, ya está hecha | **HU-22 y el paso de pago** (DP-07) |
+| Roles en `/admin/*` | ✅ Tarea `7.9` (hecha) | — |
 | Portada, descripción y categorías del libro | No existen | No |
 | Stock visible o "últimas unidades" | La API no lo expone | No |
 | Distintivo premium (que el usuario traiga `premium`) | `user` solo trae `id`, `email` y `role` | No (DP-10) |
-| Recuperar o cambiar la contraseña, verificar el correo | Fuera del corte 7 | No |
+| Recuperar o cambiar la contraseña, verificar el correo | Fuera del corte 7: no existe | No |
 
 ### Contrato propuesto de la cotización
 
