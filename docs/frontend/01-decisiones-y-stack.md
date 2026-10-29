@@ -34,7 +34,7 @@ Todo lo anterior son las decisiones del [producto](../product/09-decisiones-y-pr
 | `zustand` | Carrito persistido | |
 | `tailwindcss` (+ su plugin de Vite) y `shadcn/ui` | Estilos y componentes | Los componentes de shadcn se copian al repo en `shared/ui/` |
 | `jsdom`, `@testing-library/react` y `user-event`, `msw`, `axe-core` | Pruebas y accesibilidad | Vitest ya viene con Vite+ (se importa de `vite-plus/test`). `axe-core` se usa directo, sin envoltorio; `jest-dom` no se usa |
-| `@playwright/test` | e2e del flujo de compra | Se añade en el corte F6 |
+| `@playwright/test` | Revisión visual en un navegador real y, en F6, los e2e del flujo de compra | Instalado desde la revisión visual de F0 (Chromium 156) |
 
 > [!tip] Versiones reproducibles
 > Como en el backend: se instala todo con `-E` (versión exacta), se sube `pnpm-lock.yaml` y se valida el conjunto en CI. Antes de instalar se comprueba la versión vigente de cada paquete; esta tabla no fija números a propósito.

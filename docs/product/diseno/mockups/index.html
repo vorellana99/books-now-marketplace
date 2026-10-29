@@ -53,6 +53,8 @@ figcaption{font:600 14px/20px var(--sans);color:var(--c-muted)}
 .i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round;flex:none}
 .m p{margin:0}
 .m h1,.m h2,.m h3{margin:0}
+/* Los enlaces de navegación son tinta, no el color de enlace de la mesa de trabajo (los que deben ser granate lo declaran) */
+:where(.m) a{color:inherit;text-decoration:none}
 
 .hd{display:flex;align-items:center;gap:2px;padding:8px 8px 8px 4px;border-bottom:1px solid var(--border);background:var(--card)}
 .ib{width:44px;height:44px;display:grid;place-items:center;background:none;border:0;color:var(--fg);position:relative;padding:0}

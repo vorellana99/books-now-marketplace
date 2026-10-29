@@ -32,8 +32,7 @@ describe("layout y cabecera", () => {
     const { router } = await renderApp("/");
     const [form] = screen.getAllByRole("search");
     const field = within(form as HTMLElement).getByLabelText("Buscar por título o autor");
-    await user.type(field, "clean code");
-    await user.click(within(form as HTMLElement).getByRole("button", { name: "Buscar" }));
+    await user.type(field, "clean code{Enter}");
     expect(router.state.location.pathname).toBe("/");
     expect(router.state.location.search).toEqual({ q: "clean code", page: 1 });
   });
@@ -47,8 +46,16 @@ describe("layout y cabecera", () => {
     );
     expect(field.value).toBe("clean");
     await user.click(within(form as HTMLElement).getByRole("button", { name: "Borrar búsqueda" }));
-    await user.click(within(form as HTMLElement).getByRole("button", { name: "Buscar" }));
+    await user.click(field);
+    await user.keyboard("{Enter}");
     expect(router.state.location.search).toEqual({ page: 1 });
+  });
+
+  it("el buscador de la cabecera no tiene un botón oculto: sería una parada de teclado invisible", async () => {
+    await renderApp("/");
+    for (const form of screen.getAllByRole("search")) {
+      expect(within(form).queryByRole("button", { name: "Buscar" })).toBeNull();
+    }
   });
 
   it("descarta una página inválida de la URL en lugar de romper", async () => {

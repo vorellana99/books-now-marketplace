@@ -83,7 +83,7 @@ Campo de contraseña con botón **ver / ocultar**. Permite pegar. No muestra la 
 
 ### `SearchBox`
 
-Campo de búsqueda de la cabecera: `role="search"`, etiqueta "Buscar por título o autor", botón de envío con texto oculto visualmente y botón para limpiar cuando hay texto. Envía con `Enter`.
+Campo de búsqueda: `role="search"`, etiqueta "Buscar por título o autor" y botón para limpiar cuando hay texto. **El de la cabecera se envía con `Enter` y no lleva botón de enviar**: un botón oculto sería una parada de teclado invisible (se vio al revisar la tienda en el navegador). El de la propia página del catálogo (`PA-01`) sí lleva el botón "Buscar" visible.
 
 ### `Pagination`
 

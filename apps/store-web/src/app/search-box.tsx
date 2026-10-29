@@ -8,26 +8,38 @@ type SearchBoxProps = {
   className?: string;
   // Identifica el campo cuando hay dos en la página (cabecera de escritorio y de móvil)
   id: string;
+  // El buscador de la cabecera se envía con Enter; el de la propia página (catálogo) lleva el botón visible
+  showSubmit?: boolean;
 };
 
 // Buscador de la cabecera. La búsqueda vive en la URL (`/?q=…&page=1`): se puede compartir y "atrás" funciona
-export function SearchBox({ className, id }: SearchBoxProps) {
+export function SearchBox({ className, id, showSubmit = false }: SearchBoxProps) {
   const current = useSearch({
     strict: false,
     select: (search) => (typeof search.q === "string" ? search.q : ""),
   });
   // Si la URL cambia desde fuera (por ejemplo "Limpiar búsqueda"), el campo se reinicia con ella
-  return <SearchField key={current} id={id} initial={current} className={className} />;
+  return (
+    <SearchField
+      key={current}
+      id={id}
+      initial={current}
+      className={className}
+      showSubmit={showSubmit}
+    />
+  );
 }
 
 function SearchField({
   id,
   initial,
   className,
+  showSubmit,
 }: {
   id: string;
   initial: string;
   className: string | undefined;
+  showSubmit: boolean;
 }) {
   const navigate = useNavigate();
   const [value, setValue] = useState(initial);
@@ -43,7 +55,8 @@ function SearchField({
       <label htmlFor={id} className="sr-only">
         Buscar por título o autor
       </label>
-      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 text-foreground">
+      {/* El `input` no dibuja foco propio: el anillo se pinta en el contenedor cuando el campo (o su botón de borrar) tiene el foco */}
+      <div className="flex min-h-11 min-w-0 flex-1 items-center gap-2 rounded-md border border-input bg-card px-3 text-foreground focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring">
         <Search aria-hidden="true" className="size-5 shrink-0 text-muted-foreground" />
         <input
           id={id}
@@ -66,7 +79,9 @@ function SearchField({
           </button>
         ) : null}
       </div>
-      <Button type="submit">Buscar</Button>
+      {/* Un formulario con un solo campo se envía con Enter. Un botón oculto sería una parada de teclado invisible,
+          así que solo existe cuando se ve */}
+      {showSubmit ? <Button type="submit">Buscar</Button> : null}
     </form>
   );
 }

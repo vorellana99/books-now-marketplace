@@ -10,7 +10,7 @@ Cada corte trae un cuadro de **Tareas** que explica qué es cada una y para qué
 
 | # | Corte | Historias | Estado | Rama | PR |
 |---|---|---|---|---|---|
-| F0 | Fundaciones | — | 🔄 | `feature/frontend-mvp` | — |
+| F0 | Fundaciones | — | ✅ | `feature/frontend-mvp` | — |
 | F1 | Catálogo | HU-10, HU-11 | ⬜ | `feature/frontend-mvp` | — |
 | F2 | Cuenta y sesión | HU-01 a HU-04 | ⬜ | `feature/frontend-mvp` | — |
 | F3 | Carrito | HU-20 a HU-22 | ⬜ | `feature/frontend-mvp` | — |
@@ -24,7 +24,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 ---
 
-## Corte F0: Fundaciones 🔄
+## Corte F0: Fundaciones ✅
 
 **Guía:** [01-decisiones-y-stack](01-decisiones-y-stack.md) · [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) · [03-integracion-con-la-api](03-integracion-con-la-api.md) · [06-tests](06-tests.md)
 
@@ -40,6 +40,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 | 4 | Layout y estados base | Ruta raíz con la cabecera del [wireframe](../product/diseno/03-wireframes.md#cabecera-y-navegación), componentes de cargando, vacío, error y no encontrado, y PA-10 | Que cada pantalla futura reutilice los mismos estados | ✅ |
 | 5 | Pruebas | Vitest con Testing Library, MSW, `renderApp`, axe y la prueba de reglas de dependencia | Poder probar cada historia desde la primera | ✅ |
 | 6 | Integración continua | Workflow `store-web.yml` que repite `vp check`, `vp test` y `vp build` en un entorno limpio | Detectar lo que solo funciona en una máquina | ✅ |
+| 7 | Revisión visual en el navegador | Abrir la tienda en un Chromium real con Playwright, en móvil y escritorio, contra el backend levantado, y compararla con los mockups | Cumplir la regla del corte: verlo en un navegador real, no solo con jsdom | ✅ |
 
 - [x] F0.1 Reemplazo de la plantilla. Se comprueba: `vp dev` arranca una app React, `index.html` está en español, y no queda código ni estilo de la plantilla
 - [x] F0.2 Dependencias, configuración y entorno. Se comprueba: el proxy reenvía `/api/*` al backend sin el prefijo, la app no arranca si una variable obligatoria falta, las versiones instaladas son exactas (`-E`), y la app usa la crema, la tinta y el granate de los tokens con `Source Serif 4` e `Inter` servidas desde el propio sitio
@@ -47,10 +48,13 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 - [x] F0.4 Layout y estados base. Se comprueba: los cuatro estados son componentes reutilizables y accesibles, una ruta inexistente muestra PA-10, y la cabecera cumple su wireframe (menú móvil con foco atrapado y `Esc`, contador del carrito anunciado, enlace "Saltar al contenido")
 - [x] F0.5 Pruebas y reglas de dependencia. Se comprueba: una prueba de componente con MSW y axe pasa, y la prueba de dependencias falla si una funcionalidad importa las entrañas de otra o `shared/` importa de `features/`
 - [x] F0.6 CI. Se comprueba: el workflow corre en un pull request y falla si falla cualquiera de los tres comandos
+- [x] F0.7 Revisión visual. Se comprueba: cabecera, menú móvil, buscador, foco del teclado y PA-10 se ven como los mockups en móvil (360 px) y escritorio (1024 px); sin errores ni avisos en la consola; Enter en el buscador lleva a `/?q=…&page=1`; el recorrido por teclado no tiene paradas invisibles
 
 **Verificado:** `vp check`, `vp test` (55 pruebas), `pnpm run build` y `pnpm audit --prod` pasan, también la cadena completa del CI en local. Con el backend levantado, `vp dev` reenvía `/api/health/live` y `/api/books` por el proxy y ambos responden `200`; `vp run api:types` genera el esquema desde `/docs-json`.
 
-**Pendiente para cerrar el corte:** ver la tienda en un navegador real, en móvil y en escritorio (cabecera, menú, buscador y PA-10) y compararla con los [mockups](../product/diseno/mockups/index.html). El entorno donde se implementó no tenía navegador: la cabecera, el menú y PA-10 se comprobaron con jsdom, Testing Library y axe, que no miden estilos, diseño ni contraste. El CI tampoco se ha visto correr en GitHub.
+**Revisión visual (Playwright, Chromium 156):** con el backend levantado se capturó la tienda en móvil (360 px) y en escritorio (1024 px) y se comparó con los [mockups](../product/diseno/mockups/index.html): cabecera, menú móvil, buscador, foco del teclado y PA-10. No hay errores ni avisos en la consola. La revisión encontró y corrigió cuatro cosas (ver los desvíos de la tabla): la serif sin tamaño óptico, el foco invisible del buscador, el botón de enviar oculto y la X del menú. **No cubre** un teléfono real, Safari ni Firefox, ni mide el rendimiento (F6). El CI tampoco se ha visto correr en GitHub.
+
+**Diferencias conocidas con los mockups (menores, no se corrigieron):** los márgenes laterales del escritorio (los tokens dicen 24 px; el mockup dibuja 32 px); el menú móvil es una hoja lateral con título "Menú" y no una pantalla completa con el logotipo; y el texto de descripción de los paneles vacíos usa el gris secundario y no el negro. Faltan el carrito y la cuenta en la cabecera hasta F3 y F2.
 
 ---
 
@@ -222,6 +226,12 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-29 | F0 | `react-hook-form` y `@hookform/resolvers` **no se instalaron** en F0 | Se necesitan en F2 (primer formulario). La elección está confirmada (React Hook Form, problema 5); se instalan en F2.2, junto con el primer formulario que los usa, para no dejar dependencias sin usar |
 | 2026-10-29 | F0 | Se agregó `src/shared/ui/` con `button`, `alert`, `skeleton`, `sheet` y `state-panel` escritos a mano al estilo de shadcn/ui (con `radix-ui`, `class-variance-authority` y `cn`), sin pasar por el CLI de shadcn | El CLI reescribe archivos y pregunta; con cinco componentes es más claro escribirlos. `components.json` queda listo para usar el CLI desde F1 |
 | 2026-10-29 | Plan | Formularios: **React Hook Form + Zod 4** (confirmado, sin cambios respecto a la guía) | Enfoque al primer error y componente `Form` de shadcn/ui ya resueltos; el servidor sigue decidiendo la validación (RN-22, RN-31) |
+| 2026-10-29 | F0 | `@playwright/test` 1.64.1 se instaló en F0, no en F6 | Para revisar la tienda en un navegador real. Los e2e del flujo de compra siguen siendo de F6 |
+| 2026-10-29 | F0 | La serif se importa de `@fontsource-variable/source-serif-4/opsz.css` y no del paquete por defecto | El paquete por defecto no trae el eje de tamaño óptico que Google Fonts aplica solo: a 22 px las letras salían un 16 % más anchas que en el mockup y el título de PA-10 se partía en dos líneas |
+| 2026-10-29 | F0 | El buscador de la cabecera **no tiene botón de enviar**: se envía con Enter. `SearchBox` recibe `showSubmit` para el del catálogo (F1) | El botón oculto con `sr-only` era una parada de teclado invisible; el mockup de escritorio tampoco lo lleva |
+| 2026-10-29 | F0 | El contenedor del campo de búsqueda dibuja el anillo de foco (`focus-within`) | El `input` tenía `outline-none` y al tabular hasta él no se veía ningún foco |
+| 2026-10-29 | F0 | La X de cerrar el menú móvil va en tinta, no en granate | Así está en el mockup |
+| 2026-10-29 | F0 | En el mockup, los enlaces de navegación pasan a tinta (`:where(.m) a`) | Salían granate por un estilo heredado de la mesa de trabajo que no era intencional |
 
 ## Problemas abiertos
 
@@ -235,6 +245,7 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 6 | `openapi-typescript` 7.13 declara como peer `typescript` `^5`; el proyecto usa 6.0.3 | La generación funciona (se comprobó con el backend real). Se revisa al actualizar | ✅ Sin acción |
 | 7 | pnpm avisa de "agent skills" pendientes de aprobación en `@tanstack/react-router` y `@tanstack/router-plugin` | No se aprueban: no hacen falta para el proyecto | ✅ Sin acción |
 | 8 | El paquete de producción pesa 484 kB (152 kB comprimido), y los paquetes de tipografía emiten todos los subconjuntos de idiomas (el navegador solo baja los que usa) | Se mide y se optimiza en F6 (LCP, división por rutas, subconjuntos) | ⬜ F6 |
+| 9 | Playwright no arranca en WSL sin `libnss3`, `libnspr4` y `libasound2` | Instalarlas con `sudo` o extraerlas en una carpeta local (se hizo lo segundo, en `node_modules/.cache/visual/libs`, ignorada por git; se pierde si se borra `node_modules`). El procedimiento está en [06-tests](06-tests.md#playwright-en-wsl-faltan-librerías-del-sistema) | ✅ Resuelto para esta máquina; el CI de GitHub trae las librerías (se comprueba en F6) |
 
 ## Bitácora
 
@@ -245,3 +256,4 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-29 | Cliente de API: se anotó la ruta de A (ahora) a un generador completo (después) en [01 sección 4](01-decisiones-y-stack.md#4-del-cliente-de-hoy-a-un-generador-completo-camino-futuro), con dos reglas nuevas de arquitectura (8 y 9), `shared/api/types.ts` y `errors.ts` en la estructura, y el pendiente `operationIdFactory` del backend |
 | 2026-10-29 | Corte F0 (Fundaciones): la plantilla pasa a React 19 + TanStack Router y Query + Tailwind 4 con los tokens de diseño + `shared/ui` (botón, aviso, esqueleto, hoja lateral y paneles de estado); cliente `openapi-fetch` con tipos generados del backend real, renovación tras un `401`, `ApiError` y mensajes por `errorCode`; cabecera, buscador y PA-10; proxy `/api` al backend; CI. 55 pruebas pasan (unitarias de montos, fechas, errores, cliente con MSW y reglas de dependencia; de componente con axe). Falta la revisión visual en un navegador |
 | 2026-10-29 | Decisión: formularios con React Hook Form + Zod 4. Se cierra el problema abierto 5; la librería se instala en F2.2 |
+| 2026-10-29 | Revisión visual de F0 con Playwright (Chromium 156) contra los mockups, en móvil y escritorio. Se corrigieron cuatro diferencias reales (serif sin tamaño óptico, foco invisible del buscador, botón de enviar oculto, color de la X del menú) y una del propio mockup (enlaces de navegación). 56 pruebas pasan (se agregó una que impide un botón oculto en el buscador). El corte F0 queda ✅ |

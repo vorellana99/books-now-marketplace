@@ -28,7 +28,12 @@ export function SheetContent({ title, children }: SheetContentProps) {
             {title}
           </Dialog.Title>
           <Dialog.Close asChild>
-            <Button variant="ghost" size="icon" aria-label="Cerrar menú">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-foreground"
+              aria-label="Cerrar menú"
+            >
               <X aria-hidden="true" />
             </Button>
           </Dialog.Close>

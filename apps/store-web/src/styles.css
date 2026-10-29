@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@fontsource-variable/inter";
-@import "@fontsource-variable/source-serif-4";
+/* La variante `opsz` incluye el eje de tamaño óptico: a 22-36 px la serif se ve más estrecha y fina, como en los mockups */
+@import "@fontsource-variable/source-serif-4/opsz.css";
 
 /*
  * Tokens de diseño: docs/product/diseno/01-tokens.md. Los nombres son los de shadcn/ui.

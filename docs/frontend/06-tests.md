@@ -51,3 +51,15 @@ vp test -t "texto del test"          # un test por nombre
 ## e2e (corte F6)
 
 Playwright contra el backend real levantado en local (PostgreSQL + `pnpm run start:dev`, con la pasarela y el correo simulados): registro → login → buscar → agregar → cotizar → pagar con `tok_ok` → confirmación → mis pedidos, y los caminos con `tok_declined` y sin stock. Es lo que comprueba el contrato contra la realidad, que MSW no puede.
+
+### Playwright en WSL: faltan librerías del sistema
+
+Chromium necesita `libnss3`, `libnspr4` y `libasound2` (`libasound2t64` en Ubuntu 24.04), que WSL no trae. Dos caminos:
+
+- **Con permisos:** `sudo pnpm exec playwright install-deps chromium`.
+- **Sin permisos de administrador** (el que se usó en F0): `apt-get download libnspr4 libnss3 libasound2t64`, descomprimir cada `.deb` con `dpkg-deb -x` en una carpeta local (por ejemplo `node_modules/.cache/visual/libs`) y lanzar el proceso con `LD_LIBRARY_PATH=<esa carpeta>/usr/lib/x86_64-linux-gnu`. No toca el sistema.
+
+### Revisión visual contra los mockups
+
+La revisión de F0 se hizo con un script de Playwright que no se guardó en el repositorio: abre la tienda con `vp dev` y el backend levantados, captura móvil (360 px) y escritorio (1024 px), abre las capturas de los [mockups](../product/diseno/mockups/index.html) con los mismos anchos y las compara. Se repite al construir cada pantalla (F1 en adelante).
+
