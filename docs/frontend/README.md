@@ -3,7 +3,7 @@
 Guía de implementación de la tienda web (`apps/store-web`): React 19 + TypeScript sobre **Vite+** (`vp`). Este archivo es el índice. **Qué** hace la tienda lo define [`../product/`](../product/README.md) (historias `HU-nn`, reglas `RN-nn`, pantallas `PA-nn`, decisiones `DP-nn`); esta carpeta dice **cómo** se construye y cita esos identificadores en lugar de repetirlos. Lo que la API ofrece está en [`../api-contrato.md`](../api-contrato.md).
 
 > [!caution] Estado
-> **Ningún corte está implementado todavía.** `apps/store-web` sigue siendo la plantilla de Vite+ (un contador en TypeScript vanilla). Todo el stack de esta guía está **decidido pero sin instalar**. Las versiones se fijan con `-E` al instalar, y los bocetos de código de [05-piezas-clave](05-piezas-clave.md) se validan al implementarlos.
+> **El corte `F0` está implementado** (React 19 + TanStack + Tailwind sobre Vite+, con cliente de API, cabecera, PA-10 y 55 pruebas), a falta de verlo en un navegador real. Los cortes `F1` a `F6` no. El avance, con lo que se hizo distinto a esta guía, está en [00-avance](00-avance.md). Los bocetos de [05-piezas-clave](05-piezas-clave.md) se validan al implementar cada pieza; donde difieren, manda el código.
 
 Los comandos se ejecutan desde `apps/store-web`. Las herramientas son las de Vite+ (`vp dev`, `vp check`, `vp test`, `vp build`); no se agregan ESLint, Prettier ni Jest.
 

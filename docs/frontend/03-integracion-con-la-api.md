@@ -8,7 +8,7 @@ El contrato es el OpenAPI que publica el backend. Se pasa a tipos en dos pasos, 
 
 | Paso | Cómo | Cuándo |
 |---|---|---|
-| **1 (inicio)** | `vp run api:types` lee `VITE_API_DOCS_URL` (`/docs-json` del backend levantado) y escribe `src/shared/api/schema.d.ts`, que **se sube a git** | Desde el corte F0 |
+| **1 (inicio)** | `vp run api:types` lee `API_DOCS_URL` (por defecto `http://localhost:3000/docs-json`, del backend levantado) y escribe `src/shared/api/schema.d.ts`, que **se sube a git** | Desde el corte F0 |
 | **2 (después)** | El mismo script lee un `openapi.json` guardado en el backend, con un test que avisa cuando queda viejo | Cuando el backend lo implemente (corte 9 propuesto, aún no existe) |
 
 Con el paso 1, las operaciones `/admin/*` pueden no aparecer en los tipos si el backend corre con `ADMIN_API_ENABLED=false`. Es lo que se espera: la tienda MVP no usa administración.

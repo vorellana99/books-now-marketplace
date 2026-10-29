@@ -37,6 +37,8 @@ Los contrastes están **calculados** (relación de contraste WCAG) contra el fon
 | `--danger-text` / `--danger-bg` | `#8C1D18` / `#FCEBEA` | Texto de un aviso de error sobre su fondo | 7.9:1 |
 | `--gold` | `#C8963E` | **Solo decorativo**, por ejemplo la insignia "Envío gratis" (con texto `--foreground` encima) | 6.5:1 con texto tinta |
 
+Los avisos llevan además un borde por variante, decorativo como `--border`: `--info-border` `#B9CFEA`, `--warning-border` `#EBCB8B`, `--danger-border` `#EFB3AF` y `--success-border` `#B7D6BF`.
+
 **Reglas de uso**
 
 - **El color nunca es el único canal.** Un error lleva icono y texto además del rojo; un campo inválido, un mensaje debajo.

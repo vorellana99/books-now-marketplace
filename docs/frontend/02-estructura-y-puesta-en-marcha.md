@@ -17,6 +17,7 @@ apps/store-web/
 ├── public/
 ├── src/
 │   ├── main.tsx                    (F0) arranque: React, router, Query    ← reemplaza a main.ts
+│   ├── router.ts                   (F0) crea el router y registra sus tipos
 │   ├── routeTree.gen.ts            generado por el plugin del router; se sube a git
 │   ├── routes/                     (F0) archivos de ruta, delgados
 │   │   ├── __root.tsx              layout: cabecera, avisos, errores
@@ -29,6 +30,7 @@ apps/store-web/
 │   │   ├── pedidos.index.tsx       PA-08            (con sesión)
 │   │   ├── pedidos.$id.index.tsx   PA-09            (con sesión)
 │   │   └── pedidos.$id.gracias.tsx PA-07            (con sesión)
+│   ├── app/                        (F0) armazón: cabecera, buscador, layout, PA-10 y el cliente de consultas
 │   ├── features/
 │   │   ├── catalog/                buscar y ver libros           (F1)
 │   │   ├── auth/                   registro, login, sesión       (F2)
@@ -43,14 +45,14 @@ apps/store-web/
 │       │   ├── client.ts
 │       │   ├── errors.ts           `ApiError` y `toApiError`
 │       │   └── error-messages.ts   `errorCode` → texto (de producto 07)
-│       ├── ui/                     componentes de shadcn/ui y propios    (F0)
+│       ├── ui/                     button, alert, skeleton, sheet, state-panel (F0); más a medida que se necesiten
 │       ├── lib/                    formato de montos y fechas, utilidades (F0)
 │       └── config/                 variables de entorno validadas        (F0)
 └── test/
-    ├── unit/                       lógica pura, sin DOM
-    ├── component/                  Testing Library + MSW
+    ├── unit/                       lógica pura, sin DOM (más el cliente con MSW y las reglas de dependencia)
+    ├── component/                  Testing Library + MSW + axe
     ├── e2e/                        Playwright                            (F6)
-    └── support/                    handlers de MSW, render con providers, fábricas
+    └── support/                    server (MSW), setup, renderApp, axe y las reglas de arquitectura
 ```
 
 **Las pruebas viven en `test/`**, no junto al código, igual que en el backend ([06-tests](06-tests.md)).
@@ -72,7 +74,7 @@ vp dev                      # http://localhost:5173
 |---|---|
 | `vp dev` | Servidor de desarrollo con recarga |
 | `vp check` | Formato, lint con tipos y comprobación de tipos, todo junto |
-| `vp test` | Pruebas con Vitest (`--watch` mientras se desarrolla) |
+| `vp test` | Pruebas con Vitest, una sola corrida. `vp test watch` las deja en observación |
 | `vp build` | Compilación de producción (`pnpm run build` hace antes `tsc`) |
 | `vp preview` | Sirve la compilación para probarla |
 | `vp run api:types` | Regenera `src/shared/api/schema.d.ts` desde el backend (F0) |
@@ -89,7 +91,7 @@ Se leen de `.env` (no se sube; la plantilla es `.env.example`). Vite solo expone
 |---|---|---|
 | `VITE_API_BASE_URL` | `/api` | Dónde está la API. Con el valor por defecto, en desarrollo el servidor de Vite reenvía `/api` al backend (ver abajo) |
 | `VITE_API_PROXY_TARGET` | `http://localhost:3000` | Solo desarrollo: a dónde reenvía el proxy |
-| `VITE_API_DOCS_URL` | `http://localhost:3000/docs-json` | Solo para `api:types`: de dónde se lee el contrato |
+| `API_DOCS_URL` | `http://localhost:3000/docs-json` | Solo para `api:types`, **sin `VITE_`** y no se lee de `.env`: `API_DOCS_URL=http://… vp run api:types` |
 
 Se validan una sola vez en `shared/config/` (con Zod), y la app no arranca si falta una obligatoria.
 

@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Monorepo `books-now-marketplace` (LibroYa, una librería online). La carpeta local se llama `books-frontend`, pero casi todo el código es del backend. La documentación y los comentarios del código están en español; mantén ese idioma.
 
 - `apps/main-api`: API con NestJS 12 + Prisma 7 + PostgreSQL 18 (ESM, TypeScript 6, Vitest 4). Aquí está casi todo el trabajo. Su `README.md` explica la puesta en marcha, las variables de entorno y los problemas frecuentes.
-- `apps/store-web`: andamiaje de Vite+ (CLI `vp`) que por ahora solo tiene el código de ejemplo del contador. Los comandos `vp` (`vp dev`, `vp check`, `vp test`) están en su `AGENTS.md`. La guía del frontend está en `docs/frontend/` (avance por cortes `F0`–`F6` en `00-avance.md`): el stack decidido es React 19 + TanStack Router/Query + openapi-fetch + Zustand + Tailwind 4/shadcn, pero **aún no está instalado**: el código sigue siendo la plantilla.
+- `apps/store-web`: tienda web con React 19 + TanStack Router/Query + openapi-fetch + Tailwind 4 sobre Vite+ (CLI `vp`, sus convenciones están en su `AGENTS.md`). La guía y el avance por cortes `F0`–`F6` están en `docs/frontend/` (`00-avance.md`); el corte F0 está hecho y falta F1 en adelante (catálogo, cuenta, carrito, compra, pedidos). React Hook Form es la librería de formularios elegida, pero se instala en F2 con el primer formulario.
 - `docs/`: guía de diseño, contrato de la API (`api-contrato.md`, lo que consume el frontend) y `docs/product/`, la fuente de información del producto (visión, reglas de negocio `RN-nn`, historias `HU-nn`, pantallas `PA-nn`, decisiones `DP-nn`, y en `docs/product/diseno/` los tokens, componentes y wireframes de la interfaz); si algo ahí contradice a la API real, gana la API. `docs/backend/00-avance.md` es el control de avance.
 
 No hay `package.json` en la raíz; cada app tiene su propio `pnpm-lock.yaml`. Ejecuta los comandos desde la carpeta de la app.
@@ -35,6 +35,20 @@ pnpm exec vitest run --config ./vitest.config.e2e.ts test/e2e/auth.e2e.spec.ts  
 El CI (`.github/workflows/main-api.yml`) ejecuta lint, format:check, build, test y test:e2e, además de `pnpm audit --prod`. Antes de subir cambios corre la misma cadena: `pnpm lint && pnpm run format:check && pnpm run build && pnpm test && pnpm run test:e2e`.
 
 El cliente de Prisma se genera en `src/platform/prisma/generated/` (no se sube a git); `build`, `test` y `test:e2e` lo regeneran. Si aparece `Cannot find module './generated/client.js'`, ejecuta `pnpm run prisma:generate`.
+
+## Comandos (`apps/store-web`; pnpm 12.15, Node 24)
+
+```bash
+vp install                         # dependencias
+vp dev                             # http://localhost:5173; reenvía /api/* al backend en :3000 (la API aún no tiene CORS)
+vp check                           # formato + lint con tipos + tipos (Oxlint y Oxfmt de Vite+); no hay ESLint ni Prettier
+vp test                            # Vitest (jsdom + Testing Library + MSW), una corrida; `vp test watch` para observar
+vp test test/unit/money.test.ts    # un archivo (`-t "texto"` filtra por nombre)
+pnpm run build                     # tsc + vp build
+vp run api:types                   # regenera src/shared/api/schema.d.ts desde el backend levantado (API_DOCS_URL cambia la URL)
+```
+
+Los tests importan de `vite-plus/test` (no de `vitest`) y viven en `test/`. `src/routeTree.gen.ts` y `schema.d.ts` son generados, se suben a git y están excluidos del lint y el formato. Los imports llevan la extensión (`.ts`/`.tsx`) y el alias `@/` apunta a `src/`. Las reglas de dependencia entre `app/`, `features/`, `routes/` y `shared/` las comprueba `test/unit/dependency-rules.test.ts`. La tienda nunca calcula montos: muestra los textos de la API (RN-08).
 
 ## Arquitectura (`apps/main-api/src`)
 

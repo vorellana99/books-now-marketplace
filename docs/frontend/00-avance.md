@@ -10,7 +10,7 @@ Cada corte trae un cuadro de **Tareas** que explica qué es cada una y para qué
 
 | # | Corte | Historias | Estado | Rama | PR |
 |---|---|---|---|---|---|
-| F0 | Fundaciones | — | ⬜ | `feature/frontend-mvp` | — |
+| F0 | Fundaciones | — | 🔄 | `feature/frontend-mvp` | — |
 | F1 | Catálogo | HU-10, HU-11 | ⬜ | `feature/frontend-mvp` | — |
 | F2 | Cuenta y sesión | HU-01 a HU-04 | ⬜ | `feature/frontend-mvp` | — |
 | F3 | Carrito | HU-20 a HU-22 | ⬜ | `feature/frontend-mvp` | — |
@@ -24,7 +24,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 ---
 
-## Corte F0: Fundaciones ⬜
+## Corte F0: Fundaciones 🔄
 
 **Guía:** [01-decisiones-y-stack](01-decisiones-y-stack.md) · [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) · [03-integracion-con-la-api](03-integracion-con-la-api.md) · [06-tests](06-tests.md)
 
@@ -34,19 +34,23 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
-| 1 | Reemplazar la plantilla | Sustituir el contador de TypeScript vanilla por una app React: `main.tsx`, `index.html` con `lang="es"`, `tsconfig` con `jsx` y el alias `@/*`; borrar `counter.ts`, los recursos y el estilo de la plantilla | Partir de una app real y no de un ejemplo | ⬜ |
-| 2 | Dependencias y configuración | React 19, Tailwind 4, shadcn/ui, TanStack Router y Query, Zustand, React Hook Form y Zod, con versión exacta; plugins en `vite.config.ts`, proxy `/api`, variables `VITE_*` validadas, los [tokens de diseño](../product/diseno/01-tokens.md) en `src/styles.css` y las tipografías autoalojadas | Tener instalado y configurado el stack, sin tocar lo que ya hace Vite+ | ⬜ |
-| 3 | Cliente de API y utilidades | Script `api:types`, `schema.d.ts` y `types.ts` que lo reexporta, el cliente con sus tres comportamientos, la sesión y los errores como funciones sueltas, el mapa de errores vacío, y formato de montos y fechas | Que toda llamada a la API tenga tipos y un manejo de errores único | ⬜ |
-| 4 | Layout y estados base | Ruta raíz con la cabecera del [wireframe](../product/diseno/03-wireframes.md#cabecera-y-navegación), componentes de cargando, vacío, error y no encontrado, y PA-10 | Que cada pantalla futura reutilice los mismos estados | ⬜ |
-| 5 | Pruebas | Vitest con Testing Library, MSW, `renderApp`, axe y la prueba de reglas de dependencia | Poder probar cada historia desde la primera | ⬜ |
-| 6 | Integración continua | Workflow `store-web.yml` que repite `vp check`, `vp test` y `vp build` en un entorno limpio | Detectar lo que solo funciona en una máquina | ⬜ |
+| 1 | Reemplazar la plantilla | Sustituir el contador de TypeScript vanilla por una app React: `main.tsx`, `index.html` con `lang="es"`, `tsconfig` con `jsx` y el alias `@/*`; borrar `counter.ts`, los recursos y el estilo de la plantilla | Partir de una app real y no de un ejemplo | ✅ |
+| 2 | Dependencias y configuración | React 19, Tailwind 4, shadcn/ui, TanStack Router y Query, Zustand y Zod, con versión exacta (React Hook Form se instala en F2); plugins en `vite.config.ts`, proxy `/api`, variables `VITE_*` validadas, los [tokens de diseño](../product/diseno/01-tokens.md) en `src/styles.css` y las tipografías autoalojadas | Tener instalado y configurado el stack, sin tocar lo que ya hace Vite+ | ✅ |
+| 3 | Cliente de API y utilidades | Script `api:types`, `schema.d.ts` y `types.ts` que lo reexporta, el cliente con sus tres comportamientos, la sesión y los errores como funciones sueltas, el mapa de errores vacío, y formato de montos y fechas | Que toda llamada a la API tenga tipos y un manejo de errores único | ✅ |
+| 4 | Layout y estados base | Ruta raíz con la cabecera del [wireframe](../product/diseno/03-wireframes.md#cabecera-y-navegación), componentes de cargando, vacío, error y no encontrado, y PA-10 | Que cada pantalla futura reutilice los mismos estados | ✅ |
+| 5 | Pruebas | Vitest con Testing Library, MSW, `renderApp`, axe y la prueba de reglas de dependencia | Poder probar cada historia desde la primera | ✅ |
+| 6 | Integración continua | Workflow `store-web.yml` que repite `vp check`, `vp test` y `vp build` en un entorno limpio | Detectar lo que solo funciona en una máquina | ✅ |
 
-- [ ] F0.1 Reemplazo de la plantilla. Se comprueba: `vp dev` arranca una app React, `index.html` está en español, y no queda código ni estilo de la plantilla
-- [ ] F0.2 Dependencias, configuración y entorno. Se comprueba: el proxy reenvía `/api/*` al backend sin el prefijo, la app no arranca si una variable obligatoria falta, las versiones instaladas son exactas (`-E`), y la app usa la crema, la tinta y el granate de los tokens con `Source Serif 4` e `Inter` servidas desde el propio sitio
-- [ ] F0.3 Cliente de API, tipos y utilidades. Se comprueba: `vp run api:types` genera el esquema desde el backend levantado; los montos `"0.10"` y `"1250.00"` se formatean sin pasar por `number`; un `ApiError` conserva `errorCode` y `requestId`; las funcionalidades importan los tipos de `types.ts` y la prueba de dependencias falla si algo fuera de `shared/api/` usa `openapi-fetch`
-- [ ] F0.4 Layout y estados base. Se comprueba: los cuatro estados son componentes reutilizables y accesibles, una ruta inexistente muestra PA-10, y la cabecera cumple su wireframe (menú móvil con foco atrapado y `Esc`, contador del carrito anunciado, enlace "Saltar al contenido")
-- [ ] F0.5 Pruebas y reglas de dependencia. Se comprueba: una prueba de componente con MSW y axe pasa, y la prueba de dependencias falla si una funcionalidad importa las entrañas de otra o `shared/` importa de `features/`
-- [ ] F0.6 CI. Se comprueba: el workflow corre en un pull request y falla si falla cualquiera de los tres comandos
+- [x] F0.1 Reemplazo de la plantilla. Se comprueba: `vp dev` arranca una app React, `index.html` está en español, y no queda código ni estilo de la plantilla
+- [x] F0.2 Dependencias, configuración y entorno. Se comprueba: el proxy reenvía `/api/*` al backend sin el prefijo, la app no arranca si una variable obligatoria falta, las versiones instaladas son exactas (`-E`), y la app usa la crema, la tinta y el granate de los tokens con `Source Serif 4` e `Inter` servidas desde el propio sitio
+- [x] F0.3 Cliente de API, tipos y utilidades. Se comprueba: `vp run api:types` genera el esquema desde el backend levantado; los montos `"0.10"` y `"1250.00"` se formatean sin pasar por `number`; un `ApiError` conserva `errorCode` y `requestId`; las funcionalidades importan los tipos de `types.ts` y la prueba de dependencias falla si algo fuera de `shared/api/` usa `openapi-fetch`
+- [x] F0.4 Layout y estados base. Se comprueba: los cuatro estados son componentes reutilizables y accesibles, una ruta inexistente muestra PA-10, y la cabecera cumple su wireframe (menú móvil con foco atrapado y `Esc`, contador del carrito anunciado, enlace "Saltar al contenido")
+- [x] F0.5 Pruebas y reglas de dependencia. Se comprueba: una prueba de componente con MSW y axe pasa, y la prueba de dependencias falla si una funcionalidad importa las entrañas de otra o `shared/` importa de `features/`
+- [x] F0.6 CI. Se comprueba: el workflow corre en un pull request y falla si falla cualquiera de los tres comandos
+
+**Verificado:** `vp check`, `vp test` (55 pruebas), `pnpm run build` y `pnpm audit --prod` pasan, también la cadena completa del CI en local. Con el backend levantado, `vp dev` reenvía `/api/health/live` y `/api/books` por el proxy y ambos responden `200`; `vp run api:types` genera el esquema desde `/docs-json`.
+
+**Pendiente para cerrar el corte:** ver la tienda en un navegador real, en móvil y en escritorio (cabecera, menú, buscador y PA-10) y compararla con los [mockups](../product/diseno/mockups/index.html). El entorno donde se implementó no tenía navegador: la cabecera, el menú y PA-10 se comprobaron con jsdom, Testing Library y axe, que no miden estilos, diseño ni contraste. El CI tampoco se ha visto correr en GitHub.
 
 ---
 
@@ -83,7 +87,7 @@ F1 y F2 son independientes entre sí y pueden ir en paralelo tras F0. Del F3 en 
 | # | Tarea | Qué es | Objetivo principal | Estado |
 |---|---|---|---|---|
 | 1 | Sesión y renovación | Token de acceso en memoria, de refresco en `localStorage`, una renovación a la vez por pestaña y un candado entre pestañas | Que ninguna combinación de pestañas y peticiones dispare la detección de reutilización | ⬜ |
-| 2 | PA-04 Iniciar sesión | Formulario, `INVALID_CREDENTIALS` con un solo mensaje y vuelta al origen | HU-02 | ⬜ |
+| 2 | PA-04 Iniciar sesión | Formulario con React Hook Form + Zod (se instalan aquí `react-hook-form` y `@hookform/resolvers`), `INVALID_CREDENTIALS` con un solo mensaje y vuelta al origen | HU-02 | ⬜ |
 | 3 | PA-03 Registrarse | Formulario con `EMAIL_ALREADY_REGISTERED`, `WEAK_PASSWORD` y `INVALID_EMAIL`, e inicio de sesión automático | HU-01 | ⬜ |
 | 4 | Guardia de rutas y `returnTo` | `beforeLoad` en las rutas con sesión, y `returnTo` que solo acepta rutas internas | Que ninguna ruta con sesión se vea sin ella, ni se pueda redirigir a un sitio ajeno | ⬜ |
 | 5 | Menú de cuenta y cerrar sesión | Cabecera con "Entrar" o el menú de la cuenta, y cierre que borra tokens y caché | HU-04 | ⬜ |
@@ -204,6 +208,20 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-29 | Plan | Cliente de API: se empieza con openapi-typescript + openapi-fetch y los hooks escritos a mano; un generador completo (hey-api u orval) queda como camino futuro, con cuatro requisitos para que el cambio sea barato ([01 sección 4](01-decisiones-y-stack.md#4-del-cliente-de-hoy-a-un-generador-completo-camino-futuro)) | Con unos doce endpoints, escribir los hooks cuesta menos que configurar un generador, y la arquitectura permite cambiarlo después sin tocar las pantallas |
 | 2026-10-29 | Plan | Las pruebas viven en `test/` y no junto al código | Mismo criterio que el backend |
 | 2026-10-29 | Plan | Los imports llevan la extensión del archivo, como en la plantilla | Coherencia con el código existente; el CLI de shadcn genera imports sin extensión y se ajustan al añadir cada componente |
+| 2026-10-29 | F0 | El script `api:types` lee `API_DOCS_URL` (sin `VITE_`), no `VITE_API_DOCS_URL` | Solo lo usa el script en la máquina de quien desarrolla: una variable `VITE_*` se publica dentro del código que baja el navegador |
+| 2026-10-29 | F0 | Nueva carpeta `src/app/` con el armazón de la tienda (cabecera, layout, buscador y las pantallas PA-10). Solo la importan `routes/` y `main.tsx`; `shared/` no puede importar de ella | La cabecera necesitará la sesión y el carrito, y no puede vivir en `shared/` (regla 2) ni en `routes/` (regla 3: las rutas no llevan lógica) |
+| 2026-10-29 | F0 | La cabecera no tiene aún el carrito ni el menú de la cuenta; solo "Libros" y el buscador | Esas rutas (`/carrito`, `/ingresar`) no existen hasta F3 y F2, y un enlace tipado a una ruta inexistente no compila. Se agregan en esos cortes |
+| 2026-10-29 | F0 | La búsqueda de la URL (`q`, `page`) lleva ambos parámetros **opcionales** (`.optional().catch(undefined)`); la página por defecto (1) la aplica la pantalla | Con `.catch(1)` el router exige `search` en todo enlace a `/` |
+| 2026-10-29 | F0 | `openapi-fetch` recibe un `fetch` que se resuelve en cada llamada (`(request) => globalThis.fetch(request)`) | Guarda el `fetch` que recibe al crear el cliente: sin esto, MSW (que reemplaza `fetch` después) no interceptaba y las pruebas llegaban al backend real |
+| 2026-10-29 | F0 | Las pruebas no usan `@testing-library/jest-dom` ni `vitest-axe`: comprueban con las consultas por rol de Testing Library y con `axe-core` directo (`test/support/axe.ts`) | `jest-dom` importa `vitest` (que aquí va dentro de `vite-plus`) y `vitest-axe` es antiguo; `axe-core` basta y no añade capas. `color-contrast` se desactiva porque jsdom no calcula estilos |
+| 2026-10-29 | F0 | En MSW 3 la opción de peticiones sin handler es `onUnhandledFrame: "error"`, no `onUnhandledRequest` | Cambió de nombre en la versión 3 |
+| 2026-10-29 | F0 | `lucide-react` queda en `1.61.0` y no en la última (`1.63.0`) | La política de edad mínima de paquetes de pnpm bloquea versiones recientes; no se agregó ninguna excepción a `pnpm-workspace.yaml` |
+| 2026-10-29 | F0 | Se agregó `@types/node` (24) y `"types": ["vite/client", "node"]` | Las pruebas de reglas de dependencia y de montos leen archivos con `node:fs` |
+| 2026-10-29 | F0 | `vp test` no queda en modo observación; para eso es `vp test watch` | Así lo define Vite+ |
+| 2026-10-29 | F0 | El CI usa `pnpm/action-setup` y `setup-node` (como el backend) y llama a `pnpm exec vp check`, `vp test` y `pnpm run build`, no `voidzero-dev/setup-vp` | La guía de Vite+ exige una versión exacta de `setup-vp` que no se pudo confirmar; así se evita una acción de terceros sin fijar |
+| 2026-10-29 | F0 | `react-hook-form` y `@hookform/resolvers` **no se instalaron** en F0 | Se necesitan en F2 (primer formulario). La elección está confirmada (React Hook Form, problema 5); se instalan en F2.2, junto con el primer formulario que los usa, para no dejar dependencias sin usar |
+| 2026-10-29 | F0 | Se agregó `src/shared/ui/` con `button`, `alert`, `skeleton`, `sheet` y `state-panel` escritos a mano al estilo de shadcn/ui (con `radix-ui`, `class-variance-authority` y `cn`), sin pasar por el CLI de shadcn | El CLI reescribe archivos y pregunta; con cinco componentes es más claro escribirlos. `components.json` queda listo para usar el CLI desde F1 |
+| 2026-10-29 | Plan | Formularios: **React Hook Form + Zod 4** (confirmado, sin cambios respecto a la guía) | Enfoque al primer error y componente `Form` de shadcn/ui ya resueltos; el servidor sigue decidiendo la validación (RN-22, RN-31) |
 
 ## Problemas abiertos
 
@@ -213,6 +231,10 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2 | Los candados entre pestañas usan Web Locks (`navigator.locks`) | Navegadores a cubrir: las dos últimas versiones de los principales (producto 08), que lo soportan | ✅ Sin acción |
 | 3 | La compra recién registrada puede dar `404 NOT_FOUND` mientras se crea el cliente de Ventas | Reintento único con la misma clave (HU-31) | ✅ Decidido; se prueba en F4.3 |
 | 4 | Los `operationId` que genera Nest (`BookController_get`) son ilegibles para un generador de código | El backend configura `operationIdFactory` (anotado en sus problemas abiertos). No bloquea el MVP | ⬜ Pendiente del backend; antes de migrar a un generador |
+| 5 | Formularios: React Hook Form o TanStack Form | Se eligió **React Hook Form + Zod 4** (la opción recomendada) el 2026-10-29. Pesó el enfoque al primer error del formulario y el componente `Form` de shadcn/ui, que ya están hechos; TanStack Form queda descartado para este proyecto | ✅ Decidido; se instala en F2.2 |
+| 6 | `openapi-typescript` 7.13 declara como peer `typescript` `^5`; el proyecto usa 6.0.3 | La generación funciona (se comprobó con el backend real). Se revisa al actualizar | ✅ Sin acción |
+| 7 | pnpm avisa de "agent skills" pendientes de aprobación en `@tanstack/react-router` y `@tanstack/router-plugin` | No se aprueban: no hacen falta para el proyecto | ✅ Sin acción |
+| 8 | El paquete de producción pesa 484 kB (152 kB comprimido), y los paquetes de tipografía emiten todos los subconjuntos de idiomas (el navegador solo baja los que usa) | Se mide y se optimiza en F6 (LCP, división por rutas, subconjuntos) | ⬜ F6 |
 
 ## Bitácora
 
@@ -221,3 +243,5 @@ Cuando la implementación se aparte de la guía, se anota aquí y se corrige la 
 | 2026-10-29 | Plan del frontend (`F0`–`F6`): siete cortes con su cuadro de tareas, ligados a las historias de [producto](../product/04-historias-de-usuario.md) y a las dependencias del backend (`7.7`, `7.8`, `7.10` y el corte 8). Estado comprobado antes de planificar: `apps/store-web` es la plantilla de Vite+ en TypeScript vanilla (un contador que arma el HTML con `innerHTML`), con Vite+ 1.4.0, TypeScript 6 estricto en la forma (`erasableSyntaxOnly`, `verbatimModuleSyntax`, lint con tipos), sin framework, sin rutas, sin cliente de API y sin pruebas |
 | 2026-10-29 | Diseño: se escribió `docs/product/diseno/` (tokens con contrastes calculados, componentes y wireframes de las diez pantallas con sus estados) y se ligó a los cortes: lo mínimo antes de `F0` y cada pantalla revisada antes de su corte |
 | 2026-10-29 | Cliente de API: se anotó la ruta de A (ahora) a un generador completo (después) en [01 sección 4](01-decisiones-y-stack.md#4-del-cliente-de-hoy-a-un-generador-completo-camino-futuro), con dos reglas nuevas de arquitectura (8 y 9), `shared/api/types.ts` y `errors.ts` en la estructura, y el pendiente `operationIdFactory` del backend |
+| 2026-10-29 | Corte F0 (Fundaciones): la plantilla pasa a React 19 + TanStack Router y Query + Tailwind 4 con los tokens de diseño + `shared/ui` (botón, aviso, esqueleto, hoja lateral y paneles de estado); cliente `openapi-fetch` con tipos generados del backend real, renovación tras un `401`, `ApiError` y mensajes por `errorCode`; cabecera, buscador y PA-10; proxy `/api` al backend; CI. 55 pruebas pasan (unitarias de montos, fechas, errores, cliente con MSW y reglas de dependencia; de componente con axe). Falta la revisión visual en un navegador |
+| 2026-10-29 | Decisión: formularios con React Hook Form + Zod 4. Se cierra el problema abierto 5; la librería se instala en F2.2 |

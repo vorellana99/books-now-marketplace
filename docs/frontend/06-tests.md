@@ -8,13 +8,14 @@
 |---|---|---|---|
 | **Unitarias** | Lógica pura: formato de montos, mapa de errores, huella y clave de idempotencia, reglas del carrito, reglas de dependencia | Vitest | `test/unit/` |
 | **De componente** | Una pantalla o un flujo con su ruta, sus formularios y la API simulada | Vitest + Testing Library + MSW | `test/component/` |
-| **Accesibilidad** | Que las pantallas no tengan violaciones de axe (nivel AA, [producto 08](../product/08-requisitos-de-experiencia.md)) | Un paquete de axe para Vitest dentro de las pruebas de componente | `test/component/` |
+| **Accesibilidad** | Que las pantallas no tengan violaciones de axe (nivel AA, [producto 08](../product/08-requisitos-de-experiencia.md)) | `axe-core` directo (`test/support/axe.ts`) dentro de las pruebas de componente; no mide el contraste, que jsdom no calcula y se audita en el navegador (F6) | `test/component/` |
 | **e2e** | El recorrido completo contra el backend real | Playwright | `test/e2e/` (corte F6) |
 
 Las pruebas viven en `test/`, no junto al código, como en el backend. `test/support/` tiene los handlers de MSW, una función `renderApp()` con los proveedores (router, Query, sesión) y fábricas tipadas con el esquema generado.
 
 ```bash
-vp test                              # todas las unitarias y de componente
+vp test                              # todas las unitarias y de componente (una corrida)
+vp test watch                        # en observación mientras se desarrolla
 vp test test/unit/money.test.ts      # un archivo
 vp test -t "texto del test"          # un test por nombre
 ```
@@ -23,7 +24,7 @@ vp test -t "texto del test"          # un test por nombre
 
 - Los handlers se tipan con el esquema generado (`schema.d.ts`), así que un cambio de contrato del backend rompe la compilación de las pruebas.
 - Los endpoints que **aún no existen** (`POST /orders/quote`, `GET /me/orders`, y el `shippingAddress` de `GET /orders/:id`) tienen handlers que siguen el contrato propuesto y llevan el comentario `// CONTRATO PROPUESTO: aún no existe en el backend`. Una historia que depende de ellos **no se marca terminada** hasta probarla contra la ruta real ([00-avance](00-avance.md)).
-- Cada prueba parte de un estado limpio de MSW y de `localStorage`/`sessionStorage`.
+- Cada prueba parte de un estado limpio de MSW y de `localStorage`/`sessionStorage`. Una petición sin handler falla la prueba (`onUnhandledFrame: "error"`).
 
 ## Casos mínimos, por funcionalidad
 

@@ -33,7 +33,7 @@ Todo lo anterior son las decisiones del [producto](../product/09-decisiones-y-pr
 | `react-hook-form`, `@hookform/resolvers`, `zod` | Formularios y validación de forma | El servidor decide siempre; la validación del cliente solo avisa antes |
 | `zustand` | Carrito persistido | |
 | `tailwindcss` (+ su plugin de Vite) y `shadcn/ui` | Estilos y componentes | Los componentes de shadcn se copian al repo en `shared/ui/` |
-| `vitest`, `@testing-library/react`, `msw`, un paquete de axe para Vitest | Pruebas y accesibilidad | Vitest ya viene con Vite+ |
+| `jsdom`, `@testing-library/react` y `user-event`, `msw`, `axe-core` | Pruebas y accesibilidad | Vitest ya viene con Vite+ (se importa de `vite-plus/test`). `axe-core` se usa directo, sin envoltorio; `jest-dom` no se usa |
 | `@playwright/test` | e2e del flujo de compra | Se añade en el corte F6 |
 
 > [!tip] Versiones reproducibles
@@ -79,8 +79,8 @@ flowchart TB
 **Reglas** (las comprobará `test/unit/dependency-rules.test.ts`, que lee los imports como hace la prueba equivalente del backend):
 
 1. **Una funcionalidad no importa las entrañas de otra.** Solo su API pública, `features/<x>/index.ts`. La única dependencia prevista es `checkout → cart` (el carrito y su total).
-2. **`shared/` no importa de `features/` ni de `routes/`.**
-3. **`routes/` solo conecta:** cada archivo declara la ruta, su acceso (`beforeLoad`) y qué página de `features/` muestra. No lleva lógica.
+2. **`shared/` no importa de `features/`, `routes/` ni `app/`.**
+3. **`routes/` solo conecta:** cada archivo declara la ruta, su acceso (`beforeLoad`) y qué página de `features/` muestra. No lleva lógica. **`app/` es el armazón** (cabecera, layout y las pantallas de error): compone `features/` y `shared/`, y solo lo importan `routes/` y `main.tsx`.
 4. **Solo `shared/api/` habla con la red.** Ninguna página llama a `fetch`; usa los hooks de su funcionalidad, que usan el cliente.
 5. **Los montos son texto** de la API (`{ amount, currency }`) hasta el momento de mostrarlos. No se convierten a `number` (RN-08).
 6. **El mensaje al usuario sale del `errorCode`**, nunca del `message` de la API (ver [03](03-integracion-con-la-api.md) y [`07-contenido-y-mensajes`](../product/07-contenido-y-mensajes.md)).

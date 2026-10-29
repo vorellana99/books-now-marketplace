@@ -52,6 +52,8 @@ api.use(withSession);
 
 > `shared/` no puede importar de `features/` (regla 2 de [01](01-decisiones-y-stack.md#3-arquitectura)). En el código real, `shared/api` recibe las funciones de la sesión por **inyección** al arrancar (`configureApi({ getAccessToken, refreshSession })`) y no las importa. El boceto las importa solo para que se vea el flujo. `getAccessToken`, `refreshSession` y `toApiError` son **funciones sueltas**, sin depender de `openapi-fetch`, para poder enchufarlas en un interceptor o un *mutator* si algún día se migra a un generador completo ([01 sección 4](01-decisiones-y-stack.md#4-del-cliente-de-hoy-a-un-generador-completo-camino-futuro)).
 
+> **Implementado en F0** (`src/shared/api/client.ts`): la sesión se inyecta con `configureApi({ getAccessToken, refreshSession })`; hay dos clientes, `api` (con sesión) y `rawApi` (sin ella, para `/auth/*` y para la renovación); `unwrap(call)` devuelve los datos o lanza `ApiError` o `NetworkError`; y la petición original se guarda por su `id` en `onRequest` para poder repetirla con su cuerpo tras el `401`. Además, a `openapi-fetch` se le pasa `fetch: (request) => globalThis.fetch(request)`: de otro modo guarda el `fetch` de ese momento y MSW no intercepta en las pruebas.
+
 ## 3. Sesión con renovación serializada (`features/auth/session.ts`)
 
 Un token de refresco sirve una sola vez; dos renovaciones con el mismo token cierran la sesión (RN-34). Una renovación a la vez por pestaña y **un candado entre pestañas**:
