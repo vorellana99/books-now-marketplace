@@ -3,6 +3,7 @@ import { Logger, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { HealthModule } from '../../src/platform/health/health.module.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
@@ -29,7 +30,7 @@ describe('Límite de intentos (e2e, aplicación y PostgreSQL reales)', () => {
   let app: INestApplication;
   beforeAll(async () => {
     app = await createHttpApp(
-      [OutboxModule, IdentityModule, CatalogModule, HealthModule],
+      [OutboxModule, IdentityModule, AUTH_MODULE, CatalogModule, HealthModule],
       { ...LIMITS, TRUST_PROXY: '1' },
     );
   });
@@ -305,7 +306,10 @@ describe('Límite de intentos (e2e, aplicación y PostgreSQL reales)', () => {
 describe('Límite de intentos sin confiar en el proxy (TRUST_PROXY=0)', () => {
   let app: INestApplication;
   beforeAll(async () => {
-    app = await createHttpApp([OutboxModule, IdentityModule], LIMITS);
+    app = await createHttpApp(
+      [OutboxModule, IdentityModule, AUTH_MODULE],
+      LIMITS,
+    );
   });
   afterAll(async () => {
     await app.close();

@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { HealthModule } from '../../src/platform/health/health.module.js';
@@ -31,6 +32,7 @@ const MODULES = () => [
   InventoryModule,
   SalesModule,
   IdentityModule, // el guard global: las rutas exigen sesión
+  AUTH_MODULE,
 ];
 const ISBN = '9780134494166';
 const BOOK = {

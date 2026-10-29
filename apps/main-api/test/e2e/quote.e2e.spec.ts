@@ -3,6 +3,7 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
@@ -30,6 +31,7 @@ describe('POST /orders/quote (e2e, aplicación y PostgreSQL reales)', () => {
         InventoryModule,
         SalesModule,
         IdentityModule,
+        AUTH_MODULE,
       ],
       { PAYMENT_PROVIDER: 'fake' },
     );

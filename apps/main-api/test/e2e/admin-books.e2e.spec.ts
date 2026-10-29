@@ -2,6 +2,7 @@ import { Module, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { bearer } from '../support/auth.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { insertBook } from '../support/builders.js';
@@ -36,6 +37,7 @@ describe('POST /admin/books (e2e, aplicación y PostgreSQL reales)', () => {
         CatalogModule,
         Probes,
         IdentityModule,
+        AUTH_MODULE,
       ]);
       admin = await bearer(app, 'ADMIN');
     });

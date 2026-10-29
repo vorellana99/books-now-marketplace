@@ -5,7 +5,6 @@ import { OutboxModule } from '../../platform/outbox/outbox.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
-import { AuthGuard } from '../../platform/auth/auth.guard.js';
 import { AccessTokenIssuer } from './application/access-token-issuer.js';
 import { PasswordHasher } from './domain/password-hasher.port.js';
 import { AuthController } from './infrastructure/auth.controller.js';
@@ -37,9 +36,6 @@ import { SessionService } from './infrastructure/session.service.js';
   providers: [
     // El límite de intentos va antes que el resto de los guards: un intento cortado no gasta ni la verificación del token
     { provide: APP_GUARD, useClass: AuthThrottlerGuard },
-    // Toda aplicación que incluye Identidad queda con denegado por defecto: el guard es global, de la plataforma, y
-    // verifica con el puerto que este módulo implementa
-    { provide: APP_GUARD, useClass: AuthGuard },
     SessionService,
     RegisterUserHandler,
     LoginHandler,

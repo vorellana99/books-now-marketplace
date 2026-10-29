@@ -3,6 +3,7 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
@@ -17,6 +18,7 @@ const MODULES = [
   InventoryModule,
   SalesModule,
   IdentityModule, // el guard global: las rutas exigen sesión
+  AUTH_MODULE,
 ];
 const BASE = Date.parse('2026-10-28T10:00:00.000Z');
 

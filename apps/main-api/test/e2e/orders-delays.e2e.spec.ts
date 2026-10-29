@@ -7,6 +7,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
@@ -60,6 +61,7 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
             InventoryModule,
             SalesModule,
             IdentityModule,
+            AUTH_MODULE,
           ],
         }).compile(),
     );
