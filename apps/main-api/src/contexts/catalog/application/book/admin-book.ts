@@ -1,7 +1,2 @@
-import type { BookItem } from './search-books.query.js';
-
-// Un libro como lo ve la administración: lo mismo que el catálogo, más si está activo (el catálogo público no muestra
-// los inactivos, así que allí no hace falta)
-export interface AdminBook extends BookItem {
-  active: boolean;
-}
+// Un libro como lo ve la administración. El tipo es del dominio; se reexporta aquí para quien ya lo importaba de este archivo
+export type { BookView as AdminBook } from '../../domain/book/book-view.js';
