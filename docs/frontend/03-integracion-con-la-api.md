@@ -20,7 +20,7 @@ Con el paso 1, los tipos incluyen también las operaciones `/admin/*` (desde el 
 | Hueco | Qué hace el frontend mientras tanto |
 |---|---|
 | Los `operationId` de Nest salen como `BookController_get`, ilegibles | Con `openapi-fetch` no importa (se llama por ruta y método). Es un pendiente del backend (`operationIdFactory`) para cuando se migre a un generador ([01 sección 4](01-decisiones-y-stack.md#4-del-cliente-de-hoy-a-un-generador-completo-camino-futuro)) |
-| El formato de error (`{ statusCode, errorCode, message }`) no está en el esquema | `shared/api/errors.ts` lo declara a mano y se cubre con una prueba |
+| El formato de error (`{ statusCode, errorCode, message }`, y `details` en un `400` de validación) no está en el esquema. Desde el corte 9 **toda** respuesta de error lo tiene, también las de validación, ruta inexistente e inesperadas | `shared/api/errors.ts` lo declara a mano y se cubre con una prueba |
 | Los `errorCode` solo aparecen en texto de las descripciones | `shared/api/error-messages.ts` lista los de [producto 07](../product/07-contenido-y-mensajes.md); un código desconocido muestra el mensaje genérico |
 | Las respuestas de Swagger son clases que "describen" lo que devuelven los handlers, sin estar atadas a ellos | Las pruebas con MSW usan fábricas tipadas con el esquema, y el e2e (F6) comprueba contra el backend real |
 
@@ -96,7 +96,7 @@ flowchart LR
 ```
 
 - El texto sale de `errorCode` mediante `shared/api/error-messages.ts` (de [producto 07](../product/07-contenido-y-mensajes.md)). **Nunca** del `message` del servidor.
-- Los `400` (forma del cuerpo) no deberían ocurrir si el formulario valida; si ocurren, se muestra el genérico y se registra en consola con el `requestId`.
+- Los `400` (forma del cuerpo, `VALIDATION_ERROR`) no deberían ocurrir si el formulario valida; si ocurren, se muestra el genérico y se registra en consola con el `requestId`. Traen `details` con la lista de fallos: sirve para depurar, no se muestra a la persona. `ROUTE_NOT_FOUND` e `INTERNAL_ERROR` tampoco tienen mensaje propio: un `404` de ruta es el genérico y un `500` es «no se pudo confirmar» (no se sabe si se cobró).
 - Una pérdida de red o un `5xx` en el pago **no afirma que no se cobró**: no se sabe (RN-21). Ofrece reintentar con la misma clave.
 - Un `429` (límite de intentos, `7.10`, ya en el backend) llega como `{ statusCode: 429, errorCode: "TOO_MANY_REQUESTS", message }` con la cabecera **`Retry-After`** en segundos. Muestra el aviso de "demasiados intentos"; si hay `Retry-After`, la tienda puede decir cuánto esperar (la ventana por defecto es de 60 segundos). Solo limitan `POST /auth/login` (por dirección y por correo), `/auth/register` y `/auth/refresh` más `/auth/logout`; el catálogo y las compras no se limitan.
 

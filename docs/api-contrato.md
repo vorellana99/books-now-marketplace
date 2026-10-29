@@ -39,6 +39,19 @@
 
 **Autenticación.** La sesión viaja en `Authorization: Bearer <accessToken>`; nunca en la URL, el cuerpo ni una cookie. El token de acceso es un JWT firmado (HS256) que vale `ACCESS_TOKEN_TTL_SECONDS` (900 por defecto) y solo lleva el id del usuario (`sub`) y su rol: no lleva el correo. El token de refresco es un texto opaco de 43 caracteres: se cambia en `POST /auth/refresh` por un par nuevo y el anterior deja de servir; presentar uno ya usado se toma por un robo y revoca toda esa sesión (incluido el token nuevo), y dos renovaciones simultáneas con el mismo token cuentan como reutilización. El cierre de sesión no invalida el token de acceso ya emitido, que vale hasta que venza. Toda ruta exige sesión salvo el catálogo (`GET /books…`), `/health/*`, `/docs*` y `/auth/*`.
 
+**Formato de todo error.** Toda respuesta de error de la API, venga de donde venga, es `{ statusCode, errorCode, message }` y lleva el header `X-Request-Id`. Además de los códigos de dominio de cada ruta (`OUT_OF_STOCK`, `INVALID_ISBN`…), hay códigos genéricos que no son de dominio y que no se confunden con ellos (`NOT_FOUND` es «el libro o el pedido no existe»; una ruta inexistente es otro):
+
+| Estado | `errorCode` | Cuándo | Notas |
+|---|---|---|---|
+| `400` | `VALIDATION_ERROR` | El cuerpo, un parámetro o la ruta no cumplen el formato, un `Idempotency-Key` falta, o el JSON está mal formado | Con varios fallos, `message` es el texto fijo «La petición no es válida» y `details` es la lista de fallos (textos). Con uno solo (por ejemplo un header que falta), `message` lo dice y no hay `details` |
+| `404` | `ROUTE_NOT_FOUND` | La ruta no existe, o existe pero no con ese método | Distinto de `NOT_FOUND` (el recurso no existe) |
+| `405` | `METHOD_NOT_ALLOWED` | El método no está permitido | Hoy Nest responde `404` para un método que la ruta no tiene; el código existe por si algún día se responde `405` |
+| `413` | `PAYLOAD_TOO_LARGE` | El cuerpo supera el límite | |
+| `4xx` | `REQUEST_ERROR` | Cualquier otro error del cliente sin código propio | |
+| `500` | `INTERNAL_ERROR` | Un error inesperado | `message` es siempre «Error interno del servidor»: no revela el error. Queda en el log con su `X-Request-Id`, que es lo que hay que dar a soporte |
+
+Las respuestas de salud (`/health/*`) conservan su propio cuerpo, porque las lee el balanceador y el monitoreo.
+
 **Errores de acceso** (siempre `{ statusCode, errorCode, message }`): `401 UNAUTHENTICATED` (falta el token, está mal formado, alterado o de otro esquema; con `WWW-Authenticate: Bearer`), `401 TOKEN_EXPIRED` (el token es auténtico pero venció: el cliente debe renovar la sesión), `403 FORBIDDEN` (se sabe quién es, pero su rol no sirve para esta ruta) y `429 TOO_MANY_REQUESTS` (con `Retry-After`, en segundos). Los mensajes nunca repiten el token ni lo que se mandó.
 
 **Roles.** `BUYER` (un comprador: compra y ve sus pedidos, con `POST /orders`, `GET /orders/:id` de los suyos y `GET /me/orders`) y `ADMIN` (la administración `/admin/*` y `GET /orders/:id` de cualquiera). Un administrador no es un cliente: no puede comprar. Los administradores no se crean por la API sino con `pnpm run admin:create`.

@@ -1,8 +1,10 @@
-// Cuerpo de un error de negocio de la API (DomainExceptionFilter). El contrato OpenAPI aún no lo describe
+// Cuerpo de todo error de la API (ApiExceptionFilter): los de dominio, los de validación, de ruta inexistente e inesperados.
+// El contrato OpenAPI aún no lo describe. `details` solo viene en un 400 de validación y no se muestra
 export type ApiErrorBody = {
   statusCode?: number;
   errorCode?: string;
   message?: string;
+  details?: string[];
 };
 
 type ApiErrorInit = {

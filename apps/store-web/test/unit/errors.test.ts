@@ -20,6 +20,18 @@ describe("toApiError", () => {
     expect(error.requestId).toBe("abc-123");
   });
 
+  it("un 400 de validación trae details: se ignora y no rompe nada", () => {
+    const error = toApiError(new Response(null, { status: 400 }), {
+      statusCode: 400,
+      errorCode: "VALIDATION_ERROR",
+      message: "La petición no es válida",
+      details: ["items debe tener al menos 1 elemento"],
+    });
+    expect(error.status).toBe(400);
+    expect(error.errorCode).toBe("VALIDATION_ERROR");
+    expect(error.message).toBe("La petición no es válida");
+  });
+
   it("tolera un cuerpo que no es el esperado", () => {
     expect(toApiError(new Response(null, { status: 500 }), "texto").errorCode).toBeUndefined();
     expect(toApiError(new Response(null, { status: 500 }), null).errorCode).toBeUndefined();
@@ -84,6 +96,20 @@ describe("outcomeFor", () => {
       expect(outcome.action).toBe("retry-same-key");
       expect(outcome.message).not.toMatch(/no se te cobr[óo] nada/i);
     }
+  });
+
+  it("los códigos de error genéricos de la API (9.1) no tienen mensaje propio: ni afirman un cobro ni lo niegan", () => {
+    for (const code of ["VALIDATION_ERROR", "ROUTE_NOT_FOUND", "METHOD_NOT_ALLOWED"]) {
+      const status = code === "VALIDATION_ERROR" ? 400 : 404;
+      expect(KNOWN_ERROR_CODES).not.toContain(code);
+      const outcome = outcomeFor(apiError(status, code));
+      expect(outcome.action).toBe("retry");
+      expect(outcome.charged).toBeUndefined();
+    }
+    // un 500 con INTERNAL_ERROR se trata como cualquier 5xx: no se sabe si se cobró
+    const server = outcomeFor(apiError(500, "INTERNAL_ERROR"));
+    expect(server.charged).toBe("unknown");
+    expect(server.action).toBe("retry-same-key");
   });
 
   it("un 429 pide esperar y un 401 sin código pide entrar", () => {
