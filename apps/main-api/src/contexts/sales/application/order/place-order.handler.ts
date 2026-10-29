@@ -8,10 +8,12 @@ import {
   CheckoutLog,
   type CheckoutRecord,
 } from '../../domain/order/checkout-log.port.js';
+import type { Order } from '../../domain/order/order.aggregate.js';
 import { ShippingAddress } from '../../domain/order/shipping-address.vo.js';
 import { OrderRepository } from '../../domain/order/order.repository.js';
 import { StockReservation } from '../../domain/order/stock-reservation.port.js';
 import { PaymentGateway } from '../../domain/payment/payment-gateway.port.js';
+import type { Money } from '../../domain/shared/money.vo.js';
 import {
   PlaceOrderCommand,
   type PlaceOrderResult,
@@ -51,32 +53,44 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       address,
     });
     const finalPrice = breakdown.total.toFinal();
+
+    // 2. Efectos, en orden; si algo falla, se deshace lo hecho
+    const raced = await this.start(order.id, cmd.idempotencyKey, requestHash);
+    if (raced) return this.replay(raced, requestHash);
+    return this.charge(order, finalPrice, cmd.cardToken);
+  }
+
+  // Registra el intento. Devuelve null si empezó, o el registro de otra petición con la misma clave que entró justo
+  // antes (la clave es única en la base); si esa otra ya no se ve, todavía se está procesando
+  private async start(
+    orderId: string,
+    idempotencyKey: string,
+    requestHash: string,
+  ): Promise<CheckoutRecord | null> {
+    if (await this.checkouts.start(orderId, idempotencyKey, requestHash)) {
+      return null;
+    }
+    const existing = await this.checkouts.findByKey(idempotencyKey);
+    if (!existing) throw this.inProgress();
+    return existing;
+  }
+
+  // Reserva, cobra y guarda. Desde aquí, si el proceso cae, RecoverCheckoutsJob recupera el checkout
+  private async charge(
+    order: Order,
+    finalPrice: Money,
+    cardToken: string,
+  ): Promise<PlaceOrderResult> {
     const lines = order
       .getLines()
       .map((l) => ({ isbn: l.isbn.value, quantity: l.quantity }));
-
-    // 2. Efectos, en orden; si algo falla, se deshace lo hecho
-    if (
-      !(await this.checkouts.start(order.id, cmd.idempotencyKey, requestHash))
-    ) {
-      // Otra petición con la misma clave entró justo antes (la clave es única en la base)
-      const existing = await this.checkouts.findByKey(cmd.idempotencyKey);
-      if (!existing)
-        throw new ConflictError(
-          'CHECKOUT_IN_PROGRESS',
-          'Esta compra todavía se está procesando',
-        );
-      return this.replay(existing, requestHash);
-    }
-
-    // Desde aquí, si el proceso cae, RecoverCheckoutsJob recupera el checkout
     let chargeAttempted = false;
     try {
       await this.stock.reserve(order.id, lines); // sin stock → no reservó nada; release no hace nada
       chargeAttempted = true;
       const payment = await this.payments.charge(
         finalPrice,
-        cmd.cardToken,
+        cardToken,
         order.id,
       );
       if (!payment.approved) {
@@ -88,23 +102,30 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
       order.place();
       await this.orders.save(order, finalPrice); // pedido + checkout COMPLETED + outbox
     } catch (e) {
-      if (await this.checkouts.isCompleted(order.id)) {
-        // El commit sí ocurrió (la respuesta se perdió): el pedido es válido, no se compensa
-        return { orderId: order.id, charged: finalPrice };
+      if (!(await this.checkouts.isCompleted(order.id))) {
+        await this.compensate(order.id, chargeAttempted);
+        throw e; // el cliente recibe el error original, no el de la compensación
       }
-      try {
-        if (chargeAttempted) await this.payments.refund(order.id); // idempotente: cubre rechazos y timeouts
-        await this.stock.release(order.id);
-        await this.checkouts.abort(order.id); // solo si TODAS las compensaciones terminaron
-      } catch (compensationError) {
-        // No se marca ABORTED: queda PENDING y RecoverCheckoutsJob reintenta las compensaciones
-        this.logger.error(
-          `Compensación incompleta para ${order.id}: ${String(compensationError)}`,
-        );
-      }
-      throw e; // el cliente recibe el error original, no el de la compensación
+      // El commit sí ocurrió (la respuesta se perdió): el pedido es válido, no se compensa
     }
     return { orderId: order.id, charged: finalPrice };
+  }
+
+  // Deshace lo hecho, en orden: reembolsa, libera el stock y solo entonces anula el checkout. Si algo falla no se
+  // marca ABORTED: queda PENDING y RecoverCheckoutsJob reintenta las compensaciones
+  private async compensate(
+    orderId: string,
+    chargeAttempted: boolean,
+  ): Promise<void> {
+    try {
+      if (chargeAttempted) await this.payments.refund(orderId); // idempotente: cubre rechazos y timeouts
+      await this.stock.release(orderId);
+      await this.checkouts.abort(orderId); // solo si TODAS las compensaciones terminaron
+    } catch (compensationError) {
+      this.logger.error(
+        `Compensación incompleta para ${orderId}: ${String(compensationError)}`,
+      );
+    }
   }
 
   // Responde un reintento según cómo terminó el intento original
@@ -125,15 +146,17 @@ export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
         );
       return { orderId: checkout.orderId, charged: checkout.charged };
     }
-    if (checkout.status === 'PENDING') {
-      throw new ConflictError(
-        'CHECKOUT_IN_PROGRESS',
-        'Esta compra todavía se está procesando',
-      );
-    }
+    if (checkout.status === 'PENDING') throw this.inProgress();
     throw new DomainError(
       'PREVIOUS_ATTEMPT_FAILED',
       'El intento anterior con esta clave falló; usa una clave nueva',
+    );
+  }
+
+  private inProgress(): ConflictError {
+    return new ConflictError(
+      'CHECKOUT_IN_PROGRESS',
+      'Esta compra todavía se está procesando',
     );
   }
 }

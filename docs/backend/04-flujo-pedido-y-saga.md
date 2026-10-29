@@ -107,6 +107,8 @@ stateDiagram-v2
 
 ### Application: el handler con compensaciones (la saga)
 
+> Desde el corte 9 (tarea `9.10`) el código real reparte estos pasos en métodos privados: `execute` (idempotencia y precios), `start` (registrar el intento), `charge` (reservar, cobrar y guardar), `compensate` (reembolsar, liberar y anular, en ese orden) y `replay`. El orden y la conducta son los de este fragmento, que se deja en un solo bloque para leer la saga de corrido.
+
 ```ts
 // sales/application/order/place-order.handler.ts
 @CommandHandler(PlaceOrderCommand)
