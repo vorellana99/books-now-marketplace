@@ -4,6 +4,8 @@
 
 **Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado
 
+**Columna «Tiempo» de los cuadros de tareas:** es una **aproximación** sacada de `git log`: los minutos entre el commit anterior (sin contar las fusiones) y el commit `N.M` de la tarea. Incluye lo que se hizo en medio (esperas, planificación, documentos de otros temas) y, en cambio, no distingue el tiempo activo de una pausa, así que sirve para comparar el orden de magnitud entre tareas y no para facturar. Las tareas de los cortes 0 y 1 llevan `—` porque no tienen un commit propio (el corte 1 se entregó en un solo commit). Las tareas 2.1 a 2.6 se midieron con sus commits sin prefijo `N.M`. Una tarea que tuvo commits posteriores de ajuste (por ejemplo la `5.14`) cuenta solo hasta el primero.
+
 Los cortes 0 a 6 traen un cuadro de **Tareas** que explica qué es cada una y para qué sirve; debajo queda la lista de casillas con el detalle. Al terminar una tarea de un corte en curso, se marca en las dos. Los commits de cada tarea llevan su número (`2.7`, `3.1`…).
 
 ## Resumen
@@ -30,13 +32,13 @@ Los cortes 1 y 2 son independientes y pueden ir en paralelo. Del 3 en adelante, 
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | Proyecto Nest 12 en ESM | El esqueleto de la API en `apps/main-api` | Tener una app que compila y arranca | ✅ |
-| 2 | TypeScript 6, Vitest 4 y Vite 8 | El compilador y las herramientas de pruebas | Poder escribir y ejecutar tests | ✅ |
-| 3 | oxlint y Prettier | El análisis de código y el formato | Detectar errores y mantener un estilo único | ✅ |
-| 4 | `supertest` | Librería para hacer peticiones HTTP en los tests | Probar la API completa (e2e) | ✅ |
-| 5 | pnpm | El gestor de paquetes | Instalaciones reproducibles con un lockfile | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | Proyecto Nest 12 en ESM | El esqueleto de la API en `apps/main-api` | Tener una app que compila y arranca | ✅ | — |
+| 2 | TypeScript 6, Vitest 4 y Vite 8 | El compilador y las herramientas de pruebas | Poder escribir y ejecutar tests | ✅ | — |
+| 3 | oxlint y Prettier | El análisis de código y el formato | Detectar errores y mantener un estilo único | ✅ | — |
+| 4 | `supertest` | Librería para hacer peticiones HTTP en los tests | Probar la API completa (e2e) | ✅ | — |
+| 5 | pnpm | El gestor de paquetes | Instalaciones reproducibles con un lockfile | ✅ | — |
 
 - [x] Proyecto Nest 12 en ESM (`apps/main-api`)
 - [x] TypeScript 6, Vitest 4, Vite 8
@@ -56,16 +58,16 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | Dependencias, entorno y scripts | Las librerías de la guía, `.env` / `.env.example`, `.gitignore` y los scripts `db:*`, `prisma:generate` y `test:e2e` | Poder instalar, configurar y arrancar el proyecto con comandos cortos | ✅ |
-| 2 | Base de datos local | `docker-compose.yml` con PostgreSQL 18 y `healthcheck` | Tener la misma base en todas las máquinas con `pnpm run db:up` | ✅ |
-| 3 | Configuración validada | `env.schema.ts` con Zod y el `ConfigModule` | Que la app no arranque con variables faltantes o inválidas, y que diga cuál | ✅ |
-| 4 | Prisma y esquema | `prisma.config.ts`, `schema.prisma` (4 schemas), la migración `init` con los `CHECK` y `uuidv7()`, `PrismaModule` y `PrismaService` | Tener las tablas creadas y un cliente de base de datos listo para usar | ✅ |
-| 5 | Errores de dominio y filtro HTTP | `domain.errors.ts`, `DomainExceptionFilter` y `configure-app` | Que un error de negocio responda 404, 409 o 422 en lugar de un 500 | ✅ |
-| 6 | Observabilidad | `request-context`, middleware de `X-Request-Id`, interceptor y `RequestAwareLogger` | Seguir una petición por todos sus logs con un solo identificador | ✅ |
-| 7 | Salud y documentación de la API | `/health/live`, `/health/ready`, Swagger en `/docs`, nuevo `main.ts` y `AppModule`; se elimina el "Hello World" | Saber si la API y la base están vivas, y poder explorar los endpoints | ✅ |
-| 8 | Verificación | Tests de `env.schema` y e2e de `X-Request-Id`; comprobar que TypeScript 6, Vitest 4 y Prisma 7 funcionan juntos | Confirmar que los cimientos funcionan antes de construir encima | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | Dependencias, entorno y scripts | Las librerías de la guía, `.env` / `.env.example`, `.gitignore` y los scripts `db:*`, `prisma:generate` y `test:e2e` | Poder instalar, configurar y arrancar el proyecto con comandos cortos | ✅ | — |
+| 2 | Base de datos local | `docker-compose.yml` con PostgreSQL 18 y `healthcheck` | Tener la misma base en todas las máquinas con `pnpm run db:up` | ✅ | — |
+| 3 | Configuración validada | `env.schema.ts` con Zod y el `ConfigModule` | Que la app no arranque con variables faltantes o inválidas, y que diga cuál | ✅ | — |
+| 4 | Prisma y esquema | `prisma.config.ts`, `schema.prisma` (4 schemas), la migración `init` con los `CHECK` y `uuidv7()`, `PrismaModule` y `PrismaService` | Tener las tablas creadas y un cliente de base de datos listo para usar | ✅ | — |
+| 5 | Errores de dominio y filtro HTTP | `domain.errors.ts`, `DomainExceptionFilter` y `configure-app` | Que un error de negocio responda 404, 409 o 422 en lugar de un 500 | ✅ | — |
+| 6 | Observabilidad | `request-context`, middleware de `X-Request-Id`, interceptor y `RequestAwareLogger` | Seguir una petición por todos sus logs con un solo identificador | ✅ | — |
+| 7 | Salud y documentación de la API | `/health/live`, `/health/ready`, Swagger en `/docs`, nuevo `main.ts` y `AppModule`; se elimina el "Hello World" | Saber si la API y la base están vivas, y poder explorar los endpoints | ✅ | — |
+| 8 | Verificación | Tests de `env.schema` y e2e de `X-Request-Id`; comprobar que TypeScript 6, Vitest 4 y Prisma 7 funcionan juntos | Confirmar que los cimientos funcionan antes de construir encima | ✅ | — |
 
 - [x] Instalar las dependencias de la guía (`pnpm add -E …`, Prisma fijado en `^7`)
 - [x] `docker-compose.yml` con PostgreSQL 18 y `healthcheck`
@@ -94,18 +96,18 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | `Isbn` y `DomainEvent` | El identificador del libro y la forma base de un evento | Que un ISBN inválido no pueda existir en el sistema | ✅ |
-| 2 | `contracts/` | Los mensajes públicos que se envían entre Ventas, Catálogo e Inventario | Que los contextos hablen sin importar el código interno del otro | ✅ |
-| 3 | `Money` y `Specification` | El dinero exacto (decimal.js) y la base de las reglas combinables | Que los totales no tengan errores de redondeo | ✅ |
-| 4 | `Order`, `OrderLine` y `OrderFactory` | El pedido y sus líneas | Reglas de pedido: máximo 10 por libro, una sola moneda, líneas repetidas sumadas | ✅ |
-| 5 | `Customer` y `Email` | El cliente y su correo | Saber si el cliente es premium | ✅ |
-| 6 | `PricingService` y las specifications | El cálculo del total | Descuento, envío y total: S/ 110, 160, 90 y 180 de la tabla del producto | ✅ |
-| 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ✅ |
-| 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ✅ |
-| 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ✅ |
-| 10 | Reglas de precio por moneda | Una tabla con el mínimo de envío gratis y el costo de envío de cada moneda | Que un pedido en dólares se cobre bien, con sus propios valores (40.00 USD y 3.00 USD) | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | `Isbn` y `DomainEvent` | El identificador del libro y la forma base de un evento | Que un ISBN inválido no pueda existir en el sistema | ✅ | ~14 min |
+| 2 | `contracts/` | Los mensajes públicos que se envían entre Ventas, Catálogo e Inventario | Que los contextos hablen sin importar el código interno del otro | ✅ | ~9 min |
+| 3 | `Money` y `Specification` | El dinero exacto (decimal.js) y la base de las reglas combinables | Que los totales no tengan errores de redondeo | ✅ | ~10 min |
+| 4 | `Order`, `OrderLine` y `OrderFactory` | El pedido y sus líneas | Reglas de pedido: máximo 10 por libro, una sola moneda, líneas repetidas sumadas | ✅ | ~4 min |
+| 5 | `Customer` y `Email` | El cliente y su correo | Saber si el cliente es premium | ✅ | ~6 min |
+| 6 | `PricingService` y las specifications | El cálculo del total | Descuento, envío y total: S/ 110, 160, 90 y 180 de la tabla del producto | ✅ | ~8 min |
+| 7 | Puertos (`abstract class`) | Los "enchufes" que el dominio necesita: repositorios, pago, stock y notificación | Que el dominio no dependa de Prisma ni de Nest | ✅ | ~4 min |
+| 8 | `test/fakes/` | Versiones en memoria de esos puertos | Probar la saga sin base de datos | ✅ | ~3 min |
+| 9 | Regla de dependencias | Un test que revisa los imports | Que `domain/` quede sin Nest ni Prisma y `contracts/` sin `contexts/` | ✅ | ~2 min |
+| 10 | Reglas de precio por moneda | Una tabla con el mínimo de envío gratis y el costo de envío de cada moneda | Que un pedido en dólares se cobre bien, con sus propios valores (40.00 USD y 3.00 USD) | ✅ | ~31 min |
 
 - [x] `shared-kernel/`: `isbn.vo.ts` y `domain-event.ts`
 - [x] `contracts/`: `order-placed.event`, `get-book-price.query`, `reserve-stock.command`, `release-stock.command`, `stock.errors`
@@ -129,18 +131,18 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | Entorno de integración con Testcontainers | Un `globalSetup` que levanta `postgres:18`, aplica las migraciones y entrega las variables `DB_*`; los archivos de integración se ejecutan uno tras otro porque comparten la base; limpieza de tablas entre tests y tiempos de espera mayores | Probar contra PostgreSQL real sin que los tests se pisen entre sí | ✅ |
-| 2 | CI y documentación de pruebas | El workflow sin el servicio `postgres` ni `db:deploy`, y el README (Requisitos, Pruebas y "Base de datos aparte para las pruebas") | Que el repositorio quede coherente justo después de cambiar cómo se prueba | ✅ |
-| 3 | Seed | `prisma/seed.ts` con clientes (normal y premium), libros (en PEN, en USD, uno inactivo y uno sin registro de stock) y stock (uno en cero) | Poder probar la API a mano con `pnpm run db:seed`, incluidos los tres casos de stock | ✅ |
-| 4 | Catálogo: `GetBookPriceHandler` | El handler de la query de precio, con Prisma directo, y las ayudas para crear libros y stock en los tests | Que Ventas pueda pedir título y precio de un libro por el contrato | ✅ |
-| 5 | Catálogo: `GET /books/:isbn` | `BookController` (envía `GetBookPriceQuery` por el `QueryBus`), `CatalogModule` en `AppModule` y Swagger | Que la API publique el libro, con un solo camino y un solo formato de error | ✅ |
-| 6 | Inventario: `ReserveStockHandler` | Reservar todas las líneas o ninguna, con una actualización condicional, y rechazo de entradas inválidas | Que el stock nunca quede en negativo | ✅ |
-| 7 | Inventario: `ReleaseStockHandler` | Devolver el stock de un pedido, de forma idempotente | Que compensar la saga no devuelva stock de más | ✅ |
-| 8 | Concurrencia sin interbloqueo | Tests con pedidos simultáneos que reservan los mismos libros en orden inverso | Demostrar que el bloqueo por orden de ISBN evita los interbloqueos | ✅ |
-| 9 | Cableado y cierre | `InventoryModule` en `AppModule`, prueba a través del `CommandBus` y el `QueryBus`, regla de dependencias para `application/` y guía al día | Cerrar el corte con los criterios "listo cuando" cumplidos de verdad | ✅ |
-| 10 | Reservas simultáneas del mismo pedido | Un bloqueo por pedido al inicio de la reserva | Que un pedido reserve una sola vez aunque dos llamadas a la vez usen libros distintos | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | Entorno de integración con Testcontainers | Un `globalSetup` que levanta `postgres:18`, aplica las migraciones y entrega las variables `DB_*`; los archivos de integración se ejecutan uno tras otro porque comparten la base; limpieza de tablas entre tests y tiempos de espera mayores | Probar contra PostgreSQL real sin que los tests se pisen entre sí | ✅ | ~11 min |
+| 2 | CI y documentación de pruebas | El workflow sin el servicio `postgres` ni `db:deploy`, y el README (Requisitos, Pruebas y "Base de datos aparte para las pruebas") | Que el repositorio quede coherente justo después de cambiar cómo se prueba | ✅ | ~1 min |
+| 3 | Seed | `prisma/seed.ts` con clientes (normal y premium), libros (en PEN, en USD, uno inactivo y uno sin registro de stock) y stock (uno en cero) | Poder probar la API a mano con `pnpm run db:seed`, incluidos los tres casos de stock | ✅ | ~7 min |
+| 4 | Catálogo: `GetBookPriceHandler` | El handler de la query de precio, con Prisma directo, y las ayudas para crear libros y stock en los tests | Que Ventas pueda pedir título y precio de un libro por el contrato | ✅ | ~4 min |
+| 5 | Catálogo: `GET /books/:isbn` | `BookController` (envía `GetBookPriceQuery` por el `QueryBus`), `CatalogModule` en `AppModule` y Swagger | Que la API publique el libro, con un solo camino y un solo formato de error | ✅ | ~6 min |
+| 6 | Inventario: `ReserveStockHandler` | Reservar todas las líneas o ninguna, con una actualización condicional, y rechazo de entradas inválidas | Que el stock nunca quede en negativo | ✅ | ~5 min |
+| 7 | Inventario: `ReleaseStockHandler` | Devolver el stock de un pedido, de forma idempotente | Que compensar la saga no devuelva stock de más | ✅ | ~6 min |
+| 8 | Concurrencia sin interbloqueo | Tests con pedidos simultáneos que reservan los mismos libros en orden inverso | Demostrar que el bloqueo por orden de ISBN evita los interbloqueos | ✅ | ~7 min |
+| 9 | Cableado y cierre | `InventoryModule` en `AppModule`, prueba a través del `CommandBus` y el `QueryBus`, regla de dependencias para `application/` y guía al día | Cerrar el corte con los criterios "listo cuando" cumplidos de verdad | ✅ | ~6 min |
+| 10 | Reservas simultáneas del mismo pedido | Un bloqueo por pedido al inicio de la reserva | Que un pedido reserve una sola vez aunque dos llamadas a la vez usen libros distintos | ✅ | ~17 min |
 
 **Decisiones** (se aplicó la opción propuesta en las cinco; si alguna no convence, cambiarla es una tarea pequeña):
 
@@ -174,17 +176,17 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | Consumidores y registro | `outbox-consumer.ts` (consumidor `db` y `external`), `@OutboxHandler()` y `OutboxRegistry` | Que el sistema sepa qué consumidores existen y a qué evento responde cada uno | ✅ |
-| 2 | `OutboxWriter` | `append(tx, events)`: guarda el evento y una entrega por consumidor | Que el evento se guarde en la misma transacción que el pedido | ✅ |
-| 3 | Relay: reclamar y entregar | `runOnce()`: reclama con `SKIP LOCKED`, entrega y marca `DONE`, con consumidores `db` y `external` | Que cada evento llegue a su consumidor y quede marcado | ✅ |
-| 4 | Relay: fallos y reintentos | Retroceso exponencial, `last_error` y paso a `FAILED` | Que un consumidor que falla no se pierda ni bloquee a los demás | ✅ |
-| 5 | Relay: concurrencia | `SKIP LOCKED`, bloqueo vencido y *fencing* por `attempts` | Que dos instancias no entreguen lo mismo y una lenta no pise a otra | ✅ |
-| 6 | Ciclo de vida del relay | `tick()` con una vuelta a la vez, `isAlive()` y apagado ordenado | Que el relay corra solo, se sepa si está vivo y se detenga sin dejar entregas a medias | ✅ |
-| 7 | Salud del Outbox | `OutboxHealthIndicator` y `GET /health/outbox` | Que monitoreo sepa si el relay sigue vivo y cuántas entregas fallan | ✅ |
-| 8 | Cableado y cierre | `OutboxModule` en `AppModule`, prueba con el intervalo real, README operativo, CI y guía | Cerrar el corte con el "listo cuando" cumplido de verdad | ✅ |
-| 9 | Logs JSON con el `requestId` de primer nivel | Cambia `RequestAwareLogger` para formatear el JSON con `requestId` aparte y `message` siempre del mismo tipo | Que los indexadores de logs no rechacen líneas y que los seis niveles lleven el id | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | Consumidores y registro | `outbox-consumer.ts` (consumidor `db` y `external`), `@OutboxHandler()` y `OutboxRegistry` | Que el sistema sepa qué consumidores existen y a qué evento responde cada uno | ✅ | ~8 min |
+| 2 | `OutboxWriter` | `append(tx, events)`: guarda el evento y una entrega por consumidor | Que el evento se guarde en la misma transacción que el pedido | ✅ | ~17 min |
+| 3 | Relay: reclamar y entregar | `runOnce()`: reclama con `SKIP LOCKED`, entrega y marca `DONE`, con consumidores `db` y `external` | Que cada evento llegue a su consumidor y quede marcado | ✅ | ~11 min |
+| 4 | Relay: fallos y reintentos | Retroceso exponencial, `last_error` y paso a `FAILED` | Que un consumidor que falla no se pierda ni bloquee a los demás | ✅ | ~13 min |
+| 5 | Relay: concurrencia | `SKIP LOCKED`, bloqueo vencido y *fencing* por `attempts` | Que dos instancias no entreguen lo mismo y una lenta no pise a otra | ✅ | ~10 min |
+| 6 | Ciclo de vida del relay | `tick()` con una vuelta a la vez, `isAlive()` y apagado ordenado | Que el relay corra solo, se sepa si está vivo y se detenga sin dejar entregas a medias | ✅ | ~7 min |
+| 7 | Salud del Outbox | `OutboxHealthIndicator` y `GET /health/outbox` | Que monitoreo sepa si el relay sigue vivo y cuántas entregas fallan | ✅ | ~8 min |
+| 8 | Cableado y cierre | `OutboxModule` en `AppModule`, prueba con el intervalo real, README operativo, CI y guía | Cerrar el corte con el "listo cuando" cumplido de verdad | ✅ | ~17 min |
+| 9 | Logs JSON con el `requestId` de primer nivel | Cambia `RequestAwareLogger` para formatear el JSON con `requestId` aparte y `message` siempre del mismo tipo | Que los indexadores de logs no rechacen líneas y que los seis niveles lleven el id | ✅ | ~51 min |
 
 **Decisiones** (se aplica la opción propuesta; si alguna no convence, se cambia antes de llegar a esa tarea):
 
@@ -216,22 +218,22 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | `PlaceOrderHandler` | La saga con los fakes: idempotencia, reserva, cobro, guardado y compensaciones | Que cada fallo deje todo como estaba y un reintento nunca cobre dos veces | ✅ |
-| 2 | Checkouts y clientes | `PrismaCheckoutLog` y `PrismaCustomerRepository`, con tests de contrato compartidos con el fake | Que el estado de la saga sobreviva a caídas | ✅ |
-| 3 | Guardar el pedido | `PrismaOrderRepository` y `OrderMapper` (más `Order.restore`) | Que pedido, cobro registrado y evento se confirmen juntos o ninguno | ✅ |
-| 4 | Adaptadores en proceso | `CatalogInProcessAdapter`, `InventoryInProcessAdapter` y `ConsoleNotifier` | Que Ventas hable con los otros contextos solo por contratos | ✅ |
-| 5 | Pasarelas de pago | La pasarela simulada y `ExternalPaymentAdapter` con timeout de 10 s | Cobrar y reembolsar por referencia, de forma idempotente | ✅ |
-| 6 | Recuperación de checkouts | `RecoverCheckoutsJob` | Reembolsar y liberar lo que quedó a medias tras una caída | ✅ |
-| 7 | Consumidores del evento | `ConfirmReservationConsumer` (`db`) y `SendOrderConfirmationConsumer` (`external`) | Que la compra confirme la reserva y avise por email | ✅ |
-| 8 | API HTTP | `PlaceOrderDto`, `OrderController`, `GetOrderHandler` y Swagger | Publicar `POST /orders` y `GET /orders/:id` | ✅ |
-| 9 | Cableado | `SalesModule` en `AppModule`, `PAYMENT_PROVIDER` y el límite de tiempo de la base | Que la app real quede conectada | ✅ |
-| 10 | e2e y cierre | Los flujos de `06-tests.md`, README, guías y CI | Cumplir el "listo cuando" del corte | ✅ |
-| 11 | Pasarela fuera de producción | Rechazar `PAYMENT_PROVIDER=fake` con `NODE_ENV=production` | Que una pasarela que aprueba cualquier tarjeta no llegue a producción por descuido | ✅ |
-| 12 | Pasarela simulada con demora | `SimulatedPaymentGateway` tarda 3 s en cobrar y reembolsar (`PAYMENT_SIMULATED_DELAY_MS`), y sigue siendo idempotente aunque dos cobros coincidan dentro de la demora | Que la API se comporte como con un proveedor real: lenta, con la ventana del `409` abierta | ✅ |
-| 13 | Correo simulado con demora | `ConsoleNotifier` tarda 3 s en "enviar" (`EMAIL_SIMULATED_DELAY_MS`) | Que el consumidor `external` del relay se pruebe con un proveedor lento | ✅ |
-| 14 | Efectos de la demora | Los márgenes del relay y del job de recuperación con 3 s por paso, tests con demora real (escalada) y guías | Comprobar que nada del diseño depende de que todo sea instantáneo | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | `PlaceOrderHandler` | La saga con los fakes: idempotencia, reserva, cobro, guardado y compensaciones | Que cada fallo deje todo como estaba y un reintento nunca cobre dos veces | ✅ | ~6 min |
+| 2 | Checkouts y clientes | `PrismaCheckoutLog` y `PrismaCustomerRepository`, con tests de contrato compartidos con el fake | Que el estado de la saga sobreviva a caídas | ✅ | ~15 min |
+| 3 | Guardar el pedido | `PrismaOrderRepository` y `OrderMapper` (más `Order.restore`) | Que pedido, cobro registrado y evento se confirmen juntos o ninguno | ✅ | ~13 min |
+| 4 | Adaptadores en proceso | `CatalogInProcessAdapter`, `InventoryInProcessAdapter` y `ConsoleNotifier` | Que Ventas hable con los otros contextos solo por contratos | ✅ | ~10 min |
+| 5 | Pasarelas de pago | La pasarela simulada y `ExternalPaymentAdapter` con timeout de 10 s | Cobrar y reembolsar por referencia, de forma idempotente | ✅ | ~6 min |
+| 6 | Recuperación de checkouts | `RecoverCheckoutsJob` | Reembolsar y liberar lo que quedó a medias tras una caída | ✅ | ~7 min |
+| 7 | Consumidores del evento | `ConfirmReservationConsumer` (`db`) y `SendOrderConfirmationConsumer` (`external`) | Que la compra confirme la reserva y avise por email | ✅ | ~7 min |
+| 8 | API HTTP | `PlaceOrderDto`, `OrderController`, `GetOrderHandler` y Swagger | Publicar `POST /orders` y `GET /orders/:id` | ✅ | ~7 min |
+| 9 | Cableado | `SalesModule` en `AppModule`, `PAYMENT_PROVIDER` y el límite de tiempo de la base | Que la app real quede conectada | ✅ | ~11 min |
+| 10 | e2e y cierre | Los flujos de `06-tests.md`, README, guías y CI | Cumplir el "listo cuando" del corte | ✅ | ~15 min |
+| 11 | Pasarela fuera de producción | Rechazar `PAYMENT_PROVIDER=fake` con `NODE_ENV=production` | Que una pasarela que aprueba cualquier tarjeta no llegue a producción por descuido | ✅ | ~3 min |
+| 12 | Pasarela simulada con demora | `SimulatedPaymentGateway` tarda 3 s en cobrar y reembolsar (`PAYMENT_SIMULATED_DELAY_MS`), y sigue siendo idempotente aunque dos cobros coincidan dentro de la demora | Que la API se comporte como con un proveedor real: lenta, con la ventana del `409` abierta | ✅ | ~6 min |
+| 13 | Correo simulado con demora | `ConsoleNotifier` tarda 3 s en "enviar" (`EMAIL_SIMULATED_DELAY_MS`) | Que el consumidor `external` del relay se pruebe con un proveedor lento | ✅ | ~5 min |
+| 14 | Efectos de la demora | Los márgenes del relay y del job de recuperación con 3 s por paso, tests con demora real (escalada) y guías | Comprobar que nada del diseño depende de que todo sea instantáneo | ✅ | ~11 min |
 
 **Huecos de la lista original que este plan cubre:** falta `PrismaCustomerRepository`; `Order` no se podía reconstruir desde la base (`Order.restore`); el `save` de la guía marcaba `COMPLETED` sin comprobar que el checkout siguiera `PENDING` (si el job de recuperación ya lo había anulado, se creaba un pedido sin cobro y sin stock); la guía no define cómo rechaza pagos la pasarela simulada ni el contrato HTTP de la real; el DTO rechazaba ISBN con guiones y el hash distinguía `978-0-…` de `978…`; el hash usaba `localeCompare`; no había timeouts de base de datos aunque la guía los da por supuestos; `OutboxModule` no es global aquí, así que `SalesModule` lo importa; y se añaden tests de contrato para que el fake de `CheckoutLog` no se desvíe de Prisma, y un test de que `cardToken` no queda en la base ni en los logs.
 
@@ -272,18 +274,18 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | Buscar y listar libros | `SearchBooksQuery`, su handler y `GET /books?q=&page=&pageSize=` | Que el cliente encuentre libros por título o autor, paginados, sin repetir ni omitir ninguno entre páginas | ✅ |
-| 2 | Dirección de envío en el dominio | `ShippingAddress` (valor), columnas `ship_*` en `Order` con su migración, `Order`, fábrica, mapper y repositorio | Que el pedido conserve la dirección de entrega como una copia, igual que el título y el precio | ✅ |
-| 3 | Dirección de envío en la compra | DTO anidado, `PlaceOrderCommand`, `hashRequest`, `OrderPlacedEvent` v2 y la vista del pedido | Que `POST /orders` pida la dirección, la guarde y el evento la lleve, sin romper la idempotencia ni a los consumidores actuales | ✅ |
-| 4 | Guard de administración | `AdminApiEnabledGuard` (404 si `ADMIN_API_ENABLED=false`) y la etiqueta `admin` en Swagger | Que `/admin` y el historial existan solo en desarrollo, sin quedar expuestos | ✅ |
-| 5 | Crear libros | `CreateBookCommand`, `BookCreatedEvent` y `POST /admin/books` | Que un libro nazca junto con su evento, en la misma transacción | ✅ |
-| 6 | Stock inicial de un libro nuevo | Consumidor `inventory.create-stock-item` (`db`) del evento `catalog.book.created` | Que todo libro nuevo tenga su registro de stock en cero, sin que Catálogo toque tablas de Inventario | ✅ |
-| 7 | Editar y desactivar libros | `UpdateBookCommand`, `DeactivateBookCommand` y `PATCH /admin/books/:isbn` | Cambiar datos o precio y retirar un libro sin borrarlo ni afectar pedidos ya hechos | ✅ |
-| 8 | Cargar stock | `AddStockCommand` y `POST /admin/stock/:isbn/additions` | Sumar unidades de forma atómica, aunque coincidan con reservas | ✅ |
-| 9 | Historial de pedidos | `ListCustomerOrdersQuery`, `GET /orders?customerId=&cursor=&limit=` con el guard en el método y el índice `(customer_id, created_at)` | Listar los pedidos de un cliente, del más reciente al más antiguo, con cursor | ✅ |
-| 10 | e2e y cierre | El flujo de tienda completo, README, contrato de la API, guías y CI | Cumplir el "listo cuando" del corte | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | Buscar y listar libros | `SearchBooksQuery`, su handler y `GET /books?q=&page=&pageSize=` | Que el cliente encuentre libros por título o autor, paginados, sin repetir ni omitir ninguno entre páginas | ✅ | ~23 min |
+| 2 | Dirección de envío en el dominio | `ShippingAddress` (valor), columnas `ship_*` en `Order` con su migración, `Order`, fábrica, mapper y repositorio | Que el pedido conserve la dirección de entrega como una copia, igual que el título y el precio | ✅ | ~12 min |
+| 3 | Dirección de envío en la compra | DTO anidado, `PlaceOrderCommand`, `hashRequest`, `OrderPlacedEvent` v2 y la vista del pedido | Que `POST /orders` pida la dirección, la guarde y el evento la lleve, sin romper la idempotencia ni a los consumidores actuales | ✅ | ~14 min |
+| 4 | Guard de administración | `AdminApiEnabledGuard` (404 si `ADMIN_API_ENABLED=false`) y la etiqueta `admin` en Swagger | Que `/admin` y el historial existan solo en desarrollo, sin quedar expuestos | ✅ | ~7 min |
+| 5 | Crear libros | `CreateBookCommand`, `BookCreatedEvent` y `POST /admin/books` | Que un libro nazca junto con su evento, en la misma transacción | ✅ | ~17 min |
+| 6 | Stock inicial de un libro nuevo | Consumidor `inventory.create-stock-item` (`db`) del evento `catalog.book.created` | Que todo libro nuevo tenga su registro de stock en cero, sin que Catálogo toque tablas de Inventario | ✅ | ~8 min |
+| 7 | Editar y desactivar libros | `UpdateBookCommand`, `DeactivateBookCommand` y `PATCH /admin/books/:isbn` | Cambiar datos o precio y retirar un libro sin borrarlo ni afectar pedidos ya hechos | ✅ | ~22 min |
+| 8 | Cargar stock | `AddStockCommand` y `POST /admin/stock/:isbn/additions` | Sumar unidades de forma atómica, aunque coincidan con reservas | ✅ | ~17 min |
+| 9 | Historial de pedidos | `ListCustomerOrdersQuery`, `GET /orders?customerId=&cursor=&limit=` con el guard en el método y el índice `(customer_id, created_at)` | Listar los pedidos de un cliente, del más reciente al más antiguo, con cursor | ✅ | ~43 min |
+| 10 | e2e y cierre | El flujo de tienda completo, README, contrato de la API, guías y CI | Cumplir el "listo cuando" del corte | ✅ | ~1 h 2 min |
 
 **Huecos de la lista original que este plan cubre:**
 - `AdminApiEnabledGuard` no existe todavía: solo está la variable de entorno que lo gobierna.
@@ -332,20 +334,20 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | Identidad: dominio y base | Nuevo contexto `identity` y schema `identity` (`users`, `refresh_tokens`), `User`, `Email`, política de contraseñas y el puerto `PasswordHasher` con su implementación (decisión D2) | Guardar una identidad sin nunca guardar la contraseña, con un hash lento y con una sal propia | ✅ |
-| 2 | Tokens de acceso | `TokenService`: firmar y verificar el token de acceso (decisiones D1 y D2), con las variables `JWT_SECRET` y duraciones en el esquema de entorno | Un token que no se puede falsificar, ni alterar, ni usar vencido | ✅ |
-| 3 | Registro y login | `RegisterUserCommand`, `LoginCommand`, `POST /auth/register` y `POST /auth/login`, y el evento `identity.user.registered` por el Outbox (decisiones D3 y D4) | Entrar sin revelar qué correos existen y sin que registrar y avisar a Ventas se pueda quedar a medias | ✅ |
-| 4 | Refresh y cierre de sesión | `POST /auth/refresh` (el token de refresco rota en cada uso y se detecta su reutilización) y `POST /auth/logout` | Una sesión larga con tokens de acceso cortos, y un robo de refresh que se note | ✅ |
-| 5 | Ventas crea al cliente | Consumidor `sales.create-customer` de `identity.user.registered` (mismo id), y usuarios de ejemplo en el seed | Que todo comprador registrado sea un cliente de Ventas, sin que un contexto toque las tablas del otro | ✅ |
-| 6 | Guards y decoradores | `AuthGuard` (token Bearer), `@Roles()`, `@CurrentUser()` y `@Public()`, con **denegado por defecto**, más un test que recorre todas las rutas | Que una ruta nueva sin decidir su acceso no quede abierta por descuido | ✅ |
-| 7 | Compra autenticada | `POST /orders` toma el cliente del token; `GET /orders/:id` solo para su dueño o un administrador (decisión D6) | Que nadie compre ni lea pedidos a nombre de otro | ✅ |
-| 8 | Mis pedidos y el historial de administración | `GET /me/orders` para el comprador y el historial de cualquier cliente para el administrador (decisión D6) | Que cada quien vea lo suyo, y el administrador lo de todos | ✅ |
-| 9 | Administración con rol | `/admin/*` exige el rol `ADMIN` (`401` y `403`), se elimina `ADMIN_API_ENABLED`, y un comando para crear administradores (decisión D5) | Sustituir el interruptor provisional por identidad real | ✅ |
-| 10 | Abuso y endurecimiento | Límite de intentos en login, registro y refresh, cabeceras de seguridad y CORS por variable de entorno, y registro de los eventos de acceso sin secretos (decisión D7) | Que probar contraseñas por fuerza bruta sea lento y que quede rastro de qué pasó | ✅ |
-| 11 | Swagger, seed y ergonomía | Esquema Bearer en `/docs`, usuarios de ejemplo en el seed, ayudas de test para iniciar sesión (decisión D8) y README | Poder probarlo a mano con `curl` y en Swagger | ✅ |
-| 12 | e2e y cierre | Los flujos completos, contrato de la API, guías, revisión de seguridad y CI | Cumplir el "listo cuando" del corte | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | Identidad: dominio y base | Nuevo contexto `identity` y schema `identity` (`users`, `refresh_tokens`), `User`, `Email`, política de contraseñas y el puerto `PasswordHasher` con su implementación (decisión D2) | Guardar una identidad sin nunca guardar la contraseña, con un hash lento y con una sal propia | ✅ | ~35 min |
+| 2 | Tokens de acceso | `TokenService`: firmar y verificar el token de acceso (decisiones D1 y D2), con las variables `JWT_SECRET` y duraciones en el esquema de entorno | Un token que no se puede falsificar, ni alterar, ni usar vencido | ✅ | ~12 min |
+| 3 | Registro y login | `RegisterUserCommand`, `LoginCommand`, `POST /auth/register` y `POST /auth/login`, y el evento `identity.user.registered` por el Outbox (decisiones D3 y D4) | Entrar sin revelar qué correos existen y sin que registrar y avisar a Ventas se pueda quedar a medias | ✅ | ~34 min |
+| 4 | Refresh y cierre de sesión | `POST /auth/refresh` (el token de refresco rota en cada uso y se detecta su reutilización) y `POST /auth/logout` | Una sesión larga con tokens de acceso cortos, y un robo de refresh que se note | ✅ | ~34 min |
+| 5 | Ventas crea al cliente | Consumidor `sales.create-customer` de `identity.user.registered` (mismo id), y usuarios de ejemplo en el seed | Que todo comprador registrado sea un cliente de Ventas, sin que un contexto toque las tablas del otro | ✅ | ~45 min |
+| 6 | Guards y decoradores | `AuthGuard` (token Bearer), `@Roles()`, `@CurrentUser()` y `@Public()`, con **denegado por defecto**, más un test que recorre todas las rutas | Que una ruta nueva sin decidir su acceso no quede abierta por descuido | ✅ | ~37 min |
+| 7 | Compra autenticada | `POST /orders` toma el cliente del token; `GET /orders/:id` solo para su dueño o un administrador (decisión D6) | Que nadie compre ni lea pedidos a nombre de otro | ✅ | ~31 min |
+| 8 | Mis pedidos y el historial de administración | `GET /me/orders` para el comprador y el historial de cualquier cliente para el administrador (decisión D6) | Que cada quien vea lo suyo, y el administrador lo de todos | ✅ | ~37 min |
+| 9 | Administración con rol | `/admin/*` exige el rol `ADMIN` (`401` y `403`), se elimina `ADMIN_API_ENABLED`, y un comando para crear administradores (decisión D5) | Sustituir el interruptor provisional por identidad real | ✅ | ~39 min |
+| 10 | Abuso y endurecimiento | Límite de intentos en login, registro y refresh, cabeceras de seguridad y CORS por variable de entorno, y registro de los eventos de acceso sin secretos (decisión D7) | Que probar contraseñas por fuerza bruta sea lento y que quede rastro de qué pasó | ✅ | ~25 min |
+| 11 | Swagger, seed y ergonomía | Esquema Bearer en `/docs`, usuarios de ejemplo en el seed, ayudas de test para iniciar sesión (decisión D8) y README | Poder probarlo a mano con `curl` y en Swagger | ✅ | ~11 min |
+| 12 | e2e y cierre | Los flujos completos, contrato de la API, guías, revisión de seguridad y CI | Cumplir el "listo cuando" del corte | ✅ | ~23 min |
 
 **Huecos que este plan cubre:**
 - **La guía no define dónde viven los usuarios ni cómo se ligan a los clientes.** Hoy `sales.customers` solo tiene `id`, `email` y `premium`, sin contraseña. Identidad y Ventas no pueden importarse entre sí (D4).
@@ -440,12 +442,12 @@ El "Hello World" del scaffold (`AppController`, `AppService` y sus tests) se eli
 
 ### Tareas
 
-| # | Tarea | Qué es | Objetivo principal | Estado |
-|---|---|---|---|---|
-| 1 | Desglose del precio en el dominio | `PricingService` devuelve cada parte del precio (subtotal, descuento, envío y total) y `calculateFinalPrice` delega en él | Que el cobro y la cotización salgan del **mismo** cálculo y no puedan desviarse | ✅ |
-| 2 | `QuoteOrderQuery` y su handler | Query de Ventas que carga al cliente, pide los precios al catálogo, arma el pedido en memoria y devuelve el desglose | Calcular el total sin efectos: sin reservar stock, cobrar, registrar el checkout ni escribir en el outbox | ✅ |
-| 3 | `POST /orders/quote` | La ruta, su DTO (solo `items`), su respuesta y su Swagger | Que el frontend pueda pedir el total antes de pagar, con el cliente tomado del token | ✅ |
-| 4 | Contrato, guías y cierre | `api-contrato.md`, esta guía, [producto](../product/09-decisiones-y-preguntas.md) (estado de HU-22) y los tests e2e | Que la documentación refleje lo que realmente se hizo | ✅ |
+| # | Tarea | Qué es | Objetivo principal | Estado | Tiempo |
+|---|---|---|---|---|---|
+| 1 | Desglose del precio en el dominio | `PricingService` devuelve cada parte del precio (subtotal, descuento, envío y total) y `calculateFinalPrice` delega en él | Que el cobro y la cotización salgan del **mismo** cálculo y no puedan desviarse | ✅ | ~22 min |
+| 2 | `QuoteOrderQuery` y su handler | Query de Ventas que carga al cliente, pide los precios al catálogo, arma el pedido en memoria y devuelve el desglose | Calcular el total sin efectos: sin reservar stock, cobrar, registrar el checkout ni escribir en el outbox | ✅ | ~9 min |
+| 3 | `POST /orders/quote` | La ruta, su DTO (solo `items`), su respuesta y su Swagger | Que el frontend pueda pedir el total antes de pagar, con el cliente tomado del token | ✅ | ~10 min |
+| 4 | Contrato, guías y cierre | `api-contrato.md`, esta guía, [producto](../product/09-decisiones-y-preguntas.md) (estado de HU-22) y los tests e2e | Que la documentación refleje lo que realmente se hizo | ✅ | ~12 min |
 
 - [x] 8.1 Desglose del precio: `PricingService.breakdown(order, customer, freeShipping)` con subtotal, descuento, envío y total sin redondear, y `calculateFinalPrice` que delega en él. Se comprueba: los cuatro ejemplos en soles y los cuatro en dólares de [producto](../product/03-reglas-de-negocio.md) dan el mismo total que antes; el redondeo sigue siendo uno solo, al final (RN-06); y la suma de las partes mostradas coincide siempre con el total mostrado (ver el riesgo del redondeo)
 - [x] 8.2 `QuoteOrderQuery` y su handler. Se comprueba: el cliente premium y el normal reciben su descuento y su envío; un cliente inexistente da `NOT_FOUND`; un carrito mezclado da `CURRENCY_MISMATCH`; más de 10 unidades del mismo libro, `MAX_QUANTITY_EXCEEDED`; un libro inactivo o inexistente, `NOT_FOUND`; las líneas salen ordenadas por ISBN, con las repetidas sumadas y su subtotal exacto (`unitPrice × quantity`), y su suma es el subtotal del pedido; y, tras cotizar, no hay filas nuevas en `sales.checkouts`, ni reservas en `inventory`, ni eventos en `messaging`
