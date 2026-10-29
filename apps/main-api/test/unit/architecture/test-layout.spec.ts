@@ -36,7 +36,7 @@ describe('estructura de test/unit', () => {
     ['sales', 'place-order.handler.spec.ts'],
     ['catalog', 'new-book.spec.ts'],
     ['identity', 'jwt-token.service.spec.ts'],
-    ['inventory', 'reserve-stock.handler.spec.ts'],
+    ['inventory', 'stock-rules.spec.ts'],
     ['platform', 'env.schema.spec.ts'],
     ['shared-kernel', 'isbn.vo.spec.ts'],
     ['architecture', 'dependency-rules.spec.ts'],

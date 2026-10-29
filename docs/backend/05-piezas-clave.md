@@ -222,7 +222,7 @@ Es un sustituto de desarrollo: escribe el destinatario en el log, así que no es
 ### Inventario: reserva atómica, liberación y confirmación
 
 ```ts
-// inventory/infrastructure/stock/reserve-stock.handler.ts
+// inventory/infrastructure/persistence/prisma-stock.repository.ts (reserve)
 @CommandHandler(ReserveStockCommand)
 export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand> {
   constructor(private readonly prisma: PrismaService) {}
@@ -255,7 +255,7 @@ export class ReserveStockHandler implements ICommandHandler<ReserveStockCommand>
 - **`StockItemNotFoundError`** (422, `STOCK_ITEM_NOT_FOUND`) indica un libro del catálogo sin registro de stock: además de rechazar la compra, se registra como error para corregir el dato.
 
 ```ts
-// inventory/infrastructure/stock/release-stock.handler.ts: idempotente y segura bajo concurrencia
+// inventory/infrastructure/persistence/prisma-stock.repository.ts (release): idempotente y segura bajo concurrencia
 @CommandHandler(ReleaseStockCommand)
 export class ReleaseStockHandler implements ICommandHandler<ReleaseStockCommand> {
   constructor(private readonly prisma: PrismaService) {}
@@ -281,7 +281,7 @@ export class ReleaseStockHandler implements ICommandHandler<ReleaseStockCommand>
 ```
 
 ```ts
-// inventory/infrastructure/stock/confirm-reservation.consumer.ts
+// inventory/infrastructure/consumers/confirm-reservation.consumer.ts
 // Reacción a OrderPlaced: usa el tx del relay, así el efecto y la marca DONE se confirman juntos → una sola vez
 @OutboxHandler()
 @Injectable()

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Module, type INestApplication } from '@nestjs/common';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
-import { ConfirmReservationConsumer } from '../../src/contexts/inventory/infrastructure/stock/confirm-reservation.consumer.js';
+import { ConfirmReservationConsumer } from '../../src/contexts/inventory/infrastructure/consumers/confirm-reservation.consumer.js';
 import { SendOrderConfirmationConsumer } from '../../src/contexts/sales/application/order/send-order-confirmation.consumer.js';
 import { CustomerRepository } from '../../src/contexts/sales/domain/customer/customer.repository.js';
 import { Notifier } from '../../src/contexts/sales/domain/order/notifier.port.js';

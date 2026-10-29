@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto';
-import { ReserveStockHandler } from '../../../src/contexts/inventory/infrastructure/stock/reserve-stock.handler.js';
+import { PrismaStockRepository } from '../../../src/contexts/inventory/infrastructure/persistence/prisma-stock.repository.js';
 import { ReserveStockCommand } from '../../../src/contracts/inventory/reserve-stock.command.js';
 import { Prisma } from '../../../src/platform/prisma/generated/client.js';
 import type { PrismaService } from '../../../src/platform/prisma/prisma.service.js';
 import { ConflictError } from '../../../src/shared-kernel/domain.errors.js';
 
 // Base simulada: solo para provocar el error de clave duplicada que, en la práctica, depende de la carrera entre dos peticiones
-function handlerWhereCreateFails(error: Error): ReserveStockHandler {
+function repoWhereCreateFails(error: Error): PrismaStockRepository {
   const tx = {
     $executeRaw: vi.fn().mockResolvedValue(1), // el bloqueo por pedido
     reservation: {
@@ -16,14 +16,14 @@ function handlerWhereCreateFails(error: Error): ReserveStockHandler {
     stockItem: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
   };
   const prisma = { $transaction: (fn: (t: typeof tx) => unknown) => fn(tx) };
-  return new ReserveStockHandler(prisma as unknown as PrismaService);
+  return new PrismaStockRepository(prisma as unknown as PrismaService);
 }
 
 const command = new ReserveStockCommand(randomUUID(), [
   { isbn: '9780306406157', quantity: 1 },
 ]);
 
-describe('ReserveStockHandler: carrera entre dos reservas del mismo pedido', () => {
+describe('PrismaStockRepository.reserve: carrera entre dos reservas del mismo pedido', () => {
   it('una clave duplicada al crear la reserva (P2002) se vuelve ConflictError', async () => {
     const duplicate = new Prisma.PrismaClientKnownRequestError(
       'Unique constraint failed',
@@ -33,8 +33,8 @@ describe('ReserveStockHandler: carrera entre dos reservas del mismo pedido', () 
       },
     );
 
-    const error = await handlerWhereCreateFails(duplicate)
-      .execute(command)
+    const error = await repoWhereCreateFails(duplicate)
+      .reserve(command.orderId, command.lines)
       .catch((e: Error) => e);
 
     expect(error).toBeInstanceOf(ConflictError);
@@ -47,8 +47,8 @@ describe('ReserveStockHandler: carrera entre dos reservas del mismo pedido', () 
       clientVersion: 'test',
     });
 
-    await expect(handlerWhereCreateFails(other).execute(command)).rejects.toBe(
-      other,
-    );
+    await expect(
+      repoWhereCreateFails(other).reserve(command.orderId, command.lines),
+    ).rejects.toBe(other);
   });
 });

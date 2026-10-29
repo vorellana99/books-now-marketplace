@@ -3,7 +3,7 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
 import { PurgeRefreshTokensJob } from '../../src/contexts/identity/application/purge-refresh-tokens.job.js';
-import { PurgeReservationsJob } from '../../src/contexts/inventory/infrastructure/stock/purge-reservations.job.js';
+import { PurgeReservationsJob } from '../../src/contexts/inventory/application/stock/purge-reservations.job.js';
 import { PurgeCheckoutsJob } from '../../src/contexts/sales/application/order/purge-checkouts.job.js';
 import { OutboxPurgeJob } from '../../src/platform/outbox/outbox-purge.job.js';
 
