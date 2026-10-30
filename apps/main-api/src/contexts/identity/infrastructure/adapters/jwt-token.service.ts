@@ -9,7 +9,7 @@ import { ROLES, type Role } from '../../../../shared-kernel/role.js';
 import {
   AccessTokenIssuer,
   type IssuedAccessToken,
-} from '../../application/access-token-issuer.js';
+} from '../../domain/ports/access-token-issuer.js';
 
 export const TOKEN_ISSUER = 'libroya';
 export const TOKEN_AUDIENCE = 'libroya-api';

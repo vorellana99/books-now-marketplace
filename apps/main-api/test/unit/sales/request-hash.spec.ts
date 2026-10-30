@@ -1,5 +1,5 @@
 import { ShippingAddress } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
-import { hashRequest } from '../../../src/contexts/sales/application/order/request-hash.js';
+import { hashRequest } from '../../../src/contexts/sales/domain/order/request-hash.js';
 import { ADDRESS, ADDRESS_DATA } from '../../fakes/fixtures.js';
 
 const A = '9780306406157';

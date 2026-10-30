@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { CommandBus } from '@nestjs/cqrs';
-import { ConfirmReservationCommand } from '../../../src/contexts/inventory/application/stock/confirm-reservation.command.js';
-import { CreateStockItemCommand } from '../../../src/contexts/inventory/application/stock/create-stock-item.command.js';
+import { ConfirmReservationCommand } from '../../../src/contexts/inventory/application/use-cases/stock/confirm-reservation.command.js';
+import { CreateStockItemCommand } from '../../../src/contexts/inventory/application/use-cases/stock/create-stock-item.command.js';
 import { ConfirmReservationConsumer } from '../../../src/contexts/inventory/infrastructure/consumers/confirm-reservation.consumer.js';
 import { CreateStockItemConsumer } from '../../../src/contexts/inventory/infrastructure/consumers/create-stock-item.consumer.js';
 import { BookCreatedEvent } from '../../../src/contracts/catalog/book-created.event.js';

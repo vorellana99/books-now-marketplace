@@ -7,7 +7,7 @@ import type {
 } from '../../../../platform/outbox/outbox-consumer.js';
 import { OutboxHandler } from '../../../../platform/outbox/outbox-handler.decorator.js';
 import { toTransactionHandle } from '../../../../platform/prisma/transaction-handle.js';
-import { ConfirmReservationCommand } from '../../application/stock/confirm-reservation.command.js';
+import { ConfirmReservationCommand } from '../../application/use-cases/stock/confirm-reservation.command.js';
 
 // Reacciona a OrderPlaced: la reserva HELD pasa a CONFIRMED. Es un adaptador de entrada fino: convierte la transacción
 // del relay en un identificador opaco y envía el comando, así el efecto y la marca DONE se confirman juntos y ocurre una

@@ -5,7 +5,7 @@ import {
   AddStockCommand,
   MAX_ADDITION,
   MAX_AVAILABLE,
-} from '../../src/contexts/inventory/application/stock/add-stock.command.js';
+} from '../../src/contexts/inventory/application/use-cases/stock/add-stock.command.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { ReserveStockCommand } from '../../src/contracts/inventory/reserve-stock.command.js';
 import {

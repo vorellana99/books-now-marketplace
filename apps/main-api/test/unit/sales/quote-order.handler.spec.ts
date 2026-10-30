@@ -1,8 +1,8 @@
-import { PlaceOrderCommand } from '../../../src/contexts/sales/application/order/place-order.command.js';
-import { OrderPricer } from '../../../src/contexts/sales/application/order/order-pricer.js';
-import { PlaceOrderHandler } from '../../../src/contexts/sales/application/order/place-order.handler.js';
-import { QuoteOrderHandler } from '../../../src/contexts/sales/application/order/quote-order.handler.js';
-import { QuoteOrderQuery } from '../../../src/contexts/sales/application/order/quote-order.query.js';
+import { PlaceOrderCommand } from '../../../src/contexts/sales/application/use-cases/order/place-order.command.js';
+import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.js';
+import { PlaceOrderHandler } from '../../../src/contexts/sales/application/use-cases/order/place-order.handler.js';
+import { QuoteOrderHandler } from '../../../src/contexts/sales/application/use-cases/order/quote-order.handler.js';
+import { QuoteOrderQuery } from '../../../src/contexts/sales/application/use-cases/order/quote-order.query.js';
 import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
 import type { Currency } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import { PricingService } from '../../../src/contexts/sales/domain/pricing/pricing.service.js';

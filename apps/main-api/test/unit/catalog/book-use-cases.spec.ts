@@ -1,11 +1,11 @@
-import { CreateBookCommand } from '../../../src/contexts/catalog/application/book/create-book.command.js';
-import { CreateBookHandler } from '../../../src/contexts/catalog/application/book/create-book.handler.js';
-import { GetBookPriceHandler } from '../../../src/contexts/catalog/application/book/get-book-price.handler.js';
-import { GetBooksPricesHandler } from '../../../src/contexts/catalog/application/book/get-books-prices.handler.js';
-import { SearchBooksHandler } from '../../../src/contexts/catalog/application/book/search-books.handler.js';
-import { SearchBooksQuery } from '../../../src/contexts/catalog/application/book/search-books.query.js';
-import { UpdateBookCommand } from '../../../src/contexts/catalog/application/book/update-book.command.js';
-import { UpdateBookHandler } from '../../../src/contexts/catalog/application/book/update-book.handler.js';
+import { CreateBookCommand } from '../../../src/contexts/catalog/application/use-cases/book/create-book.command.js';
+import { CreateBookHandler } from '../../../src/contexts/catalog/application/use-cases/book/create-book.handler.js';
+import { GetBookPriceHandler } from '../../../src/contexts/catalog/application/use-cases/book/get-book-price.handler.js';
+import { GetBooksPricesHandler } from '../../../src/contexts/catalog/application/use-cases/book/get-books-prices.handler.js';
+import { SearchBooksHandler } from '../../../src/contexts/catalog/application/use-cases/book/search-books.handler.js';
+import { SearchBooksQuery } from '../../../src/contexts/catalog/application/use-cases/book/search-books.query.js';
+import { UpdateBookCommand } from '../../../src/contexts/catalog/application/use-cases/book/update-book.command.js';
+import { UpdateBookHandler } from '../../../src/contexts/catalog/application/use-cases/book/update-book.handler.js';
 import { GetBookPriceQuery } from '../../../src/contracts/catalog/get-book-price.query.js';
 import { GetBooksPricesQuery } from '../../../src/contracts/catalog/get-books-prices.query.js';
 import {

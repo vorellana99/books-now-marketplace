@@ -138,6 +138,9 @@ function reasonToReject(
 
 const INFRASTRUCTURE_FOLDERS = ['http', 'persistence', 'adapters', 'consumers'];
 const LAYERS = ['domain', 'application', 'infrastructure'];
+const APPLICATION_FOLDERS = ['use-cases', 'services', 'jobs', 'support'];
+const RUNTIME_EXPORT =
+  /^\s*export\s+(?:async\s+)?(?:function|const|let|enum|class)\b/m;
 
 /** Violaciones de la estructura de carpetas de los contextos (ruta → código). Vacío si todo está bien. */
 export function checkStructure(files: Record<string, string>): string[] {
@@ -170,6 +173,33 @@ export function checkStructure(files: Record<string, string>): string[] {
           `${path}: la raíz de un contexto solo tiene domain/, application/, infrastructure/ y su módulo`,
         );
         continue;
+      }
+
+      if (first === 'application') {
+        const inside = rel.slice('application/'.length);
+        if (!inside.includes('/')) {
+          violations.push(
+            `${path}: application/ no admite archivos sueltos; va en ${APPLICATION_FOLDERS.join(', ')}`,
+          );
+        } else if (!APPLICATION_FOLDERS.includes(inside.split('/')[0])) {
+          violations.push(
+            `${path}: application/ solo se divide en ${APPLICATION_FOLDERS.join(', ')} (no ${inside.split('/')[0]}/)`,
+          );
+        }
+        if (isPureDomain(path, rel, code, files[path])) {
+          violations.push(
+            `${path}: es lógica pura (sin Nest, sin platform/ y sin puertos): va en domain/. Solo application/support/ admite un archivo así`,
+          );
+        }
+      }
+
+      if (
+        /\.(command|query|handler)\.ts$/.test(path) &&
+        !/^application\/use-cases\/[^/]+\/[^/]+$/.test(rel)
+      ) {
+        violations.push(
+          `${path}: los comandos, las consultas y los handlers viven en application/use-cases/<agregado>/`,
+        );
       }
 
       if (first === 'infrastructure') {
@@ -208,8 +238,16 @@ export function checkStructure(files: Record<string, string>): string[] {
           `${path}: los controladores viven en infrastructure/http/`,
         );
       }
-      if (path.endsWith('.job.ts') && first !== 'application') {
-        violations.push(`${path}: los jobs viven en application/`);
+      if (path.endsWith('.job.ts') && !/^application\/jobs\/[^/]+$/.test(rel)) {
+        violations.push(`${path}: los jobs viven en application/jobs/`);
+      }
+      if (
+        (first === 'application' || first === 'infrastructure') &&
+        /\babstract\s+class\b/.test(code)
+      ) {
+        violations.push(
+          `${path}: una clase abstracta es un puerto y vive en domain/ports/`,
+        );
       }
       if (
         /\bclass\s+Prisma[A-Z]\w*/.test(code) &&
@@ -236,4 +274,24 @@ export function checkStructure(files: Record<string, string>): string[] {
     }
   }
   return violations;
+}
+
+// Un archivo de application/ que no es un comando, una consulta, un handler ni un job, que declara código que se ejecuta
+// y no usa Nest, platform/ ni ningún puerto, no orquesta nada: es lógica del dominio. Un archivo de solo tipos (un DTO o
+// un alias) no cuenta. application/support/ guarda lo que es formato de la API y no una regla (el cursor de paginación)
+function isPureDomain(
+  path: string,
+  rel: string,
+  code: string,
+  source: string,
+): boolean {
+  if (/\.(command|query|handler|job)\.ts$/.test(path)) return false;
+  if (rel.startsWith('application/support/')) return false;
+  if (!RUNTIME_EXPORT.test(code)) return false;
+  return !importsOf(source).some(
+    (spec) =>
+      spec.startsWith('@nestjs/') ||
+      spec.includes('/platform/') ||
+      spec.includes('domain/ports/'),
+  );
 }

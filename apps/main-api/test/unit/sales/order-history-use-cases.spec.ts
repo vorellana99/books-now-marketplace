@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { GetOrderHandler } from '../../../src/contexts/sales/application/order/get-order.handler.js';
-import { GetOrderQuery } from '../../../src/contexts/sales/application/order/get-order.query.js';
-import { ListCustomerOrdersHandler } from '../../../src/contexts/sales/application/order/list-customer-orders.handler.js';
-import { ListCustomerOrdersQuery } from '../../../src/contexts/sales/application/order/list-customer-orders.query.js';
-import { OrderCursor } from '../../../src/contexts/sales/application/order/order-cursor.js';
+import { GetOrderHandler } from '../../../src/contexts/sales/application/use-cases/order/get-order.handler.js';
+import { GetOrderQuery } from '../../../src/contexts/sales/application/use-cases/order/get-order.query.js';
+import { ListCustomerOrdersHandler } from '../../../src/contexts/sales/application/use-cases/order/list-customer-orders.handler.js';
+import { ListCustomerOrdersQuery } from '../../../src/contexts/sales/application/use-cases/order/list-customer-orders.query.js';
+import { OrderCursor } from '../../../src/contexts/sales/application/support/order-cursor.js';
 import { NotFoundError } from '../../../src/shared-kernel/domain.errors.js';
 import { InMemoryOrderHistory } from '../../fakes/in-memory-order-history.js';
 

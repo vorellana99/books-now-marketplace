@@ -7,7 +7,7 @@ import type {
 } from '../../../../platform/outbox/outbox-consumer.js';
 import { OutboxHandler } from '../../../../platform/outbox/outbox-handler.decorator.js';
 import { toTransactionHandle } from '../../../../platform/prisma/transaction-handle.js';
-import { CreateCustomerCommand } from '../../application/customer/create-customer.command.js';
+import { CreateCustomerCommand } from '../../application/use-cases/customer/create-customer.command.js';
 
 // Reacciona a identity.user.registered: todo comprador es un cliente de Ventas. Identidad no toca las tablas de Ventas;
 // se hablan por el evento. Es un adaptador de entrada fino: convierte la transacción del relay en un identificador

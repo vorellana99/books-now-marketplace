@@ -86,3 +86,27 @@ describe('Email de Identidad', () => {
     expect(JSON.stringify({ email })).toBe('{"email":"ana@example.com"}');
   });
 });
+
+// Tarea 10.16: el login trata un correo mal escrito igual que uno desconocido, sin lanzar
+describe('Email.tryCreate', () => {
+  it('devuelve el correo normalizado cuando es válido', () => {
+    expect(Email.tryCreate(' Ana@Example.COM ')?.value).toBe('ana@example.com');
+  });
+
+  it.each([
+    '',
+    'sin-arroba',
+    'a@b',
+    'ana @example.com',
+    'a'.repeat(300) + '@x.com',
+  ])('devuelve undefined con un correo inválido (%j), sin lanzar', (raw) => {
+    expect(Email.tryCreate(raw)).toBeUndefined();
+  });
+
+  it.each([undefined, null, 42, {}])(
+    'devuelve undefined con lo que no es texto (%j)',
+    (raw) => {
+      expect(Email.tryCreate(raw as never)).toBeUndefined();
+    },
+  );
+});

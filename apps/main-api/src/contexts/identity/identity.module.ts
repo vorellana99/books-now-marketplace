@@ -5,7 +5,7 @@ import { OutboxModule } from '../../platform/outbox/outbox.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
-import { AccessTokenIssuer } from './application/access-token-issuer.js';
+import { AccessTokenIssuer } from './domain/ports/access-token-issuer.js';
 import { PasswordHasher } from './domain/ports/password-hasher.port.js';
 import { SessionRepository } from './domain/ports/session.repository.js';
 import { UserRepository } from './domain/ports/user.repository.js';
@@ -17,13 +17,13 @@ import {
   authThrottlers,
 } from './infrastructure/http/auth-throttler.js';
 import { JwtTokenService } from './infrastructure/adapters/jwt-token.service.js';
-import { LoginHandler } from './application/login.handler.js';
-import { LogoutHandler } from './application/logout.handler.js';
-import { PurgeRefreshTokensJob } from './application/purge-refresh-tokens.job.js';
-import { RefreshSessionHandler } from './application/refresh-session.handler.js';
-import { RegisterUserHandler } from './application/register-user.handler.js';
+import { LoginHandler } from './application/use-cases/session/login.handler.js';
+import { LogoutHandler } from './application/use-cases/session/logout.handler.js';
+import { PurgeRefreshTokensJob } from './application/jobs/purge-refresh-tokens.job.js';
+import { RefreshSessionHandler } from './application/use-cases/session/refresh-session.handler.js';
+import { RegisterUserHandler } from './application/use-cases/user/register-user.handler.js';
 import { ScryptPasswordHasher } from './infrastructure/adapters/scrypt-password-hasher.js';
-import { SessionService } from './application/session.service.js';
+import { SessionService } from './application/services/session.service.js';
 
 @Module({
   imports: [

@@ -10,7 +10,7 @@ import { AdminApi } from '../../../../platform/http/admin-api.decorator.js';
 import {
   ListCustomerOrdersQuery,
   type OrderHistoryPage,
-} from '../../application/order/list-customer-orders.query.js';
+} from '../../application/use-cases/order/list-customer-orders.query.js';
 import { ListOrdersDto, positionAfter } from './list-orders.dto.js';
 import { OrderHistoryResponse } from './order.response.js';
 import { ApiAuthErrors } from '../../../../platform/http/api-auth-errors.decorator.js';

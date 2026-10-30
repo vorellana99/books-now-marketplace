@@ -1,14 +1,14 @@
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { LoginCommand } from '../../../src/contexts/identity/application/login.command.js';
-import { LoginHandler } from '../../../src/contexts/identity/application/login.handler.js';
-import { LogoutCommand } from '../../../src/contexts/identity/application/logout.command.js';
-import { LogoutHandler } from '../../../src/contexts/identity/application/logout.handler.js';
-import { RefreshSessionCommand } from '../../../src/contexts/identity/application/refresh-session.command.js';
-import { RefreshSessionHandler } from '../../../src/contexts/identity/application/refresh-session.handler.js';
-import { RegisterUserCommand } from '../../../src/contexts/identity/application/register-user.command.js';
-import { RegisterUserHandler } from '../../../src/contexts/identity/application/register-user.handler.js';
-import { SessionService } from '../../../src/contexts/identity/application/session.service.js';
+import { LoginCommand } from '../../../src/contexts/identity/application/use-cases/session/login.command.js';
+import { LoginHandler } from '../../../src/contexts/identity/application/use-cases/session/login.handler.js';
+import { LogoutCommand } from '../../../src/contexts/identity/application/use-cases/session/logout.command.js';
+import { LogoutHandler } from '../../../src/contexts/identity/application/use-cases/session/logout.handler.js';
+import { RefreshSessionCommand } from '../../../src/contexts/identity/application/use-cases/session/refresh-session.command.js';
+import { RefreshSessionHandler } from '../../../src/contexts/identity/application/use-cases/session/refresh-session.handler.js';
+import { RegisterUserCommand } from '../../../src/contexts/identity/application/use-cases/user/register-user.command.js';
+import { RegisterUserHandler } from '../../../src/contexts/identity/application/use-cases/user/register-user.handler.js';
+import { SessionService } from '../../../src/contexts/identity/application/services/session.service.js';
 import { hashRefreshToken } from '../../../src/contexts/identity/domain/session/refresh-token.js';
 import {
   AuthenticationError,

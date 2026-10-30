@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
-import { normalizeCart } from '../../../src/contexts/sales/application/order/normalize-cart.js';
-import { OrderPricer } from '../../../src/contexts/sales/application/order/order-pricer.js';
+import { normalizeCart } from '../../../src/contexts/sales/domain/order/normalize-cart.js';
+import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.js';
 import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
 import { ShippingAddress } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
 import { PricingService } from '../../../src/contexts/sales/domain/pricing/pricing.service.js';
@@ -194,13 +194,16 @@ describe('OrderPricer', () => {
 // importar estas piezas, el armado se habrá copiado otra vez
 describe('un solo armado del pedido', () => {
   const read = (file: string) =>
-    readFileSync(`src/contexts/sales/application/order/${file}`, 'utf8');
+    readFileSync(
+      `src/contexts/sales/application/use-cases/order/${file}`,
+      'utf8',
+    );
 
   it.each(['place-order.handler.ts', 'quote-order.handler.ts'])(
     '%s usa OrderPricer y no arma el pedido por su cuenta',
     (file) => {
       const text = read(file);
-      expect(text).toContain("from './order-pricer.js'");
+      expect(text).toContain("from '../../services/order-pricer.js'");
       for (const forbidden of [
         'catalog-pricing.port',
         'customer.repository',
@@ -216,7 +219,7 @@ describe('un solo armado del pedido', () => {
     '%s normaliza el ISBN con normalizeCart y no con Isbn.create',
     (file) => {
       const text = read(file);
-      expect(text).toContain("from './normalize-cart.js'");
+      expect(text).toContain("from '../../../domain/order/normalize-cart.js'");
       expect(text).not.toContain('Isbn.create');
     },
   );

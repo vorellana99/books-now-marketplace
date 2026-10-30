@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
 import { Logger, Module, type INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { LoginCommand } from '../../src/contexts/identity/application/login.command.js';
-import { LogoutCommand } from '../../src/contexts/identity/application/logout.command.js';
-import { RefreshSessionCommand } from '../../src/contexts/identity/application/refresh-session.command.js';
-import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
+import { LoginCommand } from '../../src/contexts/identity/application/use-cases/session/login.command.js';
+import { LogoutCommand } from '../../src/contexts/identity/application/use-cases/session/logout.command.js';
+import { RefreshSessionCommand } from '../../src/contexts/identity/application/use-cases/session/refresh-session.command.js';
+import { RegisterUserCommand } from '../../src/contexts/identity/application/use-cases/user/register-user.command.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
-import { AccessTokenIssuer } from '../../src/contexts/identity/application/access-token-issuer.js';
+import { AccessTokenIssuer } from '../../src/contexts/identity/domain/ports/access-token-issuer.js';
 import { AccessTokenVerifier } from '../../src/platform/auth/access-token-verifier.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { AuthenticationError } from '../../src/shared-kernel/domain.errors.js';

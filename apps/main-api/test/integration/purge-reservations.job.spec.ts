@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Logger, type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaStockRepository } from '../../src/contexts/inventory/infrastructure/persistence/prisma-stock.repository.js';
-import { PurgeReservationsJob } from '../../src/contexts/inventory/application/stock/purge-reservations.job.js';
+import { PurgeReservationsJob } from '../../src/contexts/inventory/application/jobs/purge-reservations.job.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { PURGE_BATCH } from '../../src/platform/retention/purge-in-batches.js';
 import { uniqueIsbn } from '../support/builders.js';

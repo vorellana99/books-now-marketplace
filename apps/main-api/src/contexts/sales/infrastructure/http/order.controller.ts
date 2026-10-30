@@ -34,15 +34,15 @@ import { Roles } from '../../../../platform/auth/roles.decorator.js';
 import {
   GetOrderQuery,
   type OrderDetail,
-} from '../../application/order/get-order.query.js';
+} from '../../application/use-cases/order/get-order.query.js';
 import {
   QuoteOrderQuery,
   type OrderQuote,
-} from '../../application/order/quote-order.query.js';
+} from '../../application/use-cases/order/quote-order.query.js';
 import {
   PlaceOrderCommand,
   type PlaceOrderResult,
-} from '../../application/order/place-order.command.js';
+} from '../../application/use-cases/order/place-order.command.js';
 import {
   OrderDetailResponse,
   OrderQuoteResponse,

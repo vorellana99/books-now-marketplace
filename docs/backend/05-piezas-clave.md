@@ -13,8 +13,28 @@ Los cuatro contextos (Ventas, Catálogo, Inventario e Identidad) siguen **una so
 | Capa | Qué contiene | Qué puede importar |
 |---|---|---|
 | `domain/` | Agregados, objetos de valor, reglas puras (y specifications en Ventas), los eventos que publica y, en `domain/ports/`, los **puertos**: clases abstractas que dicen qué necesita el contexto de afuera (`OrderRepository`, `StockRepository`, `BookCatalog`, `SessionRepository`, `PasswordHasher`…) | `decimal.js`, `node:*`, `shared-kernel/`, `contracts/` y su propio `domain/` |
-| `application/` | Los casos de uso: comandos, consultas y **todos** sus handlers (los de escritura y los de lectura), servicios de aplicación y los jobs (`*.job.ts`). Hablan con los puertos, nunca con la base | Nest, su `domain/`, `shared-kernel/`, `contracts/` y `platform/` (menos Prisma); nunca su `infrastructure/` |
+| `application/` | Los casos de uso (comandos, consultas y **todos** sus handlers, los de escritura y los de lectura) en `use-cases/`, más los servicios de aplicación en `services/`, los jobs en `jobs/` y, en `support/`, lo que es formato de la API y no una regla. Hablan con los puertos, nunca con la base | Nest, su `domain/`, `shared-kernel/`, `contracts/` y `platform/` (menos Prisma); nunca su `infrastructure/` |
 | `infrastructure/` | Los adaptadores, en cuatro carpetas: `infrastructure/http/` (controladores, DTO y respuestas), `infrastructure/persistence/` (los repositorios y lectores de Prisma, con el SQL), `infrastructure/adapters/` (lo que sale del proceso: pasarela de pago, correo, hash de contraseñas, otro contexto en proceso) y `infrastructure/consumers/` (los `@OutboxHandler`) | Todo lo anterior, Prisma y `platform/` |
+
+**Qué es un caso de uso.** Un comando o una consulta junto con su handler, en `application/use-cases/<agregado>/`. El handler orquesta: valida la entrada con el dominio, pide al puerto lo que necesita y devuelve una vista o nada; no contiene SQL ni reglas de negocio. Algunos comandos viven en `contracts/` porque otro contexto los envía, y en ese caso solo está el handler. Lo demás de `application/` tiene su carpeta (`application/services/`, `application/jobs/` y `application/support/`; la raíz de `application/` no admite archivos sueltos):
+
+| Carpeta | Qué va |
+|---|---|
+| `use-cases/<agregado>/` | `*.command.ts`, `*.query.ts` y `*.handler.ts` |
+| `services/` | Servicios de aplicación que usan varios casos de uso o puertos (`OrderPricer`, `SessionService`, `create-admin.ts`) y el tipo que devuelven |
+| `jobs/` | Los `*.job.ts` que disparan casos de uso por tiempo |
+| `support/` | Lo que es formato de la API y no una regla de negocio (el cursor de paginación del historial) |
+
+Un ejemplo por contexto:
+
+| Contexto | Caso de uso | Archivo |
+|---|---|---|
+| Ventas | Hacer un pedido | `sales/application/use-cases/order/place-order.handler.ts` |
+| Catálogo | Crear un libro | `catalog/application/use-cases/book/create-book.handler.ts` |
+| Inventario | Reservar stock | `inventory/application/use-cases/stock/reserve-stock.handler.ts` |
+| Identidad | Iniciar sesión | `identity/application/use-cases/session/login.handler.ts` |
+
+**La lógica pura va en `domain/`, no en `application/`.** Una función que no usa Nest, `platform/` ni ningún puerto no orquesta nada: es una regla (`normalizeCart`, `hashRequest`, `replayOf`, `Customer.fromRegisteredUser`, `Email.tryCreate`) y vive en el dominio, donde se prueba sin nada más. Un puerto (una clase abstracta) vive siempre en `domain/ports/`, también `AccessTokenIssuer`. El test de estructura lo comprueba: un archivo puro en `application/` es una violación, salvo en `support/`.
 
 Cómo se reparten las cosas:
 
@@ -24,9 +44,9 @@ Cómo se reparten las cosas:
 - **Los puertos se prueban una vez para todos sus adaptadores**: un contrato (`test/support/*.contract.ts`) corre contra el fake en memoria y contra PostgreSQL real, así el fake con el que se prueban los casos de uso no se desvía de lo real.
 - **Las dependencias van hacia adentro**: `infrastructure/` conoce a `application/` y a `domain/`, nunca al revés. Un contexto nunca importa de otro: se hablan por `contracts/` y `shared-kernel/`.
 
-**Lo que hace cumplir cada test.** `test/unit/architecture/dependency-rules.spec.ts` comprueba los imports: un contexto no importa de otro, `domain/` no depende de Nest, de Prisma ni de `platform/`, `application/` no usa Prisma ni importa `infrastructure/`. `test/unit/architecture/structure-rules.spec.ts` comprueba la forma: la raíz del contexto solo tiene `domain/`, `application/`, `infrastructure/` y su módulo; `infrastructure/` solo se divide en `http/`, `persistence/`, `adapters/` y `consumers/`; los handlers de CQRS van en `application/` y los `@OutboxHandler` en `infrastructure/consumers/`; cada contexto tiene `domain/ports/` y todo puerto va ahí. Una excepción nueva se discute y se escribe en esos tests, no se improvisa en el código.
+**Lo que hace cumplir cada test.** `test/unit/architecture/dependency-rules.spec.ts` comprueba los imports: un contexto no importa de otro, `domain/` no depende de Nest, de Prisma ni de `platform/`, `application/` no usa Prisma ni importa `infrastructure/`. `test/unit/architecture/structure-rules.spec.ts` comprueba la forma: la raíz del contexto solo tiene `domain/`, `application/`, `infrastructure/` y su módulo; `infrastructure/` solo se divide en `http/`, `persistence/`, `adapters/` y `consumers/`; `application/` solo se divide en `use-cases/`, `services/`, `jobs/` y `support/`, con los comandos, las consultas y los handlers bajo `use-cases/<agregado>/` y los jobs en `jobs/`; los `@OutboxHandler` van en `infrastructure/consumers/`; cada contexto tiene `domain/ports/`, todo puerto va ahí y ninguna clase abstracta vive fuera de él. Una excepción nueva se discute y se escribe en esos tests, no se improvisa en el código.
 
-**Regla práctica para el que añada algo:** una regla de negocio va en `domain/`; lo que el caso de uso necesita de afuera es un puerto en `domain/ports/` con su adaptador en `infrastructure/persistence/` o `adapters/`, su fake y su contrato; el caso de uso va en `application/`; y lo que entra por HTTP o por un evento es un adaptador fino que envía el comando.
+**Regla práctica para el que añada algo:** una regla de negocio va en `domain/`; lo que el caso de uso necesita de afuera es un puerto en `domain/ports/` con su adaptador en `infrastructure/persistence/` o `adapters/`, su fake y su contrato; el caso de uso va en `application/use-cases/<agregado>/`; y lo que entra por HTTP o por un evento es un adaptador fino que envía el comando.
 
 ### Límites conocidos
 

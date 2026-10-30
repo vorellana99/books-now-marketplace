@@ -31,6 +31,15 @@ export class Email {
     return new Email(value);
   }
 
+  // Para quien trata un correo mal escrito igual que uno desconocido (el inicio de sesión): undefined en vez de lanzar
+  static tryCreate(raw: string): Email | undefined {
+    try {
+      return Email.create(raw);
+    } catch {
+      return undefined;
+    }
+  }
+
   equals(other: Email): boolean {
     return this.value === other.value;
   }

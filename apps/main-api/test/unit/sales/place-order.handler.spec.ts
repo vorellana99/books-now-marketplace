@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
-import { PlaceOrderCommand } from '../../../src/contexts/sales/application/order/place-order.command.js';
-import { OrderPricer } from '../../../src/contexts/sales/application/order/order-pricer.js';
-import { PlaceOrderHandler } from '../../../src/contexts/sales/application/order/place-order.handler.js';
-import { hashRequest } from '../../../src/contexts/sales/application/order/request-hash.js';
+import { PlaceOrderCommand } from '../../../src/contexts/sales/application/use-cases/order/place-order.command.js';
+import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.js';
+import { PlaceOrderHandler } from '../../../src/contexts/sales/application/use-cases/order/place-order.handler.js';
+import { hashRequest } from '../../../src/contexts/sales/domain/order/request-hash.js';
 import type { CatalogPricing } from '../../../src/contexts/sales/domain/ports/catalog-pricing.port.js';
 import type { CustomerRepository } from '../../../src/contexts/sales/domain/ports/customer.repository.js';
 import type { ShippingAddressData } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';

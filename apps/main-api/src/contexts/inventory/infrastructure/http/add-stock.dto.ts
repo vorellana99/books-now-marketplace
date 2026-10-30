@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { IsInt, Max, Min } from 'class-validator';
-import { MAX_ADDITION } from '../../application/stock/add-stock.command.js';
+import { MAX_ADDITION } from '../../application/use-cases/stock/add-stock.command.js';
 
 export class AddStockDto {
   @ApiProperty({

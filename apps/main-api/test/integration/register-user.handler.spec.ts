@@ -1,10 +1,10 @@
 import { Module, type INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
+import { RegisterUserCommand } from '../../src/contexts/identity/application/use-cases/user/register-user.command.js';
 import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { PrismaUserRepository } from '../../src/contexts/identity/infrastructure/persistence/prisma-user.repository.js';
-import { RegisterUserHandler } from '../../src/contexts/identity/application/register-user.handler.js';
+import { RegisterUserHandler } from '../../src/contexts/identity/application/use-cases/user/register-user.handler.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { OutboxWriter } from '../../src/platform/outbox/outbox.writer.js';

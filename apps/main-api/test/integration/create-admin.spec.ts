@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { ScryptPasswordHasher } from '../../src/contexts/identity/infrastructure/adapters/scrypt-password-hasher.js';
-import { createAdminUser } from '../../src/contexts/identity/application/create-admin.js';
+import { createAdminUser } from '../../src/contexts/identity/application/services/create-admin.js';
 import { PrismaUserRepository } from '../../src/contexts/identity/infrastructure/persistence/prisma-user.repository.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { OutboxWriter } from '../../src/platform/outbox/outbox.writer.js';

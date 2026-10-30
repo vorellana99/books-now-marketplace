@@ -1,10 +1,10 @@
 import { Module, type INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { LoginCommand } from '../../src/contexts/identity/application/login.command.js';
-import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
-import { SessionService } from '../../src/contexts/identity/application/session.service.js';
+import { LoginCommand } from '../../src/contexts/identity/application/use-cases/session/login.command.js';
+import { RegisterUserCommand } from '../../src/contexts/identity/application/use-cases/user/register-user.command.js';
+import { SessionService } from '../../src/contexts/identity/application/services/session.service.js';
 import { UserRepository } from '../../src/contexts/identity/domain/ports/user.repository.js';
-import { LoginHandler } from '../../src/contexts/identity/application/login.handler.js';
+import { LoginHandler } from '../../src/contexts/identity/application/use-cases/session/login.handler.js';
 import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
 import { AccessTokenVerifier } from '../../src/platform/auth/access-token-verifier.js';

@@ -1,4 +1,4 @@
-import { AccessTokenIssuer } from '../../src/contexts/identity/application/access-token-issuer.js';
+import { AccessTokenIssuer } from '../../src/contexts/identity/domain/ports/access-token-issuer.js';
 import { PasswordHasher } from '../../src/contexts/identity/domain/ports/password-hasher.port.js';
 import type { Role } from '../../src/shared-kernel/role.js';
 

@@ -110,7 +110,7 @@ stateDiagram-v2
 > Desde el corte 9 (tarea `9.10`) el código real reparte estos pasos en métodos privados: `execute` (idempotencia y precios), `start` (registrar el intento), `charge` (reservar, cobrar y guardar), `compensate` (reembolsar, liberar y anular, en ese orden) y `replay`. El orden y la conducta son los de este fragmento, que se deja en un solo bloque para leer la saga de corrido.
 
 ```ts
-// sales/application/order/place-order.handler.ts
+// sales/application/use-cases/order/place-order.handler.ts
 @CommandHandler(PlaceOrderCommand)
 export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {
   private readonly logger = new Logger(PlaceOrderHandler.name);
@@ -224,7 +224,7 @@ flowchart TB
 ### Application: el job de recuperación
 
 ```ts
-// sales/application/order/recover-checkouts.job.ts
+// sales/application/jobs/recover-checkouts.job.ts
 @Injectable()
 export class RecoverCheckoutsJob {
   private readonly logger = new Logger(RecoverCheckoutsJob.name);

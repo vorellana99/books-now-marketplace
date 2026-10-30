@@ -70,7 +70,7 @@ Un guard es más simple que registrar controllers de forma condicional, que en N
 ### Fase 10: Listar y buscar libros
 
 ```ts
-// Versión de esta fase. Desde el corte 10 el handler (catalog/application/book/search-books.handler.ts)
+// Versión de esta fase. Desde el corte 10 el handler (catalog/application/use-cases/book/search-books.handler.ts)
 // solo delega en el puerto BookCatalog.search, y esta consulta vive en infrastructure/persistence/prisma-book-catalog.ts
 @QueryHandler(SearchBooksQuery)
 export class SearchBooksHandler implements IQueryHandler<SearchBooksQuery> {
@@ -163,7 +163,7 @@ hashRequest(customerId, items, address);
 ### Fase 13: Cargar stock
 
 ```ts
-// inventory/application/stock/add-stock.handler.ts
+// inventory/application/use-cases/stock/add-stock.handler.ts
 @CommandHandler(AddStockCommand)
 export class AddStockHandler implements ICommandHandler<AddStockCommand> {
   constructor(private readonly prisma: PrismaService) {}
@@ -195,7 +195,7 @@ export class AddStockHandler implements ICommandHandler<AddStockCommand> {
 ### Fase 14: Historial de pedidos
 
 ```ts
-// Versión de esta fase. Desde el corte 10 el handler (sales/application/order/list-customer-orders.handler.ts) pide la
+// Versión de esta fase. Desde el corte 10 el handler (sales/application/use-cases/order/list-customer-orders.handler.ts) pide la
 // página al puerto OrderHistory.listByCustomer, y esta consulta vive en infrastructure/persistence/prisma-order-history.ts
 @QueryHandler(ListCustomerOrdersQuery)
 export class ListCustomerOrdersHandler implements IQueryHandler<ListCustomerOrdersQuery> {

@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
-import { RecoverCheckoutsJob } from '../../../src/contexts/sales/application/order/recover-checkouts.job.js';
+import { RecoverCheckoutsJob } from '../../../src/contexts/sales/application/jobs/recover-checkouts.job.js';
 import { CheckoutLog } from '../../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import { StockReservation } from '../../../src/contexts/sales/domain/ports/stock-reservation.port.js';
 import { PaymentGateway } from '../../../src/contexts/sales/domain/ports/payment-gateway.port.js';

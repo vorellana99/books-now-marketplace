@@ -4,9 +4,9 @@ import { QueryBus } from '@nestjs/cqrs';
 import {
   ListCustomerOrdersQuery,
   type OrderHistoryPage,
-} from '../../src/contexts/sales/application/order/list-customer-orders.query.js';
-import { ListCustomerOrdersHandler } from '../../src/contexts/sales/application/order/list-customer-orders.handler.js';
-import { OrderCursor } from '../../src/contexts/sales/application/order/order-cursor.js';
+} from '../../src/contexts/sales/application/use-cases/order/list-customer-orders.query.js';
+import { ListCustomerOrdersHandler } from '../../src/contexts/sales/application/use-cases/order/list-customer-orders.handler.js';
+import { OrderCursor } from '../../src/contexts/sales/application/support/order-cursor.js';
 import { insertCustomer, insertOrder } from '../support/builders.js';
 import { OrderHistory } from '../../src/contexts/sales/domain/ports/order-history.js';
 import { PrismaOrderHistory } from '../../src/contexts/sales/infrastructure/persistence/prisma-order-history.js';

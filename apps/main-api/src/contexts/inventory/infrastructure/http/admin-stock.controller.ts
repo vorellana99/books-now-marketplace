@@ -11,7 +11,7 @@ import { AdminApi } from '../../../../platform/http/admin-api.decorator.js';
 import {
   AddStockCommand,
   type StockLevel,
-} from '../../application/stock/add-stock.command.js';
+} from '../../application/use-cases/stock/add-stock.command.js';
 import { AddStockDto, StockLevelResponse } from './add-stock.dto.js';
 import { ApiAuthErrors } from '../../../../platform/http/api-auth-errors.decorator.js';
 

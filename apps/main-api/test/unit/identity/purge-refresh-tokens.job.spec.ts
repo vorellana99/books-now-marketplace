@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
-import { PurgeRefreshTokensJob } from '../../../src/contexts/identity/application/purge-refresh-tokens.job.js';
+import { PurgeRefreshTokensJob } from '../../../src/contexts/identity/application/jobs/purge-refresh-tokens.job.js';
 import { SessionRepository } from '../../../src/contexts/identity/domain/ports/session.repository.js';
 import { Session } from '../../../src/contexts/identity/domain/session/session.aggregate.js';
 import { PURGE_BATCH } from '../../../src/platform/retention/purge-in-batches.js';

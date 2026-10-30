@@ -127,16 +127,38 @@ describe('estructura de sales/application', () => {
     expect(all(APP).filter((f) => f.endsWith('.consumer.ts'))).toEqual([]);
   });
 
-  it('tiene los handlers de lectura y el del cliente', () => {
-    const names = all(APP).map((f) => f.slice(APP.length + 1));
+  it('agrupa los casos de uso en use-cases/<agregado>, y el resto en services, jobs y support (tarea 10.16)', () => {
+    const names = all(APP)
+      .map((f) => f.slice(APP.length + 1))
+      .sort((a, b) => a.localeCompare(b));
     expect(names).toEqual(
-      expect.arrayContaining([
-        'order/get-order.handler.ts',
-        'order/list-customer-orders.handler.ts',
-        'order/order-cursor.ts',
-        'customer/create-customer.command.ts',
-        'customer/create-customer.handler.ts',
-      ]),
+      [
+        'jobs/purge-checkouts.job.ts',
+        'jobs/recover-checkouts.job.ts',
+        'services/order-pricer.ts',
+        'support/order-cursor.ts',
+        'use-cases/customer/create-customer.command.ts',
+        'use-cases/customer/create-customer.handler.ts',
+        'use-cases/order/get-order.handler.ts',
+        'use-cases/order/get-order.query.ts',
+        'use-cases/order/list-customer-orders.handler.ts',
+        'use-cases/order/list-customer-orders.query.ts',
+        'use-cases/order/place-order.command.ts',
+        'use-cases/order/place-order.handler.ts',
+        'use-cases/order/quote-order.handler.ts',
+        'use-cases/order/quote-order.query.ts',
+      ].sort((a, b) => a.localeCompare(b)),
     );
+  });
+
+  it('las funciones puras de negocio viven en el dominio, no en application/', () => {
+    const domain = 'src/contexts/sales/domain/order';
+    for (const file of [
+      'normalize-cart.ts',
+      'request-hash.ts',
+      'checkout-replay.ts',
+    ]) {
+      expect(existsSync(`${domain}/${file}`), file).toBe(true);
+    }
   });
 });

@@ -43,17 +43,18 @@ describe('estructura de contexts/inventory', () => {
     ]);
   });
 
-  it('los handlers y la purga viven en application/stock', () => {
-    expect(files('application/stock')).toEqual(
+  it('los handlers viven en application/use-cases/stock y la purga en application/jobs (tarea 10.16)', () => {
+    expect(files('application/use-cases/stock')).toEqual(
       expect.arrayContaining([
         'add-stock.handler.ts',
         'confirm-reservation.handler.ts',
         'create-stock-item.handler.ts',
-        'purge-reservations.job.ts',
         'release-stock.handler.ts',
         'reserve-stock.handler.ts',
       ]),
     );
+    expect(files('application/jobs')).toEqual(['purge-reservations.job.ts']);
+    expect(files('application')).toEqual([]);
   });
 
   it('ningún handler vive en infrastructure/', () => {

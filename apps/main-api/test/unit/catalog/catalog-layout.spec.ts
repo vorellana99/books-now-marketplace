@@ -39,8 +39,9 @@ describe('estructura de contexts/catalog', () => {
     ]);
   });
 
-  it('los cinco handlers viven en application/book', () => {
-    expect(files('application/book')).toEqual(
+  it('los cinco handlers viven en application/use-cases/book (tarea 10.16)', () => {
+    expect(files('application')).toEqual([]);
+    expect(files('application/use-cases/book')).toEqual(
       expect.arrayContaining([
         'create-book.handler.ts',
         'get-book-price.handler.ts',

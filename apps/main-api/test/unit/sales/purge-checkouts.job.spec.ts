@@ -2,7 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
-import { PurgeCheckoutsJob } from '../../../src/contexts/sales/application/order/purge-checkouts.job.js';
+import { PurgeCheckoutsJob } from '../../../src/contexts/sales/application/jobs/purge-checkouts.job.js';
 import { CheckoutLog } from '../../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import { PURGE_BATCH } from '../../../src/platform/retention/purge-in-batches.js';

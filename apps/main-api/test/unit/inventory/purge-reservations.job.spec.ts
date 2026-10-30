@@ -2,7 +2,7 @@ import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ScheduleModule, SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
-import { PurgeReservationsJob } from '../../../src/contexts/inventory/application/stock/purge-reservations.job.js';
+import { PurgeReservationsJob } from '../../../src/contexts/inventory/application/jobs/purge-reservations.job.js';
 import { StockRepository } from '../../../src/contexts/inventory/domain/ports/stock.repository.js';
 import { PURGE_BATCH } from '../../../src/platform/retention/purge-in-batches.js';
 import { InMemoryStockRepository } from '../../fakes/in-memory-stock-repository.js';

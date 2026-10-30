@@ -18,9 +18,9 @@ import {
   ApiUnprocessableEntityResponse,
 } from '@nestjs/swagger';
 import { AdminApi } from '../../../../platform/http/admin-api.decorator.js';
-import { CreateBookCommand } from '../../application/book/create-book.command.js';
-import type { AdminBook } from '../../application/book/admin-book.js';
-import { UpdateBookCommand } from '../../application/book/update-book.command.js';
+import { CreateBookCommand } from '../../application/use-cases/book/create-book.command.js';
+import type { AdminBook } from '../../application/use-cases/book/admin-book.js';
+import { UpdateBookCommand } from '../../application/use-cases/book/update-book.command.js';
 import { AdminBookResponse } from './book-price.response.js';
 import { CreateBookDto, UpdateBookDto } from './create-book.dto.js';
 import { ApiAuthErrors } from '../../../../platform/http/api-auth-errors.decorator.js';

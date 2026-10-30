@@ -1,11 +1,11 @@
 import type { INestApplication } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { Module } from '@nestjs/common';
-import { CreateBookCommand } from '../../src/contexts/catalog/application/book/create-book.command.js';
-import { SearchBooksQuery } from '../../src/contexts/catalog/application/book/search-books.query.js';
+import { CreateBookCommand } from '../../src/contexts/catalog/application/use-cases/book/create-book.command.js';
+import { SearchBooksQuery } from '../../src/contexts/catalog/application/use-cases/book/search-books.query.js';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { PrismaBookRepository } from '../../src/contexts/catalog/infrastructure/persistence/prisma-book.repository.js';
-import { CreateBookHandler } from '../../src/contexts/catalog/application/book/create-book.handler.js';
+import { CreateBookHandler } from '../../src/contexts/catalog/application/use-cases/book/create-book.handler.js';
 import { GetBookPriceQuery } from '../../src/contracts/catalog/get-book-price.query.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';

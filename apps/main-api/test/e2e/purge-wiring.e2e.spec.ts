@@ -2,9 +2,9 @@ import { Logger, type INestApplication } from '@nestjs/common';
 import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
-import { PurgeRefreshTokensJob } from '../../src/contexts/identity/application/purge-refresh-tokens.job.js';
-import { PurgeReservationsJob } from '../../src/contexts/inventory/application/stock/purge-reservations.job.js';
-import { PurgeCheckoutsJob } from '../../src/contexts/sales/application/order/purge-checkouts.job.js';
+import { PurgeRefreshTokensJob } from '../../src/contexts/identity/application/jobs/purge-refresh-tokens.job.js';
+import { PurgeReservationsJob } from '../../src/contexts/inventory/application/jobs/purge-reservations.job.js';
+import { PurgeCheckoutsJob } from '../../src/contexts/sales/application/jobs/purge-checkouts.job.js';
 import { OutboxPurgeJob } from '../../src/platform/outbox/outbox-purge.job.js';
 
 describe('Purga de datos viejos: cableado (e2e)', () => {

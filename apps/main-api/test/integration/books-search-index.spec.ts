@@ -2,7 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import { QueryBus } from '@nestjs/cqrs';
 import { Client } from 'pg';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
-import { SearchBooksQuery } from '../../src/contexts/catalog/application/book/search-books.query.js';
+import { SearchBooksQuery } from '../../src/contexts/catalog/application/use-cases/book/search-books.query.js';
 import { query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 

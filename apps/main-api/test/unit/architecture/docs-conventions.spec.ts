@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { BATCH, LEASE_MS } from '../../../src/platform/outbox/outbox.relay.js';
 
 const read = (path: string) => readFileSync(path, 'utf8');
@@ -83,6 +83,46 @@ describe('una sola arquitectura (documentada)', () => {
     expect(decisiones).toMatch(/`application\/`[^\n]*no[^\n]*Prisma/);
     expect(estructura).toContain('infrastructure/consumers/');
     expect(estructura).not.toMatch(/Consumidores que escriben en BD van en/);
+  });
+
+  // Tarea 10.16: qué es un caso de uso y cómo se ordena application/
+  it('define qué es un caso de uso y cómo se ordena application/', () => {
+    expect(section).toMatch(/Qué es un caso de uso/);
+    for (const folder of [
+      'application/use-cases/',
+      'application/services/',
+      'application/jobs/',
+      'application/support/',
+    ]) {
+      expect(section, folder).toContain(folder);
+    }
+    expect(claude).toContain('use-cases/');
+  });
+
+  it('el ejemplo de cada contexto existe de verdad en src/', () => {
+    const examples = [
+      'sales/application/use-cases/order/place-order.handler.ts',
+      'catalog/application/use-cases/book/create-book.handler.ts',
+      'inventory/application/use-cases/stock/reserve-stock.handler.ts',
+      'identity/application/use-cases/session/login.handler.ts',
+    ];
+    for (const example of examples) {
+      expect(section, example).toContain(example);
+      expect(existsSync(`src/contexts/${example}`), example).toBe(true);
+    }
+  });
+
+  it('la lógica de negocio que estaba en application/ está en el dominio y los documentos lo dicen', () => {
+    for (const file of [
+      'src/contexts/sales/domain/order/normalize-cart.ts',
+      'src/contexts/sales/domain/order/request-hash.ts',
+      'src/contexts/sales/domain/order/checkout-replay.ts',
+      'src/contexts/identity/domain/ports/access-token-issuer.ts',
+    ]) {
+      expect(existsSync(file), file).toBe(true);
+    }
+    expect(section).toMatch(/lógica pura/i);
+    expect(section).toContain('support/');
   });
 
   it('/nuevo-evento manda el consumidor a infrastructure/consumers/', () => {

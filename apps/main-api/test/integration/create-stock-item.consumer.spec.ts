@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { CreateBookCommand } from '../../src/contexts/catalog/application/book/create-book.command.js';
+import { CreateBookCommand } from '../../src/contexts/catalog/application/use-cases/book/create-book.command.js';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { CreateStockItemConsumer } from '../../src/contexts/inventory/infrastructure/consumers/create-stock-item.consumer.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';

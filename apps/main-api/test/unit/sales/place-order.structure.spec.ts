@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 
-const FILE = 'src/contexts/sales/application/order/place-order.handler.ts';
+const FILE =
+  'src/contexts/sales/application/use-cases/order/place-order.handler.ts';
 const text = readFileSync(FILE, 'utf8');
 
 // Cuántas líneas ocupa el cuerpo de un método de la clase (desde su firma hasta la llave que lo cierra, al mismo nivel)
@@ -26,9 +27,16 @@ describe('estructura de PlaceOrderHandler', () => {
     expect(text.match(/this\.compensate\(/g)).toHaveLength(1);
   });
 
-  it('el error de «compra en curso» se construye en un solo sitio', () => {
-    expect(text.match(/Esta compra todavía se está procesando/g)).toHaveLength(
-      1,
+  // Desde la tarea 10.16 el error vive en el dominio (`checkout-replay.ts`); el handler solo lo usa
+  it('el error de «compra en curso» se construye en un solo sitio, en el dominio', () => {
+    const domain = readFileSync(
+      'src/contexts/sales/domain/order/checkout-replay.ts',
+      'utf8',
     );
+    expect(text).not.toContain('Esta compra todavía se está procesando');
+    expect(
+      domain.match(/Esta compra todavía se está procesando/g),
+    ).toHaveLength(1);
+    expect(text).toContain('checkoutInProgress()');
   });
 });

@@ -48,18 +48,31 @@ describe('estructura de contexts/identity', () => {
     ]);
   });
 
-  it('los handlers, el servicio de sesión y la purga viven en application/', () => {
-    expect(files('application')).toEqual(
+  it('los casos de uso viven en application/use-cases, uno por agregado (tarea 10.16)', () => {
+    expect(files('application/use-cases/session')).toEqual(
       expect.arrayContaining([
         'login.handler.ts',
         'logout.handler.ts',
         'refresh-session.handler.ts',
-        'register-user.handler.ts',
-        'session.service.ts',
-        'purge-refresh-tokens.job.ts',
-        'create-admin.ts',
       ]),
     );
+    expect(files('application/use-cases/user')).toEqual(
+      expect.arrayContaining([
+        'register-user.command.ts',
+        'register-user.handler.ts',
+      ]),
+    );
+  });
+
+  it('los servicios y la purga viven en application/services y application/jobs; el puerto del token en el dominio', () => {
+    expect(files('application/services')).toEqual([
+      'create-admin.ts',
+      'session.service.ts',
+      'session.ts',
+    ]);
+    expect(files('application/jobs')).toEqual(['purge-refresh-tokens.job.ts']);
+    expect(files('domain/ports')).toContain('access-token-issuer.ts');
+    expect(files('application')).toEqual([]);
   });
 
   it('ningún handler vive en infrastructure/', () => {
@@ -69,8 +82,9 @@ describe('estructura de contexts/identity', () => {
     expect(handlers).toEqual([]);
   });
 
-  it('domain/ports/ tiene los tres puertos', () => {
+  it('domain/ports/ tiene los cuatro puertos', () => {
     expect(files('domain/ports')).toEqual([
+      'access-token-issuer.ts',
       'password-hasher.port.ts',
       'session.repository.ts',
       'user.repository.ts',

@@ -15,7 +15,7 @@ import {
 } from '../../../../contracts/catalog/get-book-price.query.js';
 import { Public } from '../../../../platform/auth/public.decorator.js';
 import { Isbn } from '../../../../shared-kernel/isbn.vo.js';
-import { SearchBooksQuery } from '../../application/book/search-books.query.js';
+import { SearchBooksQuery } from '../../application/use-cases/book/search-books.query.js';
 import { BookPageResponse, BookResponse } from './book-price.response.js';
 import { SearchBooksDto } from './search-books.dto.js';
 
