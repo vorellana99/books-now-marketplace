@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { MAX_PER_BOOK, type CartLine as Line } from "../cart.store.ts";
 import type { LineCheck } from "../hooks/use-cart-revalidation.ts";
+import type { Money } from "@/shared/api/types.ts";
 import { formatMoney } from "@/shared/lib/money.ts";
 import { Alert } from "@/shared/ui/alert.tsx";
 import { BookCover } from "@/shared/ui/book-cover.tsx";
@@ -15,11 +16,14 @@ const QUANTITIES = Array.from({ length: MAX_PER_BOOK }, (_, n) => n + 1);
 export function CartLine({
   line,
   check,
+  subtotal,
   onQuantity,
   onRemove,
 }: {
   line: Line;
   check?: LineCheck | undefined;
+  // El subtotal de la línea, de la cotización (el servidor lo calcula)
+  subtotal?: Money | undefined;
   onQuantity: (quantity: number) => void;
   onRemove: () => void;
 }) {
@@ -46,6 +50,12 @@ export function CartLine({
           </h3>
           <p className="text-sm text-muted-foreground">{line.author}</p>
           <Price money={line.unitPrice} />
+          {subtotal ? (
+            <p className="text-sm text-muted-foreground">
+              <span>Subtotal de la línea</span>{" "}
+              <span className="money font-semibold text-foreground">{formatMoney(subtotal)}</span>
+            </p>
+          ) : null}
         </div>
         {unavailable ? (
           <div className="flex flex-col items-start gap-2">

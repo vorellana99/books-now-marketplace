@@ -7,6 +7,7 @@ import { FakeAuth } from "../support/auth.ts";
 import { API, apiError, book, bookNumber, page, searchHandler } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
 import { deferred } from "../support/deferred.ts";
+import { quoteFor, quoteHandler } from "../support/orders.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
@@ -39,6 +40,10 @@ beforeEach(() => {
   server.use(
     ...auth.handlers(),
     searchHandler(() => page([bookNumber(1)])),
+    // la cotización: estas pruebas miran la revalidación, no el total
+    quoteHandler((items) =>
+      quoteFor(items, { "9780132350884": "90.00", "9780321125217": "120.00" }),
+    ),
     http.get(API("/books/:isbn"), ({ params }) => {
       const isbn = String(params.isbn);
       requests.push(isbn);

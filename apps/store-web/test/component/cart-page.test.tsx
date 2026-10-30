@@ -5,6 +5,7 @@ import { cartStore, type CartBook } from "@/features/cart/cart.store.ts";
 import { FakeAuth } from "../support/auth.ts";
 import { book, bookNumber, detailHandler, page, searchHandler } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { quoteFor, quoteHandler } from "../support/orders.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
@@ -30,6 +31,10 @@ beforeEach(() => {
     // al abrir el carrito se vuelven a consultar los libros (F3.4): aquí siguen igual
     detailHandler((isbn) => (isbn === DDD.isbn ? book({ ...DDD, price: DDD.unitPrice }) : book())),
     searchHandler(() => page([bookNumber(1)])),
+    // la cotización: estas pruebas miran las líneas, no el total
+    quoteHandler((items) =>
+      quoteFor(items, { "9780132350884": "90.00", "9780321125217": "120.00" }),
+    ),
   );
   userId = auth.signIn().user.id;
 });
@@ -51,12 +56,13 @@ describe("PA-05 Carrito: las líneas", () => {
       "/libros/9780132350884",
     );
     expect(within(row).getByText("Robert C. Martin", { selector: "p" })).toBeTruthy();
-    expect(within(row).getByText("S/ 90.00")).toBeTruthy();
+    // el precio unitario (con una sola unidad el subtotal de la línea coincide: puede aparecer dos veces)
+    expect(within(row).getAllByText("S/ 90.00").length).toBeGreaterThanOrEqual(1);
     expect((within(row).getByLabelText("Cantidad de Clean Code") as HTMLSelectElement).value).toBe(
       "3",
     );
     const other = await rowOf("Domain-Driven Design");
-    expect(within(other).getByText("S/ 120.00")).toBeTruthy();
+    expect(within(other).getAllByText("S/ 120.00").length).toBeGreaterThanOrEqual(1);
   });
 
   it("las líneas salen en el orden en que se agregaron", async () => {

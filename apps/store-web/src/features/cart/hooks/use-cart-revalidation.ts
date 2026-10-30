@@ -93,7 +93,12 @@ export function useCartRevalidation() {
   const unavailable = lines
     .filter((line) => checks[line.isbn]?.status === "unavailable")
     .map((line) => line.isbn);
-  const mixedCurrency = new Set(lines.map((line) => line.unitPrice.currency)).size > 1;
+  // La moneda vigente: la que acaba de llegar del libro, aunque el carrito guardado todavía no se haya actualizado. Si no,
+  // habría un instante en que se cotizaría un carrito con dos monedas
+  const mixedCurrency =
+    new Set(
+      lines.map((line, index) => results[index]?.data?.price.currency ?? line.unitPrice.currency),
+    ).size > 1;
   return {
     checks,
     // Todavía se está consultando algún libro (la primera vez o al abrir otra vez)
