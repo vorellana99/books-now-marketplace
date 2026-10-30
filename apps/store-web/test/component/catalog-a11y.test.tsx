@@ -12,14 +12,19 @@ import {
   searchHandler,
 } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { deferred } from "../support/deferred.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
-const slow = <T,>(body: T) =>
-  http.all(API("/*"), async () => {
-    await new Promise((resolve) => setTimeout(resolve, 60));
+// Una respuesta retenida hasta que se suelta: la prueba mira el estado «cargando» sin depender del reloj
+const held = <T,>(body: T) => {
+  const gate = deferred();
+  const handler = http.all(API("/*"), async () => {
+    await gate.promise;
     return HttpResponse.json(body as never);
   });
+  return { handler, release: gate.release };
+};
 
 const h1s = () => screen.getAllByRole("heading", { level: 1 });
 
@@ -42,10 +47,12 @@ describe("F1.4 · PA-01: accesibilidad de cada estado", () => {
   });
 
   it("cargando", async () => {
-    server.use(slow(page([book()])));
+    const response = held(page([book()]));
+    server.use(response.handler);
     const { container } = await renderApp("/");
     expect(screen.getByRole("status")).toBeTruthy();
     await expectNoA11yViolations(container);
+    response.release();
   });
 
   it("sin resultados", async () => {
@@ -87,10 +94,12 @@ describe("F1.4 · PA-01: accesibilidad de cada estado", () => {
 
 describe("F1.4 · PA-02: accesibilidad de cada estado", () => {
   it("cargando", async () => {
-    server.use(slow(book()));
+    const response = held(book());
+    server.use(response.handler);
     const { container } = await renderApp("/libros/9780132350884");
     expect(screen.getByRole("status")).toBeTruthy();
     await expectNoA11yViolations(container);
+    response.release();
   });
 
   it("con error", async () => {

@@ -14,6 +14,7 @@ import {
   searchHandler,
 } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { deferred } from "../support/deferred.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
@@ -139,10 +140,11 @@ describe("PA-03 Registrarse: crear la cuenta", () => {
 
   it("mientras la petición está en curso el botón se deshabilita y no se registra dos veces", async () => {
     let registers = 0;
+    const gate = deferred();
     server.use(
       http.post(API("/auth/register"), async () => {
         registers += 1;
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        await gate.promise;
         return apiError(409, "EMAIL_ALREADY_REGISTERED");
       }),
     );
@@ -152,6 +154,7 @@ describe("PA-03 Registrarse: crear la cuenta", () => {
     const busy = await screen.findByRole("button", { name: "Creando tu cuenta…" });
     expect((busy as HTMLButtonElement).disabled).toBe(true);
     await user.click(busy);
+    gate.release();
     await screen.findByText(/Ya existe una cuenta/);
     expect(registers).toBe(1);
   });

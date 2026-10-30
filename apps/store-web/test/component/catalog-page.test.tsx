@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vite-plus/test";
 import { API, apiError, book, bookNumber, page, searchHandler } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { deferred } from "../support/deferred.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
@@ -230,9 +231,10 @@ describe("PA-01 Catálogo: paginación", () => {
 
 describe("PA-01 Catálogo: cargando y error", () => {
   it("mientras carga muestra esqueletos y avisa a los lectores de pantalla", async () => {
+    const gate = deferred();
     server.use(
       http.get(API("/books"), async () => {
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        await gate.promise;
         return HttpResponse.json(page([book()]));
       }),
     );
@@ -240,6 +242,7 @@ describe("PA-01 Catálogo: cargando y error", () => {
     expect(screen.getByRole("status").textContent).toContain("Cargando libros");
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThanOrEqual(6);
     expect(container.querySelector('[aria-busy="true"]')).toBeTruthy();
+    gate.release();
     expect(await screen.findByRole("heading", { name: "Clean Code" })).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
   });

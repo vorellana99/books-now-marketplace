@@ -13,6 +13,7 @@ import {
   searchHandler,
 } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { deferred } from "../support/deferred.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
@@ -59,15 +60,17 @@ describe("cabecera sin sesión", () => {
 
   it("mientras se recupera la sesión no muestra ni Entrar ni la cuenta (no parpadea)", async () => {
     signedIn();
+    const gate = deferred();
     server.use(
       http.post(API("/auth/refresh"), async () => {
-        await new Promise((resolve) => setTimeout(resolve, 120));
+        await gate.promise;
         return apiError(401, "INVALID_REFRESH_TOKEN");
       }),
     );
     await renderApp("/");
     expect(within(header()).queryByRole("link", { name: "Entrar" })).toBeNull();
     expect(within(header()).queryByRole("button", { name: "Mi cuenta" })).toBeNull();
+    gate.release();
     await waitFor(() =>
       expect(within(header()).getByRole("link", { name: "Entrar" })).toBeTruthy(),
     );

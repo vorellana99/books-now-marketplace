@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vite-plus/test";
 import { API, apiError, book, detailHandler } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { deferred } from "../support/deferred.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
@@ -100,15 +101,17 @@ describe("PA-02 Detalle: libro no disponible", () => {
 
 describe("PA-02 Detalle: cargando y error", () => {
   it("mientras carga muestra un esqueleto y avisa a los lectores de pantalla", async () => {
+    const gate = deferred();
     server.use(
       http.get(API("/books/:isbn"), async () => {
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        await gate.promise;
         return HttpResponse.json(book());
       }),
     );
     const { container } = await renderApp("/libros/9780132350884");
     expect(screen.getByRole("status").textContent).toContain("Cargando el libro");
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0);
+    gate.release();
     expect(await screen.findByRole("heading", { name: "Clean Code" })).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
   });

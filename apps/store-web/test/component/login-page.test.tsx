@@ -14,6 +14,7 @@ import {
   searchHandler,
 } from "../support/books.ts";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { deferred } from "../support/deferred.ts";
 import { renderApp } from "../support/render.tsx";
 import { server } from "../support/server.ts";
 
@@ -150,21 +151,22 @@ describe("PA-04 Iniciar sesión: entrar", () => {
 
   it("mientras la petición está en curso el botón se deshabilita y no se envía dos veces", async () => {
     let calls = 0;
+    const gate = deferred();
     server.use(
       http.post(API("/auth/login"), async () => {
         calls += 1;
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        await gate.promise;
         return apiError(401, "INVALID_CREDENTIALS");
       }),
     );
     await renderApp("/ingresar");
     await screen.findByRole("heading", { name: "Entra a tu cuenta" });
     const user = await fill("ana@example.com", "LibroYa-dev-2026");
-    const button = screen.getByRole("button", { name: "Entrar" });
-    await user.click(button);
+    await user.click(screen.getByRole("button", { name: "Entrar" }));
     const busy = await screen.findByRole("button", { name: "Entrando…" });
     expect((busy as HTMLButtonElement).disabled).toBe(true);
     await user.click(busy);
+    gate.release();
     await screen.findByRole("alert");
     expect(calls).toBe(1);
     expect((screen.getByRole("button", { name: "Entrar" }) as HTMLButtonElement).disabled).toBe(
