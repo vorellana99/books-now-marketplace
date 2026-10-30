@@ -1,8 +1,22 @@
+import { BadRequestException } from '@nestjs/common';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { OrderCursor } from '../../application/order/order-cursor.js';
+import type { OrderPosition } from '../../domain/order/order-view.js';
 
 export const MAX_HISTORY_LIMIT = 50;
+
+// La posición de la que sigue la página, o undefined en la primera. Un cursor que no es válido es un 400
+export function positionAfter(
+  cursor: string | undefined,
+): OrderPosition | undefined {
+  if (cursor === undefined) return undefined;
+  const position = OrderCursor.decode(cursor);
+  if (position === null)
+    throw new BadRequestException('El cursor no es válido');
+  return position;
+}
 
 // Lo que comparten los dos listados de pedidos: la página
 export class PageDto {

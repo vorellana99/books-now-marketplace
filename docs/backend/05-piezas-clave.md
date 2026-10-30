@@ -346,7 +346,7 @@ En esta fase los pedidos solo se crean. Cuando existan flujos que los modifiquen
 ### Email: el primer consumidor
 
 ```ts
-// sales/application/order/send-order-confirmation.consumer.ts
+// sales/infrastructure/consumers/send-order-confirmation.consumer.ts
 @OutboxHandler()
 @Injectable()
 export class SendOrderConfirmationConsumer implements ExternalOutboxConsumer<OrderPlacedEvent> {

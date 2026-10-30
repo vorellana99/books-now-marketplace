@@ -6,15 +6,23 @@ import {
   type OrderRequester,
 } from '../../src/contexts/sales/application/order/get-order.query.js';
 import { ListCustomerOrdersQuery } from '../../src/contexts/sales/application/order/list-customer-orders.query.js';
-import { ListCustomerOrdersHandler } from '../../src/contexts/sales/infrastructure/persistence/list-customer-orders.handler.js';
-import { GetOrderHandler } from '../../src/contexts/sales/infrastructure/persistence/get-order.handler.js';
+import { ListCustomerOrdersHandler } from '../../src/contexts/sales/application/order/list-customer-orders.handler.js';
+import { GetOrderHandler } from '../../src/contexts/sales/application/order/get-order.handler.js';
+import { OrderHistory } from '../../src/contexts/sales/domain/ports/order-history.js';
+import { PrismaOrderHistory } from '../../src/contexts/sales/infrastructure/persistence/prisma-order-history.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { NotFoundError } from '../../src/shared-kernel/domain.errors.js';
 import { insertCustomer, insertOrder } from '../support/builders.js';
 import { resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 
-@Module({ providers: [GetOrderHandler, ListCustomerOrdersHandler] })
+@Module({
+  providers: [
+    GetOrderHandler,
+    ListCustomerOrdersHandler,
+    { provide: OrderHistory, useClass: PrismaOrderHistory },
+  ],
+})
 class OrderQueries {}
 
 describe('GetOrderHandler (PostgreSQL real, por el QueryBus)', () => {

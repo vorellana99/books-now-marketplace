@@ -1,14 +1,9 @@
-import { BadRequestException } from '@nestjs/common';
+import type { OrderPosition } from '../../domain/order/order-view.js';
 
 const MAX_LENGTH = 200;
 const URL_SAFE = /^[A-Za-z0-9_-]+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-export interface OrderPosition {
-  createdAt: Date;
-  id: string;
-}
 
 // El cursor del historial: la posición del último pedido de la página, como texto opaco para el cliente. Lleva la fecha
 // y el id (no solo el id): con los dos se pagina por "lo que viene después de este punto", y sigue valiendo aunque ese
@@ -41,14 +36,3 @@ export const OrderCursor = {
     return { createdAt, id };
   },
 };
-
-// La posición de la que sigue la página, o undefined en la primera. Un cursor que no es válido es un 400
-export function positionAfter(
-  cursor: string | undefined,
-): OrderPosition | undefined {
-  if (cursor === undefined) return undefined;
-  const position = OrderCursor.decode(cursor);
-  if (position === null)
-    throw new BadRequestException('El cursor no es válido');
-  return position;
-}

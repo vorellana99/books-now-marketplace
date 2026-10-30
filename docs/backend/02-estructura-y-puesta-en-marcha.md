@@ -117,33 +117,38 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   └── shared/
 │       │   │       ├── money.vo.ts   decimal.js
 │       │   │       └── specification.ts
-│       │   ├── application/order/
-│       │   │   ├── place-order.command.ts
-│       │   │   ├── place-order.handler.ts
-│       │   │   ├── get-order.query.ts                      ✅ hecho (5.8)
-│       │   │   ├── list-customer-orders.query.ts           ✅ hecho (6.9)
-│       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias   ✅ hecho (5.6)
-│       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox   ✅ hecho (5.7)
+│       │   ├── application/
+│       │   │   ├── order/
+│       │   │   │   ├── place-order.command.ts
+│       │   │   │   ├── place-order.handler.ts
+│       │   │   │   ├── get-order.query.ts                  ✅ hecho (5.8)
+│       │   │   │   ├── get-order.handler.ts                ✅ hecho (5.8); desde 10.12 pide la vista al puerto OrderHistory
+│       │   │   │   ├── list-customer-orders.query.ts       ✅ hecho (6.9)
+│       │   │   │   ├── list-customer-orders.handler.ts     ✅ hecho (6.9); también order-cursor.ts (10.12)
+│       │   │   │   └── recover-checkouts.job.ts            saga: recupera checkouts a medias   ✅ hecho (5.6)
+│       │   │   └── customer/
+│       │   │       ├── create-customer.command.ts          (10.12)
+│       │   │       └── create-customer.handler.ts          las reglas del cliente de cada comprador (10.12)
 │       │   └── infrastructure/
-│       │       ├── order/
+│       │       ├── http/
 │       │       │   ├── order.controller.ts                 ✅ hecho (5.8)
-│       │       │   ├── place-order.dto.ts                  ✅ hecho (5.8)
-│       │       │   ├── (ShippingAddressDto vive en place-order.dto.ts) ✅ hecho (6.3)
-│       │       │   ├── list-orders.dto.ts                  ✅ hecho (6.9) (nombre real)
-│       │       │   ├── get-order.handler.ts                ✅ hecho (5.8)
-│       │       │   ├── list-customer-orders.handler.ts     ✅ hecho (6.9); también order-cursor.ts y order-view.ts
+│       │       │   ├── place-order.dto.ts                  ✅ hecho (5.8); ShippingAddressDto vive aquí ✅ hecho (6.3)
+│       │       │   └── list-orders.dto.ts                  ✅ hecho (6.9) (nombre real); también positionAfter
+│       │       ├── persistence/
 │       │       │   ├── prisma-order.repository.ts          ✅ hecho (5.3)
-│       │       │   ├── order.mapper.ts                     ✅ hecho (5.3)
-│       │       │   ├── prisma-checkout-log.adapter.ts      ✅ hecho (5.2)
+│       │       │   ├── prisma-order-history.ts             el lado de lectura (10.12)
+│       │       │   ├── prisma-customer.repository.ts       ✅ hecho (5.2)
+│       │       │   ├── order.mapper.ts                     ✅ hecho (5.3); también order-view.mapper.ts
+│       │       │   └── prisma-checkout-log.adapter.ts      ✅ hecho (5.2)
+│       │       ├── adapters/
 │       │       │   ├── catalog-in-process.adapter.ts       ✅ hecho (5.4)
 │       │       │   ├── inventory-in-process.adapter.ts     ✅ hecho (5.4)
-│       │       │   └── console-notifier.adapter.ts         ✅ hecho (5.4)
-│       │       ├── customer/
-│       │       │   ├── prisma-customer.repository.ts       ✅ hecho (5.2)
-│       │       │   └── create-customer.consumer.ts         ✅ hecho (7.5) consumidor `db` de identity.user.registered
-│       │       └── payment/
-│       │           ├── simulated-payment-gateway.adapter.ts   ✅ hecho (5.5); en la guía v5 se llamaba FakePaymentGateway
-│       │           └── external-payment.adapter.ts            ✅ hecho (5.5)
+│       │       │   ├── console-notifier.adapter.ts         ✅ hecho (5.4)
+│       │       │   ├── simulated-payment-gateway.adapter.ts   ✅ hecho (5.5); en la guía v5 se llamaba FakePaymentGateway
+│       │       │   └── external-payment.adapter.ts         ✅ hecho (5.5)
+│       │       └── consumers/
+│       │           ├── send-order-confirmation.consumer.ts consumidor `external` del Outbox   ✅ hecho (5.7)
+│       │           └── create-customer.consumer.ts         ✅ hecho (7.5) consumidor `db` de identity.user.registered
 │       │
 │       ├── catalog/
 │       │   ├── catalog.module.ts

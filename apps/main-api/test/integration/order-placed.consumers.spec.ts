@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Module, type INestApplication } from '@nestjs/common';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { ConfirmReservationConsumer } from '../../src/contexts/inventory/infrastructure/consumers/confirm-reservation.consumer.js';
-import { SendOrderConfirmationConsumer } from '../../src/contexts/sales/application/order/send-order-confirmation.consumer.js';
+import { SendOrderConfirmationConsumer } from '../../src/contexts/sales/infrastructure/consumers/send-order-confirmation.consumer.js';
 import { CustomerRepository } from '../../src/contexts/sales/domain/ports/customer.repository.js';
 import { Notifier } from '../../src/contexts/sales/domain/ports/notifier.port.js';
 import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/persistence/prisma-customer.repository.js';

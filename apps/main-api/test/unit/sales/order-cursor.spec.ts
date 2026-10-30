@@ -1,4 +1,4 @@
-import { OrderCursor } from '../../../src/contexts/sales/infrastructure/persistence/order-cursor.js';
+import { OrderCursor } from '../../../src/contexts/sales/application/order/order-cursor.js';
 
 const ID = '0196a000-0000-7000-8000-0000000000aa';
 const AT = new Date('2026-10-28T12:34:56.789Z');

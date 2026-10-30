@@ -195,7 +195,8 @@ export class AddStockHandler implements ICommandHandler<AddStockCommand> {
 ### Fase 14: Historial de pedidos
 
 ```ts
-// sales/infrastructure/persistence/list-customer-orders.handler.ts
+// Versión de esta fase. Desde el corte 10 el handler (sales/application/order/list-customer-orders.handler.ts) pide la
+// página al puerto OrderHistory.listByCustomer, y esta consulta vive en infrastructure/persistence/prisma-order-history.ts
 @QueryHandler(ListCustomerOrdersQuery)
 export class ListCustomerOrdersHandler implements IQueryHandler<ListCustomerOrdersQuery> {
   constructor(private readonly prisma: PrismaService) {}

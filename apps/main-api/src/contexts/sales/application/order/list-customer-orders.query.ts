@@ -1,13 +1,11 @@
 import { Query } from '@nestjs/cqrs';
-import type { OrderDetail, ShippingAddressView } from './get-order.query.js';
+import type {
+  OrderHistoryItem,
+  OrderPosition,
+  ShippingAddressView,
+} from '../../domain/order/order-view.js';
 
-export type { ShippingAddressView };
-
-// Un pedido en un historial (el del comprador o el de administración): el detalle del pedido, con su dirección de envío,
-// más su fecha
-export interface OrderHistoryItem extends OrderDetail {
-  createdAt: string; // ISO 8601, en UTC
-}
+export type { OrderHistoryItem, ShippingAddressView };
 
 export interface OrderHistoryPage {
   items: OrderHistoryItem[];
@@ -20,7 +18,7 @@ export class ListCustomerOrdersQuery extends Query<OrderHistoryPage> {
   constructor(
     readonly customerId: string,
     readonly limit: number,
-    readonly after?: { createdAt: Date; id: string },
+    readonly after?: OrderPosition,
   ) {
     super();
   }

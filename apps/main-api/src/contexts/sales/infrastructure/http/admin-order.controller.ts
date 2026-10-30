@@ -11,8 +11,7 @@ import {
   ListCustomerOrdersQuery,
   type OrderHistoryPage,
 } from '../../application/order/list-customer-orders.query.js';
-import { ListOrdersDto } from './list-orders.dto.js';
-import { positionAfter } from '../persistence/order-cursor.js';
+import { ListOrdersDto, positionAfter } from './list-orders.dto.js';
 import { OrderHistoryResponse } from './order.response.js';
 import { ApiAuthErrors } from '../../../../platform/http/api-auth-errors.decorator.js';
 

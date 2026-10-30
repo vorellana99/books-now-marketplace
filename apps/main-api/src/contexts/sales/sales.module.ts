@@ -6,7 +6,12 @@ import { PlaceOrderHandler } from './application/order/place-order.handler.js';
 import { QuoteOrderHandler } from './application/order/quote-order.handler.js';
 import { PurgeCheckoutsJob } from './application/order/purge-checkouts.job.js';
 import { RecoverCheckoutsJob } from './application/order/recover-checkouts.job.js';
-import { SendOrderConfirmationConsumer } from './application/order/send-order-confirmation.consumer.js';
+import { CreateCustomerHandler } from './application/customer/create-customer.handler.js';
+import { GetOrderHandler } from './application/order/get-order.handler.js';
+import { ListCustomerOrdersHandler } from './application/order/list-customer-orders.handler.js';
+import { OrderHistory } from './domain/ports/order-history.js';
+import { SendOrderConfirmationConsumer } from './infrastructure/consumers/send-order-confirmation.consumer.js';
+import { PrismaOrderHistory } from './infrastructure/persistence/prisma-order-history.js';
 import { CustomerRepository } from './domain/ports/customer.repository.js';
 import { CatalogPricing } from './domain/ports/catalog-pricing.port.js';
 import { CheckoutLog } from './domain/ports/checkout-log.port.js';
@@ -19,8 +24,6 @@ import { CreateCustomerConsumer } from './infrastructure/consumers/create-custom
 import { PrismaCustomerRepository } from './infrastructure/persistence/prisma-customer.repository.js';
 import { CatalogInProcessAdapter } from './infrastructure/adapters/catalog-in-process.adapter.js';
 import { ConsoleNotifier } from './infrastructure/adapters/console-notifier.adapter.js';
-import { GetOrderHandler } from './infrastructure/persistence/get-order.handler.js';
-import { ListCustomerOrdersHandler } from './infrastructure/persistence/list-customer-orders.handler.js';
 import { InventoryInProcessAdapter } from './infrastructure/adapters/inventory-in-process.adapter.js';
 import { AdminOrderController } from './infrastructure/http/admin-order.controller.js';
 import { MyOrdersController } from './infrastructure/http/my-orders.controller.js';
@@ -39,6 +42,7 @@ import { SimulatedPaymentGateway } from './infrastructure/adapters/simulated-pay
     GetOrderHandler,
     QuoteOrderHandler,
     ListCustomerOrdersHandler,
+    CreateCustomerHandler,
     SendOrderConfirmationConsumer,
     CreateCustomerConsumer,
     RecoverCheckoutsJob,
@@ -46,6 +50,7 @@ import { SimulatedPaymentGateway } from './infrastructure/adapters/simulated-pay
     PricingService,
     OrderPricer,
     { provide: OrderRepository, useClass: PrismaOrderRepository },
+    { provide: OrderHistory, useClass: PrismaOrderHistory },
     { provide: CheckoutLog, useClass: PrismaCheckoutLog },
     { provide: CustomerRepository, useClass: PrismaCustomerRepository },
     { provide: CatalogPricing, useClass: CatalogInProcessAdapter },

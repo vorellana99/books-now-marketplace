@@ -1,10 +1,10 @@
 import type { Prisma } from '../../../../platform/prisma/generated/client.js';
 import type {
   OrderDetail,
+  OrderHistoryItem,
   OrderView,
   ShippingAddressView,
-} from '../../application/order/get-order.query.js';
-import type { OrderHistoryItem } from '../../application/order/list-customer-orders.query.js';
+} from '../../domain/order/order-view.js';
 
 type OrderRow = Prisma.OrderGetPayload<{ include: { lines: true } }>;
 

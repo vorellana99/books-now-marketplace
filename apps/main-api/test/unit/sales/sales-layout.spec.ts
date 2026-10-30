@@ -41,16 +41,14 @@ describe('estructura de sales/infrastructure', () => {
     );
   });
 
-  it('persistence/ tiene lo que lee o escribe en la base de Ventas', () => {
+  it('persistence/ tiene lo que lee o escribe en la base de Ventas, sin handlers', () => {
     expect(files('persistence')).toEqual(
       [
-        'get-order.handler.ts',
-        'list-customer-orders.handler.ts',
-        'order-cursor.ts',
-        'order-view.ts',
+        'order-view.mapper.ts',
         'order.mapper.ts',
         'prisma-checkout-log.adapter.ts',
         'prisma-customer.repository.ts',
+        'prisma-order-history.ts',
         'prisma-order.repository.ts',
       ].sort(),
     );
@@ -68,8 +66,11 @@ describe('estructura de sales/infrastructure', () => {
     );
   });
 
-  it('consumers/ tiene los consumidores del Outbox que necesitan la transacción (los externos viven en application/)', () => {
-    expect(files('consumers')).toEqual(['create-customer.consumer.ts']);
+  it('consumers/ tiene los dos consumidores del Outbox, el de la transacción del relay y el externo', () => {
+    expect(files('consumers')).toEqual([
+      'create-customer.consumer.ts',
+      'send-order-confirmation.consumer.ts',
+    ]);
   });
 
   it('ninguna carpeta vieja sigue existiendo', () => {
@@ -90,12 +91,13 @@ describe('estructura de sales/domain', () => {
           .sort((a, b) => a.localeCompare(b))
       : [];
 
-  it('domain/ports/ tiene los siete puertos', () => {
+  it('domain/ports/ tiene los ocho puertos', () => {
     expect(names('ports')).toEqual([
       'catalog-pricing.port.ts',
       'checkout-log.port.ts',
       'customer.repository.ts',
       'notifier.port.ts',
+      'order-history.ts',
       'order.repository.ts',
       'payment-gateway.port.ts',
       'stock-reservation.port.ts',
@@ -110,5 +112,31 @@ describe('estructura de sales/domain', () => {
       expect(leftovers, dir).toEqual([]);
     }
     expect(names('payment')).toEqual([]);
+  });
+});
+
+// Los casos de uso de Ventas no tienen consumidores ni hablan con Prisma (tarea 10.12)
+describe('estructura de sales/application', () => {
+  const APP = 'src/contexts/sales/application';
+  const all = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? all(`${dir}/${e.name}`) : [`${dir}/${e.name}`],
+    );
+
+  it('no tiene consumidores del Outbox: viven en infrastructure/consumers/', () => {
+    expect(all(APP).filter((f) => f.endsWith('.consumer.ts'))).toEqual([]);
+  });
+
+  it('tiene los handlers de lectura y el del cliente', () => {
+    const names = all(APP).map((f) => f.slice(APP.length + 1));
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'order/get-order.handler.ts',
+        'order/list-customer-orders.handler.ts',
+        'order/order-cursor.ts',
+        'customer/create-customer.command.ts',
+        'customer/create-customer.handler.ts',
+      ]),
+    );
   });
 });
