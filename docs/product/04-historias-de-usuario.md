@@ -10,8 +10,8 @@
 | [HU-02](#hu-02-iniciar-sesión) | Iniciar sesión | Cuenta | ✅ | ⬜ | Tienda MVP |
 | [HU-03](#hu-03-mantener-la-sesión) | Mantener la sesión | Cuenta | ✅ | ⬜ | Tienda MVP |
 | [HU-04](#hu-04-cerrar-sesión) | Cerrar sesión | Cuenta | ✅ | ⬜ | Tienda MVP |
-| [HU-10](#hu-10-buscar-libros) | Buscar libros | Catálogo | ✅ | ⬜ | Tienda MVP |
-| [HU-11](#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ | ⬜ | Tienda MVP |
+| [HU-10](#hu-10-buscar-libros) | Buscar libros | Catálogo | ✅ | ✅ | Tienda MVP |
+| [HU-11](#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ | 🔄 | Tienda MVP |
 | [HU-20](#hu-20-agregar-un-libro-al-carrito) | Agregar un libro al carrito | Carrito | — | ⬜ | Tienda MVP |
 | [HU-21](#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | — | ⬜ | Tienda MVP |
 | [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ | ⬜ | Tienda MVP |
