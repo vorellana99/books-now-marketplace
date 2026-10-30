@@ -46,6 +46,18 @@ describe("PA-04 Iniciar sesión: la pantalla", () => {
     expect(screen.getByRole("link", { name: "Crea una" }).getAttribute("href")).toBe("/registro");
   });
 
+  it("el enlace para crear cuenta conserva a dónde volver", async () => {
+    await renderApp("/ingresar?returnTo=%2Fcarrito");
+    const link = await screen.findByRole("link", { name: "Crea una" });
+    expect(link.getAttribute("href")).toContain("returnTo=%2Fcarrito");
+  });
+
+  it("ignora un returnTo ajeno también en el enlace para crear cuenta", async () => {
+    await renderApp("/ingresar?returnTo=https%3A%2F%2Fotro.com");
+    const link = await screen.findByRole("link", { name: "Crea una" });
+    expect(link.getAttribute("href")).toBe("/registro");
+  });
+
   it("los campos piden lo que el navegador sabe autocompletar", async () => {
     await renderApp("/ingresar");
     const email = await screen.findByLabelText("Correo electrónico");

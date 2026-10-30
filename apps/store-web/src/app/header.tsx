@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Menu, Search } from "lucide-react";
 import { useState } from "react";
 import { SearchBox } from "@/app/search-box.tsx";
+import { AccountMenu, MobileAccount } from "@/features/auth/index.ts";
 import { Button } from "@/shared/ui/button.tsx";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/shared/ui/sheet.tsx";
 
@@ -34,6 +35,7 @@ export function Header() {
                   Libros
                 </Link>
               </SheetClose>
+              <MobileAccount />
             </nav>
           </SheetContent>
         </Sheet>
@@ -54,6 +56,7 @@ export function Header() {
           <Link to="/" className="hover:text-primary">
             Libros
           </Link>
+          <AccountMenu />
         </nav>
 
         <div className="ml-auto md:hidden">

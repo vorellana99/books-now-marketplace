@@ -2,6 +2,9 @@ import { useStore } from "zustand";
 import { configureApi } from "@/shared/api/client.ts";
 import { session, type SessionState } from "./session.ts";
 
+export { AccountMenu, MobileAccount } from "./components/account-menu.tsx";
+export { useSessionWatcher } from "./hooks/use-session-watcher.ts";
+export { redirectIfSignedIn, requireSession } from "./guards.ts";
 export { LoginPage } from "./pages/login-page.tsx";
 export { RegisterPage } from "./pages/register-page.tsx";
 export { safeReturnTo } from "./return-to.ts";

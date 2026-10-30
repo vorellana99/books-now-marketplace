@@ -16,6 +16,7 @@ import { session } from "../session.ts";
 export function LoginPage() {
   const search = useSearch({ from: "/ingresar" });
   const router = useRouter();
+  const returnTo = safeReturnTo(search.returnTo);
   const [error, setError] = useState<string | null>(null);
 
   // El aviso de «tu sesión terminó» se muestra una sola vez: se toma del estado de la sesión y se descarta
@@ -31,7 +32,7 @@ export function LoginPage() {
     setError(null);
     try {
       session.start(await login(values));
-      router.history.push(safeReturnTo(search.returnTo) ?? "/");
+      router.history.push(returnTo ?? "/");
     } catch (failure) {
       setError(accountErrorMessage(failure));
       // La contraseña no se conserva: se vuelve a escribir, y el foco va a ella
@@ -74,7 +75,11 @@ export function LoginPage() {
         </form>
         <p className="text-center">
           ¿No tienes cuenta?{" "}
-          <Link to="/registro" className="font-medium text-primary hover:underline">
+          <Link
+            to="/registro"
+            search={returnTo ? { returnTo } : {}}
+            className="font-medium text-primary hover:underline"
+          >
             Crea una
           </Link>
         </p>

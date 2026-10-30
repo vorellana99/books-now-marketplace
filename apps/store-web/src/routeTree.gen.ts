@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CarritoRouteImport } from './routes/carrito'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as LibrosIsbnRouteImport } from './routes/libros.$isbn'
@@ -17,6 +18,11 @@ import { Route as LibrosIsbnRouteImport } from './routes/libros.$isbn'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CarritoRoute = CarritoRouteImport.update({
+  id: '/carrito',
+  path: '/carrito',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IngresarRoute = IngresarRouteImport.update({
@@ -37,12 +43,14 @@ const LibrosIsbnRoute = LibrosIsbnRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/carrito': typeof CarritoRoute
   '/ingresar': typeof IngresarRoute
   '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/carrito': typeof CarritoRoute
   '/ingresar': typeof IngresarRoute
   '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
@@ -50,20 +58,23 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/carrito': typeof CarritoRoute
   '/ingresar': typeof IngresarRoute
   '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ingresar' | '/registro' | '/libros/$isbn'
+  fullPaths: '/' | '/carrito' | '/ingresar' | '/registro' | '/libros/$isbn'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ingresar' | '/registro' | '/libros/$isbn'
-  id: '__root__' | '/' | '/ingresar' | '/registro' | '/libros/$isbn'
+  to: '/' | '/carrito' | '/ingresar' | '/registro' | '/libros/$isbn'
+  id:
+    '__root__' | '/' | '/carrito' | '/ingresar' | '/registro' | '/libros/$isbn'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CarritoRoute: typeof CarritoRoute
   IngresarRoute: typeof IngresarRoute
   RegistroRoute: typeof RegistroRoute
   LibrosIsbnRoute: typeof LibrosIsbnRoute
@@ -76,6 +87,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/carrito': {
+      id: '/carrito'
+      path: '/carrito'
+      fullPath: '/carrito'
+      preLoaderRoute: typeof CarritoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ingresar': {
@@ -104,6 +122,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CarritoRoute: CarritoRoute,
   IngresarRoute: IngresarRoute,
   RegistroRoute: RegistroRoute,
   LibrosIsbnRoute: LibrosIsbnRoute,
