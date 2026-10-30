@@ -150,7 +150,7 @@ describe("cerrar sesión", () => {
     const user = userEvent.setup();
     signedIn();
     const { router } = await renderApp("/carrito");
-    await screen.findByRole("heading", { name: "Estamos armando el carrito" });
+    await screen.findByRole("heading", { name: "Tu carrito" });
     await openMenu(user);
     await user.click(screen.getByRole("menuitem", { name: "Cerrar sesión" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/"));
@@ -205,7 +205,7 @@ describe("otra pestaña cierra la sesión", () => {
   it("esta pestaña queda sin sesión, vacía su caché y, si estaba en una pantalla con sesión, pide entrar", async () => {
     signedIn();
     const { router, queryClient } = await renderApp("/carrito");
-    await screen.findByRole("heading", { name: "Estamos armando el carrito" });
+    await screen.findByRole("heading", { name: "Tu carrito" });
     queryClient.setQueryData(["orders", "mine"], { items: [] });
 
     localStorage.removeItem("libroya.refresh");

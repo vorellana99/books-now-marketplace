@@ -32,7 +32,8 @@ describe("F1.4 · PA-01: accesibilidad de cada estado", () => {
   const twenty = Array.from({ length: 20 }, (_, n) => bookNumber(n + 1));
 
   it("con la lista", async () => {
-    server.use(searchHandler(() => page(twenty, { total: 45 })));
+    // Con seis libros y el total de 45 se ve la paginación; axe con las veinte tarjetas tarda más que el límite de la prueba
+    server.use(searchHandler(() => page(twenty.slice(0, 6), { total: 45 })));
     const { container } = await renderApp("/");
     await screen.findByRole("heading", { name: "Libro 01" });
     expect(h1s()).toHaveLength(1);

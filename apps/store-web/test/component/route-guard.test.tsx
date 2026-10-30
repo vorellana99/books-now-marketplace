@@ -37,7 +37,7 @@ describe("ruta con sesión, sin sesión", () => {
     await user.type(screen.getByLabelText("Contraseña"), "LibroYa-dev-2026");
     await user.click(screen.getByRole("button", { name: "Entrar" }));
     await waitFor(() => expect(router.state.location.pathname).toBe("/carrito"));
-    expect(await screen.findByRole("heading", { name: "Estamos armando el carrito" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Tu carrito" })).toBeTruthy();
   });
 
   it("sin token de refresco no avisa que terminó una sesión: nunca hubo", async () => {
@@ -73,7 +73,7 @@ describe("ruta con sesión, con sesión", () => {
   it("espera a recuperar la sesión y muestra la pantalla, sin pasar por /ingresar", async () => {
     signedIn();
     const { router } = await renderApp("/carrito");
-    expect(await screen.findByRole("heading", { name: "Estamos armando el carrito" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Tu carrito" })).toBeTruthy();
     expect(router.state.location.pathname).toBe("/carrito");
     expect(auth.refreshCalls).toHaveLength(1);
   });
@@ -81,10 +81,10 @@ describe("ruta con sesión, con sesión", () => {
   it("recuperar la sesión una vez sirve para las rutas siguientes", async () => {
     signedIn();
     const { router } = await renderApp("/carrito");
-    await screen.findByRole("heading", { name: "Estamos armando el carrito" });
+    await screen.findByRole("heading", { name: "Tu carrito" });
     await router.navigate({ to: "/" });
     await router.navigate({ to: "/carrito" });
-    expect(await screen.findByRole("heading", { name: "Estamos armando el carrito" })).toBeTruthy();
+    expect(await screen.findByRole("heading", { name: "Tu carrito" })).toBeTruthy();
     expect(auth.refreshCalls).toHaveLength(1);
   });
 });
