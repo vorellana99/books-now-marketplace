@@ -2,6 +2,10 @@ import { useStore } from "zustand";
 import { configureApi } from "@/shared/api/client.ts";
 import { session, type SessionState } from "./session.ts";
 
+export { LoginPage } from "./pages/login-page.tsx";
+export { safeReturnTo } from "./return-to.ts";
+export { loginSearchSchema } from "./search.ts";
+
 export type { SessionState };
 
 // Al arrancar la app: le entrega al cliente de API las dos funciones de la sesión (`shared/` no puede importar de

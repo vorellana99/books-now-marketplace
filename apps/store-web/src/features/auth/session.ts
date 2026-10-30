@@ -115,6 +115,11 @@ export function createSession(deps: Deps = {}) {
   };
   window.addEventListener("storage", onStorage);
 
+  // El aviso «tu sesión terminó» se muestra una vez: quien lo muestra lo descarta
+  function dismissNotice() {
+    if (getState().notice !== null) store.setState({ notice: null });
+  }
+
   // Vuelve al estado de recién abierta la pestaña, sin tocar el almacenamiento (lo usan las pruebas entre un caso y otro)
   function reset() {
     accessToken = null;
@@ -125,6 +130,7 @@ export function createSession(deps: Deps = {}) {
   return {
     store,
     reset,
+    dismissNotice,
     getState,
     getAccessToken,
     start,

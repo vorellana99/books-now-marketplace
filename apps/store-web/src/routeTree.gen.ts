@@ -10,11 +10,23 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as IngresarRouteImport } from './routes/ingresar'
+import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as LibrosIsbnRouteImport } from './routes/libros.$isbn'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IngresarRoute = IngresarRouteImport.update({
+  id: '/ingresar',
+  path: '/ingresar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RegistroRoute = RegistroRouteImport.update({
+  id: '/registro',
+  path: '/registro',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LibrosIsbnRoute = LibrosIsbnRouteImport.update({
@@ -25,27 +37,35 @@ const LibrosIsbnRoute = LibrosIsbnRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ingresar': typeof IngresarRoute
+  '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ingresar': typeof IngresarRoute
+  '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ingresar': typeof IngresarRoute
+  '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/libros/$isbn'
+  fullPaths: '/' | '/ingresar' | '/registro' | '/libros/$isbn'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/libros/$isbn'
-  id: '__root__' | '/' | '/libros/$isbn'
+  to: '/' | '/ingresar' | '/registro' | '/libros/$isbn'
+  id: '__root__' | '/' | '/ingresar' | '/registro' | '/libros/$isbn'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  IngresarRoute: typeof IngresarRoute
+  RegistroRoute: typeof RegistroRoute
   LibrosIsbnRoute: typeof LibrosIsbnRoute
 }
 
@@ -56,6 +76,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ingresar': {
+      id: '/ingresar'
+      path: '/ingresar'
+      fullPath: '/ingresar'
+      preLoaderRoute: typeof IngresarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/registro': {
+      id: '/registro'
+      path: '/registro'
+      fullPath: '/registro'
+      preLoaderRoute: typeof RegistroRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/libros/$isbn': {
@@ -70,6 +104,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  IngresarRoute: IngresarRoute,
+  RegistroRoute: RegistroRoute,
   LibrosIsbnRoute: LibrosIsbnRoute,
 }
 export const routeTree = rootRouteImport
