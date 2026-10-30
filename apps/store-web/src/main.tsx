@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { preloadWhenIdle } from "@/app/preload.ts";
 import { queryClient } from "@/app/query-client.ts";
 import { configureAuth } from "@/features/auth/index.ts";
 import { router } from "./router.ts";
@@ -19,3 +20,5 @@ createRoot(container).render(
     </QueryClientProvider>
   </StrictMode>,
 );
+
+preloadWhenIdle(router);

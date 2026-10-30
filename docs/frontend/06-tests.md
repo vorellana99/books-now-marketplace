@@ -78,6 +78,21 @@ E2E_BASE_URL=http://localhost:4173 pnpm run test:e2e   # contra otra URL (por ej
 
 **Accesibilidad (`accessibility.e2e.ts`, `keyboard.e2e.ts`)**: axe en el navegador real en las diez pantallas y en sus estados con error, a 360 px y a 1280 px; y el recorrido de compra completo (agregar, carrito, dirección, pago, confirmación, pedidos y detalle) **solo con teclado**, comprobando que el foco se ve en cada parada. En jsdom axe no calcula estilos, así que el contraste de color y el tamaño de los objetivos táctiles solo se comprueban aquí; las pruebas de componente siguen cubriendo el resto de reglas.
 
+### Rendimiento (`pnpm run test:perf`)
+
+`playwright.perf.config.ts` + `test/e2e/performance.perf.ts`. Mide el build de **producción** (`vp build` + `vp preview` en `:4173`, siempre uno nuevo: no reutiliza un servidor que ya estuviera) en un teléfono de gama media con 4G: CPU 4 veces más lenta y el perfil «4G lento» de Lighthouse (1.6 Mbps, 150 ms), el peor caso razonable. Necesita el backend real. `E2E_BASE_URL=<url>` mide un servidor que ya está en marcha (sirve para comparar dos builds). Objetivos de [producto 08](../product/08-requisitos-de-experiencia.md) y lo medido en F6.3:
+
+| Indicador | Objetivo | Medido (peor perfil) |
+|---|---|---|
+| LCP del catálogo | ≤ 2.5 s | 1.9–2.0 s (0.73 s con una 4G típica de 9 Mbps) |
+| CLS | ≤ 0.1 | 0.001 |
+| INP en el recorrido de compra (buscar, agregar, carrito, cantidad, continuar, escribir la dirección) | ≤ 200 ms | 48–80 ms |
+| JS y CSS iniciales sin comprimir | ≤ 700 kB (presupuesto) | 647 kB |
+
+Solo se baja el subconjunto latino de las tipografías (la prueba lo exige). `vp preview` no comprime: en producción el proxy inverso debe servir `gzip` o `br` (se documenta en el despliegue, tarea F6.4).
+
+**Qué se corrigió**: la interacción más lenta era tocar «Continuar con la compra» o el carrito (232–256 ms): el trozo de la ruta se pedía recién al tocar y esperaba a la red. `src/app/preload.ts` precarga `/carrito`, `/compra` y `/pedidos` en un momento libre tras el primer pintado (`requestIdleCallback`, con un temporizador en Safari) y la interacción baja a 56–64 ms. Se comprobó con un A/B de dos builds servidos a la vez (con y sin precarga, 5 corridas cada uno: 56–64 ms contra 240–256 ms) y la prueba de INP falla sobre el build sin precarga.
+
 ### Playwright en WSL: faltan librerías del sistema
 
 Chromium necesita `libnss3`, `libnspr4` y `libasound2` (`libasound2t64` en Ubuntu 24.04), que WSL no trae. Dos caminos:
