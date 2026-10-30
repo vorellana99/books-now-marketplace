@@ -164,7 +164,8 @@ describe("las acciones de cada fallo", () => {
     expect(alert.textContent).toContain("Revisa tu dirección de envío, en especial el teléfono.");
     expect(alert.textContent).toContain("No se te cobró nada.");
     const phone = screen.getByLabelText("Teléfono");
-    expect(phone.getAttribute("aria-invalid")).toBe("true");
+    // El campo se marca en el render siguiente al del aviso (el formulario recibe el error por una prop)
+    await waitFor(() => expect(phone.getAttribute("aria-invalid")).toBe("true"));
     await waitFor(() => expect(document.activeElement).toBe(phone));
     // lo escrito se conserva
     expect((screen.getByLabelText("Destinatario") as HTMLInputElement).value).toBe("María Quispe");

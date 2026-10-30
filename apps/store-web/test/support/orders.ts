@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { Quote } from "@/shared/api/types.ts";
+import type { Order, Quote } from "@/shared/api/types.ts";
 import { API } from "./books.ts";
 
 export type QuoteItem = { isbn: string; quantity: number };
@@ -47,6 +47,39 @@ export const quoteHandler = (
     return result instanceof Response ? result : HttpResponse.json(result);
   });
 
+// Un pedido como lo devuelve `GET /orders/:id`, con una línea y una dirección de ejemplo
+export const orderDetail = (overrides: Partial<Order> = {}): Order => ({
+  id: "0b6f2f0e-6f0e-4b1e-9a55-3f1f5a0c1d11",
+  status: "PLACED",
+  charged: { amount: "100.00", currency: "PEN" },
+  lines: [
+    {
+      isbn: "9780132350884",
+      title: "Clean Code",
+      unitPrice: { amount: "90.00", currency: "PEN" },
+      quantity: 1,
+    },
+  ],
+  shippingAddress: {
+    recipient: "María Quispe",
+    phone: "+51 987 654 321",
+    line1: "Jr. Ucayali 150, Dpto 2",
+    district: "Barranco",
+    province: "Lima",
+    department: "Lima",
+    reference: null,
+  },
+  ...overrides,
+});
+
+export const orderDetailHandler = (
+  respond: (id: string) => Order | Response | Promise<Order | Response>,
+) =>
+  http.get(API("/orders/:id"), async ({ params }) => {
+    const result = await respond(String(params.id));
+    return result instanceof Response ? result : HttpResponse.json(result);
+  });
+
 type Charged = { amount: string; currency: "PEN" | "USD" };
 export type PlacedRequest = {
   key: string | null;
@@ -65,15 +98,25 @@ export class FakeOrders {
   requests: PlacedRequest[] = [];
   // pedidos creados, por clave de idempotencia
   created = new Map<string, { orderId: string; charged: Charged }>();
+  // lo que `GET /orders/:id` devuelve de cada pedido creado, por id
+  details = new Map<string, Order>();
+  // cuántas veces se consultó un pedido
+  detailRequests = 0;
   private queue: ((create: () => Response) => Response)[] = [];
 
   private readonly prices: Record<string, string>;
+  private readonly titles: Record<string, string>;
   // Si se da, una petición con un token de acceso que no sirve recibe `401` (como la API real)
   private readonly accepts: ((accessToken: string | null) => boolean) | undefined;
 
-  constructor(prices: Record<string, string>, accepts?: (accessToken: string | null) => boolean) {
+  constructor(
+    prices: Record<string, string>,
+    accepts?: (accessToken: string | null) => boolean,
+    titles: Record<string, string> = {},
+  ) {
     this.prices = prices;
     this.accepts = accepts;
+    this.titles = titles;
   }
 
   // La próxima petición se atiende pero la respuesta se pierde (red caída): el pedido SÍ se creó
@@ -113,10 +156,34 @@ export class FakeOrders {
         const quote = quoteFor(body.items ?? [], this.prices);
         const order = { orderId: crypto.randomUUID(), charged: quote.total };
         if (key) this.created.set(key, order);
+        this.details.set(order.orderId, {
+          id: order.orderId,
+          status: "PLACED",
+          charged: quote.total,
+          lines: quote.lines.map((line) => ({
+            isbn: line.isbn,
+            title: this.titles[line.isbn] ?? line.isbn,
+            unitPrice: line.unitPrice,
+            quantity: line.quantity,
+          })),
+          shippingAddress: body.shippingAddress
+            ? ({ reference: null, ...body.shippingAddress } as Order["shippingAddress"])
+            : null,
+        });
         return HttpResponse.json(order, { status: 201 });
       };
       const next = this.queue.shift();
       return next ? next(create) : create();
+    }),
+    http.get(API("/orders/:id"), ({ params }) => {
+      this.detailRequests += 1;
+      const found = this.details.get(String(params.id));
+      return found
+        ? HttpResponse.json(found)
+        : HttpResponse.json(
+            { statusCode: 404, errorCode: "NOT_FOUND", message: "x" },
+            { status: 404 },
+          );
     }),
   ];
 }

@@ -15,6 +15,7 @@ import { Route as CompraRouteImport } from './routes/compra'
 import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as LibrosIsbnRouteImport } from './routes/libros.$isbn'
+import { Route as PedidosIndexRouteImport } from './routes/pedidos.index'
 import { Route as PedidosIdGraciasRouteImport } from './routes/pedidos.$id.gracias'
 
 const IndexRoute = IndexRouteImport.update({
@@ -47,6 +48,11 @@ const LibrosIsbnRoute = LibrosIsbnRouteImport.update({
   path: '/libros/$isbn',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PedidosIndexRoute = PedidosIndexRouteImport.update({
+  id: '/pedidos/',
+  path: '/pedidos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PedidosIdGraciasRoute = PedidosIdGraciasRouteImport.update({
   id: '/pedidos/$id/gracias',
   path: '/pedidos/$id/gracias',
@@ -60,6 +66,7 @@ export interface FileRoutesByFullPath {
   '/ingresar': typeof IngresarRoute
   '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
+  '/pedidos/': typeof PedidosIndexRoute
   '/pedidos/$id/gracias': typeof PedidosIdGraciasRoute
 }
 export interface FileRoutesByTo {
@@ -69,6 +76,7 @@ export interface FileRoutesByTo {
   '/ingresar': typeof IngresarRoute
   '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
+  '/pedidos': typeof PedidosIndexRoute
   '/pedidos/$id/gracias': typeof PedidosIdGraciasRoute
 }
 export interface FileRoutesById {
@@ -79,6 +87,7 @@ export interface FileRoutesById {
   '/ingresar': typeof IngresarRoute
   '/registro': typeof RegistroRoute
   '/libros/$isbn': typeof LibrosIsbnRoute
+  '/pedidos/': typeof PedidosIndexRoute
   '/pedidos/$id/gracias': typeof PedidosIdGraciasRoute
 }
 export interface FileRouteTypes {
@@ -90,6 +99,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/registro'
     | '/libros/$isbn'
+    | '/pedidos/'
     | '/pedidos/$id/gracias'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -99,6 +109,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/registro'
     | '/libros/$isbn'
+    | '/pedidos'
     | '/pedidos/$id/gracias'
   id:
     | '__root__'
@@ -108,6 +119,7 @@ export interface FileRouteTypes {
     | '/ingresar'
     | '/registro'
     | '/libros/$isbn'
+    | '/pedidos/'
     | '/pedidos/$id/gracias'
   fileRoutesById: FileRoutesById
 }
@@ -118,6 +130,7 @@ export interface RootRouteChildren {
   IngresarRoute: typeof IngresarRoute
   RegistroRoute: typeof RegistroRoute
   LibrosIsbnRoute: typeof LibrosIsbnRoute
+  PedidosIndexRoute: typeof PedidosIndexRoute
   PedidosIdGraciasRoute: typeof PedidosIdGraciasRoute
 }
 
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LibrosIsbnRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pedidos/': {
+      id: '/pedidos/'
+      path: '/pedidos'
+      fullPath: '/pedidos/'
+      preLoaderRoute: typeof PedidosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pedidos/$id/gracias': {
       id: '/pedidos/$id/gracias'
       path: '/pedidos/$id/gracias'
@@ -182,6 +202,7 @@ const rootRouteChildren: RootRouteChildren = {
   IngresarRoute: IngresarRoute,
   RegistroRoute: RegistroRoute,
   LibrosIsbnRoute: LibrosIsbnRoute,
+  PedidosIndexRoute: PedidosIndexRoute,
   PedidosIdGraciasRoute: PedidosIdGraciasRoute,
 }
 export const routeTree = rootRouteImport
