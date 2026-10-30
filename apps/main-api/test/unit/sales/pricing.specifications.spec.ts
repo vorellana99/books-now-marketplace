@@ -1,13 +1,13 @@
-import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
-import { OrderFactory } from '../../../src/contexts/sales/domain/order/order.factory.js';
+import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
+import { OrderFactory } from '../../../src/contexts/sales/domain/model/order/order.factory.js';
 import {
   FreeShippingSpec,
   freeShippingSpec,
-} from '../../../src/contexts/sales/domain/pricing/free-shipping.specification.js';
-import { MinimumSubtotalSpec } from '../../../src/contexts/sales/domain/pricing/minimum-subtotal.specification.js';
-import type { PricingContext } from '../../../src/contexts/sales/domain/pricing/pricing-context.js';
-import { PremiumCustomerSpec } from '../../../src/contexts/sales/domain/pricing/premium-customer.specification.js';
-import { PremiumOfferSpec } from '../../../src/contexts/sales/domain/pricing/premium-offer.specification.js';
+} from '../../../src/contexts/sales/domain/model/pricing/free-shipping.specification.js';
+import { MinimumSubtotalSpec } from '../../../src/contexts/sales/domain/model/pricing/minimum-subtotal.specification.js';
+import type { PricingContext } from '../../../src/contexts/sales/domain/model/pricing/pricing-context.js';
+import { PremiumCustomerSpec } from '../../../src/contexts/sales/domain/model/pricing/premium-customer.specification.js';
+import { PremiumOfferSpec } from '../../../src/contexts/sales/domain/model/pricing/premium-offer.specification.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import { Specification } from '../../../src/contexts/sales/domain/shared/specification.js';
 import { ADDRESS } from '../../fakes/fixtures.js';

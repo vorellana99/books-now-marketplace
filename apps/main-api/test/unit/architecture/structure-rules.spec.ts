@@ -5,6 +5,7 @@ import { checkStructure } from '../../support/architecture.js';
 // que lo único que falle sea lo que cada caso quiere probar
 const BASE = {
   'src/contexts/demo/demo.module.ts': '',
+  'src/contexts/demo/domain/model/thing/thing.aggregate.ts': '',
   'src/contexts/demo/domain/ports/thing.repository.ts':
     'export abstract class ThingRepository {}',
   'src/contexts/demo/application/use-cases/thing/do-thing.handler.ts': '',
@@ -76,7 +77,9 @@ describe('los handlers de CQRS viven en application/', () => {
   });
 
   it('en domain/ también lo es', () => {
-    expect(violations({ [`${D}/domain/h.ts`]: handler })).toHaveLength(1);
+    expect(
+      violations({ [`${D}/domain/model/thing/h.ts`]: handler }),
+    ).toHaveLength(1);
   });
 
   it('en application/ está permitido', () => {
@@ -101,7 +104,7 @@ describe('los consumidores del Outbox viven en infrastructure/consumers/', () =>
 
   it.each([
     ['application/', `${D}/application/services/c.consumer.ts`],
-    ['domain/', `${D}/domain/c.consumer.ts`],
+    ['domain/', `${D}/domain/model/thing/c.consumer.ts`],
     ['infrastructure/persistence/', `${D}/infrastructure/persistence/c.ts`],
     ['infrastructure/http/', `${D}/infrastructure/http/c.ts`],
   ])('un @OutboxHandler en %s es una violación', (_donde, path) => {
@@ -228,7 +231,7 @@ describe('application/ se ordena en use-cases/, services/, jobs/ y support/ (tar
     });
 
     it('en domain/ports/ está permitida, y una clase base abstracta del dominio también', () => {
-      expect(message({ [`${D}/domain/ports/g.ts`]: port })).toEqual([]);
+      expect(message({ [`${D}/domain/ports/g.port.ts`]: port })).toEqual([]);
       expect(
         message({ [`${D}/domain/shared/specification.ts`]: port }),
       ).toEqual([]);
@@ -299,6 +302,74 @@ describe('application/ se ordena en use-cases/, services/, jobs/ y support/ (tar
   });
 });
 
+describe('domain/ se ordena en model/, ports/ y shared/ (tarea 10.17)', () => {
+  const DOM = `${D}/domain`;
+
+  it.each(['model/thing', 'ports', 'shared'])('puede tener %s/', (dir) => {
+    const file = dir === 'ports' ? 'x.port.ts' : 'x.ts';
+    const source = dir === 'ports' ? 'export abstract class X {}' : '';
+    expect(violations({ [`${DOM}/${dir}/${file}`]: source })).toEqual([]);
+  });
+
+  it.each(['order', 'customer', 'pricing', 'stock'])(
+    'no puede tener una carpeta de negocio en la raíz (%s/): va dentro de model/',
+    (dir) => {
+      const found = violations({ [`${DOM}/${dir}/x.ts`]: '' });
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatch(/model, ports, shared/);
+    },
+  );
+
+  it('no puede tener archivos sueltos en la raíz', () => {
+    const found = violations({ [`${DOM}/user.aggregate.ts`]: '' });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(/archivos sueltos/);
+  });
+
+  it('shared/ es opcional, pero model/ y ports/ son obligatorias', () => {
+    expect(
+      violations({}, [`${DOM}/model/thing/thing.aggregate.ts`]),
+    ).toHaveLength(1);
+    expect(violations({}, [`${DOM}/ports/thing.repository.ts`])).toHaveLength(
+      1,
+    );
+  });
+
+  describe('model/ solo tiene una carpeta por agregado o concepto', () => {
+    it('un archivo suelto en model/ es una violación', () => {
+      const found = violations({ [`${DOM}/model/helper.ts`]: '' });
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatch(/archivos sueltos/);
+    });
+
+    it('una subcarpeta dentro de la carpeta del agregado también', () => {
+      expect(violations({ [`${DOM}/model/thing/deep/x.ts`]: '' })).toHaveLength(
+        1,
+      );
+    });
+  });
+
+  describe('los puertos terminan en .repository.ts o .port.ts', () => {
+    const port = 'export abstract class X {}';
+
+    it.each(['order.repository.ts', 'notifier.port.ts'])(
+      '%s está permitido',
+      (file) => {
+        expect(violations({ [`${DOM}/ports/${file}`]: port })).toEqual([]);
+      },
+    );
+
+    it.each(['order-history.ts', 'book-catalog.ts', 'notifier.ts'])(
+      '%s es una violación',
+      (file) => {
+        const found = violations({ [`${DOM}/ports/${file}`]: port });
+        expect(found).toHaveLength(1);
+        expect(found[0]).toMatch(/\.repository\.ts o \.port\.ts/);
+      },
+    );
+  });
+});
+
 describe('los puertos viven en domain/ports/', () => {
   it('cada contexto tiene domain/ports/', () => {
     expect(
@@ -309,29 +380,34 @@ describe('los puertos viven en domain/ports/', () => {
   it('un *.port.ts o *.repository.ts fuera de domain/ports/ es una violación', () => {
     expect(
       violations({
-        [`${D}/domain/order/order.repository.ts`]: 'export abstract class R {}',
+        [`${D}/domain/model/order/order.repository.ts`]:
+          'export abstract class R {}',
       }),
     ).toHaveLength(1);
     expect(
       violations({
-        [`${D}/domain/notifier.port.ts`]: 'export abstract class N {}',
+        [`${D}/domain/model/thing/notifier.port.ts`]:
+          'export abstract class N {}',
       }),
     ).toHaveLength(1);
   });
 
   it('un archivo de domain/ports/ declara una clase abstracta', () => {
     expect(
-      violations({ [`${D}/domain/ports/x.ts`]: 'export class X {}' }),
+      violations({ [`${D}/domain/ports/x.port.ts`]: 'export class X {}' }),
     ).toHaveLength(1);
     expect(
-      violations({ [`${D}/domain/ports/x.ts`]: 'export abstract class X {}' }),
+      violations({
+        [`${D}/domain/ports/x.port.ts`]: 'export abstract class X {}',
+      }),
     ).toEqual([]);
   });
 
   it('un puerto sin la palabra abstract solo en un comentario no cuenta', () => {
     expect(
       violations({
-        [`${D}/domain/ports/x.ts`]: '// abstract class X\nexport class X {}',
+        [`${D}/domain/ports/x.port.ts`]:
+          '// abstract class X\nexport class X {}',
       }),
     ).toHaveLength(1);
   });

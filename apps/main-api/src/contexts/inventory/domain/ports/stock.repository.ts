@@ -1,5 +1,5 @@
 import type { TransactionHandle } from '../../../../shared-kernel/transaction-handle.js';
-import type { StockLevel, StockLine } from '../stock/stock-rules.js';
+import type { StockLevel, StockLine } from '../model/stock/stock-rules.js';
 
 // Dónde vive el stock. Las operaciones son atómicas por contrato, con nombres de negocio: cómo se garantiza (un `UPDATE`
 // condicional, un bloqueo por pedido, el orden de bloqueo por ISBN) es cosa del adaptador y de la base, que son quienes

@@ -6,7 +6,7 @@ import {
   CatalogPricing,
   type CartItem,
 } from '../../domain/ports/catalog-pricing.port.js';
-import type { PricedCartItem } from '../../domain/order/order.factory.js';
+import type { PricedCartItem } from '../../domain/model/order/order.factory.js';
 
 // Ventas habla con Catálogo solo por su contrato (`contracts/`), nunca con su código interno
 @Injectable()

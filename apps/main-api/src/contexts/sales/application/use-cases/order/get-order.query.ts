@@ -5,7 +5,7 @@ import type {
   OrderRequester,
   OrderView,
   ShippingAddressView,
-} from '../../../domain/order/order-view.js';
+} from '../../../domain/model/order/order-view.js';
 
 export type {
   MoneyView,

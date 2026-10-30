@@ -1,6 +1,6 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { Isbn } from '../../../../../shared-kernel/isbn.vo.js';
-import { BookChanges } from '../../../domain/book/book-changes.js';
+import { BookChanges } from '../../../domain/model/book/book-changes.js';
 import { BookRepository } from '../../../domain/ports/book.repository.js';
 import type { AdminBook } from './admin-book.js';
 import { UpdateBookCommand } from './update-book.command.js';

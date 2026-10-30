@@ -4,7 +4,7 @@ import { StockRepository } from '../../../domain/ports/stock.repository.js';
 import {
   assertOrderId,
   assertValidLines,
-} from '../../../domain/stock/stock-rules.js';
+} from '../../../domain/model/stock/stock-rules.js';
 
 // Reserva todas las líneas o ninguna (lo garantiza el repositorio). Una entrada inválida es un error de dominio, antes
 // de tocar la base y no el error crudo de la base

@@ -1,7 +1,7 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { ReleaseStockCommand } from '../../../../../contracts/inventory/release-stock.command.js';
 import { StockRepository } from '../../../domain/ports/stock.repository.js';
-import { assertOrderId } from '../../../domain/stock/stock-rules.js';
+import { assertOrderId } from '../../../domain/model/stock/stock-rules.js';
 
 // Idempotente y segura bajo concurrencia (lo garantiza el repositorio): devuelve el stock de las reservas HELD del
 // pedido, una sola vez

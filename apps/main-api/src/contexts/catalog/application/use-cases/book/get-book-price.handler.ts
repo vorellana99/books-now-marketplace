@@ -3,7 +3,7 @@ import {
   GetBookPriceQuery,
   type BookPrice,
 } from '../../../../../contracts/catalog/get-book-price.query.js';
-import { BookCatalog } from '../../../domain/ports/book-catalog.js';
+import { BookCatalog } from '../../../domain/ports/book-catalog.port.js';
 
 // Es el contrato con otros contextos (`contracts/`): Ventas pide aquí el precio de un libro. Falla con NotFoundError si
 // el libro no existe o está inactivo

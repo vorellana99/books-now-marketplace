@@ -139,6 +139,7 @@ function reasonToReject(
 const INFRASTRUCTURE_FOLDERS = ['http', 'persistence', 'adapters', 'consumers'];
 const LAYERS = ['domain', 'application', 'infrastructure'];
 const APPLICATION_FOLDERS = ['use-cases', 'services', 'jobs', 'support'];
+const DOMAIN_FOLDERS = ['model', 'ports', 'shared'];
 const RUNTIME_EXPORT =
   /^\s*export\s+(?:async\s+)?(?:function|const|let|enum|class)\b/m;
 
@@ -162,6 +163,11 @@ export function checkStructure(files: Record<string, string>): string[] {
         `${root}domain/: falta la carpeta ports/ con los puertos`,
       );
     }
+    if (!paths.some((p) => p.startsWith(`${root}domain/model/`))) {
+      violations.push(
+        `${root}domain/: falta la carpeta model/ con los agregados y las reglas`,
+      );
+    }
 
     for (const path of paths) {
       const rel = path.slice(root.length);
@@ -173,6 +179,28 @@ export function checkStructure(files: Record<string, string>): string[] {
           `${path}: la raíz de un contexto solo tiene domain/, application/, infrastructure/ y su módulo`,
         );
         continue;
+      }
+
+      if (first === 'domain') {
+        const inside = rel.slice('domain/'.length);
+        const top = inside.split('/')[0];
+        if (!inside.includes('/')) {
+          violations.push(
+            `${path}: domain/ no admite archivos sueltos; va en ${DOMAIN_FOLDERS.join(', ')}`,
+          );
+        } else if (!DOMAIN_FOLDERS.includes(top)) {
+          violations.push(
+            `${path}: domain/ solo se divide en ${DOMAIN_FOLDERS.join(', ')} (no ${top}/); los nombres del negocio van dentro de model/`,
+          );
+        } else if (top === 'model' && !/^model\/[^/]+\/[^/]+$/.test(inside)) {
+          violations.push(
+            `${path}: model/ no admite archivos sueltos ni subcarpetas dentro de la carpeta de un agregado: model/<agregado>/<archivo>`,
+          );
+        } else if (top === 'ports' && !/\.(repository|port)\.ts$/.test(path)) {
+          violations.push(
+            `${path}: un puerto de domain/ports/ termina en .repository.ts o .port.ts`,
+          );
+        }
       }
 
       if (first === 'application') {

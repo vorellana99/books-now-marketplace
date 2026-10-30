@@ -1,6 +1,6 @@
 import { UserRepository } from '../../src/contexts/identity/domain/ports/user.repository.js';
-import type { Email } from '../../src/contexts/identity/domain/email.vo.js';
-import { User } from '../../src/contexts/identity/domain/user.aggregate.js';
+import type { Email } from '../../src/contexts/identity/domain/model/user/email.vo.js';
+import { User } from '../../src/contexts/identity/domain/model/user/user.aggregate.js';
 import type { Role } from '../../src/shared-kernel/role.js';
 import { ConflictError } from '../../src/shared-kernel/domain.errors.js';
 

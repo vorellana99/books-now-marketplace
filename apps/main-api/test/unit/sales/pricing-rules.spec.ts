@@ -1,7 +1,7 @@
 import {
   PRICING_RULES,
   pricingRulesFor,
-} from '../../../src/contexts/sales/domain/pricing/pricing-rules.js';
+} from '../../../src/contexts/sales/domain/model/pricing/pricing-rules.js';
 import { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 describe('reglas de precio por moneda', () => {

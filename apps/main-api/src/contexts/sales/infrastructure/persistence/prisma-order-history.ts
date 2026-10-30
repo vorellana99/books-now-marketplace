@@ -4,11 +4,11 @@ import type {
   OrderDetail,
   OrderPosition,
   OrderRequester,
-} from '../../domain/order/order-view.js';
+} from '../../domain/model/order/order-view.js';
 import {
   OrderHistory,
   type OrderHistorySlice,
-} from '../../domain/ports/order-history.js';
+} from '../../domain/ports/order-history.port.js';
 import { toHistoryItem, toOrderDetail } from './order-view.mapper.js';
 
 // El lado de lectura con Prisma: consulta y arma la vista, sin reconstruir el agregado

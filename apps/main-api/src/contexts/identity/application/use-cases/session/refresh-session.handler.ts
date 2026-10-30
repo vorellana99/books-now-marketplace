@@ -6,7 +6,7 @@ import { UserRepository } from '../../../domain/ports/user.repository.js';
 import {
   hashRefreshToken,
   isWellFormedRefreshToken,
-} from '../../../domain/session/refresh-token.js';
+} from '../../../domain/model/session/refresh-token.js';
 import { RefreshSessionCommand } from './refresh-session.command.js';
 import type { Session } from '../../services/session.js';
 import { SessionService } from '../../services/session.service.js';

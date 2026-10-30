@@ -1,4 +1,4 @@
-import { Email } from '../../../src/contexts/identity/domain/email.vo.js';
+import { Email } from '../../../src/contexts/identity/domain/model/user/email.vo.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 const failure = (fn: () => unknown): DomainError | undefined => {

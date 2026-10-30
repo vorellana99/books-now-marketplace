@@ -30,7 +30,7 @@ describe('estructura de PlaceOrderHandler', () => {
   // Desde la tarea 10.16 el error vive en el dominio (`checkout-replay.ts`); el handler solo lo usa
   it('el error de «compra en curso» se construye en un solo sitio, en el dominio', () => {
     const domain = readFileSync(
-      'src/contexts/sales/domain/order/checkout-replay.ts',
+      'src/contexts/sales/domain/model/order/checkout-replay.ts',
       'utf8',
     );
     expect(text).not.toContain('Esta compra todavía se está procesando');

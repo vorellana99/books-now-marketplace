@@ -1,5 +1,5 @@
 import { SignJWT } from 'jose';
-import { AccessTokenIssuer } from '../../../src/contexts/identity/domain/ports/access-token-issuer.js';
+import { AccessTokenIssuer } from '../../../src/contexts/identity/domain/ports/access-token-issuer.port.js';
 import {
   JwtTokenService,
   TOKEN_AUDIENCE,

@@ -1,10 +1,10 @@
 import type { BookPrice } from '../../src/contracts/catalog/get-book-price.query.js';
-import { Book } from '../../src/contexts/catalog/domain/book/book.aggregate.js';
+import { Book } from '../../src/contexts/catalog/domain/model/book/book.aggregate.js';
 import type {
   BookPage,
   BookView,
-} from '../../src/contexts/catalog/domain/book/book-view.js';
-import { BookCatalog } from '../../src/contexts/catalog/domain/ports/book-catalog.js';
+} from '../../src/contexts/catalog/domain/model/book/book-view.js';
+import { BookCatalog } from '../../src/contexts/catalog/domain/ports/book-catalog.port.js';
 import { BookRepository } from '../../src/contexts/catalog/domain/ports/book.repository.js';
 import {
   ConflictError,

@@ -4,7 +4,7 @@ import { StockRepository } from '../../../domain/ports/stock.repository.js';
 import {
   assertValidAddition,
   type StockLevel,
-} from '../../../domain/stock/stock-rules.js';
+} from '../../../domain/model/stock/stock-rules.js';
 import { AddStockCommand } from './add-stock.command.js';
 
 @CommandHandler(AddStockCommand)

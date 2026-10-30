@@ -5,7 +5,7 @@ import { OutboxModule } from '../../platform/outbox/outbox.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
-import { AccessTokenIssuer } from './domain/ports/access-token-issuer.js';
+import { AccessTokenIssuer } from './domain/ports/access-token-issuer.port.js';
 import { PasswordHasher } from './domain/ports/password-hasher.port.js';
 import { SessionRepository } from './domain/ports/session.repository.js';
 import { UserRepository } from './domain/ports/user.repository.js';

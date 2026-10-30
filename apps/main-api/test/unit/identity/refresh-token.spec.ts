@@ -2,7 +2,7 @@ import {
   generateRefreshToken,
   hashRefreshToken,
   isWellFormedRefreshToken,
-} from '../../../src/contexts/identity/domain/session/refresh-token.js';
+} from '../../../src/contexts/identity/domain/model/session/refresh-token.js';
 
 describe('refresh-token', () => {
   describe('generateRefreshToken', () => {

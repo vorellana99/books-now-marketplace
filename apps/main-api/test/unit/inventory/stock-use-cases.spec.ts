@@ -7,7 +7,7 @@ import { CreateStockItemCommand } from '../../../src/contexts/inventory/applicat
 import { CreateStockItemHandler } from '../../../src/contexts/inventory/application/use-cases/stock/create-stock-item.handler.js';
 import { ReleaseStockHandler } from '../../../src/contexts/inventory/application/use-cases/stock/release-stock.handler.js';
 import { ReserveStockHandler } from '../../../src/contexts/inventory/application/use-cases/stock/reserve-stock.handler.js';
-import { MAX_ADDITION } from '../../../src/contexts/inventory/domain/stock/stock-rules.js';
+import { MAX_ADDITION } from '../../../src/contexts/inventory/domain/model/stock/stock-rules.js';
 import { ReleaseStockCommand } from '../../../src/contracts/inventory/release-stock.command.js';
 import { ReserveStockCommand } from '../../../src/contracts/inventory/reserve-stock.command.js';
 import {

@@ -6,9 +6,9 @@ import {
   ConflictError,
   NotFoundError,
 } from '../../../../shared-kernel/domain.errors.js';
-import { Book } from '../../domain/book/book.aggregate.js';
-import type { BookCurrency } from '../../domain/book/book-rules.js';
-import type { BookUpdate } from '../../domain/book/book.aggregate.js';
+import { Book } from '../../domain/model/book/book.aggregate.js';
+import type { BookCurrency } from '../../domain/model/book/book-rules.js';
+import type { BookUpdate } from '../../domain/model/book/book.aggregate.js';
 import { BookRepository } from '../../domain/ports/book.repository.js';
 
 interface BookRow {

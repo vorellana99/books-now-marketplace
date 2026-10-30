@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
 import { OrderCursor } from '../../application/support/order-cursor.js';
-import type { OrderPosition } from '../../domain/order/order-view.js';
+import type { OrderPosition } from '../../domain/model/order/order-view.js';
 
 export const MAX_HISTORY_LIMIT = 50;
 

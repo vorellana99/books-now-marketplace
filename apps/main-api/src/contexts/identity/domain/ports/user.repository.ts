@@ -1,5 +1,5 @@
-import type { Email } from '../email.vo.js';
-import type { User } from '../user.aggregate.js';
+import type { Email } from '../model/user/email.vo.js';
+import type { User } from '../model/user/user.aggregate.js';
 
 // Dónde viven los usuarios
 export abstract class UserRepository {

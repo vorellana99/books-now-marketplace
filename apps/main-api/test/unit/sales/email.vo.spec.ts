@@ -1,4 +1,4 @@
-import { Email } from '../../../src/contexts/sales/domain/customer/email.vo.js';
+import { Email } from '../../../src/contexts/sales/domain/model/customer/email.vo.js';
 import { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 describe('Email', () => {

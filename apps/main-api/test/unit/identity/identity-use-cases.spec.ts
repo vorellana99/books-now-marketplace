@@ -9,7 +9,7 @@ import { RefreshSessionHandler } from '../../../src/contexts/identity/applicatio
 import { RegisterUserCommand } from '../../../src/contexts/identity/application/use-cases/user/register-user.command.js';
 import { RegisterUserHandler } from '../../../src/contexts/identity/application/use-cases/user/register-user.handler.js';
 import { SessionService } from '../../../src/contexts/identity/application/services/session.service.js';
-import { hashRefreshToken } from '../../../src/contexts/identity/domain/session/refresh-token.js';
+import { hashRefreshToken } from '../../../src/contexts/identity/domain/model/session/refresh-token.js';
 import {
   AuthenticationError,
   ConflictError,

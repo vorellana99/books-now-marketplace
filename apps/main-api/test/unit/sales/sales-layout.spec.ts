@@ -97,21 +97,48 @@ describe('estructura de sales/domain', () => {
       'checkout-log.port.ts',
       'customer.repository.ts',
       'notifier.port.ts',
-      'order-history.ts',
+      'order-history.port.ts',
       'order.repository.ts',
       'payment-gateway.port.ts',
       'stock-reservation.port.ts',
     ]);
   });
 
-  it('ningún puerto queda junto a su agregado ni en la carpeta de pagos', () => {
-    for (const dir of ['order', 'customer', 'payment']) {
-      const leftovers = names(dir).filter(
+  it('ningún puerto queda junto a su agregado y la raíz de domain/ solo tiene model, ports y shared (tarea 10.17)', () => {
+    for (const dir of ['order', 'customer']) {
+      const leftovers = names(`model/${dir}`).filter(
         (f) => f.endsWith('.port.ts') || f.endsWith('.repository.ts'),
       );
       expect(leftovers, dir).toEqual([]);
     }
-    expect(names('payment')).toEqual([]);
+    const folders = readdirSync(DOMAIN, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort((a, b) => a.localeCompare(b));
+    expect(folders).toEqual(['model', 'ports', 'shared']);
+    expect(names('')).toEqual([]);
+  });
+
+  it('model/ tiene una carpeta por agregado o concepto', () => {
+    const concepts = readdirSync(`${DOMAIN}/model`, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort((a, b) => a.localeCompare(b));
+    expect(concepts).toEqual(['customer', 'order', 'pricing']);
+    expect(names('model/order')).toEqual(
+      expect.arrayContaining([
+        'checkout-replay.ts',
+        'normalize-cart.ts',
+        'order-view.ts',
+        'order.aggregate.ts',
+        'request-hash.ts',
+      ]),
+    );
+    expect(names('model/pricing')).toContain('pricing.service.ts');
+    expect(names('model/customer')).toEqual([
+      'customer.aggregate.ts',
+      'email.vo.ts',
+    ]);
   });
 });
 
@@ -152,7 +179,7 @@ describe('estructura de sales/application', () => {
   });
 
   it('las funciones puras de negocio viven en el dominio, no en application/', () => {
-    const domain = 'src/contexts/sales/domain/order';
+    const domain = 'src/contexts/sales/domain/model/order';
     for (const file of [
       'normalize-cart.ts',
       'request-hash.ts',

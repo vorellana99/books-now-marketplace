@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { Book } from '../../src/contexts/catalog/domain/book/book.aggregate.js';
-import { BookChanges } from '../../src/contexts/catalog/domain/book/book-changes.js';
-import type { BookCatalog } from '../../src/contexts/catalog/domain/ports/book-catalog.js';
+import { Book } from '../../src/contexts/catalog/domain/model/book/book.aggregate.js';
+import { BookChanges } from '../../src/contexts/catalog/domain/model/book/book-changes.js';
+import type { BookCatalog } from '../../src/contexts/catalog/domain/ports/book-catalog.port.js';
 import type { BookRepository } from '../../src/contexts/catalog/domain/ports/book.repository.js';
 import {
   ConflictError,

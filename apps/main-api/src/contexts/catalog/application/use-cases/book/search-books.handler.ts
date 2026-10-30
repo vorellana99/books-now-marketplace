@@ -1,5 +1,5 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
-import { BookCatalog } from '../../../domain/ports/book-catalog.js';
+import { BookCatalog } from '../../../domain/ports/book-catalog.port.js';
 import { SearchBooksQuery, type BookPage } from './search-books.query.js';
 
 @QueryHandler(SearchBooksQuery)

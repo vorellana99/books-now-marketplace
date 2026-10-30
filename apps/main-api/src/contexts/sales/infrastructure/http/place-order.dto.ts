@@ -14,7 +14,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-import { SHIPPING_LIMITS } from '../../domain/order/shipping-address.vo.js';
+import { SHIPPING_LIMITS } from '../../domain/model/order/shipping-address.vo.js';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;

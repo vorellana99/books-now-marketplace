@@ -1,4 +1,4 @@
-import type { Session } from '../session/session.aggregate.js';
+import type { Session } from '../model/session/session.aggregate.js';
 
 // Dónde viven las sesiones. Guardar una sesión es aplicar sus `changes()`
 export abstract class SessionRepository {

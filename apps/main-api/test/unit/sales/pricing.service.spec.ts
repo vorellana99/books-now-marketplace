@@ -1,7 +1,7 @@
-import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
-import { OrderFactory } from '../../../src/contexts/sales/domain/order/order.factory.js';
-import { freeShippingSpec } from '../../../src/contexts/sales/domain/pricing/free-shipping.specification.js';
-import { PricingService } from '../../../src/contexts/sales/domain/pricing/pricing.service.js';
+import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
+import { OrderFactory } from '../../../src/contexts/sales/domain/model/order/order.factory.js';
+import { freeShippingSpec } from '../../../src/contexts/sales/domain/model/pricing/free-shipping.specification.js';
+import { PricingService } from '../../../src/contexts/sales/domain/model/pricing/pricing.service.js';
 import { ADDRESS } from '../../fakes/fixtures.js';
 
 const ISBN = '9780306406157';

@@ -1,5 +1,5 @@
 import { Command } from '@nestjs/cqrs';
-import type { BookChangesData } from '../../../domain/book/book-changes.js';
+import type { BookChangesData } from '../../../domain/model/book/book-changes.js';
 import type { AdminBook } from './admin-book.js';
 
 // Cambia datos, precio y/o estado de un libro en una sola operación (una desactivación junto a un cambio de precio se

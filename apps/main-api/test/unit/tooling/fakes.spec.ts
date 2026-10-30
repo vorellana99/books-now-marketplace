@@ -1,10 +1,10 @@
-import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
+import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
 import { CustomerRepository } from '../../../src/contexts/sales/domain/ports/customer.repository.js';
 import { CatalogPricing } from '../../../src/contexts/sales/domain/ports/catalog-pricing.port.js';
 import { CheckoutLog } from '../../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import { Notifier } from '../../../src/contexts/sales/domain/ports/notifier.port.js';
-import { Order } from '../../../src/contexts/sales/domain/order/order.aggregate.js';
-import { OrderFactory } from '../../../src/contexts/sales/domain/order/order.factory.js';
+import { Order } from '../../../src/contexts/sales/domain/model/order/order.aggregate.js';
+import { OrderFactory } from '../../../src/contexts/sales/domain/model/order/order.factory.js';
 import { OrderRepository } from '../../../src/contexts/sales/domain/ports/order.repository.js';
 import { StockReservation } from '../../../src/contexts/sales/domain/ports/stock-reservation.port.js';
 import { PaymentGateway } from '../../../src/contexts/sales/domain/ports/payment-gateway.port.js';

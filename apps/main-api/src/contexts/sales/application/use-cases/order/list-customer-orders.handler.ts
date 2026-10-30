@@ -1,5 +1,5 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
-import { OrderHistory } from '../../../domain/ports/order-history.js';
+import { OrderHistory } from '../../../domain/ports/order-history.port.js';
 import { OrderCursor } from '../../support/order-cursor.js';
 import {
   ListCustomerOrdersQuery,

@@ -1,7 +1,7 @@
 import {
   SHIPPING_LIMITS,
   ShippingAddress,
-} from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
+} from '../../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 import { ADDRESS_DATA } from '../../fakes/fixtures.js';
 

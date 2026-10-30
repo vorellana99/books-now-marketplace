@@ -3,9 +3,9 @@ import { OutboxWriter } from '../../../../platform/outbox/outbox.writer.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import { isUniqueViolation } from '../../../../platform/prisma/unique-violation.js';
 import { ConflictError } from '../../../../shared-kernel/domain.errors.js';
-import { Email } from '../../domain/email.vo.js';
+import { Email } from '../../domain/model/user/email.vo.js';
 import { UserRepository } from '../../domain/ports/user.repository.js';
-import { User } from '../../domain/user.aggregate.js';
+import { User } from '../../domain/model/user/user.aggregate.js';
 
 interface UserRow {
   id: string;

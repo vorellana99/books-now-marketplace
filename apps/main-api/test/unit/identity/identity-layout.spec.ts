@@ -71,7 +71,7 @@ describe('estructura de contexts/identity', () => {
       'session.ts',
     ]);
     expect(files('application/jobs')).toEqual(['purge-refresh-tokens.job.ts']);
-    expect(files('domain/ports')).toContain('access-token-issuer.ts');
+    expect(files('domain/ports')).toContain('access-token-issuer.port.ts');
     expect(files('application')).toEqual([]);
   });
 
@@ -84,10 +84,23 @@ describe('estructura de contexts/identity', () => {
 
   it('domain/ports/ tiene los cuatro puertos', () => {
     expect(files('domain/ports')).toEqual([
-      'access-token-issuer.ts',
+      'access-token-issuer.port.ts',
       'password-hasher.port.ts',
       'session.repository.ts',
       'user.repository.ts',
+    ]);
+  });
+
+  it('domain/ no tiene archivos sueltos: user/ y session/ dentro de model/ (tarea 10.17)', () => {
+    expect(files('domain')).toEqual([]);
+    expect(files('domain/model/user')).toEqual([
+      'email.vo.ts',
+      'password-policy.ts',
+      'user.aggregate.ts',
+    ]);
+    expect(files('domain/model/session')).toEqual([
+      'refresh-token.ts',
+      'session.aggregate.ts',
     ]);
   });
 });

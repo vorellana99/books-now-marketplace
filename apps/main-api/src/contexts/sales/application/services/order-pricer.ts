@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundError } from '../../../../shared-kernel/domain.errors.js';
-import { Customer } from '../../domain/customer/customer.aggregate.js';
+import { Customer } from '../../domain/model/customer/customer.aggregate.js';
 import { CustomerRepository } from '../../domain/ports/customer.repository.js';
 import {
   CatalogPricing,
   type CartItem,
 } from '../../domain/ports/catalog-pricing.port.js';
-import { OrderFactory } from '../../domain/order/order.factory.js';
-import type { Order } from '../../domain/order/order.aggregate.js';
-import type { ShippingAddress } from '../../domain/order/shipping-address.vo.js';
-import { freeShippingSpec } from '../../domain/pricing/free-shipping.specification.js';
-import type { PriceBreakdown } from '../../domain/pricing/price-breakdown.js';
-import { PricingService } from '../../domain/pricing/pricing.service.js';
+import { OrderFactory } from '../../domain/model/order/order.factory.js';
+import type { Order } from '../../domain/model/order/order.aggregate.js';
+import type { ShippingAddress } from '../../domain/model/order/shipping-address.vo.js';
+import { freeShippingSpec } from '../../domain/model/pricing/free-shipping.specification.js';
+import type { PriceBreakdown } from '../../domain/model/pricing/price-breakdown.js';
+import { PricingService } from '../../domain/model/pricing/pricing.service.js';
 
 export interface PriceOrderInput {
   orderId: string;

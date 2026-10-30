@@ -1,7 +1,7 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import type { BookPrice } from '../../../../../contracts/catalog/get-book-price.query.js';
 import { GetBooksPricesQuery } from '../../../../../contracts/catalog/get-books-prices.query.js';
-import { BookCatalog } from '../../../domain/ports/book-catalog.js';
+import { BookCatalog } from '../../../domain/ports/book-catalog.port.js';
 
 // Los precios de todo un carrito con una sola consulta (lo garantiza el puerto de lectura)
 @QueryHandler(GetBooksPricesQuery)

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma } from '../../../../platform/prisma/generated/client.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import { SessionRepository } from '../../domain/ports/session.repository.js';
-import { Session } from '../../domain/session/session.aggregate.js';
+import { Session } from '../../domain/model/session/session.aggregate.js';
 
 interface TokenRow {
   id: string;

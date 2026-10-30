@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SessionRepository } from '../../domain/ports/session.repository.js';
-import { Session } from '../../domain/session/session.aggregate.js';
-import type { User } from '../../domain/user.aggregate.js';
-import { AccessTokenIssuer } from '../../domain/ports/access-token-issuer.js';
+import { Session } from '../../domain/model/session/session.aggregate.js';
+import type { User } from '../../domain/model/user/user.aggregate.js';
+import { AccessTokenIssuer } from '../../domain/ports/access-token-issuer.port.js';
 import type { Session as SessionTokens } from './session.js';
 
 const DAY_MS = 86_400_000;

@@ -1,8 +1,8 @@
-import { Order } from '../../../src/contexts/sales/domain/order/order.aggregate.js';
+import { Order } from '../../../src/contexts/sales/domain/model/order/order.aggregate.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 import { Isbn } from '../../../src/shared-kernel/isbn.vo.js';
-import { ShippingAddress } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ShippingAddress } from '../../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
 import { ADDRESS_DATA } from '../../fakes/fixtures.js';
 
 const A = Isbn.create('9780306406157');

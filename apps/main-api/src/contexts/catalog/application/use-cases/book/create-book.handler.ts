@@ -1,5 +1,5 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { Book } from '../../../domain/book/book.aggregate.js';
+import { Book } from '../../../domain/model/book/book.aggregate.js';
 import { BookRepository } from '../../../domain/ports/book.repository.js';
 import type { AdminBook } from './admin-book.js';
 import { CreateBookCommand } from './create-book.command.js';

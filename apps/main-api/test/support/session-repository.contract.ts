@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { SessionRepository } from '../../src/contexts/identity/domain/ports/session.repository.js';
-import { hashRefreshToken } from '../../src/contexts/identity/domain/session/refresh-token.js';
-import { Session } from '../../src/contexts/identity/domain/session/session.aggregate.js';
+import { hashRefreshToken } from '../../src/contexts/identity/domain/model/session/refresh-token.js';
+import { Session } from '../../src/contexts/identity/domain/model/session/session.aggregate.js';
 
 export interface TokenRow {
   id: string;

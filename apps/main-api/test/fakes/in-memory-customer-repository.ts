@@ -1,4 +1,4 @@
-import type { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
+import type { Customer } from '../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
 import { CustomerRepository } from '../../src/contexts/sales/domain/ports/customer.repository.js';
 import type { TransactionHandle } from '../../src/shared-kernel/transaction-handle.js';
 

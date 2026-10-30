@@ -6,7 +6,7 @@ import {
   ConflictError,
   DomainError,
 } from '../../../../shared-kernel/domain.errors.js';
-import type { Order } from '../../domain/order/order.aggregate.js';
+import type { Order } from '../../domain/model/order/order.aggregate.js';
 import { OrderRepository } from '../../domain/ports/order.repository.js';
 import type { Money } from '../../domain/shared/money.vo.js';
 import { OrderMapper } from './order.mapper.js';

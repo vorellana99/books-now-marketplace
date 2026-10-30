@@ -2,7 +2,7 @@ import {
   MAX_PASSWORD_LENGTH,
   MIN_PASSWORD_LENGTH,
   PasswordPolicy,
-} from '../../../src/contexts/identity/domain/password-policy.js';
+} from '../../../src/contexts/identity/domain/model/user/password-policy.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 const failure = (fn: () => unknown): DomainError | undefined => {

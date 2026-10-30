@@ -5,12 +5,12 @@ import {
   CheckoutLog,
   type CheckoutRecord,
 } from '../../../domain/ports/checkout-log.port.js';
-import type { Order } from '../../../domain/order/order.aggregate.js';
+import type { Order } from '../../../domain/model/order/order.aggregate.js';
 import {
   checkoutInProgress,
   replayOf,
-} from '../../../domain/order/checkout-replay.js';
-import { ShippingAddress } from '../../../domain/order/shipping-address.vo.js';
+} from '../../../domain/model/order/checkout-replay.js';
+import { ShippingAddress } from '../../../domain/model/order/shipping-address.vo.js';
 import { OrderRepository } from '../../../domain/ports/order.repository.js';
 import { StockReservation } from '../../../domain/ports/stock-reservation.port.js';
 import { PaymentGateway } from '../../../domain/ports/payment-gateway.port.js';
@@ -19,9 +19,9 @@ import {
   PlaceOrderCommand,
   type PlaceOrderResult,
 } from './place-order.command.js';
-import { normalizeCart } from '../../../domain/order/normalize-cart.js';
+import { normalizeCart } from '../../../domain/model/order/normalize-cart.js';
 import { OrderPricer } from '../../services/order-pricer.js';
-import { hashRequest } from '../../../domain/order/request-hash.js';
+import { hashRequest } from '../../../domain/model/order/request-hash.js';
 
 @CommandHandler(PlaceOrderCommand)
 export class PlaceOrderHandler implements ICommandHandler<PlaceOrderCommand> {

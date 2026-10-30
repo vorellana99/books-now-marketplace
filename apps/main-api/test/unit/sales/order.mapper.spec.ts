@@ -1,8 +1,8 @@
 import { OrderMapper } from '../../../src/contexts/sales/infrastructure/persistence/order.mapper.js';
-import { Order } from '../../../src/contexts/sales/domain/order/order.aggregate.js';
-import { OrderFactory } from '../../../src/contexts/sales/domain/order/order.factory.js';
+import { Order } from '../../../src/contexts/sales/domain/model/order/order.aggregate.js';
+import { OrderFactory } from '../../../src/contexts/sales/domain/model/order/order.factory.js';
 import { Prisma } from '../../../src/platform/prisma/generated/client.js';
-import { ShippingAddress } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ShippingAddress } from '../../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
 import { ADDRESS_DATA, ADDRESS } from '../../fakes/fixtures.js';
 
 const item = (overrides: Record<string, unknown> = {}) => ({

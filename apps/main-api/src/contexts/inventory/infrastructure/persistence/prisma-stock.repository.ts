@@ -16,7 +16,7 @@ import {
   MAX_AVAILABLE,
   type StockLevel,
   type StockLine,
-} from '../../domain/stock/stock-rules.js';
+} from '../../domain/model/stock/stock-rules.js';
 import { sortByIsbn } from './lock-order.js';
 
 const alreadyReserved = (orderId: string) =>

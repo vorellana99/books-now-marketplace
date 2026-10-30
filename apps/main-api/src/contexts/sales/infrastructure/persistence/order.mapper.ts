@@ -1,7 +1,7 @@
 import type { Prisma } from '../../../../platform/prisma/generated/client.js';
 import { Isbn } from '../../../../shared-kernel/isbn.vo.js';
-import { Order } from '../../domain/order/order.aggregate.js';
-import { ShippingAddress } from '../../domain/order/shipping-address.vo.js';
+import { Order } from '../../domain/model/order/order.aggregate.js';
+import { ShippingAddress } from '../../domain/model/order/shipping-address.vo.js';
 import { Money, type Currency } from '../../domain/shared/money.vo.js';
 
 type OrderRow = Prisma.OrderGetPayload<{ include: { lines: true } }>;

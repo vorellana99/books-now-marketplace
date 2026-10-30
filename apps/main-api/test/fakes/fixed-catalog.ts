@@ -2,7 +2,7 @@ import {
   CatalogPricing,
   type CartItem,
 } from '../../src/contexts/sales/domain/ports/catalog-pricing.port.js';
-import type { PricedCartItem } from '../../src/contexts/sales/domain/order/order.factory.js';
+import type { PricedCartItem } from '../../src/contexts/sales/domain/model/order/order.factory.js';
 import type { Currency } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { NotFoundError } from '../../src/shared-kernel/domain.errors.js';
 

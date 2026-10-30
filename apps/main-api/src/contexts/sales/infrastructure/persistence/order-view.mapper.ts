@@ -4,7 +4,7 @@ import type {
   OrderHistoryItem,
   OrderView,
   ShippingAddressView,
-} from '../../domain/order/order-view.js';
+} from '../../domain/model/order/order-view.js';
 
 type OrderRow = Prisma.OrderGetPayload<{ include: { lines: true } }>;
 

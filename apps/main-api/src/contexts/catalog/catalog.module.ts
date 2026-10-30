@@ -5,7 +5,7 @@ import { BookController } from './infrastructure/http/book.controller.js';
 import { CreateBookHandler } from './application/use-cases/book/create-book.handler.js';
 import { GetBookPriceHandler } from './application/use-cases/book/get-book-price.handler.js';
 import { GetBooksPricesHandler } from './application/use-cases/book/get-books-prices.handler.js';
-import { BookCatalog } from './domain/ports/book-catalog.js';
+import { BookCatalog } from './domain/ports/book-catalog.port.js';
 import { BookRepository } from './domain/ports/book.repository.js';
 import { PrismaBookCatalog } from './infrastructure/persistence/prisma-book-catalog.js';
 import { PrismaBookRepository } from './infrastructure/persistence/prisma-book.repository.js';

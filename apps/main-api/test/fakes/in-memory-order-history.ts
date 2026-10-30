@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { Decimal } from 'decimal.js';
-import type { OrderHistorySlice } from '../../src/contexts/sales/domain/ports/order-history.js';
-import { OrderHistory } from '../../src/contexts/sales/domain/ports/order-history.js';
+import type { OrderHistorySlice } from '../../src/contexts/sales/domain/ports/order-history.port.js';
+import { OrderHistory } from '../../src/contexts/sales/domain/ports/order-history.port.js';
 import type {
   OrderDetail,
   OrderHistoryItem,
   OrderPosition,
   OrderRequester,
   ShippingAddressView,
-} from '../../src/contexts/sales/domain/order/order-view.js';
+} from '../../src/contexts/sales/domain/model/order/order-view.js';
 
 export interface SeedOrderLine {
   isbn: string;

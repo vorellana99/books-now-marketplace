@@ -4,7 +4,7 @@ import {
   assertOrderId,
   assertValidAddition,
   assertValidLines,
-} from '../../../src/contexts/inventory/domain/stock/stock-rules.js';
+} from '../../../src/contexts/inventory/domain/model/stock/stock-rules.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 const failure = (fn: () => unknown): DomainError | undefined => {

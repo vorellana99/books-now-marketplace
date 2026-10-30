@@ -1,5 +1,5 @@
 import { Command } from '@nestjs/cqrs';
-import type { ShippingAddressData } from '../../../domain/order/shipping-address.vo.js';
+import type { ShippingAddressData } from '../../../domain/model/order/shipping-address.vo.js';
 import type { CartItem } from '../../../domain/ports/catalog-pricing.port.js';
 import type { Money } from '../../../domain/shared/money.vo.js';
 

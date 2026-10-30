@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { OrderHistory } from '../../src/contexts/sales/domain/ports/order-history.js';
+import type { OrderHistory } from '../../src/contexts/sales/domain/ports/order-history.port.js';
 import type { SeedOrder } from '../fakes/in-memory-order-history.js';
 
 // Lo que cada implementación aporta además del puerto: preparar un pedido ya hecho, sin pasar por el dominio

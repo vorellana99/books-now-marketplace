@@ -2,7 +2,7 @@ import type { CheckoutRecord } from '../../../src/contexts/sales/domain/ports/ch
 import {
   checkoutInProgress,
   replayOf,
-} from '../../../src/contexts/sales/domain/order/checkout-replay.js';
+} from '../../../src/contexts/sales/domain/model/order/checkout-replay.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import {
   ConflictError,

@@ -6,7 +6,7 @@ import { LogoutCommand } from '../../src/contexts/identity/application/use-cases
 import { RefreshSessionCommand } from '../../src/contexts/identity/application/use-cases/session/refresh-session.command.js';
 import { RegisterUserCommand } from '../../src/contexts/identity/application/use-cases/user/register-user.command.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
-import { AccessTokenIssuer } from '../../src/contexts/identity/domain/ports/access-token-issuer.js';
+import { AccessTokenIssuer } from '../../src/contexts/identity/domain/ports/access-token-issuer.port.js';
 import { AccessTokenVerifier } from '../../src/platform/auth/access-token-verifier.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { AuthenticationError } from '../../src/shared-kernel/domain.errors.js';

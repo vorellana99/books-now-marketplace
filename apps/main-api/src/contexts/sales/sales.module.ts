@@ -9,7 +9,7 @@ import { RecoverCheckoutsJob } from './application/jobs/recover-checkouts.job.js
 import { CreateCustomerHandler } from './application/use-cases/customer/create-customer.handler.js';
 import { GetOrderHandler } from './application/use-cases/order/get-order.handler.js';
 import { ListCustomerOrdersHandler } from './application/use-cases/order/list-customer-orders.handler.js';
-import { OrderHistory } from './domain/ports/order-history.js';
+import { OrderHistory } from './domain/ports/order-history.port.js';
 import { SendOrderConfirmationConsumer } from './infrastructure/consumers/send-order-confirmation.consumer.js';
 import { PrismaOrderHistory } from './infrastructure/persistence/prisma-order-history.js';
 import { CustomerRepository } from './domain/ports/customer.repository.js';
@@ -19,7 +19,7 @@ import { Notifier } from './domain/ports/notifier.port.js';
 import { OrderRepository } from './domain/ports/order.repository.js';
 import { StockReservation } from './domain/ports/stock-reservation.port.js';
 import { PaymentGateway } from './domain/ports/payment-gateway.port.js';
-import { PricingService } from './domain/pricing/pricing.service.js';
+import { PricingService } from './domain/model/pricing/pricing.service.js';
 import { CreateCustomerConsumer } from './infrastructure/consumers/create-customer.consumer.js';
 import { PrismaCustomerRepository } from './infrastructure/persistence/prisma-customer.repository.js';
 import { CatalogInProcessAdapter } from './infrastructure/adapters/catalog-in-process.adapter.js';

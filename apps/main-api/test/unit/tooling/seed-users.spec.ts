@@ -1,6 +1,6 @@
 import { CUSTOMERS, DEV_PASSWORD, USERS } from '../../../prisma/seed-data.js';
-import { Email } from '../../../src/contexts/identity/domain/email.vo.js';
-import { PasswordPolicy } from '../../../src/contexts/identity/domain/password-policy.js';
+import { Email } from '../../../src/contexts/identity/domain/model/user/email.vo.js';
+import { PasswordPolicy } from '../../../src/contexts/identity/domain/model/user/password-policy.js';
 import { ROLES } from '../../../src/shared-kernel/role.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;

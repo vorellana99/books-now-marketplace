@@ -1,6 +1,6 @@
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import { NotFoundError } from '../../../../../shared-kernel/domain.errors.js';
-import { OrderHistory } from '../../../domain/ports/order-history.js';
+import { OrderHistory } from '../../../domain/ports/order-history.port.js';
 import { GetOrderQuery, type OrderDetail } from './get-order.query.js';
 
 // Lado de lectura de CQRS: pide la vista al puerto, sin reconstruir el agregado. Un comprador solo ve sus pedidos: el de

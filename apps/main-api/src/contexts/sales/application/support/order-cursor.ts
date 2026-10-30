@@ -1,4 +1,4 @@
-import type { OrderPosition } from '../../domain/order/order-view.js';
+import type { OrderPosition } from '../../domain/model/order/order-view.js';
 
 const MAX_LENGTH = 200;
 const URL_SAFE = /^[A-Za-z0-9_-]+$/;

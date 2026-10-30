@@ -1,8 +1,8 @@
-import { hashRefreshToken } from '../../../src/contexts/identity/domain/session/refresh-token.js';
+import { hashRefreshToken } from '../../../src/contexts/identity/domain/model/session/refresh-token.js';
 import {
   Session,
   type RefreshTokenRecord,
-} from '../../../src/contexts/identity/domain/session/session.aggregate.js';
+} from '../../../src/contexts/identity/domain/model/session/session.aggregate.js';
 
 const USER = '11111111-1111-4111-8111-111111111111';
 const FAMILY = '22222222-2222-4222-8222-222222222222';

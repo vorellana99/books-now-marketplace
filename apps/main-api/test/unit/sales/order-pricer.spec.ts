@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
-import { normalizeCart } from '../../../src/contexts/sales/domain/order/normalize-cart.js';
+import { normalizeCart } from '../../../src/contexts/sales/domain/model/order/normalize-cart.js';
 import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.js';
-import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
-import { ShippingAddress } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
-import { PricingService } from '../../../src/contexts/sales/domain/pricing/pricing.service.js';
+import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
+import { ShippingAddress } from '../../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
+import { PricingService } from '../../../src/contexts/sales/domain/model/pricing/pricing.service.js';
 import {
   DomainError,
   NotFoundError,
@@ -219,7 +219,9 @@ describe('un solo armado del pedido', () => {
     '%s normaliza el ISBN con normalizeCart y no con Isbn.create',
     (file) => {
       const text = read(file);
-      expect(text).toContain("from '../../../domain/order/normalize-cart.js'");
+      expect(text).toContain(
+        "from '../../../domain/model/order/normalize-cart.js'",
+      );
       expect(text).not.toContain('Isbn.create');
     },
   );

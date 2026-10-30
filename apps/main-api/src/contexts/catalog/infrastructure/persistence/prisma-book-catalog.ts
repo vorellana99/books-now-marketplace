@@ -2,8 +2,8 @@ import { Injectable } from '@nestjs/common';
 import type { BookPrice } from '../../../../contracts/catalog/get-book-price.query.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import { NotFoundError } from '../../../../shared-kernel/domain.errors.js';
-import type { BookPage } from '../../domain/book/book-view.js';
-import { BookCatalog } from '../../domain/ports/book-catalog.js';
+import type { BookPage } from '../../domain/model/book/book-view.js';
+import { BookCatalog } from '../../domain/ports/book-catalog.port.js';
 
 @Injectable()
 export class PrismaBookCatalog extends BookCatalog {

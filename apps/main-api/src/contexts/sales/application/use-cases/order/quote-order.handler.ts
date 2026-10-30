@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
-import { normalizeCart } from '../../../domain/order/normalize-cart.js';
+import { normalizeCart } from '../../../domain/model/order/normalize-cart.js';
 import { OrderPricer } from '../../services/order-pricer.js';
 import { QuoteOrderQuery, type OrderQuote } from './quote-order.query.js';
 

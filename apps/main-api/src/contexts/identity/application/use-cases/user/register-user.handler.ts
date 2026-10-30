@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { Email } from '../../../domain/email.vo.js';
+import { Email } from '../../../domain/model/user/email.vo.js';
 import { PasswordHasher } from '../../../domain/ports/password-hasher.port.js';
 import { UserRepository } from '../../../domain/ports/user.repository.js';
-import { PasswordPolicy } from '../../../domain/password-policy.js';
-import { User } from '../../../domain/user.aggregate.js';
+import { PasswordPolicy } from '../../../domain/model/user/password-policy.js';
+import { User } from '../../../domain/model/user/user.aggregate.js';
 import {
   RegisterUserCommand,
   type RegisteredUser,

@@ -1,5 +1,5 @@
-import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
-import { Email } from '../../../src/contexts/sales/domain/customer/email.vo.js';
+import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
+import { Email } from '../../../src/contexts/sales/domain/model/customer/email.vo.js';
 import { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 describe('Customer', () => {

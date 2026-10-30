@@ -1,5 +1,5 @@
-import { BookChanges } from '../../../src/contexts/catalog/domain/book/book-changes.js';
-import { Book } from '../../../src/contexts/catalog/domain/book/book.aggregate.js';
+import { BookChanges } from '../../../src/contexts/catalog/domain/model/book/book-changes.js';
+import { Book } from '../../../src/contexts/catalog/domain/model/book/book.aggregate.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 const DATA = {

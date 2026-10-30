@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { fromTransactionHandle } from '../../../../platform/prisma/transaction-handle.js';
 import { PrismaService } from '../../../../platform/prisma/prisma.service.js';
 import type { TransactionHandle } from '../../../../shared-kernel/transaction-handle.js';
-import { Customer } from '../../domain/customer/customer.aggregate.js';
+import { Customer } from '../../domain/model/customer/customer.aggregate.js';
 import { CustomerRepository } from '../../domain/ports/customer.repository.js';
 
 @Injectable()

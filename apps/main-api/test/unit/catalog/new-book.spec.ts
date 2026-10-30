@@ -1,4 +1,4 @@
-import { NewBook } from '../../../src/contexts/catalog/domain/book/new-book.js';
+import { NewBook } from '../../../src/contexts/catalog/domain/model/book/new-book.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 const VALID = {

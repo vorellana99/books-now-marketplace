@@ -3,7 +3,7 @@ import type { StockRepository } from '../../src/contexts/inventory/domain/ports/
 import {
   MAX_AVAILABLE,
   type StockLevel,
-} from '../../src/contexts/inventory/domain/stock/stock-rules.js';
+} from '../../src/contexts/inventory/domain/model/stock/stock-rules.js';
 import {
   OutOfStockError,
   StockItemNotFoundError,

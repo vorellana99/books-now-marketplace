@@ -65,7 +65,8 @@ describe('estructura de contexts/inventory', () => {
   });
 
   it('domain/ tiene las reglas del stock y domain/ports/ el puerto', () => {
-    expect(files('domain/stock')).toEqual(['stock-rules.ts']);
+    expect(files('domain')).toEqual([]);
+    expect(files('domain/model/stock')).toEqual(['stock-rules.ts']);
     expect(files('domain/ports')).toEqual(['stock.repository.ts']);
   });
 });

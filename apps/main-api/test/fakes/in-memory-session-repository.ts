@@ -1,5 +1,5 @@
 import { SessionRepository } from '../../src/contexts/identity/domain/ports/session.repository.js';
-import { Session } from '../../src/contexts/identity/domain/session/session.aggregate.js';
+import { Session } from '../../src/contexts/identity/domain/model/session/session.aggregate.js';
 
 interface Row {
   id: string;

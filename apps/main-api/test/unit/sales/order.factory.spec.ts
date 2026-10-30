@@ -1,6 +1,6 @@
-import { OrderFactory } from '../../../src/contexts/sales/domain/order/order.factory.js';
+import { OrderFactory } from '../../../src/contexts/sales/domain/model/order/order.factory.js';
 import { DomainError } from '../../../src/shared-kernel/domain.errors.js';
-import { ShippingAddress } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ShippingAddress } from '../../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
 import { ADDRESS_DATA, ADDRESS } from '../../fakes/fixtures.js';
 
 const codeOf = (fn: () => unknown): string | undefined => {

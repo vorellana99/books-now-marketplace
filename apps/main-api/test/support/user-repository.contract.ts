@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { Email } from '../../src/contexts/identity/domain/email.vo.js';
+import { Email } from '../../src/contexts/identity/domain/model/user/email.vo.js';
 import type { UserRepository } from '../../src/contexts/identity/domain/ports/user.repository.js';
-import { User } from '../../src/contexts/identity/domain/user.aggregate.js';
+import { User } from '../../src/contexts/identity/domain/model/user/user.aggregate.js';
 import { ConflictError } from '../../src/shared-kernel/domain.errors.js';
 
 export interface PublishedEvent {

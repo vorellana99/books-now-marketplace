@@ -1,4 +1,4 @@
-import { Email } from '../../../src/contexts/sales/domain/customer/email.vo.js';
+import { Email } from '../../../src/contexts/sales/domain/model/customer/email.vo.js';
 import { Isbn } from '../../../src/shared-kernel/isbn.vo.js';
 import { BOOKS, CUSTOMERS, STOCK } from '../../../prisma/seed-data.js';
 

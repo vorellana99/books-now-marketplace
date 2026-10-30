@@ -61,8 +61,19 @@ describe('estructura de contexts/catalog', () => {
 
   it('domain/ports/ tiene los dos puertos', () => {
     expect(files('domain/ports')).toEqual([
-      'book-catalog.ts',
+      'book-catalog.port.ts',
       'book.repository.ts',
+    ]);
+  });
+
+  it('domain/ solo tiene model/book y ports/ (tarea 10.17)', () => {
+    expect(files('domain')).toEqual([]);
+    expect(files('domain/model/book')).toEqual([
+      'book-changes.ts',
+      'book-rules.ts',
+      'book-view.ts',
+      'book.aggregate.ts',
+      'new-book.ts',
     ]);
   });
 });

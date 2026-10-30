@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { Module, type INestApplication } from '@nestjs/common';
 import { Decimal } from 'decimal.js';
-import { Order } from '../../src/contexts/sales/domain/order/order.aggregate.js';
-import { OrderFactory } from '../../src/contexts/sales/domain/order/order.factory.js';
+import { Order } from '../../src/contexts/sales/domain/model/order/order.aggregate.js';
+import { OrderFactory } from '../../src/contexts/sales/domain/model/order/order.factory.js';
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/persistence/prisma-checkout-log.adapter.js';
 import { PrismaOrderRepository } from '../../src/contexts/sales/infrastructure/persistence/prisma-order.repository.js';
@@ -22,7 +22,7 @@ import {
 import { query, resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 import { OrderPlacedProbe } from '../support/outbox-probes.js';
-import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
+import { ShippingAddress } from '../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
 import { ADDRESS_DATA, ADDRESS } from '../fakes/fixtures.js';
 import { insertOrder } from '../support/builders.js';
 

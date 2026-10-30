@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { DomainEvent } from '../../src/shared-kernel/domain-event.js';
-import type { Order } from '../../src/contexts/sales/domain/order/order.aggregate.js';
+import type { Order } from '../../src/contexts/sales/domain/model/order/order.aggregate.js';
 import { OrderRepository } from '../../src/contexts/sales/domain/ports/order.repository.js';
 import type { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { InMemoryCheckoutLog } from './in-memory-checkout-log.js';

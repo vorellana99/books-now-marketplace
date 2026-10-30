@@ -12,7 +12,7 @@ import {
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
-import { BOOK_LIMITS } from '../../domain/book/new-book.js';
+import { BOOK_LIMITS } from '../../domain/model/book/new-book.js';
 
 const trim = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() : value;

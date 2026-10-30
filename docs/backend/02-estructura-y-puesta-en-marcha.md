@@ -113,36 +113,37 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │           ├── quote-order.handler.ts
 │       │   │           └── quote-order.query.ts
 │       │   ├── domain/
-│       │   │   ├── customer/
-│       │   │   │   ├── customer.aggregate.ts
-│       │   │   │   └── email.vo.ts
-│       │   │   ├── order/
-│       │   │   │   ├── checkout-replay.ts
-│       │   │   │   ├── normalize-cart.ts
-│       │   │   │   ├── order-line.entity.ts
-│       │   │   │   ├── order-view.ts
-│       │   │   │   ├── order.aggregate.ts
-│       │   │   │   ├── order.factory.ts
-│       │   │   │   ├── request-hash.ts
-│       │   │   │   └── shipping-address.vo.ts
+│       │   │   ├── model/
+│       │   │   │   ├── customer/
+│       │   │   │   │   ├── customer.aggregate.ts
+│       │   │   │   │   └── email.vo.ts
+│       │   │   │   ├── order/
+│       │   │   │   │   ├── checkout-replay.ts
+│       │   │   │   │   ├── normalize-cart.ts
+│       │   │   │   │   ├── order-line.entity.ts
+│       │   │   │   │   ├── order-view.ts
+│       │   │   │   │   ├── order.aggregate.ts
+│       │   │   │   │   ├── order.factory.ts
+│       │   │   │   │   ├── request-hash.ts
+│       │   │   │   │   └── shipping-address.vo.ts
+│       │   │   │   └── pricing/
+│       │   │   │       ├── free-shipping.specification.ts
+│       │   │   │       ├── minimum-subtotal.specification.ts
+│       │   │   │       ├── premium-customer.specification.ts
+│       │   │   │       ├── premium-offer.specification.ts
+│       │   │   │       ├── price-breakdown.ts
+│       │   │   │       ├── pricing-context.ts
+│       │   │   │       ├── pricing-rules.ts
+│       │   │   │       └── pricing.service.ts
 │       │   │   ├── ports/
 │       │   │   │   ├── catalog-pricing.port.ts
 │       │   │   │   ├── checkout-log.port.ts
 │       │   │   │   ├── customer.repository.ts
 │       │   │   │   ├── notifier.port.ts
-│       │   │   │   ├── order-history.ts
+│       │   │   │   ├── order-history.port.ts
 │       │   │   │   ├── order.repository.ts
 │       │   │   │   ├── payment-gateway.port.ts
 │       │   │   │   └── stock-reservation.port.ts
-│       │   │   ├── pricing/
-│       │   │   │   ├── free-shipping.specification.ts
-│       │   │   │   ├── minimum-subtotal.specification.ts
-│       │   │   │   ├── premium-customer.specification.ts
-│       │   │   │   ├── premium-offer.specification.ts
-│       │   │   │   ├── price-breakdown.ts
-│       │   │   │   ├── pricing-context.ts
-│       │   │   │   ├── pricing-rules.ts
-│       │   │   │   └── pricing.service.ts
 │       │   │   └── shared/
 │       │   │       ├── money.vo.ts
 │       │   │       └── specification.ts
@@ -187,14 +188,15 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │           ├── update-book.command.ts
 │       │   │           └── update-book.handler.ts
 │       │   ├── domain/
-│       │   │   ├── book/
-│       │   │   │   ├── book-changes.ts
-│       │   │   │   ├── book-rules.ts
-│       │   │   │   ├── book-view.ts
-│       │   │   │   ├── book.aggregate.ts
-│       │   │   │   └── new-book.ts
+│       │   │   ├── model/
+│       │   │   │   └── book/
+│       │   │   │       ├── book-changes.ts
+│       │   │   │       ├── book-rules.ts
+│       │   │   │       ├── book-view.ts
+│       │   │   │       ├── book.aggregate.ts
+│       │   │   │       └── new-book.ts
 │       │   │   └── ports/
-│       │   │       ├── book-catalog.ts
+│       │   │       ├── book-catalog.port.ts
 │       │   │       └── book.repository.ts
 │       │   ├── infrastructure/
 │       │   │   ├── http/
@@ -223,10 +225,11 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │           ├── release-stock.handler.ts
 │       │   │           └── reserve-stock.handler.ts
 │       │   ├── domain/
-│       │   │   ├── ports/
-│       │   │   │   └── stock.repository.ts
-│       │   │   └── stock/
-│       │   │       └── stock-rules.ts
+│       │   │   ├── model/
+│       │   │   │   └── stock/
+│       │   │   │       └── stock-rules.ts
+│       │   │   └── ports/
+│       │   │       └── stock.repository.ts
 │       │   ├── infrastructure/
 │       │   │   ├── consumers/
 │       │   │   │   ├── confirm-reservation.consumer.ts
@@ -259,17 +262,19 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │           │           ├── register-user.command.ts
 │           │           └── register-user.handler.ts
 │           ├── domain/
-│           │   ├── ports/
-│           │   │   ├── access-token-issuer.ts
-│           │   │   ├── password-hasher.port.ts
-│           │   │   ├── session.repository.ts
-│           │   │   └── user.repository.ts
-│           │   ├── session/
-│           │   │   ├── refresh-token.ts
-│           │   │   └── session.aggregate.ts
-│           │   ├── email.vo.ts
-│           │   ├── password-policy.ts
-│           │   └── user.aggregate.ts
+│           │   ├── model/
+│           │   │   ├── session/
+│           │   │   │   ├── refresh-token.ts
+│           │   │   │   └── session.aggregate.ts
+│           │   │   └── user/
+│           │   │       ├── email.vo.ts
+│           │   │       ├── password-policy.ts
+│           │   │       └── user.aggregate.ts
+│           │   └── ports/
+│           │       ├── access-token-issuer.port.ts
+│           │       ├── password-hasher.port.ts
+│           │       ├── session.repository.ts
+│           │       └── user.repository.ts
 │           ├── infrastructure/
 │           │   ├── adapters/
 │           │   │   ├── jwt-token.service.ts

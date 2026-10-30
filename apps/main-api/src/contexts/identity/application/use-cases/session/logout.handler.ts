@@ -3,7 +3,7 @@ import { SessionRepository } from '../../../domain/ports/session.repository.js';
 import {
   hashRefreshToken,
   isWellFormedRefreshToken,
-} from '../../../domain/session/refresh-token.js';
+} from '../../../domain/model/session/refresh-token.js';
 import { LogoutCommand } from './logout.command.js';
 
 @CommandHandler(LogoutCommand)

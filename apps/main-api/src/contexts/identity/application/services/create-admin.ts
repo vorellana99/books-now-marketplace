@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { Email } from '../../domain/email.vo.js';
+import { Email } from '../../domain/model/user/email.vo.js';
 import type { UserRepository } from '../../domain/ports/user.repository.js';
 import type { PasswordHasher } from '../../domain/ports/password-hasher.port.js';
-import { PasswordPolicy } from '../../domain/password-policy.js';
-import { User } from '../../domain/user.aggregate.js';
+import { PasswordPolicy } from '../../domain/model/user/password-policy.js';
+import { User } from '../../domain/model/user/user.aggregate.js';
 
 // Crea un administrador. No hay ruta HTTP para esto: nadie se hace administrador por la API, ni siquiera otro
 // administrador. Lo usa el comando `pnpm run admin:create`. A diferencia del registro no deja ningún evento: un

@@ -1,5 +1,5 @@
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
-import { Customer } from '../../../domain/customer/customer.aggregate.js';
+import { Customer } from '../../../domain/model/customer/customer.aggregate.js';
 import { CustomerRepository } from '../../../domain/ports/customer.repository.js';
 import { CreateCustomerCommand } from './create-customer.command.js';
 

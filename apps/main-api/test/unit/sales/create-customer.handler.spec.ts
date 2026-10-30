@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CreateCustomerCommand } from '../../../src/contexts/sales/application/use-cases/customer/create-customer.command.js';
 import { CreateCustomerHandler } from '../../../src/contexts/sales/application/use-cases/customer/create-customer.handler.js';
-import { Customer } from '../../../src/contexts/sales/domain/customer/customer.aggregate.js';
+import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
 import type { TransactionHandle } from '../../../src/shared-kernel/transaction-handle.js';
 import { InMemoryCustomerRepository } from '../../fakes/in-memory-customer-repository.js';
 

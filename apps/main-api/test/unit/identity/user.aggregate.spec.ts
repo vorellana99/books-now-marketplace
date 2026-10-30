@@ -1,5 +1,5 @@
-import { Email } from '../../../src/contexts/identity/domain/email.vo.js';
-import { User } from '../../../src/contexts/identity/domain/user.aggregate.js';
+import { Email } from '../../../src/contexts/identity/domain/model/user/email.vo.js';
+import { User } from '../../../src/contexts/identity/domain/model/user/user.aggregate.js';
 import type { DomainError } from '../../../src/shared-kernel/domain.errors.js';
 
 const ID = '0196a000-0000-7000-8000-0000000000aa';

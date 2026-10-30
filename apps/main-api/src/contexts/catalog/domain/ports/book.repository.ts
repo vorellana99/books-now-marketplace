@@ -1,4 +1,4 @@
-import type { Book } from '../book/book.aggregate.js';
+import type { Book } from '../model/book/book.aggregate.js';
 
 // Dónde viven los libros que se escriben
 export abstract class BookRepository {

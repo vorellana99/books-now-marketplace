@@ -114,15 +114,36 @@ describe('una sola arquitectura (documentada)', () => {
 
   it('la lógica de negocio que estaba en application/ está en el dominio y los documentos lo dicen', () => {
     for (const file of [
-      'src/contexts/sales/domain/order/normalize-cart.ts',
-      'src/contexts/sales/domain/order/request-hash.ts',
-      'src/contexts/sales/domain/order/checkout-replay.ts',
-      'src/contexts/identity/domain/ports/access-token-issuer.ts',
+      'src/contexts/sales/domain/model/order/normalize-cart.ts',
+      'src/contexts/sales/domain/model/order/request-hash.ts',
+      'src/contexts/sales/domain/model/order/checkout-replay.ts',
+      'src/contexts/identity/domain/ports/access-token-issuer.port.ts',
     ]) {
       expect(existsSync(file), file).toBe(true);
     }
     expect(section).toMatch(/lógica pura/i);
     expect(section).toContain('support/');
+  });
+
+  // Tarea 10.17: domain/ se ordena igual que application/, la raíz por tipo de pieza y los nombres del negocio dentro
+  it('explica cómo se ordena domain/: model/, ports/ y shared/', () => {
+    for (const part of ['domain/model/', 'domain/ports/', 'domain/shared/']) {
+      expect(section, part).toContain(part);
+    }
+    expect(claude).toContain('model/');
+  });
+
+  it('el ejemplo de agregado de cada contexto existe en domain/model/', () => {
+    const examples = [
+      'sales/domain/model/order/order.aggregate.ts',
+      'catalog/domain/model/book/book.aggregate.ts',
+      'inventory/domain/model/stock/stock-rules.ts',
+      'identity/domain/model/user/user.aggregate.ts',
+    ];
+    for (const example of examples) {
+      expect(section, example).toContain(example);
+      expect(existsSync(`src/contexts/${example}`), example).toBe(true);
+    }
   });
 
   it('/nuevo-evento manda el consumidor a infrastructure/consumers/', () => {
