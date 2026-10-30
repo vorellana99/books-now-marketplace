@@ -14,12 +14,12 @@
 | [HU-11](#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ | ✅ | Tienda MVP |
 | [HU-20](#hu-20-agregar-un-libro-al-carrito) | Agregar un libro al carrito | Carrito | — | ✅ | Tienda MVP |
 | [HU-21](#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | — | ✅ | Tienda MVP |
-| [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ | 🔄 | Tienda MVP |
-| [HU-30](#hu-30-indicar-la-dirección-de-envío) | Indicar la dirección de envío | Compra | ✅ | ⬜ | Tienda MVP |
-| [HU-31](#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | ✅ | ⬜ | Tienda MVP |
-| [HU-32](#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ | ⬜ | Tienda MVP |
-| [HU-33](#hu-33-entender-por-qué-falló-la-compra) | Entender por qué falló la compra | Compra | ✅ | ⬜ | Tienda MVP |
-| [HU-34](#hu-34-ver-la-confirmación) | Ver la confirmación | Compra | ✅ | ⬜ | Tienda MVP |
+| [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ | ✅ | Tienda MVP |
+| [HU-30](#hu-30-indicar-la-dirección-de-envío) | Indicar la dirección de envío | Compra | ✅ | ✅ | Tienda MVP |
+| [HU-31](#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | ✅ | ✅ | Tienda MVP |
+| [HU-32](#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ | ✅ | Tienda MVP |
+| [HU-33](#hu-33-entender-por-qué-falló-la-compra) | Entender por qué falló la compra | Compra | ✅ | ✅ | Tienda MVP |
+| [HU-34](#hu-34-ver-la-confirmación) | Ver la confirmación | Compra | ✅ | ✅ | Tienda MVP |
 | [HU-40](#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ✅ | ⬜ | Tienda MVP |
 | [HU-41](#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ | ⬜ | Tienda MVP |
 | [HU-50](#hu-50-crear-un-libro) | Crear un libro | Administración | ✅ | ⬜ | Segunda etapa |

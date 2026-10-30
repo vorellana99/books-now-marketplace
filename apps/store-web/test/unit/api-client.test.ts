@@ -146,7 +146,6 @@ describe("renovación tras un 401", () => {
     const result = await api.POST("/orders", {
       params: { header: { "Idempotency-Key": "k-1" } },
       body: {
-        customerId: "c-1",
         cardToken: "tok_ok",
         items: [{ isbn: "9780132350884", quantity: 1 }],
         shippingAddress: {
