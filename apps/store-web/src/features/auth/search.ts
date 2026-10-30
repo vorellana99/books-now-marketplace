@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/shared/lib/zod.ts";
 
 // Parámetros de la URL de `/ingresar`. Un valor inválido se descarta en lugar de romper la pantalla. `returnTo` se valida
 // al usarlo (`safeReturnTo`); `aviso` dice por qué se llegó; `correo` es el que dejó escrito el registro

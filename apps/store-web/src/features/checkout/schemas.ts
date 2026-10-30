@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/shared/lib/zod.ts";
 
 // RN-22: largos máximos de la dirección de envío (los mismos que valida la API)
 export const LIMITS = {

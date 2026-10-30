@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/shared/lib/zod.ts";
 
 // Lo que se valida antes de enviar es solo lo que ahorra un viaje: que no esté vacío y que parezca un correo. La decisión
 // final siempre es del servidor. La contraseña no se recorta: los espacios forman parte de ella

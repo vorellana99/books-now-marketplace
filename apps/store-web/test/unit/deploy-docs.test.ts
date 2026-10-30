@@ -45,12 +45,17 @@ describe("README de la tienda (despliegue)", () => {
     expect(readme).toContain("CORS_ORIGINS");
   });
 
-  it("incluye una configuración de ejemplo de nginx con la salida de las rutas del cliente (SPA) y la caché", () => {
-    expect(readme).toContain("nginx");
-    expect(readme).toContain("try_files");
-    expect(readme).toContain("/index.html");
-    expect(readme).toMatch(/immutable/);
-    expect(readme).toMatch(/no-cache/);
+  it("enlaza una configuración de ejemplo de nginx completa: rutas del cliente (SPA), caché y compresión", () => {
+    expect(readme).toContain("deploy/nginx.conf");
+    expect(readme).toContain("deploy/security-headers.conf");
+    const nginx = read("deploy/nginx.conf");
+    expect(nginx).toContain("try_files $uri /index.html");
+    expect(nginx).toContain("proxy_pass http://127.0.0.1:3000/;"); // con la barra final: quita el prefijo /api
+    expect(nginx).toMatch(/immutable/);
+    expect(nginx).toMatch(/no-cache/);
+    expect(nginx).toMatch(/gzip on/);
+    expect(nginx).toContain("X-Forwarded-For");
+    expect(readme).toMatch(/nginx/);
     expect(readme).toMatch(/gzip|brotli/i);
   });
 

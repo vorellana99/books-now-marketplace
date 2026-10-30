@@ -54,47 +54,26 @@ La plantilla es [.env.example](.env.example) y se valida al cargar la app (`src/
 
 La tienda y la API quedan en **el mismo origen**: un proxy inverso sirve `dist/` en `/` y enruta `/api/*` al backend **quitando el prefijo** (la API no lo tiene: `/api/books` llega como `/books`). Así el navegador no hace peticiones entre orígenes y no hace falta CORS. Es lo que ya hacen `vp dev` y `vp preview`.
 
-Un ejemplo con **nginx** (HTTPS lo termina el propio nginx o el balanceador que tenga delante):
-
-```nginx
-server {
-  listen 443 ssl http2;
-  server_name tienda.example.com;
-  root /var/www/libroya/dist;
-
-  # Comprimir: `vp preview` no comprime, el JS inicial pesa ~650 kB sin comprimir y ~195 kB con gzip
-  gzip on;
-  gzip_types text/css application/javascript application/json image/svg+xml;
-  # brotli on;   # si el módulo está instalado (mejor que gzip)
-
-  # La API, en el mismo origen: se quita el prefijo /api (la barra final del proxy_pass lo hace)
-  location /api/ {
-    proxy_pass http://127.0.0.1:3000/;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;   # el límite de intentos cuenta por dirección: ver TRUST_PROXY
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header X-Request-Id $request_id;                     # sale en los logs del backend (código de soporte)
-  }
-
-  # Archivos con hash en el nombre: nunca cambian, se cachean un año
-  location /assets/ {
-    add_header Cache-Control "public, max-age=31536000, immutable";
-    try_files $uri =404;
-  }
-
-  # Todo lo demás es una ruta del cliente (/carrito, /pedidos/…): devuelve index.html, que no se cachea para que una
-  # versión nueva llegue en la siguiente visita
-  location / {
-    add_header Cache-Control "no-cache";
-    try_files $uri /index.html;
-  }
-}
-```
+Un ejemplo completo con **nginx**, listo para copiar y ajustar (`server_name`, certificado, ruta de `dist/` y puerto del backend), está en [deploy/nginx.conf](deploy/nginx.conf): sirve `dist/`, enruta `/api/` al backend **sin el prefijo** (la barra final del `proxy_pass` lo quita), comprime con `gzip` (o `brotli`), cachea `/assets/` un año como `immutable`, devuelve `index.html` con `no-cache` para las rutas del cliente y reenvía `X-Forwarded-For` (para `TRUST_PROXY`) y `X-Request-Id`. HTTPS lo termina el propio nginx o el balanceador que tenga delante.
 
 Dos detalles que importan:
 
 - **Las rutas del cliente** (`/pedidos/<id>`, `/libros/<isbn>`…) no existen como archivos: sin el `try_files … /index.html` recargar la página o abrir un enlace daría `404`.
 - **`/assets/` con `try_files $uri =404`**: un trozo de JS que ya no existe (una versión anterior) debe dar `404`, no `index.html`; un navegador con la página vieja abierta lo trataría como código.
+
+### Cabeceras de seguridad
+
+[deploy/security-headers.conf](deploy/security-headers.conf) tiene las cabeceras que el despliegue debe añadir (se copia a `/etc/nginx/snippets/libroya-security-headers.conf` y el ejemplo la incluye en cada `location`: un `add_header` propio de un `location` descarta los del nivel superior):
+
+| Cabecera                                           | Para qué                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Content-Security-Policy`                          | La más estricta con la que la tienda funciona: scripts, estilos, tipografías y peticiones solo del propio origen (`script-src 'self'`, sin `'unsafe-inline'` ni `'unsafe-eval'`), sin `object`, sin marcos (`frame-ancestors 'none'`) y sin cambiar `base` ni el destino de los formularios |
+| `X-Content-Type-Options: nosniff`                  | El navegador no adivina el tipo de un archivo                                                                                                                                                                                                                                               |
+| `Referrer-Policy: strict-origin-when-cross-origin` | Las URL de la tienda no salen enteras hacia otro sitio                                                                                                                                                                                                                                      |
+| `Permissions-Policy`                               | Sin cámara, micrófono ni geolocalización                                                                                                                                                                                                                                                    |
+| `Strict-Transport-Security`                        | Solo HTTPS (si TLS lo termina un balanceador, ponerla allí)                                                                                                                                                                                                                                 |
+
+La política **está probada**: `test/e2e/security.e2e.ts` la lee de ese mismo archivo, la aplica al build de producción y recorre registro, compra, confirmación y pedidos fallando ante cualquier violación (`E2E_PRODUCTION_BUILD=1`, ver [06-tests](../../docs/frontend/06-tests.md)). Si se añade algo que necesite otra fuente (la pasarela de pago, una analítica), se amplía ahí con el origen exacto y se vuelve a ejecutar. Para eso, `zod` se configura sin compilación en tiempo de ejecución (`src/shared/lib/zod.ts`): sin ello el navegador reportaría una violación de `'unsafe-eval'`.
 
 ### Si la API está en otro origen
 
@@ -126,7 +105,7 @@ Está anotado como problema abierto 11 en el [control de avance](../../docs/fron
 ### Lista de comprobación antes de publicar
 
 - [ ] `pnpm run build` y `pnpm run test:e2e` en verde, y `pnpm run test:perf` si hubo cambios de peso.
-- [ ] Un proxy inverso con el ejemplo de arriba: `/api` al backend sin prefijo, `index.html` para las rutas del cliente, compresión y caché.
+- [ ] Un proxy inverso con [deploy/nginx.conf](deploy/nginx.conf): `/api` al backend sin prefijo, `index.html` para las rutas del cliente, compresión, caché y las cabeceras de seguridad.
 - [ ] El backend con `NODE_ENV=production`, `JWT_SECRET`, `TRUST_PROXY` y una pasarela real.
 - [ ] HTTPS en todo; el backend solo acepta orígenes `https` en `CORS_ORIGINS`.
 - [ ] Probar en el navegador, contra ese despliegue: registrarse, comprar, recargar `/pedidos/<id>` (debe seguir ahí) y cerrar sesión.

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "@/shared/lib/zod.ts";
 
 // La búsqueda y la página viven en la URL. Un valor inválido se descarta en lugar de romper la pantalla: `q` de solo
 // espacios o que no es texto, y `page` que no es un entero de 1 en adelante, vuelven a su valor por defecto (sin búsqueda,

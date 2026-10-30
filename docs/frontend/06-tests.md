@@ -95,6 +95,22 @@ Solo se baja el subconjunto latino de las tipografías (la prueba lo exige). `vp
 
 **Qué se corrigió**: la interacción más lenta era tocar «Continuar con la compra» o el carrito (232–256 ms): el trozo de la ruta se pedía recién al tocar y esperaba a la red. `src/app/preload.ts` precarga `/carrito`, `/compra` y `/pedidos` en un momento libre tras el primer pintado (`requestIdleCallback`, con un temporizador en Safari) y la interacción baja a 56–64 ms. Se comprobó con un A/B de dos builds servidos a la vez (con y sin precarga, 5 corridas cada uno: 56–64 ms contra 240–256 ms) y la prueba de INP falla sobre el build sin precarga.
 
+### Seguridad (F6.5)
+
+Lo que la revisión comprobó y qué prueba lo mantiene:
+
+| Qué | Cómo se comprueba |
+|---|---|
+| Ni `dangerouslySetInnerHTML`, `innerHTML`, `eval`, `new Function` ni `document.write` con datos de la API (ni sin ellos) | `test/unit/security.test.ts` recorre todo `src/` |
+| Ningún `console.*` en el código (un token o una contraseña en un log no se borra) | Ídem |
+| El token de acceso solo en memoria y el de refresco solo bajo `libroya.refresh`; ninguno ni la contraseña en la URL, la consola, ningún otro almacenamiento ni un error de pantalla | `test/component/session-privacy.test.tsx` (con la app montada y entrando por el formulario) y `test/e2e/security.e2e.ts` (en el navegador real, con los tokens reales de la sesión) |
+| Cerrar sesión borra el token de refresco y avisa a la API (también si la API falla) | `session-privacy`, `session.test.ts` y `security.e2e.ts` |
+| `returnTo` solo admite rutas internas (`//otro.com`, `https://…`, `javascript:`, `/\otro.com`…) | `test/unit/return-to.test.ts` |
+| La CSP de `deploy/security-headers.conf` (scripts solo del propio origen, sin `'unsafe-inline'` ni `'unsafe-eval'`) no se viola en el recorrido completo, y ninguna petición sale del propio origen | `security.e2e.ts` (solo contra el build de producción; `vp dev` usa scripts en línea) |
+| Dependencias de producción sin vulnerabilidades conocidas | `pnpm audit --prod` (tienda y backend: «No known vulnerabilities found») |
+
+Lo que **no** se hace y por qué: el token de refresco vive en `localStorage` ([DP-16](../product/09-decisiones-y-preguntas.md)), de modo que un XSS podría leerlo; la defensa es no tener XSS (sin APIs de inyección, React escapa lo que dibuja) y la CSP estricta que lo impediría. `zod` se importa siempre de `src/shared/lib/zod.ts`, que lo configura sin compilación en tiempo de ejecución: sin ello zod prueba `new Function("")` y el navegador reporta una violación de `'unsafe-eval'`; el orden de evaluación de los módulos no lo decide `main.tsx` (Rollup evalúa antes los trozos compartidos), por eso la configuración vive en el módulo por el que se importa `z`.
+
 ### Playwright en WSL: faltan librerías del sistema
 
 Chromium necesita `libnss3`, `libnspr4` y `libasound2` (`libasound2t64` en Ubuntu 24.04), que WSL no trae. Dos caminos:
