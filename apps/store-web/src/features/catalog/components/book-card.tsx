@@ -15,7 +15,7 @@ export function BookCard({ book }: { book: Book }) {
         title={book.title}
         author={book.author}
         size="sm"
-        className="sm:w-24 sm:p-2 sm:text-sm"
+        className="self-start sm:w-24 sm:p-2 sm:text-sm"
       />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <h3 className="text-base leading-snug font-semibold">

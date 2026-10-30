@@ -11,10 +11,10 @@
 | [HU-03](#hu-03-mantener-la-sesión) | Mantener la sesión | Cuenta | ✅ | ✅ | Tienda MVP |
 | [HU-04](#hu-04-cerrar-sesión) | Cerrar sesión | Cuenta | ✅ | ✅ | Tienda MVP |
 | [HU-10](#hu-10-buscar-libros) | Buscar libros | Catálogo | ✅ | ✅ | Tienda MVP |
-| [HU-11](#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ | 🔄 | Tienda MVP |
-| [HU-20](#hu-20-agregar-un-libro-al-carrito) | Agregar un libro al carrito | Carrito | — | ⬜ | Tienda MVP |
-| [HU-21](#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | — | ⬜ | Tienda MVP |
-| [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ | ⬜ | Tienda MVP |
+| [HU-11](#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ | ✅ | Tienda MVP |
+| [HU-20](#hu-20-agregar-un-libro-al-carrito) | Agregar un libro al carrito | Carrito | — | ✅ | Tienda MVP |
+| [HU-21](#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | — | ✅ | Tienda MVP |
+| [HU-22](#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ | 🔄 | Tienda MVP |
 | [HU-30](#hu-30-indicar-la-dirección-de-envío) | Indicar la dirección de envío | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-31](#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | ✅ | ⬜ | Tienda MVP |
 | [HU-32](#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ | ⬜ | Tienda MVP |
