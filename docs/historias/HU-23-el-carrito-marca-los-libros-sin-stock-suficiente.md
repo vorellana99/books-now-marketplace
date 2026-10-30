@@ -62,10 +62,10 @@ Contra el backend real, con un libro agotado y otro con 3 unidades en el carrito
 
 ## Tareas
 
-| # | Capa | Tipo | Tarea | Se comprueba | Depende de | Estado |
-|---|---|---|---|---|---|---|
-| HU-23.1 | [WEB] | pantalla | El carrito y la compra marcan los libros sin stock suficiente | `use-cart-revalidation.ts` expone `available` por ISBN y `stockProblems` (`{isbn, title, available}`); `cart-line.tsx`: mensaje con el título y selector 1..min(10, disponibles); `cart-page.tsx`: alerta que lista los libros y «Continuar» deshabilitado; `checkout-page.tsx`: `EmptyState` que nombra los libros y vuelve al carrito; no se corrige la cantidad en silencio; cumple la sección **Pantalla** (mensajes, `Alert`, botón y `EmptyState`) **revisada en un navegador real a 360 y 1280 px**, con la captura anotada en la bitácora. Pruebas: `cart-revalidation`, `cart-page` (el test «selector de 1 a 10» pasa a ser dinámico), `checkout-page` | HU-12.4 | 📝 |
-| HU-23.2 | [E2E] | recorrido | El carrito sin stock de punta a punta | Un libro agotado y otro con 3 unidades (por la API de administración): el carrito los marca, el selector se limita, no deja continuar, `/compra` directo los nombra; se resuelve y se compra; axe a 360 y 1280 px | HU-23.1 | 📝 |
+| # | Capa | Tipo | Rigor | Tarea | Se comprueba | Depende de | Estado |
+|---|---|---|---|---|---|---|---|
+| HU-23.1 | [WEB] | pantalla | normal | El carrito y la compra marcan los libros sin stock suficiente | `use-cart-revalidation.ts` expone `available` por ISBN y `stockProblems` (`{isbn, title, available}`); `cart-line.tsx`: mensaje con el título y selector 1..min(10, disponibles); `cart-page.tsx`: alerta que lista los libros y «Continuar» deshabilitado; `checkout-page.tsx`: `EmptyState` que nombra los libros y vuelve al carrito; no se corrige la cantidad en silencio; cumple la sección **Pantalla** (mensajes, `Alert`, botón y `EmptyState`) **revisada en un navegador real a 360 y 1280 px**, con la captura anotada en la bitácora. Pruebas: `cart-revalidation`, `cart-page` (el test «selector de 1 a 10» pasa a ser dinámico), `checkout-page` | HU-12.4 | 📝 |
+| HU-23.2 | [E2E] | recorrido | normal | El carrito sin stock de punta a punta | Un libro agotado y otro con 3 unidades (por la API de administración): el carrito los marca, el selector se limita, no deja continuar, `/compra` directo los nombra; se resuelve y se compra; axe a 360 y 1280 px | HU-23.1 | 📝 |
 
 - [ ] HU-23.1 [WEB] Carrito y compra. Se comprueba: lo de la tabla
 - [ ] HU-23.2 [E2E] Carrito sin stock de punta a punta. Se comprueba: lo de la tabla

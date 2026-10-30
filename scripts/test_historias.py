@@ -36,18 +36,18 @@ Sin cambios visuales.
 
 ## Tareas
 
-| # | Capa | Tipo | Tarea | Se comprueba | Depende de | Estado |
-|---|---|---|---|---|---|---|
-| HU-12.1 | [DOC] | producto | Decisión | lo que sea | — | ✅ |
-| HU-12.2 | [API] | regla 🔒 | Inventario | lo que sea | HU-12.1 | ✅ |
-| HU-12.3 | [API] | contrato | Catálogo | lo que sea | HU-12.2 | ⬜ |
-| HU-12.4 | [WEB] | pantalla | Pantalla | lo que sea | HU-12.3 | ⬜ |
+| # | Capa | Tipo | Rigor | Tarea | Se comprueba | Depende de | Estado |
+|---|---|---|---|---|---|---|---|
+| HU-12.1 | [DOC] | producto | normal | Decisión | lo que sea | — | ✅ |
+| HU-12.2 | [API] | regla | critico | Inventario | lo que sea | HU-12.1 | ✅ |
+| HU-12.3 | [API] | contrato | normal | Catálogo | lo que sea | HU-12.2 | ⬜ |
+| HU-12.4 | [WEB] | pantalla | normal | Pantalla | lo que sea | HU-12.3 | ⬜ |
 """
 
 
 PLANTILLA_OK = """# plantilla
 
-> | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre 🔒? |
+> | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre critico? |
 > |---|---|---|---|---|
 > | `[API]` | `contrato` | Lo que la API ofrece | Un campo más | no |
 > | `[API]` | `regla` | Cómo decide el negocio | Un límite | no |
@@ -84,7 +84,7 @@ class Parseo(unittest.TestCase):
     def test_tipo_y_rigor_de_cada_tarea(self):
         self.assertEqual(
             h.parse_task_types(HU_OK),
-            [("HU-12.1", "DOC", "producto", False), ("HU-12.2", "API", "regla", True), ("HU-12.3", "API", "contrato", False), ("HU-12.4", "WEB", "pantalla", False)],
+            [("HU-12.1", "DOC", "producto", "normal"), ("HU-12.2", "API", "regla", "critico"), ("HU-12.3", "API", "contrato", "normal"), ("HU-12.4", "WEB", "pantalla", "normal")],
         )
 
     def test_estado_de_una_capa(self):
@@ -113,7 +113,7 @@ class TablaDeTipos(unittest.TestCase):
         texto = h.render_types(PLANTILLA_OK)
         self.assertIn("[API] contrato", texto)
         self.assertIn("Lo que la API ofrece", texto)
-        self.assertIn("siempre 🔒", texto)  # base-de-datos y evento
+        self.assertIn("siempre critico", texto)  # base-de-datos y evento
         self.assertIn("_plantilla.md", texto)
 
     def test_la_salida_de_tipos_no_lleva_marcas_de_markdown(self):
@@ -257,7 +257,7 @@ class Comprobacion(unittest.TestCase):
         self.assertTrue(any("Contrato" in e for e in self.errors()))
 
     def test_una_historia_sin_tareas_api_no_necesita_contrato(self):
-        solo_web = HU_OK.replace("## Contrato\n\nSin cambios en el contrato.\n\n", "").replace("[API] | regla 🔒", "[WEB] | comportamiento").replace("[API] | contrato", "[WEB] | comportamiento")
+        solo_web = HU_OK.replace("## Contrato\n\nSin cambios en el contrato.\n\n", "").replace("[API] | regla | critico", "[WEB] | comportamiento | normal").replace("[API] | contrato", "[WEB] | comportamiento")
         self.file.write_text(solo_web, encoding="utf-8")
         self.assertEqual(self.errors(), [])
 
@@ -288,7 +288,7 @@ class Comprobacion(unittest.TestCase):
                             ("base de datos", "API"), ("configuración", "API"), ("guía", "DOC")):
             self.file.write_text(HU_OK.replace(fila_por_capa[capa], f"[{capa}] | {viejo}"), encoding="utf-8")
             self.assertTrue(any("tipo" in e for e in self.errors()), viejo)
-        conE2E = HU_OK + "| HU-12.5 | [E2E] | — | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
+        conE2E = HU_OK + "| HU-12.5 | [E2E] | — | normal | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
         self.file.write_text(conE2E, encoding="utf-8")
         self.assertTrue(any("tipo" in e and "HU-12.5" in e for e in self.errors()))
 
@@ -320,7 +320,7 @@ class Comprobacion(unittest.TestCase):
         errores = self.errors()
         self.assertTrue(any("_plantilla.md" in e and "WEB" in e for e in errores))
         (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace("| Un aviso entre partes | Reaccionar a algo | sí |", "| Un aviso entre partes | Reaccionar a algo | no |"), encoding="utf-8")
-        self.assertTrue(any("🔒" in e and "_plantilla.md" in e for e in self.errors()))
+        self.assertTrue(any("critico" in e and "_plantilla.md" in e for e in self.errors()))
 
     def test_una_tarea_sin_tipo(self):
         self.file.write_text(HU_OK.replace("[API] | contrato", "[API] |  "), encoding="utf-8")
@@ -328,17 +328,29 @@ class Comprobacion(unittest.TestCase):
 
     def test_migracion_y_evento_siempre_son_criticos(self):
         for tipo in ("base-de-datos", "evento"):
-            self.file.write_text(HU_OK.replace("[API] | contrato", f"[API] | {tipo}"), encoding="utf-8")
-            self.assertTrue(any("🔒" in e and "HU-12.3" in e for e in self.errors()), tipo)
-            self.file.write_text(HU_OK.replace("[API] | contrato", f"[API] | {tipo} 🔒"), encoding="utf-8")
+            self.file.write_text(HU_OK.replace("[API] | contrato | normal", f"[API] | {tipo} | normal"), encoding="utf-8")
+            self.assertTrue(any("critico" in e and "HU-12.3" in e for e in self.errors()), tipo)
+            self.file.write_text(HU_OK.replace("[API] | contrato | normal", f"[API] | {tipo} | critico"), encoding="utf-8")
             self.assertEqual(self.errors(), [], tipo)
 
-    def test_la_marca_de_rigor_solo_va_en_tareas_api(self):
-        self.file.write_text(HU_OK.replace("[WEB] | pantalla", "[WEB] | pantalla 🔒"), encoding="utf-8")
-        self.assertTrue(any("🔒" in e and "HU-12.4" in e for e in self.errors()))
+    def test_el_rigor_critico_solo_va_en_tareas_api(self):
+        self.file.write_text(HU_OK.replace("[WEB] | pantalla | normal", "[WEB] | pantalla | critico"), encoding="utf-8")
+        self.assertTrue(any("critico" in e and "HU-12.4" in e for e in self.errors()))
+
+    def test_el_rigor_debe_ser_critico_o_normal(self):
+        for valor in ("alto", "Critico", "CRITICO", "crítico", "", "🔒"):
+            self.file.write_text(HU_OK.replace("[API] | contrato | normal", f"[API] | contrato | {valor}"), encoding="utf-8")
+            errores = [e for e in self.errors() if "HU-12.3" in e and "rigor" in e]
+            self.assertTrue(errores, repr(valor))
+            self.assertIn("critico", errores[0])
+            self.assertIn("normal", errores[0])
+
+    def test_un_icono_en_la_celda_del_tipo_ya_no_vale(self):
+        self.file.write_text(HU_OK.replace("[API] | regla | critico", "[API] | regla 🔒 | critico"), encoding="utf-8")
+        self.assertTrue(any("tipo" in e and "HU-12.2" in e for e in self.errors()))
 
     def test_las_tareas_e2e_no_llevan_tipo(self):
-        conE2E = HU_OK + "| HU-12.5 | [E2E] | recorrido | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
+        conE2E = HU_OK + "| HU-12.5 | [E2E] | recorrido | normal | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
         self.file.write_text(conE2E, encoding="utf-8")
         self.assertEqual(self.errors(), [])
         self.file.write_text(conE2E.replace("[E2E] | recorrido", "[E2E] | contrato"), encoding="utf-8")
