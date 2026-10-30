@@ -50,7 +50,24 @@ vp test -t "texto del test"          # un test por nombre
 
 ## e2e (corte F6)
 
-Playwright contra el backend real levantado en local (PostgreSQL + `pnpm run start:dev`, con la pasarela y el correo simulados): registro → login → buscar → agregar → cotizar → pagar con `tok_ok` → confirmación → mis pedidos, y los caminos con `tok_declined` y sin stock. Es lo que comprueba el contrato contra la realidad, que MSW no puede.
+Playwright contra el backend **real** (PostgreSQL + `pnpm run start:dev` en `:3000`, con la pasarela y el correo simulados, y los datos de `pnpm run db:seed`) y la tienda en `vp dev` (`:5173`, la levanta Playwright si no está). Es lo que comprueba el contrato contra la realidad, que MSW no puede.
+
+```bash
+# con el backend levantado
+pnpm run test:e2e                       # todo (desde apps/store-web)
+pnpm exec playwright test accessibility # un archivo
+E2E_BASE_URL=http://localhost:4173 pnpm run test:e2e   # contra otra URL (por ejemplo `vp preview`); no levanta `vp dev`
+```
+
+**No están en la compuerta (`scripts/verify.sh`) ni en el CI**: necesitan el backend con su base de datos. Se corren a mano antes de cerrar un corte y al tocar el recorrido de compra. Los archivos son `test/e2e/*.e2e.ts` (para que Vitest no los recoja) y comparten `test/e2e/support/`:
+
+- `api.ts`: prepara datos por la API real (comprador nuevo y listo para comprar, stock, un libro nuevo sin stock, un pedido hecho). Lo que se prueba por la pantalla se hace por la pantalla; esto solo deja el escenario listo.
+- `browser.ts`: `signIn` y `violations` (axe con las reglas de WCAG 2.2 AA en el navegador real).
+- `keyboard.ts`: `tabTo` recorre con `Tab` hasta un elemento por su nombre y anota si el foco se ve en cada parada.
+
+**El límite de intentos del backend** (`/auth/*`: 5 inicios de sesión por cuenta y 10 registros por dirección por minuto, `RATE_LIMIT_*`) también corre en los e2e. Por eso cada prueba crea su propio comprador y **planta su token de refresco una sola vez** en lugar de entrar por el formulario cada vez (el token se rota al usarse: plantarlo en cada navegación lo reutilizaría y la API revocaría la sesión), y `api.ts` espera el `Retry-After` de un `429` y repite. Si se quiere una tanda más rápida se puede levantar el backend con `RATE_LIMIT_LOGIN_IP`, `RATE_LIMIT_LOGIN_ACCOUNT` y `RATE_LIMIT_REGISTER_IP` altos.
+
+**Accesibilidad (`accessibility.e2e.ts`, `keyboard.e2e.ts`)**: axe en el navegador real en las diez pantallas y en sus estados con error, a 360 px y a 1280 px; y el recorrido de compra completo (agregar, carrito, dirección, pago, confirmación, pedidos y detalle) **solo con teclado**, comprobando que el foco se ve en cada parada. En jsdom axe no calcula estilos, así que el contraste de color y el tamaño de los objetivos táctiles solo se comprueban aquí; las pruebas de componente siguen cubriendo el resto de reglas.
 
 ### Playwright en WSL: faltan librerías del sistema
 

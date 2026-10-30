@@ -8,7 +8,8 @@
     "dev": "vp dev",
     "build": "tsc && vp build",
     "preview": "vp preview",
-    "api:types": "openapi-typescript ${API_DOCS_URL:-http://localhost:3000/docs-json} -o src/shared/api/schema.d.ts"
+    "api:types": "openapi-typescript ${API_DOCS_URL:-http://localhost:3000/docs-json} -o src/shared/api/schema.d.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@fontsource-variable/inter": "5.3.0",

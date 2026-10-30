@@ -31,8 +31,10 @@ export function AccountMenu() {
       </>
     );
   }
+  // No modal: un menú modal esconde el resto de la página con `aria-hidden` aunque sus enlaces siguen enfocables, y axe lo
+  // marca (`aria-hidden-focus`). Un menú de navegación no necesita atrapar el foco: se cierra con `Esc` o al salir de él
   return (
-    <DropdownMenu>
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="text-foreground">
           Mi cuenta

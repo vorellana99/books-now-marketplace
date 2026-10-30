@@ -28,3 +28,7 @@ dist-ssr
 
 # Variables de entorno locales
 .env
+
+# Resultados de las pruebas e2e (Playwright)
+test-results
+playwright-report

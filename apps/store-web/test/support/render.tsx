@@ -23,7 +23,9 @@ export async function renderApp(path = "/") {
       <RouterProvider router={router} />
     </QueryClientProvider>,
   );
-  // La ruta se resuelve de forma asíncrona: se espera a que el contenido principal exista
-  await screen.findByRole("main");
+  // La ruta se resuelve de forma asíncrona: se espera a que el contenido principal exista. La primera prueba de cada archivo
+  // carga además los trozos de las rutas (división de código) y con la máquina cargada eso pasa del segundo que espera
+  // `findByRole` por defecto: era la causa de fallos «sueltos» de la primera prueba de un archivo
+  await screen.findByRole("main", {}, { timeout: 10_000 });
   return { router, queryClient, ...utils };
 }
