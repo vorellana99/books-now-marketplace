@@ -4,7 +4,8 @@ import { Module } from '@nestjs/common';
 import { CreateBookCommand } from '../../src/contexts/catalog/application/book/create-book.command.js';
 import { SearchBooksQuery } from '../../src/contexts/catalog/application/book/search-books.query.js';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
-import { CreateBookHandler } from '../../src/contexts/catalog/infrastructure/book/create-book.handler.js';
+import { PrismaBookRepository } from '../../src/contexts/catalog/infrastructure/persistence/prisma-book.repository.js';
+import { CreateBookHandler } from '../../src/contexts/catalog/application/book/create-book.handler.js';
 import { GetBookPriceQuery } from '../../src/contracts/catalog/get-book-price.query.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
@@ -246,11 +247,13 @@ describe('CreateBookHandler (PostgreSQL real, por el CommandBus)', () => {
 
     // El libro y su evento se confirman juntos: si el evento no se puede guardar, tampoco queda el libro
     it('si falla el guardado del evento, no queda el libro', async () => {
-      const failing = new CreateBookHandler(prisma, {
-        append: async () => {
-          throw new Error('falló el outbox');
-        },
-      } as unknown as OutboxWriter);
+      const failing = new CreateBookHandler(
+        new PrismaBookRepository(prisma, {
+          append: async () => {
+            throw new Error('falló el outbox');
+          },
+        }),
+      );
 
       await expect(
         failing.execute(new CreateBookCommand(book())),
@@ -261,12 +264,14 @@ describe('CreateBookHandler (PostgreSQL real, por el CommandBus)', () => {
 
     it('si el outbox escribe el evento y luego falla, el evento también se deshace', async () => {
       const real = app.get(OutboxWriter);
-      const failing = new CreateBookHandler(prisma, {
-        append: async (tx: never, events: never) => {
-          await real.append(tx, events);
-          throw new Error('falló tras escribir');
-        },
-      } as unknown as OutboxWriter);
+      const failing = new CreateBookHandler(
+        new PrismaBookRepository(prisma, {
+          append: async (tx, events) => {
+            await real.append(tx, events);
+            throw new Error('falló tras escribir');
+          },
+        }),
+      );
 
       await expect(
         failing.execute(new CreateBookCommand(book())),

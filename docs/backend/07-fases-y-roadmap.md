@@ -70,7 +70,8 @@ Un guard es más simple que registrar controllers de forma condicional, que en N
 ### Fase 10: Listar y buscar libros
 
 ```ts
-// catalog/infrastructure/book/search-books.handler.ts
+// Versión de esta fase. Desde el corte 10 el handler (catalog/application/book/search-books.handler.ts)
+// solo delega en el puerto BookCatalog.search, y esta consulta vive en infrastructure/persistence/prisma-book-catalog.ts
 @QueryHandler(SearchBooksQuery)
 export class SearchBooksHandler implements IQueryHandler<SearchBooksQuery> {
   constructor(private readonly prisma: PrismaService) {}

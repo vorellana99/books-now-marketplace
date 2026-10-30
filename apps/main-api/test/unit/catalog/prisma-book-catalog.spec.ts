@@ -1,5 +1,4 @@
-import { GetBooksPricesQuery } from '../../../src/contracts/catalog/get-books-prices.query.js';
-import { GetBooksPricesHandler } from '../../../src/contexts/catalog/infrastructure/book/get-books-prices.handler.js';
+import { PrismaBookCatalog } from '../../../src/contexts/catalog/infrastructure/persistence/prisma-book-catalog.js';
 import { Prisma } from '../../../src/platform/prisma/generated/client.js';
 import type { PrismaService } from '../../../src/platform/prisma/prisma.service.js';
 import { NotFoundError } from '../../../src/shared-kernel/domain.errors.js';
@@ -30,15 +29,14 @@ function setup(rows: Row[]) {
   );
   const findUnique = vi.fn();
   const prisma = { book: { findMany, findUnique } } as unknown as PrismaService;
-  const handler = new GetBooksPricesHandler(prisma);
-  const ask = (...isbns: string[]) =>
-    handler.execute(new GetBooksPricesQuery(isbns));
+  const handler = new PrismaBookCatalog(prisma);
+  const ask = (...isbns: string[]) => handler.pricesOf(isbns);
   return { ask, findMany, findUnique };
 }
 
 const isbn = (n: number) => String(9780000000000 + n);
 
-describe('GetBooksPricesHandler', () => {
+describe('PrismaBookCatalog.pricesOf', () => {
   it('devuelve cada libro con el precio como texto de 2 decimales y su moneda', async () => {
     const { ask } = setup([
       row('A', { price: new Prisma.Decimal('45'), title: 'Uno' }),
