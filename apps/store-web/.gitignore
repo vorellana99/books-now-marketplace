@@ -32,3 +32,4 @@ dist-ssr
 # Resultados de las pruebas e2e (Playwright)
 test-results
 playwright-report
+.verify-last-failure.txt

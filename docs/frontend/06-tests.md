@@ -67,6 +67,15 @@ E2E_BASE_URL=http://localhost:4173 pnpm run test:e2e   # contra otra URL (por ej
 
 **El límite de intentos del backend** (`/auth/*`: 5 inicios de sesión por cuenta y 10 registros por dirección por minuto, `RATE_LIMIT_*`) también corre en los e2e. Por eso cada prueba crea su propio comprador y **planta su token de refresco una sola vez** en lugar de entrar por el formulario cada vez (el token se rota al usarse: plantarlo en cada navegación lo reutilizaría y la API revocaría la sesión), y `api.ts` espera el `Retry-After` de un `429` y repite. Si se quiere una tanda más rápida se puede levantar el backend con `RATE_LIMIT_LOGIN_IP`, `RATE_LIMIT_LOGIN_ACCOUNT` y `RATE_LIMIT_REGISTER_IP` altos.
 
+**El recorrido de compra (`purchase.e2e.ts`, 6 pruebas)**, por la pantalla y comprobando después lo que la API guardó de verdad (`GET /me/orders`):
+
+1. registro → buscar → agregar → cotizar (el total sale del backend: S/ 55.00 = 45.00 + envío) → pagar → confirmación (el «Total cobrado» es el cotizado y recargar lo conserva) → mis pedidos → detalle, y la API tiene un solo pedido con ese monto;
+2. `tok_declined`: dice «No se te cobró nada.», la API no tiene ningún pedido, la dirección y el carrito siguen, y con «Probar con otra tarjeta» se compra;
+3. falta de stock (un libro nuevo con 1 unidad y 2 en el carrito): lo dice sin cobrar, ofrece volver al carrito y no hay pedido;
+4. **un corte de red con el pedido ya creado**: Playwright deja que la petición llegue al backend (`route.fetch()`) y corta la respuesta (`route.abort()`); la tienda dice «No pudimos confirmar tu pago» sin afirmar que no se cobró, «Reintentar» envía **la misma clave de idempotencia** y la API termina con **un solo pedido** (se comprobó que la prueba falla si el reintento usa una clave nueva);
+5. el formulario de entrada (contraseña equivocada, y luego la correcta);
+6. un pedido ajeno: la API y la tienda dicen que no existe.
+
 **Accesibilidad (`accessibility.e2e.ts`, `keyboard.e2e.ts`)**: axe en el navegador real en las diez pantallas y en sus estados con error, a 360 px y a 1280 px; y el recorrido de compra completo (agregar, carrito, dirección, pago, confirmación, pedidos y detalle) **solo con teclado**, comprobando que el foco se ve en cada parada. En jsdom axe no calcula estilos, así que el contraste de color y el tamaño de los objetivos táctiles solo se comprueban aquí; las pruebas de componente siguen cubriendo el resto de reglas.
 
 ### Playwright en WSL: faltan librerías del sistema

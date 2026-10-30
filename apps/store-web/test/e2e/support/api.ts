@@ -149,3 +149,21 @@ export async function placeOrder(buyer: Buyer, items: { isbn: string; quantity: 
   if (status !== 201) throw new Error(`pedido: ${status} ${JSON.stringify(body)}`);
   return json<{ orderId: string; charged: { amount: string; currency: string } }>(body);
 }
+
+// Los pedidos de un comprador según la API (lo que SÍ quedó guardado), para comprobar que un fallo no creó nada y que un
+// reintento no creó dos
+export async function ordersOf(buyer: Pick<Buyer, "accessToken">) {
+  const { status, body } = await call("/me/orders", { token: buyer.accessToken });
+  if (status !== 200) throw new Error(`mis pedidos: ${status}`);
+  return json<{ items: { id: string; charged: { amount: string; currency: string } }[] }>(body)
+    .items;
+}
+
+// Entra por la API (para quien se registró por la pantalla y necesita un token para consultar sus pedidos)
+export async function loginApi(
+  email: string,
+  password: string,
+): Promise<Pick<Buyer, "accessToken">> {
+  const { body } = await call("/auth/login", { method: "POST", body: { email, password } });
+  return { accessToken: json<{ accessToken: string }>(body).accessToken };
+}

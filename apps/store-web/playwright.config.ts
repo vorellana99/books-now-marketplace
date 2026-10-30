@@ -8,7 +8,8 @@ const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:5173";
 export default defineConfig({
   testDir: "test/e2e",
   testMatch: "**/*.e2e.ts",
-  timeout: 60_000,
+  // 2 minutos: una prueba puede esperar el `Retry-After` (hasta un minuto) del límite de intentos de la API
+  timeout: 120_000,
   expect: { timeout: 10_000 },
   // Comparten una sola base de datos y crean sus propios datos: se ejecutan uno tras otro
   workers: 1,

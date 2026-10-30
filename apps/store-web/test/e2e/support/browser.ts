@@ -47,3 +47,32 @@ export async function violations(page: Page): Promise<string[]> {
       `${v.id}: ${v.help} → ${v.nodes.map((n) => `${n.target.join(" ")} ${n.html.slice(0, 90)}`).join(" | ")}`,
   );
 }
+
+// Lo que hace una persona en PA-06: escribir la dirección de envío y pagar con la tarjeta de prueba elegida
+export async function fillAddress(page: Page) {
+  for (const [label, value] of Object.entries({
+    Destinatario: "María Quispe",
+    Teléfono: "+51 987 654 321",
+    Dirección: "Jr. Ucayali 150, Dpto 2",
+    Distrito: "Barranco",
+    Provincia: "Lima",
+    Departamento: "Lima",
+  })) {
+    await page.getByLabel(label).fill(value);
+  }
+}
+
+// Un libro al carrito desde su página, y al carrito
+export async function addFromDetail(page: Page, isbn: string) {
+  await page.goto(`/libros/${isbn}`);
+  await page.getByRole("button", { name: "Agregar al carrito" }).click();
+  await expect(page.getByText("Libro agregado")).toBeVisible();
+}
+
+// Del carrito a la pantalla de pago, con el total ya cotizado
+export async function goToCheckout(page: Page) {
+  await page.goto("/carrito");
+  await page.getByRole("link", { name: "Continuar con la compra" }).click();
+  await expect(page.getByRole("heading", { name: "Finaliza tu compra", level: 1 })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Pagar S\// })).toBeEnabled();
+}
