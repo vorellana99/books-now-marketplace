@@ -62,13 +62,34 @@ Contra el backend real, con un libro agotado y otro con 3 unidades en el carrito
 
 ## Tareas
 
-| # | Capa | Tipo | Rigor | Tarea | Se comprueba | Depende de | Estado |
+| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |
 |---|---|---|---|---|---|---|---|
-| HU-23.1 | [WEB] | pantalla | normal | El carrito y la compra marcan los libros sin stock suficiente | `use-cart-revalidation.ts` expone `available` por ISBN y `stockProblems` (`{isbn, title, available}`); `cart-line.tsx`: mensaje con el título y selector 1..min(10, disponibles); `cart-page.tsx`: alerta que lista los libros y «Continuar» deshabilitado; `checkout-page.tsx`: `EmptyState` que nombra los libros y vuelve al carrito; no se corrige la cantidad en silencio; cumple la sección **Pantalla** (mensajes, `Alert`, botón y `EmptyState`) **revisada en un navegador real a 360 y 1280 px**, con la captura anotada en la bitácora. Pruebas: `cart-revalidation`, `cart-page` (el test «selector de 1 a 10» pasa a ser dinámico), `checkout-page` | HU-12.4 | 📝 |
-| HU-23.2 | [E2E] | recorrido | normal | El carrito sin stock de punta a punta | Un libro agotado y otro con 3 unidades (por la API de administración): el carrito los marca, el selector se limita, no deja continuar, `/compra` directo los nombra; se resuelve y se compra; axe a 360 y 1280 px | HU-23.1 | 📝 |
+| HU-23.1 | 🌐 WEB | 🖼️ pantalla | 🟢 normal | El carrito y la compra marcan los libros sin stock suficiente | Que la persona se entere en el carrito, y no en el pago, de qué libro ya no alcanza | HU-12.4 | ✏️ propuesta |
+| HU-23.2 | 🧪 E2E | 🔁 recorrido | 🟢 normal | El carrito sin stock de punta a punta | Comprobar con el backend real que el carrito bloquea y explica antes de pagar | HU-23.1 | ✏️ propuesta |
 
-- [ ] HU-23.1 [WEB] Carrito y compra. Se comprueba: lo de la tabla
-- [ ] HU-23.2 [E2E] Carrito sin stock de punta a punta. Se comprueba: lo de la tabla
+## Detalle de las tareas
+
+### HU-23.1 El carrito y la compra marcan los libros sin stock suficiente
+
+**Se comprueba**
+
+- [ ] `use-cart-revalidation.ts` expone `available` por ISBN y `stockProblems` (`{isbn, title, available}`)
+- [ ] `cart-line.tsx`: mensaje con el título y selector de 1 a min(10, disponibles)
+- [ ] `cart-page.tsx`: alerta que lista los libros y «Continuar» deshabilitado
+- [ ] `checkout-page.tsx`: `EmptyState` que nombra los libros y vuelve al carrito
+- [ ] no se corrige la cantidad en silencio
+- [ ] pruebas: `cart-revalidation`, `cart-page` (el test «selector de 1 a 10» pasa a ser dinámico) y `checkout-page`
+- [ ] revisado en un navegador real a 360 y 1280 px contra la sección **Pantalla**, con la captura anotada en la bitácora
+
+### HU-23.2 El carrito sin stock de punta a punta
+
+**Se comprueba**
+
+- [ ] un libro agotado y otro con 3 unidades (por la API de administración): el carrito los marca por su título
+- [ ] el selector se limita y «Continuar» no deja avanzar
+- [ ] entrar directo a `/compra` nombra los libros
+- [ ] al quitar uno y bajar la cantidad del otro, se puede comprar
+- [ ] axe sin violaciones a 360 y 1280 px
 
 ## Decisiones y desvíos
 

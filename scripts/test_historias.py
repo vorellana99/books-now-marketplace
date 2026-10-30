@@ -15,51 +15,67 @@ def at(hour, minute=0, day=30):
     return datetime(2026, 10, day, hour, minute, tzinfo=LIMA)
 
 
-HU_OK = """---
-id: HU-12
-titulo: Ver si hay stock de un libro
-tipo: HU
-epica: Catálogo
-estado: aprobada
-amplia:
----
+# ---------- constructores de historias de prueba ----------
 
-# HU-12
-
-## Contrato
-
-Sin cambios en el contrato.
-
-## Pantalla
-
-Sin cambios visuales.
-
-## Tareas
-
-| # | Capa | Tipo | Rigor | Tarea | Se comprueba | Depende de | Estado |
-|---|---|---|---|---|---|---|---|
-| HU-12.1 | [DOC] | producto | normal | Decisión | lo que sea | — | ✅ |
-| HU-12.2 | [API] | regla | critico | Inventario | lo que sea | HU-12.1 | ✅ |
-| HU-12.3 | [API] | contrato | normal | Catálogo | lo que sea | HU-12.2 | ⬜ |
-| HU-12.4 | [WEB] | pantalla | normal | Pantalla | lo que sea | HU-12.3 | ⬜ |
-"""
+TAREAS = [
+    ("HU-12.1", "DOC", "producto", "normal", "hecho"),
+    ("HU-12.2", "API", "regla", "critico", "hecho"),
+    ("HU-12.3", "API", "contrato", "normal", "pendiente"),
+    ("HU-12.4", "WEB", "pantalla", "normal", "pendiente"),
+]
 
 
-PLANTILLA_OK = """# plantilla
+def fila(tid, capa, tipo, rigor, estado, tarea="Tarea", objetivo="Objetivo", dep="—"):
+    c = h.cell
+    return f"| {tid} | {c('capa', capa)} | {c('tipo', tipo)} | {c('rigor', rigor)} | {tarea} | {objetivo} | {dep} | {c('estado', estado)} |"
 
-> | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre critico? |
-> |---|---|---|---|---|
-> | `[API]` | `contrato` | Lo que la API ofrece | Un campo más | no |
-> | `[API]` | `regla` | Cómo decide el negocio | Un límite | no |
-> | `[API]` | `evento` | Un aviso entre partes | Reaccionar a algo | sí |
-> | `[API]` | `base-de-datos` | Las tablas | Una columna | sí |
-> | `[API]` | `configuracion` | Una variable de entorno | `JWT_SECRET` | no |
-> | `[WEB]` | `pantalla` | Lo que se ve | Mover un botón | no |
-> | `[WEB]` | `comportamiento` | Lo que la tienda hace | Pedir un campo | no |
-> | `[DOC]` | `producto` | Reglas y decisiones | `RN-13` | no |
-> | `[DOC]` | `guia` | Guías técnicas | `CLAUDE.md` | no |
-> | `[E2E]` | `recorrido` | El recorrido de punta a punta | — | no |
-"""
+
+def bloque(tid, rigor, estado, checks=("una comprobación",), reglas=True):
+    marca = "x" if estado == "hecho" else " "
+    lines = [f"### {tid} Tarea", "", "**Se comprueba**", ""] + [f"- [{marca}] {c}" for c in checks]
+    if rigor == "critico" and reglas:
+        lines += ["", "**Reglas e invariantes**", "", "- nunca negativa"]
+    return "\n".join(lines)
+
+
+def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=True, sid="HU-12"):
+    partes = [f"---\nid: {sid}\ntitulo: Ver si hay stock de un libro\ntipo: HU\nepica: Catálogo\nestado: {estado}\namplia:\n---\n", f"# {sid}\n"]
+    if contrato:
+        partes.append("## Contrato\n\nSin cambios en el contrato.\n")
+    if pantalla:
+        partes.append("## Pantalla\n\nSin cambios visuales.\n")
+    cab = "| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |\n|---|---|---|---|---|---|---|---|"
+    partes.append("## Tareas\n\n" + cab + "\n" + "\n".join(fila(*t) for t in tareas) + "\n")
+    if detalle:
+        partes.append("## Detalle de las tareas\n\n" + "\n\n".join(bloque(t[0], t[3], t[4]) for t in tareas) + "\n")
+    return "\n".join(partes)
+
+
+HU_OK = hu()
+
+def _fila_tipo(capa, tipo, cambia, ejemplos, siempre):
+    return f"> | {h.cell('capa', capa)} | {h.cell('tipo', tipo)} | {cambia} | {ejemplos} | {siempre} |"
+
+
+PLANTILLA_OK = "\n".join(
+    [
+        "# plantilla",
+        "",
+        "> | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre critico? |",
+        "> |---|---|---|---|---|",
+        _fila_tipo("API", "contrato", "Lo que la API ofrece", "Un campo más", "no"),
+        _fila_tipo("API", "regla", "Cómo decide el negocio", "Un límite", "no"),
+        _fila_tipo("API", "evento", "Un aviso entre partes", "Reaccionar a algo", "sí"),
+        _fila_tipo("API", "base-de-datos", "Las tablas", "Una columna", "sí"),
+        _fila_tipo("API", "configuracion", "Una variable de entorno", "`JWT_SECRET`", "no"),
+        _fila_tipo("WEB", "pantalla", "Lo que se ve", "Mover un botón", "no"),
+        _fila_tipo("WEB", "comportamiento", "Lo que la tienda hace", "Pedir un campo", "no"),
+        _fila_tipo("DOC", "producto", "Reglas y decisiones", "`RN-13`", "no"),
+        _fila_tipo("DOC", "guia", "Guías técnicas", "`CLAUDE.md`", "no"),
+        _fila_tipo("E2E", "recorrido", "El recorrido de punta a punta", "—", "no"),
+        "",
+    ]
+)
 
 
 class Parseo(unittest.TestCase):
@@ -75,10 +91,9 @@ class Parseo(unittest.TestCase):
             h.parse_front_matter("# solo un título\n")
 
     def test_tareas_con_su_capa_y_estado(self):
-        tareas = h.parse_tasks(HU_OK)
         self.assertEqual(
-            tareas,
-            [("HU-12.1", "DOC", "✅"), ("HU-12.2", "API", "✅"), ("HU-12.3", "API", "⬜"), ("HU-12.4", "WEB", "⬜")],
+            h.parse_tasks(HU_OK),
+            [("HU-12.1", "DOC", "hecho"), ("HU-12.2", "API", "hecho"), ("HU-12.3", "API", "pendiente"), ("HU-12.4", "WEB", "pendiente")],
         )
 
     def test_tipo_y_rigor_de_cada_tarea(self):
@@ -94,6 +109,70 @@ class Parseo(unittest.TestCase):
         self.assertEqual(h.layer_status(tareas, "DOC"), "✅")
         self.assertEqual(h.layer_status(tareas, "E2E"), "—")  # no hay tareas de esa capa
 
+    def test_los_bloques_de_detalle_y_sus_comprobaciones(self):
+        bloques = h.parse_detail_blocks(HU_OK)
+        self.assertEqual(list(bloques), ["HU-12.1", "HU-12.2", "HU-12.3", "HU-12.4"])
+        self.assertEqual(bloques["HU-12.2"]["checks"], [(True, "una comprobación")])
+        self.assertEqual(bloques["HU-12.3"]["checks"], [(False, "una comprobación")])
+        self.assertTrue(bloques["HU-12.2"]["reglas"])
+        self.assertFalse(bloques["HU-12.3"]["reglas"])
+
+
+class Iconos(unittest.TestCase):
+    def test_una_celda_es_icono_mas_texto(self):
+        self.assertEqual(h.cell("capa", "API"), "⚙️ API")
+        self.assertEqual(h.cell("tipo", "base-de-datos"), "🧊 base-de-datos")
+        self.assertEqual(h.cell("rigor", "critico"), "🔴 critico")
+        self.assertEqual(h.cell("rigor", "normal"), "🟢 normal")
+        self.assertEqual(h.cell("estado", "en-curso"), "⏩ en-curso")
+        self.assertEqual(h.cell("tipo", "producto"), "📦 producto")
+
+    def test_se_lee_el_texto_y_el_icono(self):
+        self.assertEqual(h.parse_cell("🔌 API"), ("🔌", "API"))
+        self.assertEqual(h.parse_cell("API"), ("", "API"))
+        self.assertEqual(h.parse_cell("[API]"), ("", "API"))  # el formato antiguo
+        self.assertEqual(h.parse_cell("⬜"), ("⬜", ""))  # solo icono
+
+    def test_un_icono_vale_con_o_sin_el_selector_de_emoji(self):
+        con = h.cell("capa", "API")  # ⚙️ lleva el selector invisible
+        sin = con.replace("\ufe0f", "")
+        self.assertNotEqual(con, sin)
+        self.assertEqual(h.parse_cell(con), h.parse_cell(sin))
+        self.assertEqual(h.format_text(fila("HU-12.3", "API", "contrato", "normal", "pendiente").replace(con, sin)), fila("HU-12.3", "API", "contrato", "normal", "pendiente"))
+
+    def test_todos_los_iconos_son_distintos_dentro_de_una_columna(self):
+        for columna, mapa in h.ICONOS.items():
+            self.assertEqual(len(set(mapa.values())), len(mapa), columna)
+
+    def test_hay_un_icono_para_cada_valor_del_vocabulario(self):
+        tipos = {t for ts in h.TIPOS.values() for t in ts}
+        self.assertEqual(set(h.ICONOS["tipo"]), tipos)
+        self.assertEqual(set(h.ICONOS["rigor"]), set(h.RIGORES))
+        self.assertEqual(set(h.ICONOS["capa"]), set(h.TIPOS))
+        self.assertEqual(set(h.ICONOS["estado"]), set(h.ESTADOS_TAREA))
+
+    def test_formato_completa_los_iconos_que_faltan(self):
+        crudo = "| HU-12.3 | API | contrato | normal | Tarea | Objetivo | — | pendiente |"
+        self.assertEqual(h.format_text(crudo), fila("HU-12.3", "API", "contrato", "normal", "pendiente"))
+
+    def test_formato_convierte_el_formato_antiguo_y_los_estados_de_solo_icono(self):
+        viejo = "| HU-12.3 | [API] | contrato | normal | Tarea | Objetivo | — | ⏳ |"
+        self.assertEqual(h.format_text(viejo), fila("HU-12.3", "API", "contrato", "normal", "pendiente"))
+        self.assertEqual(h.format_text("| HU-12.3 | API | contrato | normal | T | O | — | ✅ |"), fila("HU-12.3", "API", "contrato", "normal", "hecho", "T", "O"))
+
+    def test_formato_corrige_un_icono_equivocado(self):
+        malo = fila("HU-12.3", "API", "contrato", "normal", "pendiente").replace("📜", "🎨")
+        self.assertEqual(h.format_text(malo), fila("HU-12.3", "API", "contrato", "normal", "pendiente"))
+
+    def test_formato_es_idempotente_y_no_toca_lo_demas(self):
+        texto = HU_OK + "\nOtra línea | con | barras\n"
+        self.assertEqual(h.format_text(h.format_text(texto)), h.format_text(texto))
+        self.assertEqual(h.format_text(HU_OK), HU_OK)
+
+    def test_formato_deja_lo_que_no_entiende(self):
+        raro = "| HU-12.3 | API | cosa | normal | Tarea | Objetivo | — | pendiente |"
+        self.assertIn("cosa", h.format_text(raro))
+
 
 class TablaDeTipos(unittest.TestCase):
     def test_lee_la_tabla_de_la_plantilla(self):
@@ -105,13 +184,20 @@ class TablaDeTipos(unittest.TestCase):
     def test_lee_cuales_son_siempre_criticos(self):
         self.assertEqual(h.parse_always_critical(PLANTILLA_OK), {"evento", "base-de-datos"})
 
+    def test_los_iconos_de_la_tabla_de_la_plantilla_son_los_del_script(self):
+        self.assertEqual(h.template_icon_errors(PLANTILLA_OK), [])
+        mal = PLANTILLA_OK.replace(h.cell("tipo", "regla"), "📏 regla").replace(h.cell("capa", "WEB"), "🖥 WEB")
+        errores = h.template_icon_errors(mal)
+        self.assertTrue(any("regla" in e and h.ICONOS["tipo"]["regla"] in e for e in errores))
+        self.assertTrue(any("WEB" in e for e in errores))
+
     def test_el_script_y_la_tabla_coinciden(self):
         self.assertEqual({c: tuple(t) for c, t in h.parse_types_table(PLANTILLA_OK).items()}, h.TIPOS)
         self.assertEqual(h.parse_always_critical(PLANTILLA_OK), set(h.SIEMPRE_CRITICOS))
 
     def test_imprime_la_tabla_para_consultarla(self):
         texto = h.render_types(PLANTILLA_OK)
-        self.assertIn("[API] contrato", texto)
+        self.assertIn("contrato", texto)
         self.assertIn("Lo que la API ofrece", texto)
         self.assertIn("siempre critico", texto)  # base-de-datos y evento
         self.assertIn("_plantilla.md", texto)
@@ -237,143 +323,210 @@ class Comprobacion(unittest.TestCase):
     def errors(self):
         return h.check(self.root)
 
+    def escribe(self, texto):
+        self.file.write_text(texto, encoding="utf-8")
+
+    def con_tareas(self, tareas, **kw):
+        self.escribe(hu(tareas, **kw))
+
+    def hay(self, *palabras):
+        return any(all(p in e for p in palabras) for e in self.errors())
+
+    # --- lo básico ---
     def test_todo_en_orden(self):
         self.assertEqual(self.errors(), [])
 
     def test_el_nombre_del_archivo_empieza_por_el_id(self):
         self.file.rename(self.dir / "HU-13-otro-nombre.md")
-        self.assertTrue(any("nombre" in e for e in self.errors()))
+        self.assertTrue(self.hay("nombre"))
 
     def test_estado_invalido(self):
-        self.file.write_text(HU_OK.replace("estado: aprobada", "estado: terminada"), encoding="utf-8")
-        self.assertTrue(any("estado" in e for e in self.errors()))
+        self.escribe(HU_OK.replace("estado: aprobada", "estado: terminada"))
+        self.assertTrue(self.hay("estado"))
 
     def test_una_tarea_de_otra_historia_en_el_archivo(self):
-        self.file.write_text(HU_OK.replace("| HU-12.4 |", "| HU-13.1 |"), encoding="utf-8")
-        self.assertTrue(any("HU-13.1" in e for e in self.errors()))
-
-    def test_una_historia_con_tareas_api_necesita_su_seccion_contrato(self):
-        self.file.write_text(HU_OK.replace("## Contrato\n\nSin cambios en el contrato.\n\n", ""), encoding="utf-8")
-        self.assertTrue(any("Contrato" in e for e in self.errors()))
-
-    def test_una_historia_sin_tareas_api_no_necesita_contrato(self):
-        solo_web = HU_OK.replace("## Contrato\n\nSin cambios en el contrato.\n\n", "").replace("[API] | regla | critico", "[WEB] | comportamiento | normal").replace("[API] | contrato", "[WEB] | comportamiento")
-        self.file.write_text(solo_web, encoding="utf-8")
-        self.assertEqual(self.errors(), [])
-
-    def test_una_historia_con_tareas_web_necesita_su_seccion_pantalla(self):
-        self.file.write_text(HU_OK.replace("## Pantalla\n\nSin cambios visuales.\n\n", ""), encoding="utf-8")
-        self.assertTrue(any("Pantalla" in e for e in self.errors()))
-
-    def test_una_seccion_pantalla_vacia_no_vale(self):
-        self.file.write_text(HU_OK.replace("Sin cambios visuales.", ""), encoding="utf-8")
-        self.assertTrue(any("Pantalla" in e for e in self.errors()))
-
-    def test_una_historia_sin_tareas_web_no_necesita_pantalla(self):
-        solo_api = HU_OK.replace("## Pantalla\n\nSin cambios visuales.\n\n", "").replace("[WEB] | pantalla", "[API] | contrato")
-        self.file.write_text(solo_api, encoding="utf-8")
-        self.assertEqual(self.errors(), [])
-
-    def test_una_seccion_contrato_vacia_no_vale(self):
-        self.file.write_text(HU_OK.replace("Sin cambios en el contrato.", ""), encoding="utf-8")
-        self.assertTrue(any("Contrato" in e for e in self.errors()))
-
-    def test_el_tipo_debe_ser_de_la_capa(self):
-        self.file.write_text(HU_OK.replace("[WEB] | pantalla", "[WEB] | contrato"), encoding="utf-8")
-        self.assertTrue(any("tipo" in e and "HU-12.4" in e for e in self.errors()))
-
-    def test_los_nombres_antiguos_ya_no_valen(self):
-        fila_por_capa = {"API": "[API] | contrato", "WEB": "[WEB] | pantalla", "DOC": "[DOC] | producto"}
-        for viejo, capa in (("ruta", "API"), ("dominio", "API"), ("migración", "API"), ("config", "API"), ("datos", "WEB"),
-                            ("base de datos", "API"), ("configuración", "API"), ("guía", "DOC")):
-            self.file.write_text(HU_OK.replace(fila_por_capa[capa], f"[{capa}] | {viejo}"), encoding="utf-8")
-            self.assertTrue(any("tipo" in e for e in self.errors()), viejo)
-        conE2E = HU_OK + "| HU-12.5 | [E2E] | — | normal | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
-        self.file.write_text(conE2E, encoding="utf-8")
-        self.assertTrue(any("tipo" in e and "HU-12.5" in e for e in self.errors()))
-
-    def test_las_mayusculas_no_valen(self):
-        self.file.write_text(HU_OK.replace("[API] | contrato", "[API] | Contrato"), encoding="utf-8")
-        self.assertTrue(any("tipo" in e and "HU-12.3" in e for e in self.errors()))
-
-    def test_todos_los_tipos_son_kebab_case(self):
-        for capa, tipos in h.TIPOS.items():
-            for tipo in tipos:
-                self.assertRegex(tipo, r"^[a-z0-9]+(-[a-z0-9]+)*$", f"{capa}: {tipo}")
-
-    def test_el_error_lista_los_tipos_validos_de_la_capa(self):
-        self.file.write_text(HU_OK.replace("[API] | contrato", "[API] | cosa"), encoding="utf-8")
-        mensaje = " ".join(self.errors())
-        for tipo in ("contrato", "regla", "evento", "base-de-datos", "configuracion"):
-            self.assertIn(tipo, mensaje)
-
-    def test_el_error_de_tipo_apunta_a_la_plantilla(self):
-        self.file.write_text(HU_OK.replace("[API] | contrato", "[API] | cosa"), encoding="utf-8")
-        self.assertTrue(any("_plantilla.md" in e for e in self.errors()))
-
-    def test_una_plantilla_que_coincide_con_el_script_no_da_error(self):
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK, encoding="utf-8")
-        self.assertEqual(self.errors(), [])
-
-    def test_una_plantilla_que_se_desincroniza_del_script_da_error(self):
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace("| `[WEB]` | `pantalla` |", "| `[WEB]` | `vista` |"), encoding="utf-8")
-        errores = self.errors()
-        self.assertTrue(any("_plantilla.md" in e and "WEB" in e for e in errores))
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace("| Un aviso entre partes | Reaccionar a algo | sí |", "| Un aviso entre partes | Reaccionar a algo | no |"), encoding="utf-8")
-        self.assertTrue(any("critico" in e and "_plantilla.md" in e for e in self.errors()))
-
-    def test_una_tarea_sin_tipo(self):
-        self.file.write_text(HU_OK.replace("[API] | contrato", "[API] |  "), encoding="utf-8")
-        self.assertTrue(any("tipo" in e and "HU-12.3" in e for e in self.errors()))
-
-    def test_migracion_y_evento_siempre_son_criticos(self):
-        for tipo in ("base-de-datos", "evento"):
-            self.file.write_text(HU_OK.replace("[API] | contrato | normal", f"[API] | {tipo} | normal"), encoding="utf-8")
-            self.assertTrue(any("critico" in e and "HU-12.3" in e for e in self.errors()), tipo)
-            self.file.write_text(HU_OK.replace("[API] | contrato | normal", f"[API] | {tipo} | critico"), encoding="utf-8")
-            self.assertEqual(self.errors(), [], tipo)
-
-    def test_el_rigor_critico_solo_va_en_tareas_api(self):
-        self.file.write_text(HU_OK.replace("[WEB] | pantalla | normal", "[WEB] | pantalla | critico"), encoding="utf-8")
-        self.assertTrue(any("critico" in e and "HU-12.4" in e for e in self.errors()))
-
-    def test_el_rigor_debe_ser_critico_o_normal(self):
-        for valor in ("alto", "Critico", "CRITICO", "crítico", "", "🔒"):
-            self.file.write_text(HU_OK.replace("[API] | contrato | normal", f"[API] | contrato | {valor}"), encoding="utf-8")
-            errores = [e for e in self.errors() if "HU-12.3" in e and "rigor" in e]
-            self.assertTrue(errores, repr(valor))
-            self.assertIn("critico", errores[0])
-            self.assertIn("normal", errores[0])
-
-    def test_un_icono_en_la_celda_del_tipo_ya_no_vale(self):
-        self.file.write_text(HU_OK.replace("[API] | regla | critico", "[API] | regla 🔒 | critico"), encoding="utf-8")
-        self.assertTrue(any("tipo" in e and "HU-12.2" in e for e in self.errors()))
-
-    def test_las_tareas_e2e_no_llevan_tipo(self):
-        conE2E = HU_OK + "| HU-12.5 | [E2E] | recorrido | normal | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
-        self.file.write_text(conE2E, encoding="utf-8")
-        self.assertEqual(self.errors(), [])
-        self.file.write_text(conE2E.replace("[E2E] | recorrido", "[E2E] | contrato"), encoding="utf-8")
-        self.assertTrue(any("tipo" in e and "HU-12.5" in e for e in self.errors()))
-
-    def test_una_historia_cerrada_con_tareas_pendientes(self):
-        self.file.write_text(HU_OK.replace("estado: aprobada", "estado: cerrada"), encoding="utf-8")
-        self.assertTrue(any("cerrada" in e for e in self.errors()))
-
-    def test_una_historia_propuesta_no_puede_tener_tareas_hechas(self):
-        self.file.write_text(HU_OK.replace("estado: aprobada", "estado: propuesta"), encoding="utf-8")
-        self.assertTrue(any("propuesta" in e for e in self.errors()))
-
-    def test_una_historia_sin_fila_en_la_matriz(self):
-        (self.dir / "README.md").write_text(f"{h.START}\n| ID |\n{h.END}\n", encoding="utf-8")
-        self.assertTrue(any("matriz" in e for e in self.errors()))
+        self.escribe(HU_OK.replace("| HU-12.4 |", "| HU-13.1 |"))
+        self.assertTrue(self.hay("HU-13.1"))
 
     def test_id_repetido_entre_el_legado_y_un_archivo(self):
         (self.dir / "legado.json").write_text(
             json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-12", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
             encoding="utf-8",
         )
-        self.assertTrue(any("repetido" in e for e in self.errors()))
+        self.assertTrue(self.hay("repetido"))
+
+    def test_una_historia_sin_fila_en_la_matriz(self):
+        (self.dir / "README.md").write_text(f"{h.START}\n| ID |\n{h.END}\n", encoding="utf-8")
+        self.assertTrue(self.hay("matriz"))
+
+    # --- cierre ---
+    def test_una_historia_cerrada_con_tareas_pendientes(self):
+        self.escribe(HU_OK.replace("estado: aprobada", "estado: cerrada"))
+        self.assertTrue(self.hay("cerrada"))
+
+    def test_una_hu_cerrada_necesita_su_tarea_e2e(self):
+        todas_hechas = [(t[0], t[1], t[2], t[3], "hecho") for t in TAREAS]
+        self.con_tareas(todas_hechas, estado="cerrada")
+        self.assertTrue(self.hay("E2E"))
+        self.con_tareas(todas_hechas + [("HU-12.5", "E2E", "recorrido", "normal", "hecho")], estado="cerrada")
+        h.write_matrix(self.root, [])  # el estado de la historia cambió: la matriz se regenera
+        self.assertEqual(self.errors(), [])
+
+    def test_una_historia_propuesta_no_puede_tener_tareas_hechas(self):
+        self.escribe(HU_OK.replace("estado: aprobada", "estado: propuesta"))
+        self.assertTrue(self.hay("propuesta"))
+
+    # --- contrato y pantalla ---
+    def test_una_historia_con_tareas_api_necesita_su_seccion_contrato(self):
+        self.con_tareas(TAREAS, contrato=False)
+        self.assertTrue(self.hay("Contrato"))
+
+    def test_una_seccion_contrato_vacia_no_vale(self):
+        self.escribe(HU_OK.replace("Sin cambios en el contrato.", ""))
+        self.assertTrue(self.hay("Contrato"))
+
+    def test_una_historia_sin_tareas_api_no_necesita_contrato(self):
+        solo_web = [("HU-12.1", "DOC", "producto", "normal", "hecho"), ("HU-12.4", "WEB", "comportamiento", "normal", "pendiente")]
+        self.con_tareas(solo_web, contrato=False)
+        self.assertEqual(self.errors(), [])
+
+    def test_una_historia_con_tareas_web_necesita_su_seccion_pantalla(self):
+        self.con_tareas(TAREAS, pantalla=False)
+        self.assertTrue(self.hay("Pantalla"))
+
+    def test_una_seccion_pantalla_vacia_no_vale(self):
+        self.escribe(HU_OK.replace("Sin cambios visuales.", ""))
+        self.assertTrue(self.hay("Pantalla"))
+
+    def test_una_historia_sin_tareas_web_no_necesita_pantalla(self):
+        solo_api = [t for t in TAREAS if t[1] != "WEB"]
+        self.con_tareas(solo_api, pantalla=False)
+        self.assertEqual(self.errors(), [])
+
+    # --- tipo y rigor ---
+    def test_el_tipo_debe_ser_de_la_capa(self):
+        self.escribe(HU_OK.replace(h.cell("tipo", "pantalla"), h.cell("tipo", "contrato")))
+        self.assertTrue(self.hay("tipo", "HU-12.4"))
+
+    def test_una_tarea_sin_tipo(self):
+        self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), " "))
+        self.assertTrue(self.hay("tipo", "HU-12.3"))
+
+    def test_el_error_de_tipo_apunta_a_la_plantilla(self):
+        self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), "📜 cosa"))
+        self.assertTrue(self.hay("_plantilla.md"))
+
+    def test_el_error_lista_los_tipos_validos_de_la_capa(self):
+        self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), "📜 cosa"))
+        mensaje = " ".join(self.errors())
+        for tipo in ("contrato", "regla", "evento", "base-de-datos", "configuracion"):
+            self.assertIn(tipo, mensaje)
+
+    def test_los_nombres_antiguos_ya_no_valen(self):
+        for viejo in ("ruta", "dominio", "migración", "config", "datos", "base de datos", "configuración", "guía"):
+            self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), f"📜 {viejo}"))
+            self.assertTrue(self.hay("tipo", "HU-12.3"), viejo)
+
+    def test_las_mayusculas_no_valen(self):
+        self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), "📜 Contrato"))
+        self.assertTrue(self.hay("tipo", "HU-12.3"))
+
+    def test_las_tareas_e2e_llevan_el_tipo_recorrido(self):
+        con_e2e = TAREAS + [("HU-12.5", "E2E", "recorrido", "normal", "pendiente")]
+        self.con_tareas(con_e2e)
+        self.assertEqual(self.errors(), [])
+        self.escribe(hu(con_e2e).replace(h.cell("tipo", "recorrido"), h.cell("tipo", "contrato")))
+        self.assertTrue(self.hay("tipo", "HU-12.5"))
+
+    def test_el_rigor_debe_ser_critico_o_normal(self):
+        for valor in ("alto", "🔒 Critico", "🔒 CRITICO", "🔒 crítico", " ", "🔒"):
+            self.escribe(HU_OK.replace(h.cell("rigor", "normal") + " | Tarea | Objetivo | — | " + h.cell("estado", "pendiente"), f"{valor} | Tarea | Objetivo | — | " + h.cell("estado", "pendiente"), 1))
+            self.assertTrue(self.hay("rigor", "HU-12.3"), repr(valor))
+        self.escribe(HU_OK.replace(h.cell("rigor", "normal") + " | Tarea | Objetivo | — | " + h.cell("estado", "pendiente"), "alto | Tarea | Objetivo | — | " + h.cell("estado", "pendiente"), 1))
+        mensaje = [e for e in self.errors() if "HU-12.3" in e and "rigor" in e][0]
+        self.assertIn("critico", mensaje)
+        self.assertIn("normal", mensaje)
+
+    def test_el_rigor_critico_solo_va_en_tareas_api(self):
+        self.con_tareas([TAREAS[0], TAREAS[1], TAREAS[2], ("HU-12.4", "WEB", "pantalla", "critico", "pendiente")])
+        self.assertTrue(self.hay("critico", "HU-12.4"))
+
+    def test_migracion_y_evento_siempre_son_criticos(self):
+        for tipo in ("base-de-datos", "evento"):
+            self.con_tareas([TAREAS[0], TAREAS[1], ("HU-12.3", "API", tipo, "normal", "pendiente"), TAREAS[3]])
+            self.assertTrue(self.hay("critico", "HU-12.3"), tipo)
+            self.con_tareas([TAREAS[0], TAREAS[1], ("HU-12.3", "API", tipo, "critico", "pendiente"), TAREAS[3]])
+            self.assertEqual(self.errors(), [], tipo)
+
+    # --- iconos ---
+    def test_falta_el_icono_y_el_error_dice_como_arreglarlo(self):
+        self.escribe(HU_OK.replace(h.cell("capa", "API"), "API", 1))
+        self.assertTrue(self.hay("icono", "--formato"))
+
+    def test_icono_equivocado(self):
+        self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), "🎨 contrato"))
+        self.assertTrue(self.hay("icono", "📜"))
+
+    def test_el_estado_lleva_icono_y_texto(self):
+        self.escribe(HU_OK.replace(h.cell("estado", "pendiente"), "⬜", 1))
+        self.assertTrue(self.hay("estado", "HU-12.3"))
+        self.escribe(HU_OK.replace(h.cell("estado", "pendiente"), "⬜ terminado", 1))
+        self.assertTrue(self.hay("estado", "HU-12.3"))
+
+    # --- estructura de la tabla ---
+    def test_una_fila_con_otro_numero_de_columnas(self):
+        self.escribe(HU_OK.replace("| Tarea | Objetivo | — | " + h.cell("estado", "pendiente"), "| Tarea | — | " + h.cell("estado", "pendiente"), 1))
+        self.assertTrue(self.hay("HU-12.3", "columnas"))
+
+    def test_el_objetivo_es_obligatorio(self):
+        self.escribe(HU_OK.replace("| Tarea | Objetivo | — | " + h.cell("estado", "pendiente"), "| Tarea |  | — | " + h.cell("estado", "pendiente"), 1))
+        self.assertTrue(self.hay("objetivo", "HU-12.3"))
+        self.escribe(HU_OK.replace("| Tarea | Objetivo | — | " + h.cell("estado", "pendiente"), "| Tarea | … | — | " + h.cell("estado", "pendiente"), 1))
+        self.assertTrue(self.hay("objetivo", "HU-12.3"))
+
+    # --- bloques de detalle ---
+    def test_cada_tarea_necesita_su_bloque_de_detalle(self):
+        self.con_tareas(TAREAS, detalle=False)
+        self.assertTrue(self.hay("HU-12.1", "detalle"))
+
+    def test_un_bloque_sin_su_tarea(self):
+        self.escribe(HU_OK + "\n### HU-12.9 Una tarea que no existe\n\n**Se comprueba**\n\n- [ ] algo\n")
+        self.assertTrue(self.hay("HU-12.9"))
+
+    def test_un_bloque_sin_comprobaciones(self):
+        self.escribe(HU_OK.replace("- [ ] una comprobación\n\n### HU-12.4", "### HU-12.4", 1))
+        self.assertTrue(self.hay("HU-12.3", "comprobaci"))
+
+    def test_una_tarea_hecha_tiene_todas_sus_comprobaciones_marcadas(self):
+        self.escribe(HU_OK.replace("- [x] una comprobación", "- [ ] una comprobación", 1))
+        self.assertTrue(self.hay("HU-12.1", "marcad"))
+
+    def test_una_tarea_propuesta_no_tiene_comprobaciones_marcadas(self):
+        self.escribe(hu([("HU-12.3", "API", "contrato", "normal", "propuesta")], estado="propuesta").replace("- [ ] una comprobación", "- [x] una comprobación"))
+        self.assertTrue(self.hay("HU-12.3", "propuesta"))
+
+    def test_una_tarea_critica_necesita_reglas_e_invariantes(self):
+        self.con_tareas(TAREAS)
+        self.escribe(HU_OK.replace("**Reglas e invariantes**\n\n- nunca negativa", ""))
+        self.assertTrue(self.hay("HU-12.2", "Reglas e invariantes"))
+
+    def test_una_tarea_normal_no_necesita_reglas_e_invariantes(self):
+        self.assertEqual(self.errors(), [])  # HU-12.3 es normal y no las tiene
+
+    # --- plantilla ---
+    def test_una_plantilla_que_coincide_con_el_script_no_da_error(self):
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK, encoding="utf-8")
+        self.assertEqual(self.errors(), [])
+
+    def test_una_plantilla_con_un_icono_distinto_da_error(self):
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace(h.cell("tipo", "regla"), "📏 regla"), encoding="utf-8")
+        self.assertTrue(self.hay("_plantilla.md", "icono", "regla"))
+
+    def test_una_plantilla_que_se_desincroniza_del_script_da_error(self):
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace(h.cell("tipo", "pantalla"), "🖼️ vista"), encoding="utf-8")
+        self.assertTrue(self.hay("_plantilla.md", "WEB"))
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace("| Un aviso entre partes | Reaccionar a algo | sí |", "| Un aviso entre partes | Reaccionar a algo | no |"), encoding="utf-8")
+        self.assertTrue(self.hay("critico", "_plantilla.md"))
 
 
 class DocumentosReales(unittest.TestCase):
@@ -386,6 +539,11 @@ class DocumentosReales(unittest.TestCase):
 
     def test_los_documentos_del_repositorio_pasan_la_comprobacion(self):
         self.assertEqual(h.check(ROOT), [])
+
+    def test_los_archivos_ya_tienen_el_formato_canonico(self):
+        for path in h.story_files(ROOT):
+            texto = path.read_text(encoding="utf-8")
+            self.assertEqual(h.format_text(texto), texto, f"{path.name}: ejecuta `python3 scripts/historias.py --formato`")
 
     def test_estan_las_veinte_historias_anteriores_como_historico(self):
         legado = json.loads((ROOT / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))

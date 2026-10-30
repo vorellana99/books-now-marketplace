@@ -36,39 +36,61 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 
 ## Tareas
 
-> **Tipo** (tercera columna): dice qué receta aplica y **se elige por lo que cambia**, no por cómo se programa. Los nombres se escriben exactos, en **kebab-case** (minúsculas, sin acentos ni símbolos y con guiones en lugar de espacios):
+> **La tabla es el índice** (se escanea de un vistazo); **el detalle de cada tarea vive en su bloque**, en «Detalle de las tareas» (más abajo). Una fila no puede llevar el carácter `|` dentro de una celda.
+>
+> **Columnas:** `#` (id de la tarea) · **Capa** · **Tipo** · **Rigor** · **Tarea** (qué se hace, en una línea) · **Objetivo** (el resultado que se busca, en una frase: responde «¿para qué existe esta tarea?», no «cómo se programa») · **Depende de** (otra tarea, aunque sea de otra historia, o `—`) · **Estado**.
+>
+> **Capa, Tipo, Rigor y Estado se escriben «icono texto»** (`⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente`). El texto es el valor (kebab-case: minúsculas, sin acentos ni símbolos, con guiones en vez de espacios) y **el icono de cada valor es siempre el mismo**, en **todas** las filas: si falta o no coincide, el comprobador lo señala, y `python3 scripts/historias.py --formato` los completa y corrige (puedes escribir solo el texto). Estados: `✏️ propuesta`, `⏳ pendiente`, `⏩ en-curso`, `✅ hecho`, `⛔ bloqueado`. Rigor: `🔴 critico` o `🟢 normal`.
+>
+> **Tipo** (tercera columna): dice qué receta aplica y **se elige por lo que cambia**, no por cómo se programa:
 >
 > | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre critico? |
 > |---|---|---|---|---|
-> | `[API]` | `contrato` | **Lo que la API le ofrece a la tienda** | Un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | no |
-> | `[API]` | `regla` | **Cómo decide el negocio** | Un cálculo, un límite («máximo 10»), una condición | no |
-> | `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | Reaccionar a «se registró un usuario» | sí |
-> | `[API]` | `base-de-datos` | Las tablas, columnas, índices o restricciones | Una columna nueva | sí |
-> | `[API]` | `configuracion` | Una variable de entorno | `JWT_SECRET` | no |
-> | `[WEB]` | `pantalla` | **Lo que se ve** | Mover un botón, un texto nuevo, un aviso | no |
-> | `[WEB]` | `comportamiento` | **Lo que la tienda hace**, sin cambiar lo que se ve | Pedir el campo nuevo a la API, el estado del carrito, validar un formulario | no |
-> | `[DOC]` | `producto` | Reglas, decisiones, historias, mensajes, diseño | `RN-13`, un `DP` | no |
-> | `[DOC]` | `guia` | Guías técnicas, README, comandos | `CLAUDE.md` | no |
-> | `[E2E]` | `recorrido` | El recorrido de punta a punta | — | no |
+> | ⚙️ API | 📜 contrato | **Lo que la API le ofrece a la tienda** | Un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | no |
+> | ⚙️ API | 📐 regla | **Cómo decide el negocio** | Un cálculo, un límite («máximo 10»), una condición | no |
+> | ⚙️ API | ⚡ evento | Un aviso entre partes del sistema (Outbox) | Reaccionar a «se registró un usuario» | sí |
+> | ⚙️ API | 🧊 base-de-datos | Las tablas, columnas, índices o restricciones | Una columna nueva | sí |
+> | ⚙️ API | 🛠️ configuracion | Una variable de entorno | `JWT_SECRET` | no |
+> | 🌐 WEB | 🖼️ pantalla | **Lo que se ve** | Mover un botón, un texto nuevo, un aviso | no |
+> | 🌐 WEB | 🔀 comportamiento | **Lo que la tienda hace**, sin cambiar lo que se ve | Pedir el campo nuevo a la API, el estado del carrito, validar un formulario | no |
+> | 📄 DOC | 📦 producto | Reglas, decisiones, historias, mensajes, diseño | `RN-13`, un `DP` | no |
+> | 📄 DOC | 📘 guia | Guías técnicas, README, comandos | `CLAUDE.md` | no |
+> | 🧪 E2E | 🔁 recorrido | El recorrido de punta a punta | — | no |
 >
 > **Esta es la única tabla de tipos** (la guía, los comandos y los índices la enlazan; `python3 scripts/historias.py --tipos` la imprime y el comprobador exige que coincida con `scripts/historias.py`). La columna «¿Siempre critico?» la lee el script: no la cambies sin cambiarlo.
 >
 > **Receta por tipo** (qué comando o documento seguir al ejecutar la tarea): `contrato` → `/nueva-ruta` si es un endpoint nuevo y, en la primera tarea `[WEB]` que lo use, `/cambio-de-contrato`; `regla` → pruebas primero y, si toca dinero, seguridad o concurrencia, rigor `critico`; `evento` → `/nuevo-evento`; `base-de-datos` → `/nueva-migracion`; `configuracion` → `/nueva-variable-entorno`; `pantalla` → la sección «Pantalla» de la HU y la revisión en un navegador real; `comportamiento` → la compuerta de la tienda (y `/cambio-de-contrato` si consume un contrato nuevo); `producto` y `guia` → los documentos que toque; `recorrido` → Playwright contra el backend real.
 >
-> Un endpoint nuevo con lógica nueva son **dos tareas**: la `regla` y el `contrato`. **Rigor** (cuarta columna, **escrito en todas las filas**): `critico` marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar) y `normal` es el resto. Solo una tarea `[API]` puede ser `critico`, y `base-de-datos` y `evento` siempre lo son (el comprobador lo exige). Se marca `critico` cuando la tarea toca dinero y precios, seguridad (tokens, contraseñas, guards, roles, CORS, límites), concurrencia y transacciones (outbox, reservas, idempotencia), restricciones de la base o reglas del dominio críticas.
+> Un endpoint nuevo con lógica nueva son **dos tareas**: la `regla` y el `contrato`. **Rigor** (escrito en todas las filas): `critico` marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar) y `normal` es el resto. Solo una tarea `[API]` puede ser `critico`, y `base-de-datos` y `evento` siempre lo son (el comprobador lo exige). Se marca `critico` cuando la tarea toca dinero y precios, seguridad (tokens, contraseñas, guards, roles, CORS, límites), concurrencia y transacciones (outbox, reservas, idempotencia), restricciones de la base o reglas del dominio críticas.
 >
 > **Diagrama opcional: de flujo** con las dependencias entre tareas, solo si son más de 5 o cruzan varias historias.
->
-> Una tarea está **lista para ejecutarse** cuando alguien puede escribir su primera prueba roja leyendo solo su fila. Detalle mínimo: `[DOC]` y `[WEB]` simples, un «Se comprueba» concreto; `[WEB]` que cambia lo que se ve, además la **Pantalla**, y se revisa en un navegador real a 360 y 1280 px; `[API]` que cambia la API, el **Contrato**; `[API]` crítica (dominio, seguridad, dinero, concurrencia, migración o evento), además las reglas e invariantes; `[E2E]`, el escenario paso a paso.
 
-| # | Capa | Tipo | Rigor | Tarea | Se comprueba | Depende de | Estado |
+| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |
 |---|---|---|---|---|---|---|---|
-| HU-nn.1 | [DOC] | producto | normal | … | … | — | 📝 |
-| HU-nn.2 | [API] | contrato | normal | … | … | HU-nn.1 | 📝 |
-| HU-nn.3 | [WEB] | pantalla | normal | … | … | HU-nn.2 | 📝 |
-| HU-nn.4 | [E2E] | recorrido | normal | … | … | HU-nn.3 | 📝 |
+| HU-nn.1 | 📄 DOC | 📦 producto | 🟢 normal | … | … | — | ✏️ propuesta |
+| HU-nn.2 | ⚙️ API | 📜 contrato | 🟢 normal | … | … | HU-nn.1 | ✏️ propuesta |
+| HU-nn.3 | 🌐 WEB | 🖼️ pantalla | 🟢 normal | … | … | HU-nn.2 | ✏️ propuesta |
+| HU-nn.4 | 🧪 E2E | 🔁 recorrido | 🟢 normal | … | … | HU-nn.3 | ✏️ propuesta |
 
-- [ ] HU-nn.1 [DOC] … Se comprueba: …
+## Detalle de las tareas
+
+> Un bloque por tarea, con el mismo id que su fila. **Se comprueba** es una **lista de casillas** (`- [ ]`): cada una es algo concreto y verificable; se marcan (`- [x]`) al cumplirse y una tarea `hecho` las tiene todas marcadas. Una tarea está **lista para ejecutarse** cuando su primera comprobación basta para escribir la primera prueba roja. Una tarea con rigor `critico` lleva además **Reglas e invariantes** (lo que nunca debe dejar de cumplirse: es lo que las mutaciones comprueban). Detalle mínimo según la tarea: `[DOC]` y `[WEB]` simples, comprobaciones concretas; `[WEB]` que cambia lo que se ve, además la **Pantalla**, y se revisa en un navegador real a 360 y 1280 px; `[API]` que cambia la API, además el **Contrato**; `[E2E]`, el escenario paso a paso.
+
+### HU-nn.1 Título de la tarea
+
+**Se comprueba**
+
+- [ ] …
+
+### HU-nn.2 Título de la tarea
+
+**Se comprueba**
+
+- [ ] …
+
+**Reglas e invariantes** (solo si el rigor es `critico`)
+
+- …
 
 ## Notas de diseño (orientativas, no vinculantes)
 

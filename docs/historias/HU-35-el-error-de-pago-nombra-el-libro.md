@@ -90,15 +90,44 @@ Textos exactos (los dos van a `07-contenido-y-mensajes.md` en `HU-12.1`): «No h
 
 ## Tareas
 
-| # | Capa | Tipo | Rigor | Tarea | Se comprueba | Depende de | Estado |
+| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |
 |---|---|---|---|---|---|---|---|
-| HU-35.1 | [API] | contrato | normal | Los `422` `OUT_OF_STOCK` y `STOCK_ITEM_NOT_FOUND` llevan el `isbn` | `OutOfStockError` y `StockItemNotFoundError` (`contracts/inventory/stock.errors.ts`) exponen `isbn`; `platform/http/domain-exception.filter.ts` lo añade al cuerpo solo cuando el error lo define; cumple el **Contrato** de arriba (campo `isbn` solo en esos dos `422`); OpenAPI y `api-contrato.md` al día; sigue informando **solo el primer libro** que falla (orden por ISBN). Pruebas: `domain-exception.filter.spec`, `api-exception.filter.spec`, `orders.e2e.spec` | HU-12.1 | 📝 |
-| HU-35.2 | [WEB] | comportamiento | normal | El aviso de pago nombra el libro | `/cambio-de-contrato` si el esquema aún no trae `isbn`; `ApiError` conserva `isbn`; ayudante en `features/checkout/errors.ts` (la forma de `Outcome` **no** cambia: `payment-outcome.test.ts` compara con `toEqual`) que busca el título en el carrito; sin `isbn` o sin la línea, el mensaje genérico de hoy; el aviso cumple la sección **Pantalla** (mismo lugar y variante, solo cambia el texto; un título largo no desborda a 360 px) **revisada en un navegador real**. Pruebas: `checkout-errors.test.tsx`, `errors.test.ts` | HU-35.1 | 📝 |
-| HU-35.3 | [E2E] | recorrido | normal | La carrera de dos compradores | Un libro con 2 unidades: A lista para pagar con 2, B compra 1 por la API, A paga → el aviso nombra el libro y no hay cobro ni pedido; reemplaza el escenario viejo de `purchase.e2e.ts` (ya no llega al error cuando el carrito limita la cantidad); contra `vp dev` y el build de producción | HU-35.2 | 📝 |
+| HU-35.1 | ⚙️ API | 📜 contrato | 🟢 normal | Los `422` `OUT_OF_STOCK` y `STOCK_ITEM_NOT_FOUND` llevan el `isbn` | Que la tienda pueda decir qué libro falló sin leer el texto del mensaje | HU-12.1 | ✏️ propuesta |
+| HU-35.2 | 🌐 WEB | 🔀 comportamiento | 🟢 normal | El aviso de pago nombra el libro | Que el aviso diga «No hay suficientes unidades de «Título»» en lugar de «uno de tus libros» | HU-35.1 | ✏️ propuesta |
+| HU-35.3 | 🧪 E2E | 🔁 recorrido | 🟢 normal | La carrera de dos compradores | Comprobar con el backend real que el aviso nombra el libro cuando otra persona se lleva el último ejemplar | HU-35.2 | ✏️ propuesta |
 
-- [ ] HU-35.1 [API] `isbn` en los errores de stock. Se comprueba: lo de la tabla
-- [ ] HU-35.2 [WEB] El aviso nombra el libro. Se comprueba: lo de la tabla
-- [ ] HU-35.3 [E2E] La carrera de dos compradores. Se comprueba: lo de la tabla
+## Detalle de las tareas
+
+### HU-35.1 Los `422` `OUT_OF_STOCK` y `STOCK_ITEM_NOT_FOUND` llevan el `isbn`
+
+**Se comprueba**
+
+- [ ] `OutOfStockError` y `StockItemNotFoundError` (`contracts/inventory/stock.errors.ts`) exponen `isbn`
+- [ ] `platform/http/domain-exception.filter.ts` lo añade al cuerpo solo cuando el error lo define
+- [ ] cumple el **Contrato** de la HU: `isbn` solo en esos dos `422`, aditivo
+- [ ] OpenAPI y `api-contrato.md` al día
+- [ ] sigue informando solo el primer libro que falla (orden por ISBN)
+- [ ] pruebas: `domain-exception.filter.spec`, `api-exception.filter.spec` y `orders.e2e.spec`
+
+### HU-35.2 El aviso de pago nombra el libro
+
+**Se comprueba**
+
+- [ ] `/cambio-de-contrato` si el esquema aún no trae `isbn`
+- [ ] `ApiError` conserva `isbn`
+- [ ] un ayudante en `features/checkout/errors.ts` busca el título en el carrito; la forma de `Outcome` no cambia (`payment-outcome.test.ts` compara con `toEqual`)
+- [ ] sin `isbn` o sin la línea del carrito, queda el mensaje genérico de hoy
+- [ ] el aviso cumple la sección **Pantalla** (mismo lugar y variante, solo cambia el texto; un título largo no desborda a 360 px), revisado en un navegador real
+- [ ] pruebas: `checkout-errors.test.tsx` y `errors.test.ts`
+
+### HU-35.3 La carrera de dos compradores
+
+**Se comprueba**
+
+- [ ] un libro con 2 unidades: A lista para pagar con 2, B compra 1 por la API, A paga
+- [ ] el aviso nombra el libro y dice que no se cobró; no se crea ningún pedido
+- [ ] reemplaza el escenario viejo de `purchase.e2e.ts` (ya no llega al error cuando el carrito limita la cantidad)
+- [ ] pasa contra `vp dev` y contra el build de producción
 
 ## Decisiones y desvíos
 

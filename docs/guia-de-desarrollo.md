@@ -77,7 +77,7 @@ Cada pregunta tiene **una** fuente de verdad. Si un documento contradice al cód
 
 | Pregunta | Fuente |
 |---|---|
-| ¿Qué tarea toca y qué se comprueba? | La fila y la casilla de la tarea en el archivo de su HU, `historias/HU-nn-….md` (columnas «Se comprueba» y «Depende de»); la matriz de todas, en [`historias/README.md`](historias/README.md) |
+| ¿Qué tarea toca y qué se comprueba? | La fila de la tarea (índice: capa, tipo, rigor, objetivo, «Depende de») y su bloque de detalle («Se comprueba» con casillas) en el archivo de su HU, `historias/HU-nn-….md`; la matriz de todas, en [`historias/README.md`](historias/README.md) |
 | ¿Qué debe hacer el producto? | [`product/`](product/README.md): reglas `RN-nn` (03), historias `HU-nn` (04), decisiones `DP-nn` (09), pantallas `PA-nn` (06) |
 | ¿Cuál es el contrato HTTP? | [`api-contrato.md`](api-contrato.md) y, ejecutándose, `/docs-json` |
 | ¿Cómo está construido y por qué? | [`CLAUDE.md`](../CLAUDE.md), [`backend/05-piezas-clave.md`](backend/05-piezas-clave.md) y la tabla «Decisiones y desvíos» de [`avance.md`](avance.md) (lo que se apartó del plan; lo anterior, en los `00-avance.md` congelados) |
@@ -105,7 +105,7 @@ Dos fases: primero la **historia** se convierte en tareas (una vez, con tu aprob
 
 | Tarea | Detalle antes de ejecutarla |
 |---|---|
-| `[DOC]` y `[WEB]` simples | Un «Se comprueba» concreto |
+| `[DOC]` y `[WEB]` simples | Comprobaciones concretas en su bloque |
 | `[WEB]` que cambia lo que se ve | + la **Pantalla** de la HU, y se revisa en un navegador real a 360 y 1280 px |
 | `[API]` que cambia la API | + el **Contrato** de la HU |
 | `[API]` con rigor `critico` (dominio, seguridad, dinero, concurrencia, migración, evento) | + reglas e invariantes |
@@ -123,14 +123,14 @@ Nueve pasos, en este orden. El ejemplo es una tarea real del corte 7 (histórica
 
 | # | Paso | En la 7.8 |
 |---|---|---|
-| 1 | **Leer** la fila de la tarea, su «Se comprueba», de qué depende y las reglas que cita | «cada comprador ve solo lo suyo, el administrador ve el de cualquier cliente, la paginación sigue igual»; reglas RN-36, RN-40 y DP-18 |
+| 1 | **Leer** la fila de la tarea, su bloque de detalle («Se comprueba»), de qué depende y las reglas que cita | «cada comprador ve solo lo suyo, el administrador ve el de cualquier cliente, la paginación sigue igual»; reglas RN-36, RN-40 y DP-18 |
 | 2 | **Receta y plan corto.** La columna **Tipo** de la fila dice qué receta cargar (la **receta por tipo** está en la [plantilla de historias](historias/_plantilla.md)). El plan corto, solo en las tareas con rigor `critico` o de varios archivos: en el modo de planificación, qué archivos, qué patrón se copia, qué pruebas y qué mutaciones; se aprueba y **no se guarda en un archivo** | (en el corte 7 no existía este paso) |
 | 3 | **Pruebas primero** y verlas fallar | `test/e2e/my-orders.e2e.spec.ts` (14 pruebas) falla porque la ruta no existe |
 | 4 | **Implementar** lo mínimo, con el estilo del código vecino | `my-orders.controller.ts`, `admin-order.controller.ts`, `list-orders.dto.ts` |
 | 5 | **Revisión visual** (solo `[WEB]` que cambia lo que se ve): la tienda en un navegador real (Playwright, con la API y el seed) a 360 y 1280 px, comparada con la **Pantalla** de la HU; se anota en la bitácora qué se revisó y qué se ajustó. No hay pruebas de captura píxel a píxel (se rompen con cualquier cambio de contenido); el contraste y los objetivos táctiles los cubre axe en la `[E2E]` | (en el corte 7 no había pantallas) |
 | 6 | **Compuerta**: `scripts/verify.sh` (detecta sola si tocaste backend, tienda o ambos) | tipos, lint, formato, build, 1120 unitarias y 902 de integración y e2e |
 | 7 | **Mutaciones** si la tarea tiene rigor `critico` (solo `[API]`) | 15 cambios deliberados, todos detectados |
-| 8 | **Documentos** en el mismo commit | casilla, fila de la tabla de la HU, «Decisiones y desvíos», bitácora con los conteos reales y `api-contrato.md` |
+| 8 | **Documentos** en el mismo commit | casillas del bloque, Estado de la fila, «Decisiones y desvíos», bitácora con los conteos reales y `api-contrato.md` |
 | 9 | **Un commit** con el prefijo de la tarea y su capa | hoy: `HU-40.2 [API]: Add GET /me/orders…` (entonces: `7.8: …`) |
 
 Reglas del ciclo:
@@ -139,7 +139,7 @@ Reglas del ciclo:
 - **El contrato y la pantalla aprobados mandan.** Una tarea `[API]` cumple la sección «Contrato» de su HU tal cual, y una `[WEB]` que cambia lo que se ve cumple su «Pantalla» (ubicación, textos, estados, tonos); si al implementar hay que apartarse, se detiene y se vuelve a pedir aprobación: no se decide al programar.
 - **Una tarea, una capa.** Si al implementarla aparece trabajo en la otra capa, no se mezcla: se añade como tarea nueva de la HU (con su dependencia) y se te avisa.
 - **Los números de la documentación salen de la última ejecución**, copiados de la salida. Nunca de memoria.
-- **Los documentos se marcan en los tres sitios** del archivo de la HU: la casilla de la lista, la fila de la tabla de tareas (⬜ → ✅) y **su** bitácora. Después se regenera la matriz con `python3 scripts/historias.py` (también comprueba que el archivo está bien formado).
+- **Los documentos se marcan en los tres sitios** del archivo de la HU: las **casillas** del bloque de la tarea (todas `- [x]`), el **Estado** de su fila (`⏳ pendiente` → `✅ hecho`) y **su** bitácora. Después se regenera la matriz con `python3 scripts/historias.py` (también comprueba que el archivo está bien formado).
 - **Si se pide una HU entera** («haz la HU-12»), se encadenan sus tareas en orden sin detenerse a informar entre una y otra; el informe va una vez, al final.
 - **Cerrar la HU**: cuando todas sus tareas están ✅ **y** su «Listo cuando…» se ejecutó de verdad (la tarea `[E2E]`), el archivo pasa a `estado: cerrada` y la matriz muestra su fecha de cierre y su tiempo (salen de `git log`); el script no deja cerrar una HU sin `[E2E]` ni con tareas pendientes. Una HU con tareas hechas pero sin su `[E2E]` no está cerrada.
 - **Ramas:** una sola rama de trabajo para varias historias (hoy `feature/mvp`). **No se abren pull requests ni se sube nada** sin que lo pida quien manda el proyecto.

@@ -124,19 +124,72 @@ Resumen: 6 a 10 unidades → «Disponible», 2 a 5 → «Quedan N», 1 → «Que
 
 ## Tareas
 
-| # | Capa | Tipo | Rigor | Tarea | Se comprueba | Depende de | Estado |
+| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |
 |---|---|---|---|---|---|---|---|
-| HU-12.1 | [DOC] | producto | normal | Aprobar y registrar la decisión de producto de las tres historias | HU-12, HU-23 y HU-35 aprobadas; **RN-13** y **DP-05** reescritas; `DP-25` nueva (tope 10, dentro del catálogo, orientativa); `00-vision` (sale de «fuera de alcance»), PA-01/02/05, wireframes y mockup PA-02, `07-contenido` (textos «Disponible», «Quedan N», «Agotado» y los del error con título). `grep` de «no se muestra stock» sin restos. `product/04` no se toca (histórico) | aprobación del usuario | 📝 |
-| HU-12.2 | [API] | regla | critico | Inventario: leer la disponibilidad con tope | Función pura `reportedAvailability` (tope 10, nunca negativa) y consulta de contrato por lote; un ISBN sin registro cuenta 0; **mutaciones** (dominio): tope, 0, fila ausente; el puerto de lectura tiene su fake y su contrato de pruebas contra la base real | HU-12.1 | 📝 |
-| HU-12.3 | [API] | contrato | normal | Catálogo: `available` en `GET /books` y `GET /books/:isbn` | Catálogo pregunta a Inventario por contrato (una consulta por página, máx. 50 ISBN); el detalle deja de reutilizar la consulta de precio de Ventas; cumple el **Contrato** de arriba (campo requerido, 0–10, aditivo); OpenAPI; `CLAUDE.md` y las guías 01/05 del backend dicen la nueva dirección de la dependencia (Catálogo → Inventario por contrato; Inventario nunca llama a Catálogo); specs de estructura exactos al día | HU-12.2 | 📝 |
-| HU-12.4 | [WEB] | pantalla | normal | Lista y detalle muestran la disponibilidad; el botón respeta el límite | `/cambio-de-contrato` (regenera `schema.d.ts`); componente de aviso compartido (`shared/ui`) y lo de la sección **Pantalla** (ubicación, textos, tonos, móvil y escritorio) **revisado en un navegador real a 360 y 1280 px**, con la captura anotada en la bitácora; «Agotado» deshabilita el botón; límite = min(10, disponibles); se reescribe la prueba «no muestra el stock» (`book-detail-page.test.tsx`) | HU-12.3 | 📝 |
-| HU-12.5 | [E2E] | recorrido | normal | Catálogo y detalle contra el backend real | Un libro con 3 unidades y otro sin stock (creados por la API de administración): «Quedan 3» y «Agotado» en lista y detalle, el botón respeta el límite; axe a 360 y 1280 px; `test:perf` sin regresión; contra `vp dev` y el build de producción | HU-12.4 | 📝 |
+| HU-12.1 | 📄 DOC | 📦 producto | 🟢 normal | Aprobar y registrar la decisión de producto de las tres historias | Que las reglas de producto digan que el stock se muestra, antes de tocar código | aprobación del usuario | ✏️ propuesta |
+| HU-12.2 | ⚙️ API | 📐 regla | 🔴 critico | Inventario: leer la disponibilidad con tope | Que Inventario sepa decir cuántas unidades se pueden ofrecer (tope 10) sin exponer el inventario real | HU-12.1 | ✏️ propuesta |
+| HU-12.3 | ⚙️ API | 📜 contrato | 🟢 normal | Catálogo: `available` en `GET /books` y `GET /books/:isbn` | Que la tienda reciba la disponibilidad en las mismas llamadas que ya hace, sin llamadas extra | HU-12.2 | ✏️ propuesta |
+| HU-12.4 | 🌐 WEB | 🖼️ pantalla | 🟢 normal | Lista y detalle muestran la disponibilidad; el botón respeta el límite | Que la persona vea si hay stock desde la lista y el detalle, y no pueda agregar más de lo que hay | HU-12.3 | ✏️ propuesta |
+| HU-12.5 | 🧪 E2E | 🔁 recorrido | 🟢 normal | Catálogo y detalle contra el backend real | Comprobar de punta a punta que la persona ve la disponibilidad real | HU-12.4 | ✏️ propuesta |
 
-- [ ] HU-12.1 [DOC] Decisión de producto aprobada y registrada. Se comprueba: lo de la tabla
-- [ ] HU-12.2 [API] Disponibilidad en Inventario. Se comprueba: lo de la tabla
-- [ ] HU-12.3 [API] `available` en el catálogo. Se comprueba: lo de la tabla
-- [ ] HU-12.4 [WEB] Lista, detalle y botón. Se comprueba: lo de la tabla
-- [ ] HU-12.5 [E2E] Catálogo y detalle de punta a punta. Se comprueba: lo de la tabla
+## Detalle de las tareas
+
+### HU-12.1 Aprobar y registrar la decisión de producto de las tres historias
+
+**Se comprueba**
+
+- [ ] HU-12, HU-23 y HU-35 aprobadas por el usuario (`estado: aprobada` en su encabezado)
+- [ ] `RN-13` y `DP-05` reescritas, y `DP-25` nueva (tope 10, dentro del catálogo, orientativa)
+- [ ] `00-vision` sin «stock visible» en «fuera de alcance»; PA-01, PA-02 y PA-05, los wireframes y el mockup PA-02 actualizados
+- [ ] `07-contenido` con los textos «Disponible», «Quedan N», «Agotado» y los del error con título
+- [ ] un `grep` de «no se muestra stock» no deja restos, y `product/04` no se toca (histórico)
+
+### HU-12.2 Inventario: leer la disponibilidad con tope
+
+**Se comprueba**
+
+- [ ] la función pura `reportedAvailability` aplica el tope 10 y nunca devuelve un número negativo
+- [ ] un ISBN sin registro de stock cuenta 0
+- [ ] la consulta de contrato responde por lote (varios ISBN en una sola consulta)
+- [ ] el puerto de lectura tiene su fake y su contrato de pruebas contra la base real
+- [ ] mutaciones sobre el tope, el 0 y la fila ausente: todas detectadas
+
+**Reglas e invariantes**
+
+- `available` ya excluye lo reservado; el tope es `REPORTED_AVAILABILITY_CAP = 10` y coincide con RN-10 (Inventario no importa de Ventas)
+- un libro sin registro de stock es un libro agotado, nunca un error
+- el número informado nunca es negativo ni mayor que el tope
+
+### HU-12.3 Catálogo: `available` en `GET /books` y `GET /books/:isbn`
+
+**Se comprueba**
+
+- [ ] cumple el **Contrato** de la HU: campo `available` requerido, entero de 0 a 10, aditivo
+- [ ] Catálogo pregunta a Inventario por contrato, una consulta por página (máx. 50 ISBN)
+- [ ] el detalle deja de reutilizar la consulta de precio de Ventas
+- [ ] el OpenAPI documenta `available`
+- [ ] `CLAUDE.md` y las guías 01 y 05 del backend dicen la dirección nueva (Catálogo → Inventario por contrato; Inventario nunca llama a Catálogo)
+- [ ] los specs de estructura exactos de catálogo e inventario al día
+
+### HU-12.4 Lista y detalle muestran la disponibilidad; el botón respeta el límite
+
+**Se comprueba**
+
+- [ ] `/cambio-de-contrato`: `schema.d.ts` regenerado con `available`
+- [ ] componente de aviso compartido en `shared/ui` con «Disponible», «Quedan N», «Queda 1» y «Agotado»
+- [ ] «Agotado» deja el botón deshabilitado y el límite es min(10, disponibles)
+- [ ] se reescribe la prueba «no muestra el stock» (`book-detail-page.test.tsx`)
+- [ ] revisado en un navegador real a 360 y 1280 px contra la sección **Pantalla**, con la captura anotada en la bitácora
+
+### HU-12.5 Catálogo y detalle contra el backend real
+
+**Se comprueba**
+
+- [ ] un libro con 3 unidades y otro sin stock (creados por la API de administración): «Quedan 3» y «Agotado» en la lista y en el detalle
+- [ ] el botón respeta el límite
+- [ ] axe sin violaciones a 360 y 1280 px
+- [ ] `test:perf` sin regresión
+- [ ] pasa contra `vp dev` y contra el build de producción
 
 ## Notas de diseño (orientativas, no vinculantes)
 

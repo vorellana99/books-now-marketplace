@@ -8,6 +8,7 @@ archivo nuevo lee el encabezado y la tabla de tareas; la fecha y el tiempo salen
     python3 scripts/historias.py           # reescribe la matriz y comprueba
     python3 scripts/historias.py --check   # solo comprueba (estructura); código de salida 1 si algo no cuadra
     python3 scripts/historias.py --tipos   # imprime la tabla de tipos de tarea (la fuente es docs/historias/_plantilla.md)
+    python3 scripts/historias.py --formato # completa y corrige los iconos de la tabla de tareas de cada historia
 
 Solo usa la biblioteca estándar. Pruebas: cd scripts && python3 -m unittest test_historias
 """
@@ -25,8 +26,9 @@ END = "<!-- MATRIZ:FIN -->"
 ESTADOS = {"propuesta": "📝 propuesta", "aprobada": "⬜ aprobada", "en-curso": "🔄 en curso", "cerrada": "✅ cerrada"}
 CAPAS = ("DOC", "API", "WEB", "E2E")
 REQUERIDOS = ("id", "titulo", "tipo", "epica", "estado")
-# `| HU-12.2 | [API] | regla | critico | Tarea | Se comprueba | Depende de | Estado |`
-TAREA = re.compile(r"^\|\s*((?:HU|EN)-\d+\.\d+)\s*\|\s*\[(API|WEB|E2E|DOC)\]\s*\|([^|]*)\|([^|]*)\|.*\|\s*(⬜|🔄|✅|📝|⛔)\s*\|\s*$")
+# Una fila de la tabla de tareas: `| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |`
+FILA = re.compile(r"^\|\s*((?:HU|EN)-\d+\.\d+)\s*\|(.*)\|\s*$")
+COLUMNAS_TAREA = ("Capa", "Tipo", "Rigor", "Tarea", "Objetivo", "Depende de", "Estado")
 # Rigor de cada tarea, siempre escrito (kebab-case, como los tipos). `critico`: mutaciones obligatorias y plan corto antes de
 # codificar (solo [API]); `normal`: el resto
 CRITICO, NORMAL = "critico", "normal"
@@ -42,6 +44,19 @@ TIPOS = {
     "E2E": ("recorrido",),
 }
 SIEMPRE_CRITICOS = ("base-de-datos", "evento")
+ESTADOS_TAREA = ("propuesta", "pendiente", "en-curso", "hecho", "bloqueado")
+# Cada valor de las columnas estructuradas (Capa, Tipo, Rigor, Estado) se escribe «icono texto» y su icono es siempre el mismo:
+# el texto es el valor (kebab-case) y el icono lo acompaña. El comprobador exige que estén en TODAS las filas y que coincidan;
+# `python3 scripts/historias.py --formato` los completa
+ICONOS = {
+    "capa": {"API": "\u2699\ufe0f", "WEB": "🌐", "E2E": "🧪", "DOC": "📄"},  # ⚙️ lleva el selector de emoji (U+FE0F)
+    "tipo": {
+        "contrato": "📜", "regla": "📐", "evento": "⚡", "base-de-datos": "🧊", "configuracion": "\U0001f6e0\ufe0f",
+        "pantalla": "\U0001f5bc\ufe0f", "comportamiento": "🔀", "producto": "📦", "guia": "📘", "recorrido": "🔁",
+    },
+    "rigor": {"critico": "🔴", "normal": "🟢"},
+    "estado": {"propuesta": "\u270f\ufe0f", "pendiente": "⏳", "en-curso": "⏩", "hecho": "✅", "bloqueado": "⛔"},
+}
 
 
 class HistoriaError(Exception):
@@ -65,22 +80,125 @@ def parse_front_matter(text):
     raise HistoriaError("el encabezado no se cierra con `---`")
 
 
+def _sin_variacion(texto):
+    return texto.replace("\ufe0f", "")  # el selector de emoji no cuenta al comparar iconos
+
+
+def cell(kind, text):
+    """La celda canónica de una columna estructurada: «icono texto»."""
+    return f"{ICONOS[kind][text]} {text}"
+
+
+def parse_cell(raw):
+    """(icono, texto) de una celda: «🔌 API» → ("🔌", "API"); «[API]» (formato antiguo) → ("", "API"); «⬜» → ("⬜", "")."""
+    limpio = _sin_variacion(raw).replace("[", "").replace("]", "").strip()
+    m = re.match(r"^([^\w\s]*)\s*(.*)$", limpio)
+    return m.group(1), m.group(2).strip()
+
+
+def _valor(kind, raw):
+    """El valor (texto) de una celda; si solo trae icono, el valor al que corresponde ese icono."""
+    icono, texto = parse_cell(raw)
+    if texto:
+        return texto
+    for valor, ic in ICONOS[kind].items():
+        if icono and _sin_variacion(ic) == icono:
+            return valor
+    return ""
+
+
+def parse_rows(text):
+    """[(id, [celdas sin recortar])] de las filas de la tabla de tareas (una fila es `| HU-nn.k | … |`)."""
+    rows = []
+    for line in text.splitlines():
+        m = FILA.match(line)
+        if m:
+            rows.append((m.group(1), m.group(2).split("|")))
+    return rows
+
+
 def parse_tasks(text):
-    """[(id de la tarea, capa, estado)] de las filas de la tabla de tareas."""
-    return [(m.group(1), m.group(2), m.group(5)) for m in (TAREA.match(line) for line in text.splitlines()) if m]
+    """[(id de la tarea, capa, estado)] de las filas bien formadas de la tabla de tareas."""
+    return [(tid, _valor("capa", c[0]), _valor("estado", c[6])) for tid, c in parse_rows(text) if len(c) == len(COLUMNAS_TAREA)]
 
 
 def parse_task_types(text):
-    """[(id, capa, tipo, rigor)] de las filas de la tabla de tareas (las celdas «Tipo» y «Rigor», tal cual están escritas)."""
-    return [(m.group(1), m.group(2), m.group(3).strip(), m.group(4).strip()) for m in (TAREA.match(line) for line in text.splitlines()) if m]
+    """[(id, capa, tipo, rigor)] de las filas de la tabla de tareas (el texto de cada celda, sin el icono)."""
+    return [(tid, _valor("capa", c[0]), _valor("tipo", c[1]), _valor("rigor", c[2])) for tid, c in parse_rows(text) if len(c) == len(COLUMNAS_TAREA)]
 
 
-# `> | `[API]` | `contrato` | Qué cambia | Ejemplos | no |` (la tabla de tipos de la plantilla)
-FILA_TIPO = re.compile(r"^>\s*\|\s*`\[(API|WEB|E2E|DOC)\]`\s*\|\s*`([a-z0-9-]+)`\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*(sí|no)\s*\|\s*$")
+def parse_detail_blocks(text):
+    """{id de la tarea: {"checks": [(marcada, texto)], "reglas": bool}} de «## Detalle de las tareas» (un `### HU-nn.k …` por tarea)."""
+    cuerpo = section(text, "Detalle de las tareas") or ""
+    bloques = {}
+    for trozo in re.split(r"(?m)^### ", cuerpo)[1:]:
+        m = re.match(r"((?:HU|EN)-\d+\.\d+)\b", trozo)
+        if not m:
+            continue
+        checks = [(c.lower() == "x", t.strip()) for c, t in re.findall(r"(?m)^- \[( |x|X)\] (.+)$", trozo)]
+        reglas = re.search(r"\*\*Reglas e invariantes\*\*[^\n]*\n(.*?)(?=\n\*\*|\Z)", trozo, re.S)
+        bloques[m.group(1)] = {"checks": checks, "reglas": bool(reglas and reglas.group(1).strip())}
+    return bloques
+
+
+def _celda_canonica(kind, raw, capa=None):
+    """La celda canónica de `raw`, o None si no se entiende su valor."""
+    valor = _valor(kind, raw)
+    validos = ICONOS[kind]
+    if kind == "tipo" and capa in TIPOS:
+        validos = TIPOS[capa]
+    return cell(kind, valor) if valor in validos else None
+
+
+def format_text(text):
+    """El texto con los iconos de las columnas Capa, Tipo, Rigor y Estado de cada fila de tareas completados o corregidos. Lo que no
+    entiende lo deja como está (el comprobador lo señala)."""
+    out = []
+    for line in text.splitlines():
+        m = FILA.match(line)
+        if m:
+            c = m.group(2).split("|")
+            if len(c) == len(COLUMNAS_TAREA):
+                capa = _valor("capa", c[0])
+                nuevas = [_celda_canonica(k, c[i], capa) for k, i in (("capa", 0), ("tipo", 1), ("rigor", 2), ("estado", 6))]
+                for nueva, i in zip(nuevas, (0, 1, 2, 6)):
+                    if nueva:
+                        c[i] = nueva
+                line = "| " + " | ".join([m.group(1)] + [x.strip() for x in c]) + " |"
+        out.append(line)
+    return "\n".join(out) + ("\n" if text.endswith("\n") else "")
+
+
+# `> | 🔌 API | 📜 contrato | Qué cambia | Ejemplos | no |` (la tabla de tipos de la plantilla)
+FILA_TIPO = re.compile(r"^>\s*\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|\s*(sí|no)\s*\|\s*$")
 
 
 def _filas_tipo(text):
-    return [m.groups() for m in (FILA_TIPO.match(line) for line in text.splitlines()) if m]
+    filas = []
+    for line in text.splitlines():
+        m = FILA_TIPO.match(line)
+        if m:
+            capa, tipo = parse_cell(m.group(1))[1], parse_cell(m.group(2))[1]
+            if capa in CAPAS and tipo:
+                filas.append((capa, tipo, m.group(3).strip(), m.group(4).strip(), m.group(5)))
+    return filas
+
+
+def template_icon_errors(text):
+    """Los errores de icono de la tabla de tipos de la plantilla: cada capa y cada tipo debe llevar el icono de ICONOS."""
+    errores = []
+    for line in text.splitlines():
+        m = FILA_TIPO.match(line)
+        if not m:
+            continue
+        for kind, raw in (("capa", m.group(1)), ("tipo", m.group(2))):
+            icono, texto = parse_cell(raw)
+            if texto not in ICONOS[kind]:
+                continue
+            esperado = ICONOS[kind][texto]
+            if _sin_variacion(icono) != _sin_variacion(esperado):
+                errores.append(f"{PLANTILLA}: en la tabla de tipos, «{texto}» lleva el icono «{icono}» y debe llevar {esperado}")
+    return errores
 
 
 def parse_types_table(text):
@@ -103,7 +221,7 @@ def render_types(text):
     for capa, tipo, cambia, ejemplos, siempre in _filas_tipo(text):
         cambia, ejemplos = quitar(cambia), quitar(ejemplos)
         extra = f" · siempre {CRITICO}" if siempre == "sí" else ""
-        lines.append(f"  [{capa}] {tipo} — {cambia} (ej.: {ejemplos}){extra}")
+        lines.append(f"  {cell('capa', capa)}  {cell('tipo', tipo)} — {cambia} (ej.: {ejemplos}){extra}")
     lines += ["", f"Fuente: {PLANTILLA}. Rigor «{CRITICO}» = tarea crítica (mutaciones obligatorias y plan corto; solo [API]); «{NORMAL}» = el resto."]
     return "\n".join(lines)
 
@@ -119,9 +237,9 @@ def layer_status(tasks, capa):
     states = [s for _, c, s in tasks if c == capa]
     if not states:
         return "—"
-    if all(s == "✅" for s in states):
+    if all(s == "hecho" for s in states):
         return "✅"
-    if all(s in ("⬜", "📝") for s in states):
+    if all(s in ("pendiente", "propuesta") for s in states):
         return "⬜"
     return "🔄"
 
@@ -204,7 +322,7 @@ def new_rows(root, commits):
         meta = parse_front_matter(text)
         tasks = parse_tasks(text)
         stats = story_stats(meta["id"], commits)
-        done = sum(1 for _, _, s in tasks if s == "✅")
+        done = sum(1 for _, _, s in tasks if s == "hecho")
         closed = meta["estado"] == "cerrada"
         rows.append({
             "id": meta["id"], "titulo": meta["titulo"], "epica": meta["epica"],
@@ -262,6 +380,36 @@ def matrix_cells(root):
     return cells
 
 
+def _comprobar_fila(nombre, tid, cells):
+    """Los errores de las columnas estructuradas de una fila: valor del vocabulario, icono y reglas de rigor y objetivo."""
+    errores = []
+    capa_t = parse_cell(cells[0])[1]
+    columnas = (("capa", "capa", cells[0], tuple(ICONOS["capa"])),
+                ("tipo", "tipo", cells[1], TIPOS.get(capa_t, tuple(ICONOS["tipo"]))),
+                ("rigor", "rigor", cells[2], RIGORES),
+                ("estado", "estado", cells[6], ESTADOS_TAREA))
+    for kind, nombre_col, raw, validos in columnas:
+        icono, texto = parse_cell(raw)
+        if texto not in validos:
+            extra = f". Los tipos y sus ejemplos están en {PLANTILLA} (o `python3 scripts/historias.py --tipos`)" if kind == "tipo" else ""
+            sufijo = ", en minúsculas y sin acento" if kind == "rigor" else ""
+            errores.append(f"{nombre}: la tarea {tid} tiene un {nombre_col} «{texto}» no válido (usa {', '.join(validos)}{sufijo}){extra}")
+            continue
+        esperado = ICONOS[kind][texto]
+        if not icono:
+            errores.append(f"{nombre}: a la tarea {tid} le falta el icono de {nombre_col} («{esperado} {texto}»): ejecuta `python3 scripts/historias.py --formato`")
+        elif _sin_variacion(icono) != _sin_variacion(esperado):
+            errores.append(f"{nombre}: la tarea {tid} tiene un icono incorrecto en {nombre_col} ({icono}): «{texto}» lleva {esperado} (`python3 scripts/historias.py --formato` lo corrige)")
+    capa, tipo, rigor = capa_t, _valor("tipo", cells[1]), _valor("rigor", cells[2])
+    if rigor == CRITICO and capa != "API":
+        errores.append(f"{nombre}: la tarea {tid} tiene rigor {CRITICO} y solo las tareas [API] pueden serlo (mutaciones y plan corto)")
+    elif rigor == NORMAL and tipo in SIEMPRE_CRITICOS and capa == "API":
+        errores.append(f"{nombre}: la tarea {tid} es de tipo {tipo} y debe tener rigor {CRITICO} (siempre es crítica)")
+    if cells[4].strip() in ("", "…", "..."):
+        errores.append(f"{nombre}: la tarea {tid} no tiene objetivo (una frase sobre el resultado que se busca)")
+    return errores
+
+
 def check(root):
     errors = []
     legacy = {x["id"] for x in json.loads((Path(root) / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))["historias"]}
@@ -287,34 +435,50 @@ def check(root):
         if meta["estado"] not in ESTADOS:
             errors.append(f"{path.name}: estado «{meta['estado']}» no válido (usa {', '.join(ESTADOS)})")
             continue
+        rows = parse_rows(text)
+        bloques = parse_detail_blocks(text)
         tasks = parse_tasks(text)
-        for tid, _, _ in tasks:
+        for tid, cells in rows:
             if not tid.startswith(f"{sid}."):
                 errors.append(f"{path.name}: la tarea {tid} no es de {sid}")
+            if len(cells) != len(COLUMNAS_TAREA):
+                errors.append(f"{path.name}: la fila de {tid} tiene {len(cells)} columnas y debe tener {len(COLUMNAS_TAREA)} después del número ({' | '.join(COLUMNAS_TAREA)}); una celda no puede llevar el carácter «|»")
+                continue
+            errors += _comprobar_fila(path.name, tid, cells)
+            if tid not in bloques:
+                errors.append(f"{path.name}: la tarea {tid} no tiene su bloque de detalle («### {tid} …» dentro de «## Detalle de las tareas», con «**Se comprueba**» y sus casillas)")
+        ids = {tid for tid, _ in rows}
+        for tid in bloques:
+            if tid not in ids:
+                errors.append(f"{path.name}: hay un bloque de detalle de {tid} y no existe esa tarea en la tabla")
         for tid, capa, tipo, rigor in parse_task_types(text):
-            if tipo not in TIPOS[capa]:
-                errors.append(f"{path.name}: la tarea {tid} [{capa}] tiene un tipo «{tipo}» no válido (usa {', '.join(TIPOS[capa])}). Los tipos y sus ejemplos están en {PLANTILLA} (o `python3 scripts/historias.py --tipos`)")
-            if rigor not in RIGORES:
-                errors.append(f"{path.name}: la tarea {tid} tiene un rigor «{rigor}» no válido (usa {', '.join(RIGORES)}, en minúsculas y sin acento)")
-            elif rigor == CRITICO and capa != "API":
-                errors.append(f"{path.name}: la tarea {tid} tiene rigor {CRITICO} y solo las tareas [API] pueden serlo (mutaciones y plan corto)")
-            elif rigor != CRITICO and tipo in SIEMPRE_CRITICOS and capa == "API":
-                errors.append(f"{path.name}: la tarea {tid} es de tipo {tipo} y debe tener rigor {CRITICO} (siempre es crítica)")
+            bloque, estado = bloques.get(tid), next((e for t, _, e in tasks if t == tid), "")
+            if not bloque:
+                continue
+            if not bloque["checks"]:
+                errors.append(f"{path.name}: el bloque de {tid} no tiene comprobaciones (casillas `- [ ]` bajo «**Se comprueba**»)")
+            elif estado == "hecho" and not all(m for m, _ in bloque["checks"]):
+                errors.append(f"{path.name}: {tid} está hecha pero tiene comprobaciones sin marcar (deben estar todas marcadas)")
+            elif estado == "propuesta" and any(m for m, _ in bloque["checks"]):
+                errors.append(f"{path.name}: {tid} es una tarea propuesta y tiene comprobaciones marcadas")
+            if rigor == CRITICO and not bloque["reglas"]:
+                errors.append(f"{path.name}: {tid} es crítica y su bloque no tiene «**Reglas e invariantes**» con contenido")
         if any(c == "API" for _, c, _ in tasks) and not section(text, "Contrato"):
             errors.append(f"{path.name}: tiene tareas [API] y le falta la sección «## Contrato» (rutas, cuerpos, ejemplo, errores y compatibilidad; o «Sin cambios en el contrato»)")
         if any(c == "WEB" for _, c, _ in tasks) and not section(text, "Pantalla"):
             errors.append(f"{path.name}: tiene tareas [WEB] y le falta la sección «## Pantalla» (dónde va lo que cambia, estados, textos exactos, móvil y escritorio, accesibilidad; o «Sin cambios visuales»)")
         if meta["estado"] == "cerrada":
-            if any(s != "✅" for _, _, s in tasks) or not tasks:
+            if any(s != "hecho" for _, _, s in tasks) or not tasks:
                 errors.append(f"{path.name}: está cerrada pero tiene tareas sin hacer")
             if meta["tipo"] == "HU" and not any(c == "E2E" for _, c, _ in tasks):
                 errors.append(f"{path.name}: una HU cerrada necesita su tarea [E2E] (el «Listo cuando…» de punta a punta)")
-        if meta["estado"] == "propuesta" and any(s in ("✅", "🔄") for _, _, s in tasks):
+        if meta["estado"] == "propuesta" and any(s in ("hecho", "en-curso") for _, _, s in tasks):
             errors.append(f"{path.name}: es una propuesta pero tiene tareas hechas o en curso")
         expected[sid] = ESTADOS[meta["estado"]]
     plantilla = Path(root) / PLANTILLA
     if plantilla.exists():
         texto = plantilla.read_text(encoding="utf-8")
+        errors += template_icon_errors(texto)
         tabla = parse_types_table(texto)
         for capa, tipos in TIPOS.items():
             if set(tabla.get(capa, [])) != set(tipos):
@@ -337,6 +501,17 @@ def main(argv):
     root = Path(__file__).resolve().parent.parent
     if "--tipos" in argv:
         print(render_types((root / PLANTILLA).read_text(encoding="utf-8")))
+        return 0
+    if "--formato" in argv:
+        cambiados = 0
+        for path in story_files(root):
+            antes = path.read_text(encoding="utf-8")
+            despues = format_text(antes)
+            if despues != antes:
+                path.write_text(despues, encoding="utf-8")
+                cambiados += 1
+                print(f"formato: {path.name}")
+        print(f"iconos al día en {cambiados} archivo(s)")
         return 0
     if "--check" not in argv:
         write_matrix(root, git_commits(root))
