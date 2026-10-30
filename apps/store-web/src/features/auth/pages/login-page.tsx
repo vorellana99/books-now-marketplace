@@ -1,12 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
-import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Alert } from "@/shared/ui/alert.tsx";
 import { Button } from "@/shared/ui/button.tsx";
 import { TextField } from "@/shared/ui/text-field.tsx";
 import { login } from "../api.ts";
+import { PasswordField } from "../components/password-field.tsx";
 import { accountErrorMessage } from "../errors.ts";
 import { safeReturnTo } from "../return-to.ts";
 import { loginSchema, type LoginValues } from "../schemas.ts";
@@ -16,7 +16,6 @@ import { session } from "../session.ts";
 export function LoginPage() {
   const search = useSearch({ from: "/ingresar" });
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // El aviso de «tu sesión terminó» se muestra una sola vez: se toma del estado de la sesión y se descarta
@@ -64,26 +63,9 @@ export function LoginPage() {
             error={errors.email?.message}
             {...form.register("email")}
           />
-          <TextField
-            label="Contraseña"
-            type={showPassword ? "text" : "password"}
+          <PasswordField
             autoComplete="current-password"
             error={errors.password?.message}
-            endAdornment={
-              <button
-                type="button"
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-                aria-pressed={showPassword}
-                onClick={() => setShowPassword((shown) => !shown)}
-                className="grid size-11 place-items-center rounded-md text-muted-foreground hover:bg-accent"
-              >
-                {showPassword ? (
-                  <EyeOff aria-hidden="true" className="size-5" />
-                ) : (
-                  <Eye aria-hidden="true" className="size-5" />
-                )}
-              </button>
-            }
             {...form.register("password")}
           />
           <Button type="submit" disabled={isSubmitting} className="w-full">

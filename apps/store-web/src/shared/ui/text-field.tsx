@@ -5,7 +5,7 @@ import { cn } from "@/shared/lib/cn.ts";
 type TextFieldProps = Omit<ComponentProps<"input">, "id"> & {
   label: string;
   // El error de este campo: va debajo, con icono, y se enlaza con `aria-describedby`
-  error?: string | undefined;
+  error?: ReactNode;
   hint?: string | undefined;
   // Un botón dentro del campo (por ejemplo, mostrar la contraseña)
   endAdornment?: ReactNode;

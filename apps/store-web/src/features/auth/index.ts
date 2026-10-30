@@ -3,8 +3,9 @@ import { configureApi } from "@/shared/api/client.ts";
 import { session, type SessionState } from "./session.ts";
 
 export { LoginPage } from "./pages/login-page.tsx";
+export { RegisterPage } from "./pages/register-page.tsx";
 export { safeReturnTo } from "./return-to.ts";
-export { loginSearchSchema } from "./search.ts";
+export { loginSearchSchema, registerSearchSchema } from "./search.ts";
 
 export type { SessionState };
 

@@ -9,3 +9,8 @@ export const loginSearchSchema = z.object({
 });
 
 export type LoginSearch = z.infer<typeof loginSearchSchema>;
+
+// Parámetros de la URL de `/registro`: solo a dónde volver tras crear la cuenta
+export const registerSearchSchema = z.object({
+  returnTo: z.string().optional().catch(undefined),
+});

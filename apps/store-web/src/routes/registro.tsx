@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EmptyState } from "@/shared/ui/state-panel.tsx";
+import { RegisterPage, registerSearchSchema } from "@/features/auth/index.ts";
 
-// PA-03 llega en la tarea F2.3. Mientras tanto la ruta existe para que el enlace de PA-04 compile
+// PA-03 · Registrarse. La ruta solo conecta: declara la URL y qué pantalla muestra
 export const Route = createFileRoute("/registro")({
-  component: () => <EmptyState title="Estamos armando el registro" as="h1" />,
+  validateSearch: registerSearchSchema,
+  component: RegisterPage,
 });
