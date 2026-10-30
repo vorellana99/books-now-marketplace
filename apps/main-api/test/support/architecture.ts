@@ -4,18 +4,24 @@ import { posix } from 'node:path';
 //  - sales/domain:  solo decimal.js y node:*; puede usar shared-kernel, contracts y su propio domain
 //  - contracts:     solo @nestjs/cqrs y node:*; puede usar shared-kernel y otros contracts
 //  - shared-kernel: solo node:*; no depende de nada del proyecto
-//  - application/: puede usar Nest, pero no Prisma; las operaciones con la transacción van en infrastructure/
+//  - application/: puede usar Nest, pero no Prisma ni infrastructure/ (las dependencias van hacia adentro); lo que
+//    necesita de la base lo pide a un puerto de domain/ports/
 //  - un contexto no importa el código de otro: se hablan por contracts/
+// y las de estructura (`checkStructure`): los cuatro contextos tienen la misma forma, sin excepciones
 
 const DOMAIN_LIBRARIES = ['decimal.js'];
 const CONTRACT_LIBRARIES = ['@nestjs/cqrs'];
 
-/** Rutas importadas por un archivo, incluidos los imports de solo tipos, las re-exportaciones y los dinámicos. */
-export function importsOf(source: string): string[] {
-  const code = source
+function stripComments(source: string): string {
+  return source
     .replaceAll(/\/\*[\s\S]*?\*\//g, '') // comentarios de bloque
     .replaceAll(/^\s*\/\/.*$/gm, '') // comentarios de línea completos
     .replaceAll(/\s\/\/.*$/gm, ''); // comentarios al final de una línea
+}
+
+/** Rutas importadas por un archivo, incluidos los imports de solo tipos, las re-exportaciones y los dinámicos. */
+export function importsOf(source: string): string[] {
+  const code = stripComments(source);
   const specifiers: string[] = [];
   const statics =
     /^\s*(?:import|export)\b(?:[^;'"`]*?\bfrom)?\s*['"]([^'"]+)['"]/gm;
@@ -96,6 +102,11 @@ function reasonToReject(
     return 'application no puede usar Prisma; ponlo en infrastructure/';
   }
 
+  // Hexagonal: lo de afuera depende de lo de adentro, nunca al revés
+  if (layer === 'application' && targetZone === `${context}/infrastructure`) {
+    return 'application no puede importar infrastructure/; pide lo que necesita a un puerto de domain/ports/';
+  }
+
   if (layer === 'domain') {
     const allowed = ['shared-kernel', 'contracts', `${context}/domain`];
     return allowed.includes(targetZone)
@@ -123,4 +134,106 @@ function reasonToReject(
     return 'un contexto no importa el código de otro; usa contracts/';
   }
   return undefined;
+}
+
+const INFRASTRUCTURE_FOLDERS = ['http', 'persistence', 'adapters', 'consumers'];
+const LAYERS = ['domain', 'application', 'infrastructure'];
+
+/** Violaciones de la estructura de carpetas de los contextos (ruta → código). Vacío si todo está bien. */
+export function checkStructure(files: Record<string, string>): string[] {
+  const violations: string[] = [];
+  const byContext = new Map<string, string[]>();
+  for (const file of Object.keys(files)) {
+    const m = /^src\/contexts\/([^/]+)\//.exec(file);
+    if (m) byContext.set(m[1], [...(byContext.get(m[1]) ?? []), file]);
+  }
+
+  for (const [context, paths] of byContext) {
+    const root = `src/contexts/${context}/`;
+    const moduleFile = `${root}${context}.module.ts`;
+    if (!paths.includes(moduleFile)) {
+      violations.push(`${root}: falta ${context}.module.ts`);
+    }
+    if (!paths.some((p) => p.startsWith(`${root}domain/ports/`))) {
+      violations.push(
+        `${root}domain/: falta la carpeta ports/ con los puertos`,
+      );
+    }
+
+    for (const path of paths) {
+      const rel = path.slice(root.length);
+      const [first, second] = rel.split('/');
+      const code = stripComments(files[path]);
+
+      if (rel.includes('/') ? !LAYERS.includes(first) : path !== moduleFile) {
+        violations.push(
+          `${path}: la raíz de un contexto solo tiene domain/, application/, infrastructure/ y su módulo`,
+        );
+        continue;
+      }
+
+      if (first === 'infrastructure') {
+        if (!rel.slice('infrastructure/'.length).includes('/')) {
+          violations.push(
+            `${path}: infrastructure/ no admite archivos sueltos; va en http/, persistence/, adapters/ o consumers/`,
+          );
+        } else if (!INFRASTRUCTURE_FOLDERS.includes(second)) {
+          violations.push(
+            `${path}: infrastructure/ solo se divide en ${INFRASTRUCTURE_FOLDERS.join(', ')} (no ${second}/)`,
+          );
+        }
+      }
+
+      if (
+        first !== 'application' &&
+        /^\s*@(Command|Query)Handler\(/m.test(code)
+      ) {
+        violations.push(
+          `${path}: los handlers de CQRS (@CommandHandler, @QueryHandler) viven en application/`,
+        );
+      }
+      if (
+        !path.includes('/infrastructure/consumers/') &&
+        /^\s*@OutboxHandler\(/m.test(code)
+      ) {
+        violations.push(
+          `${path}: los consumidores del Outbox (@OutboxHandler) viven en infrastructure/consumers/`,
+        );
+      }
+      if (
+        path.endsWith('.controller.ts') &&
+        !path.includes('/infrastructure/http/')
+      ) {
+        violations.push(
+          `${path}: los controladores viven en infrastructure/http/`,
+        );
+      }
+      if (path.endsWith('.job.ts') && first !== 'application') {
+        violations.push(`${path}: los jobs viven en application/`);
+      }
+      if (
+        /\bclass\s+Prisma[A-Z]\w*/.test(code) &&
+        !path.includes('/infrastructure/persistence/')
+      ) {
+        violations.push(
+          `${path}: las clases Prisma* (adaptadores de la base) viven en infrastructure/persistence/`,
+        );
+      }
+
+      const inPorts = path.startsWith(`${root}domain/ports/`);
+      if (
+        first === 'domain' &&
+        !inPorts &&
+        /\.(port|repository)\.ts$/.test(path)
+      ) {
+        violations.push(`${path}: los puertos viven en domain/ports/`);
+      }
+      if (inPorts && !/\babstract\s+class\b/.test(code)) {
+        violations.push(
+          `${path}: un archivo de domain/ports/ declara un puerto (clase abstracta)`,
+        );
+      }
+    }
+  }
+  return violations;
 }

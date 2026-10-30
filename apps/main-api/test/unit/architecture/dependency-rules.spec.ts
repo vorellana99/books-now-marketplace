@@ -216,11 +216,31 @@ describe('checkRules: detecta las violaciones', () => {
       },
     );
 
-    it('application/ sí puede implementar un consumidor del Outbox (las interfaces viven en platform/outbox)', () => {
+    it('application/ no puede importar infrastructure/ (las dependencias van hacia adentro)', () => {
       expect(
         violations(
-          'src/contexts/sales/application/order/send-order-confirmation.consumer.ts',
-          `import { OutboxHandler } from '../../../../platform/outbox/outbox-handler.decorator.js';\nimport type { ExternalOutboxConsumer } from '../../../../platform/outbox/outbox-consumer.js';`,
+          'src/contexts/sales/application/order/h.ts',
+          `import { PrismaOrderRepository } from '../../infrastructure/persistence/prisma-order.repository.js';`,
+        ),
+      ).toHaveLength(1);
+    });
+
+    it('domain/ y application/ tampoco pueden importar PrismaService desde platform/', () => {
+      for (const layer of ['domain', 'application']) {
+        expect(
+          violations(
+            `src/contexts/sales/${layer}/x.ts`,
+            `import { PrismaService } from '../../../platform/prisma/prisma.service.js';`,
+          ),
+        ).toHaveLength(1);
+      }
+    });
+
+    it('infrastructure/ sí puede importar application/ y domain/ (para implementar puertos y enviar comandos)', () => {
+      expect(
+        violations(
+          'src/contexts/sales/infrastructure/consumers/c.ts',
+          `import { C } from '../../application/customer/create-customer.command.js';\nimport { P } from '../../domain/ports/order.repository.js';`,
         ),
       ).toEqual([]);
     });
