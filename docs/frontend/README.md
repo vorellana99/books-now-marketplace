@@ -9,7 +9,8 @@ Los comandos se ejecutan desde `apps/store-web`. Las herramientas son las de Vit
 
 | Documento | Contenido |
 |---|---|
-| [00-avance](00-avance.md) | **Control de avance** por cortes (`F0`…`F6`): tareas, desvíos de la guía y bitácora |
+| [../historias/](../historias/README.md) | **Historias de usuario** (desde 2026-10-30): la matriz de todas y un archivo por historia nueva; las tareas `[WEB]` viven con las `[API]` de su HU |
+| [00-avance](00-avance.md) | Historial **congelado** por cortes (`F0`…`F6`): tareas, desvíos de la guía y bitácora |
 | [01-decisiones-y-stack](01-decisiones-y-stack.md) | Decisiones, stack, capas y reglas de dependencia |
 | [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) | Carpetas, instalación, scripts, proxy y variables de entorno |
 | [03-integracion-con-la-api](03-integracion-con-la-api.md) | Cliente generado, sesión y renovación de tokens, errores, idempotencia y qué endpoints faltan |
@@ -23,7 +24,7 @@ Los comandos se ejecutan desde `apps/store-web`. Las herramientas son las de Vit
 
 | Producto | Dónde se materializa |
 |---|---|
-| `HU-nn` (historia) | Una tarea de [00-avance](00-avance.md) la cita, y [06-tests](06-tests.md) dice con qué prueba se comprueba |
+| `HU-nn` (historia) | Sus tareas `[WEB]` están en el archivo de la historia en [../historias/](../historias/README.md) (las anteriores, en [00-avance](00-avance.md)), y [06-tests](06-tests.md) dice con qué prueba se comprueba |
 | `PA-nn` (pantalla) | Una ruta de [04-flujos-de-pantalla](04-flujos-de-pantalla.md) y una carpeta de `features/` |
 | `RN-nn` (regla) | Casi siempre vive en el backend; el frontend solo la muestra o la anticipa (RN-08) |
 | `DP-nn` (decisión) | Se refleja en [01-decisiones-y-stack](01-decisiones-y-stack.md) cuando es técnica |

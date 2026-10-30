@@ -9,7 +9,8 @@
 | Compuerta | `scripts/verify.sh` (también `pnpm run verify` en cada app) | Comprobar todo antes de un commit; se detiene en el primer fallo |
 | Mutaciones | `scripts/mutate.py` | Romper el código a propósito y ver si las pruebas lo detectan |
 | Pruebas de las mutaciones | `scripts/test_mutate.py` | Comprobar que la herramienta restaura los archivos y clasifica bien |
-| 7 comandos de Claude | `.claude/skills/<nombre>/SKILL.md` | El flujo y las listas de comprobación que Claude sigue |
+| Matriz de historias | `scripts/historias.py` (pruebas: `scripts/test_historias.py`) | Genera la matriz de `docs/historias/README.md` (estado, fecha de cierre y tiempo desde `git log`) y comprueba que cada archivo de historia esté bien formado: `python3 scripts/historias.py` o `--check` |
+| 8 comandos de Claude | `.claude/skills/<nombre>/SKILL.md` | El flujo y las listas de comprobación que Claude sigue |
 | Resumen para Claude | `CLAUDE.md` | Se carga solo en cada sesión y enlaza a esta documentación |
 
 Las herramientas que hay que tener instaladas (`docker`, `python3`, `jq`, `uuidgen`…) están en los [requisitos previos de la guía de desarrollo](guia-de-desarrollo.md#requisitos-previos).
@@ -133,20 +134,20 @@ Si un comando recién creado no aparece, reinicia la sesión de Claude Code. Un 
 
 ### 4.1 `/tarea`
 
-**Para qué:** implementar una tarea de un corte, de principio a fin.
+**Para qué:** implementar una tarea de una historia (`HU-nn.k`), de principio a fin.
 
-**Cuándo:** al empezar cualquier tarea de `00-avance.md`, o con «continúa con la siguiente tarea».
+**Cuándo:** al empezar cualquier tarea ya aprobada de una historia de [`historias/`](historias/README.md), o con «continúa con la siguiente tarea». Si la historia aún no está desglosada y aprobada, `/tarea` no escribe código: pasa primero por `/hu`.
 
 **Cómo pedirlo:**
 ```
-/tarea 8.1
+/tarea HU-12.3
 continúa con la siguiente tarea
-haz todo el corte 8
+haz toda la HU-12
 ```
 
-**Qué hace Claude:** lee la fila de la tarea y las reglas que cita → escribe las pruebas y comprueba que fallan → implementa → pasa la compuerta → hace mutaciones si el código es crítico → actualiza los tres sitios de `00-avance.md` y los documentos que toquen → un commit `N.M: …`. Si algo no está decidido, te plantea opciones con una recomendada y espera.
+**Qué hace Claude:** lee la fila de la tarea (su capa, «Se comprueba» y «Depende de») y las reglas que cita → comprueba que sus dependencias están ✅ y que está lista para ejecutarse → (si la tarea lleva 🔒 o es grande) te muestra un **plan corto** en el modo de planificación y espera → escribe las pruebas y comprueba que fallan → implementa **solo su capa** → (si es una `[WEB]` que cambia lo que se ve) la **revisa en un navegador real** a 360 y 1280 px contra la «Pantalla» de la HU → pasa la compuerta → hace mutaciones si la tarea lleva 🔒 → actualiza los tres sitios del archivo de la HU y los documentos que toquen, y regenera la matriz (`python3 scripts/historias.py`) → un commit `HU-nn.k [CAPA]: …`. Si la última tarea ✅ es la `[E2E]` y deja cumplido el «Listo cuando…», cierra la HU (`estado: cerrada`). Si algo no está decidido, te plantea opciones con una recomendada y espera.
 
-**Ejemplo real (corte 7, tarea 7.6, guard de acceso):** pruebas del guard (45 unitarias) y del recorrido de rutas (17 e2e) → `AuthGuard` global → compuerta (1116 unitarias, 871 de integración y e2e) → 32 mutaciones, 30 detectadas a la primera y 2 cubiertas → bitácora → commit `7.6: Add the default-deny auth guard and @Public, @Roles, @CurrentUser`.
+**Ejemplo histórico (corte 7, tarea 7.6, guard de acceso; entonces el prefijo era `N.M`):** pruebas del guard (45 unitarias) y del recorrido de rutas (17 e2e) → `AuthGuard` global → compuerta (1116 unitarias, 871 de integración y e2e) → 32 mutaciones, 30 detectadas a la primera y 2 cubiertas → bitácora → commit `7.6: Add the default-deny auth guard and @Public, @Roles, @CurrentUser`.
 
 **Qué deja:** el código, sus pruebas, los documentos al día y un commit.
 
@@ -223,6 +224,23 @@ prueba con mutaciones el login
 
 **Ejemplo real (DP-15):** `GET /orders/:id` pasó a devolver `shippingAddress`; el esquema regenerado añadió `OrderDetailResponse`, `/me/orders`, `/admin/*` y el esquema Bearer; un solo ajuste (`Order` apunta ahora a `OrderDetailResponse`); `vp check` y `vp test` (56 pruebas) en verde.
 
+### 4.8 `/hu`
+
+**Para qué:** convertir una historia de usuario en tareas verticales para que las apruebes. **No escribe código.**
+
+**Cuándo:** ante una necesidad nueva («quiero que la tienda muestre el stock»), una ampliación de una historia o un habilitador técnico; o para desglosar una historia que ya existe y aún no tiene tareas.
+
+**Cómo pedirlo:**
+```
+/hu quiero que la tienda muestre el stock
+/hu HU-40
+desglosa la HU-12
+```
+
+**Qué hace Claude:** lee la historia (o redacta el borrador «Como…, quiero…, para…» con sus criterios Dado/Cuando/Entonces y su «Listo cuando…») → busca qué reglas `RN` y decisiones `DP` toca y cuáles contradice (si contradice una, **te pregunta** con opciones y una recomendada) → fija la **pantalla** de las tareas `[WEB]` (dónde va lo que cambia, croquis, estados, textos exactos, móvil y escritorio, accesibilidad) y el **contrato** de las tareas `[API]` (rutas, cuerpo, ejemplo JSON de la respuesta, errores y compatibilidad) → reparte cada criterio en tareas de **una sola capa** (`[DOC]`, `[API]`, `[WEB]`, `[E2E]`), cada una con su **tipo** (`contrato`, `regla`, `evento`, `base de datos`, `configuración`, `pantalla`, `comportamiento`…, elegido por lo que cambia) y la marca 🔒 si es crítica → las ordena, con su dependencia y su «Se comprueba» → la deja como un archivo nuevo en [`historias/`](historias/README.md) (a partir de la plantilla) marcado 📝 y **espera tu aprobación**; si amplía una historia anterior, es una historia nueva con `amplia:` en el encabezado. Al aprobar, pasa a ⬜ y `python3 scripts/historias.py` la agrega a la matriz.
+
+**Ejemplo (piloto, sin implementar):** tres historias nuevas, cada una en su archivo: HU-12 «Ver si hay stock de un libro», HU-23 (amplía HU-22) y HU-35 (amplía HU-33), con 10 tareas entre `[DOC]`, `[API]`, `[WEB]` y `[E2E]`. Están en [`historias/`](historias/README.md).
+
 ## 5. Cómo cambiar o añadir un comando
 
 Cada comando es una carpeta con un `SKILL.md`:
@@ -247,6 +265,6 @@ description: Una frase que dice QUÉ hace y CUÁNDO usarlo. Claude la lee para d
 ## 6. Estado y límites
 
 - Los scripts están probados: la compuerta se ejecutó en sus tres modos y mutate.py tiene sus propias pruebas.
-- **Los siete comandos todavía no se han usado en una tarea real.** Sus rutas y nombres se verificaron contra el repositorio, pero la primera tarea que se haga con `/tarea` mostrará qué les falta.
+- **Los ocho comandos todavía no se han usado en una tarea real con el proceso por historia** (`/hu`, `/tarea` y `scripts/historias.py` se estrenan con el piloto de [`historias/`](historias/README.md)). Sus rutas y nombres se verificaron contra el repositorio, pero la primera tarea que se haga con `/tarea` mostrará qué les falta.
 - Las mutaciones automáticas son solo del backend; la tienda usa la compuerta.
 - La compuerta no sustituye al CI: el CI corre en GitHub solo al subir a `main`/`develop` o en un pull request.

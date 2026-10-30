@@ -30,7 +30,9 @@ La guía se divide por audiencia: lo que comparten backend y frontend vive en `d
 |---|---|---|
 | [product/](product/README.md) | **Fuente de información del producto**: visión y alcance, actores, glosario, reglas del negocio, historias de usuario, recorridos, pantallas, textos y decisiones abiertas | Todos |
 | [api-contrato.md](api-contrato.md) | Endpoints, respuestas, errores y formato de montos | Backend y frontend |
-| [backend/00-avance.md](backend/00-avance.md) | **Control de avance** de la implementación, por cortes, con tareas, desvíos de la guía y bitácora | Backend |
+| [historias/](historias/README.md) | **Historias de usuario** (desde 2026-10-30): la matriz de todas (con las 20 anteriores como histórico) y un archivo por historia nueva con sus tareas por capa (`[API]`, `[WEB]`, `[E2E]`, `[DOC]`) y su bitácora | Backend y tienda |
+| [avance.md](avance.md) | Lo transversal: habilitadores, problemas abiertos, decisiones generales y bitácora general | Backend y tienda |
+| [backend/00-avance.md](backend/00-avance.md) | Historial **congelado** del backend por cortes 0–10: tareas, desvíos de la guía y bitácora | Backend |
 | [backend/01-decisiones-y-stack.md](backend/01-decisiones-y-stack.md) | Decisiones, stack y versiones · arquitectura, módulos y reglas de dependencia | Backend |
 | [backend/02-estructura-y-puesta-en-marcha.md](backend/02-estructura-y-puesta-en-marcha.md) | Estructura de carpetas · instalación, scripts, Docker y `.env` | Backend |
 | [backend/03-base-de-datos.md](backend/03-base-de-datos.md) | Esquema con Prisma 7, montos, relaciones y transacciones | Backend |
@@ -38,7 +40,7 @@ La guía se divide por audiencia: lo que comparten backend y frontend vive en `d
 | [backend/05-piezas-clave.md](backend/05-piezas-clave.md) | `Money`, puertos y eventos, Inventario, Outbox, correlación, HTTP y arranque | Backend |
 | [backend/06-tests.md](backend/06-tests.md) | Estrategia de tests con Vitest y casos mínimos | Backend |
 | [backend/07-fases-y-roadmap.md](backend/07-fases-y-roadmap.md) | Orden de implementación (fases 0–9) y siguientes funcionalidades (10–15) | Backend |
-| [frontend/README.md](frontend/README.md) | Guía del frontend (`apps/store-web`): [avance](frontend/00-avance.md) por cortes `F0`–`F6`, stack, estructura, integración con la API, flujos de pantalla, piezas clave, tests y roadmap | Frontend |
+| [frontend/README.md](frontend/README.md) | Guía del frontend (`apps/store-web`): [historial](frontend/00-avance.md) por cortes `F0`–`F6` (congelado), stack, estructura, integración con la API, flujos de pantalla, piezas clave, tests y roadmap | Frontend |
 
 > [!note] Numeración
 > Los títulos conservan los números de sección de la guía original (0 a 11), por si algún comentario o conversación antigua los menciona.

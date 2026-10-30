@@ -1,0 +1,46 @@
+# Avance: lo transversal
+
+> El trabajo se planifica y se registra **por historia de usuario**. Cada historia nueva tiene **su propio archivo** en [`historias/`](historias/README.md), con su texto, sus tareas por capa, sus decisiones y su bitácora, y la **matriz** de todas las historias (las 20 anteriores, como histórico, y las nuevas) con su estado, fecha de cierre y tiempo está en [`historias/README.md`](historias/README.md). Las reglas de cómo se trabaja una historia están ahí y en la [guía de desarrollo §4](guia-de-desarrollo.md#4-del-requisito-a-la-tarea-el-ciclo).
+>
+> **Este archivo guarda solo lo que no es de una historia concreta:** habilitadores técnicos, problemas abiertos, decisiones generales y la bitácora general. Los tableros por capa anteriores, [backend](backend/00-avance.md) (cortes 0–10) y [frontend](frontend/00-avance.md) (cortes F0–F6), son **historial congelado**.
+
+**Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado · 📝 propuesta (pendiente de aprobación)
+
+## 1. Habilitadores (`EN-nn`)
+
+Ninguno abierto. Cada habilitador vive, como una historia, en su propio archivo `EN-nn-…md` de [`historias/`](historias/README.md). Candidatos que ya están anotados como problemas abiertos (§2) y que pasarían a ser una HU o un `EN` cuando se decidan.
+
+## 2. Problemas abiertos (vigentes, trasladados de los tableros anteriores)
+
+El detalle y la historia de cada uno están en [backend](backend/00-avance.md#problemas-abiertos) y [frontend](frontend/00-avance.md#problemas-abiertos); aquí solo lo que sigue abierto hoy. Lo nuevo que no pertenece a una sola historia se anota **aquí**; lo que es de una historia, en su archivo.
+
+| Origen | Problema | Estado | Candidato |
+|---|---|---|---|
+| frontend 11 | **La tienda no puede cobrar de verdad**: solo tiene tarjetas de prueba (DP-06) y el backend no permite la pasarela simulada en producción | ⬜ Necesita elegir un proveedor de pagos | Ampliación de HU-31 |
+| frontend 10 | La búsqueda no ignora los acentos («jose» no encuentra «José») | ⬜ Pendiente del backend (`unaccent` o trigramas) | Ampliación de HU-10 |
+| frontend 4 / backend | `operationId` de Swagger ilegibles para un generador de código (`operationIdFactory`) | ⬜ No bloquea | `EN` |
+| backend | `/docs`, `/docs-json` y `/health/outbox` son públicos en producción | ⬜ Decidir si se cierran o se protegen en el despliegue | `EN` |
+| backend | Los límites de intentos viven en memoria de cada instancia (con varias haría falta un almacén compartido) | ⬜ | `EN` |
+| backend | `POST /orders/quote` no tiene límite de intentos propio (lo acotan la sesión de comprador y las 100 líneas) | ⬜ Riesgo | `EN` |
+| backend | El relay del Outbox no impone un tiempo máximo por entrega | ⬜ Riesgo bajo con los consumidores actuales | `EN` |
+| backend | Sin verificación de correo, recuperación ni cambio de contraseña, ni cierre de todas las sesiones | ⬜ Fuera del alcance actual | HU nuevas |
+| backend / frontend | Un test de la suite del backend (`orders.e2e`) y otros de la tienda fallaron alguna vez sin explicación guardada; la causa de los de la tienda se encontró (F6.1) | 🔄 Vigilar: la compuerta guarda el detalle de un fallo | — |
+
+## 3. Decisiones y desvíos transversales
+
+| Fecha | HU / EN | Qué se decidió o se desvió | Por qué |
+|---|---|---|---|
+| 2026-10-30 | Proceso | El trabajo pasa de «cortes por capa» a «HU con tareas verticales etiquetadas por capa» | Una HU como «ver el stock» necesita backend y tienda en un orden concreto y se comprueba de punta a punta; con dos tableros ese orden y ese cierre no tenían dueño |
+| 2026-10-30 | Proceso | **Cada historia nueva tiene su archivo** en `historias/`, la matriz de todas (con las anteriores como histórico) está en `historias/README.md` y **una ampliación de una historia anterior es una historia nueva** (`amplia: HU-22`) | Con todo en un solo tablero estaba muy mezclado; el histórico no se edita (decisión del usuario) |
+| 2026-10-30 | Proceso | **La pantalla (si hay `[WEB]` que cambia lo que se ve) y el contrato (si hay `[API]`) van por adelantado en la HU, y el plan de implementación, justo a tiempo; lo visual se revisa en un navegador real, sin pruebas de captura píxel a píxel.** Una HU con tareas `[API]` lleva una sección «Contrato» aprobada con ella; el plan (archivos, clases) se hace antes de cada tarea crítica con `/tarea`, en el modo de planificación, y no se guarda | Lo que se desactualiza (archivos, clases) no debe vivir en un archivo; lo que une backend y tienda (el contrato) sí debe aprobarse antes. En F6 el plan cambió al contacto con el código varias veces |
+
+## 4. Bitácora general
+
+| Fecha | Qué se hizo |
+|---|---|
+| 2026-10-30 | Nuevo proceso por HU: este tablero, `guia-de-desarrollo` (§1, §3, §4, §5, §6, §7, §9, §10, §11), `herramientas-de-trabajo` (§4.1 y el nuevo §4.8), comandos `/hu` (nuevo), `/tarea` (reescrito) y `/cambio-de-contrato` (ajustado), `CLAUDE.md`, los índices de `product/` y de las guías, y los dos tableros anteriores congelados con un aviso. Los tableros de backend (cortes 0–10) y de la tienda (F0–F6) se congelan como historial. Piloto **planificado, no implementado**: HU-12 (nueva), ampliaciones de HU-22 y HU-33, 8 tareas. Sin cambios de código ni de producto aprobados |
+| 2026-10-30 | Reorganización por archivo: `docs/historias/` (README con la matriz, plantilla, un archivo por historia nueva y `legado.json` con las 20 anteriores), `scripts/historias.py` (genera y comprueba la matriz; fechas y tiempos salen de `git log`) y `scripts/test_historias.py` (26 pruebas). El piloto de stock se partió en tres historias propias: HU-12 (ver el stock), HU-23 (el carrito marca los libros sin stock; amplía HU-22) y HU-35 (el error de pago nombra el libro; amplía HU-33), 10 tareas. Sin cambios de código de la aplicación ni de producto aprobados |
+| 2026-10-30 | Contrato por adelantado: sección «Contrato» obligatoria en toda HU con tareas `[API]` (la exige `scripts/historias.py`, con 3 pruebas nuevas: ahora 29), «lista para ejecutarse» por tipo de tarea, plan corto en modo de planificación para las `[API]` críticas, plantilla, `/hu`, `/tarea`, guía §4, herramientas y `CLAUDE.md` al día. HU-12 y HU-35 ganaron su contrato (`available` de 0 a 10 en `GET /books*`; `isbn` en los `422` de stock) y HU-23 declara que no cambia ninguno; las «Notas de diseño» de HU-12 ya no listan archivos. Sin cambios de código de la aplicación |
+| 2026-10-30 | Pantalla por adelantado: sección «Pantalla» obligatoria en toda HU con tareas `[WEB]` (la exige `scripts/historias.py`, con 3 pruebas nuevas: ahora 32), revisión visual en un navegador real a 360 y 1280 px dentro del ciclo de `/tarea`, plantilla, `/hu`, guía §4 (nueve pasos), herramientas, README de historias y `CLAUDE.md` al día. HU-12 (nota de disponibilidad con croquis, estados, textos y tonos), HU-23 (línea del carrito, `Alert`, botón y `EmptyState`) y HU-35 (mismo lugar, solo cambia el texto) ganaron su «Pantalla». Sin cambios de código de la aplicación |
+| 2026-10-30 | Diagramas Mermaid opcionales y por necesidad (secuencia en «Contrato», estados en «Pantalla», flujo para decisiones o dependencias de más de 5 tareas): guía en la plantilla, `/hu`, guía §4.1, README de historias y `CLAUDE.md`; sin exigirlos al comprobador. Piloto: HU-12 (secuencia de cómo se obtiene `available` y estados de la nota de disponibilidad) y HU-35 (secuencia de la carrera de dos compradores); HU-23 no lleva porque su tabla de situaciones basta. Sin cambios de código de la aplicación |
+| 2026-10-30 | Tipo y rigor de cada tarea: columna «Tipo» en la tabla de tareas, con vocabulario en lenguaje llano elegido **por lo que cambia** (`[API]`: contrato, regla, evento, base de datos, configuración; `[WEB]`: pantalla, comportamiento; `[DOC]`: producto, guía; `[E2E]`: —) y marca 🔒 para las críticas (mutaciones obligatorias y plan corto; solo `[API]`; `base de datos` y `evento` siempre). Primero se llamaron `ruta`, `dominio`, `migración`, `config` y `datos`; el usuario pidió nombres más intuitivos (añadir un campo a una respuesta no es una «ruta») y se renombraron, con una tabla de ejemplos en la plantilla. La exige `scripts/historias.py` (8 pruebas nuevas: ahora 40, incluida una que rechaza los nombres antiguos) y activa la receta de `/tarea`. Las 10 tareas del piloto quedaron tipadas (HU-12.2 `regla` 🔒; HU-12.3 y HU-35.1 `contrato`; HU-35.2 `comportamiento`). Sin cambios de código de la aplicación |

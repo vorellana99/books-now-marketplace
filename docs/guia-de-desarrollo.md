@@ -1,14 +1,16 @@
 # Guía de desarrollo
 
-> Cómo se trabaja en este repositorio: de dónde sale cada dato, cuál es el ciclo de una tarea, cuánto rigor se exige y qué hacer cuando algo sale mal. Está pensada para una persona que trabaja con Claude Code; lo que Claude ejecuta (comandos y scripts) se explica, con ejemplos, en [herramientas-de-trabajo](herramientas-de-trabajo.md).
+> Cómo se trabaja en este repositorio: cómo una historia de usuario se convierte en tareas, de dónde sale cada dato, cuál es el ciclo de una tarea, cuánto rigor se exige y qué hacer cuando algo sale mal. Está pensada para una persona que trabaja con Claude Code; lo que Claude ejecuta (comandos y scripts) se explica, con ejemplos, en [herramientas-de-trabajo](herramientas-de-trabajo.md).
 
 ## 1. El repositorio en un vistazo
 
 ```
 apps/main-api     API (NestJS 12 + Prisma 7 + PostgreSQL 18). Aquí está casi todo el trabajo
 apps/store-web    Tienda web (React 19 + TanStack + Tailwind 4, sobre Vite+; comando `vp`)
-docs/backend      Guía y avance del backend por cortes (00-avance.md es el tablero)
-docs/frontend     Guía y avance de la tienda por cortes F0–F6
+docs/historias/   LAS HISTORIAS: la matriz de todas (README.md) y un archivo por historia nueva, con sus tareas por capa y su bitácora
+docs/avance.md    Lo transversal: habilitadores, problemas abiertos, decisiones generales y bitácora general
+docs/backend      Guía del backend; su 00-avance.md (cortes 0–10) es historial congelado
+docs/frontend     Guía de la tienda; su 00-avance.md (cortes F0–F6) es historial congelado
 docs/product      El producto: reglas RN, historias HU, decisiones DP, pantallas PA, diseño
 docs/api-contrato.md   Lo que la API promete (rutas, respuestas, errores). Lo consume la tienda
 scripts/          La compuerta (verify.sh) y las pruebas de mutación (mutate.py)
@@ -16,7 +18,7 @@ scripts/          La compuerta (verify.sh) y las pruebas de mutación (mutate.py
 CLAUDE.md         Resumen para Claude: arquitectura, comandos y reglas
 ```
 
-El trabajo se organiza en **cortes** y cada corte en **tareas**. En el backend, `N.M` es la tarea M del corte N (`7.6`); en la tienda, `FN.M` (`F4.6`). Cada tarea es **un commit** con ese prefijo (`7.6: Add the default-deny auth guard…`).
+El trabajo se organiza **por historia de usuario (`HU-nn`)**. Una historia puede pedir cambios en el backend, en la tienda o en los dos; se desglosa en **tareas verticales**, cada una de **una sola capa** (`[API]`, `[WEB]`, `[E2E]` o `[DOC]`), y viven en el archivo de esa historia, dentro de [`historias/`](historias/README.md), donde también está la matriz de todas (las 20 anteriores, como histórico, y las nuevas). Una ampliación de una historia anterior es una historia nueva. La tarea `HU-12.3` es la tercera de la HU-12; cada tarea es **un commit** con ese prefijo y su capa (`HU-12.3 [API]: Add availability to GET /books`). Lo que no es una historia (arquitectura, rendimiento, seguridad, accesibilidad) es un **habilitador** `EN-nn`. Los cortes `N.M` y `FN.M` anteriores a 2026-10-30 son el historial y no se reutilizan.
 
 ## 2. Primer arranque
 
@@ -75,35 +77,86 @@ Cada pregunta tiene **una** fuente de verdad. Si un documento contradice al cód
 
 | Pregunta | Fuente |
 |---|---|
-| ¿Qué tarea toca y qué se comprueba? | La fila y la casilla de la tarea en [`backend/00-avance.md`](backend/00-avance.md) o [`frontend/00-avance.md`](frontend/00-avance.md), con sus enlaces de «Guía» |
+| ¿Qué tarea toca y qué se comprueba? | La fila y la casilla de la tarea en el archivo de su HU, `historias/HU-nn-….md` (columnas «Se comprueba» y «Depende de»); la matriz de todas, en [`historias/README.md`](historias/README.md) |
 | ¿Qué debe hacer el producto? | [`product/`](product/README.md): reglas `RN-nn` (03), historias `HU-nn` (04), decisiones `DP-nn` (09), pantallas `PA-nn` (06) |
 | ¿Cuál es el contrato HTTP? | [`api-contrato.md`](api-contrato.md) y, ejecutándose, `/docs-json` |
-| ¿Cómo está construido y por qué? | [`CLAUDE.md`](../CLAUDE.md), [`backend/05-piezas-clave.md`](backend/05-piezas-clave.md) y la tabla «Decisiones y desvíos» de `00-avance.md` (lo que se apartó de la guía) |
+| ¿Cómo está construido y por qué? | [`CLAUDE.md`](../CLAUDE.md), [`backend/05-piezas-clave.md`](backend/05-piezas-clave.md) y la tabla «Decisiones y desvíos» de [`avance.md`](avance.md) (lo que se apartó del plan; lo anterior, en los `00-avance.md` congelados) |
 | ¿Cómo se prueba? | [`backend/06-tests.md`](backend/06-tests.md) y [`frontend/06-tests.md`](frontend/06-tests.md) |
-| ¿Qué está abierto o por decidir? | «Problemas abiertos» de `00-avance.md` y [`product/09-decisiones-y-preguntas.md`](product/09-decisiones-y-preguntas.md) |
+| ¿Qué está abierto o por decidir? | «Problemas abiertos» de [`avance.md`](avance.md) y [`product/09-decisiones-y-preguntas.md`](product/09-decisiones-y-preguntas.md) (el historial anterior, en los `00-avance.md` congelados) |
 | ¿Qué datos hay para probar a mano? | «Datos de ejemplo» del README del backend (seed) |
 
-## 4. El ciclo de una tarea
+## 4. Del requisito a la tarea: el ciclo
 
-Siete pasos, en este orden. El ejemplo es la tarea real **7.8** (`GET /me/orders`).
+Dos fases: primero la **historia** se convierte en tareas (una vez, con tu aprobación) y después cada **tarea** sigue siempre el mismo ciclo.
+
+### 4.1 De la historia a las tareas (`/hu`)
+
+| # | Paso | Qué sale |
+|---|---|---|
+| 1 | **Redactar o ampliar la HU** en lenguaje de producto: «Como…, quiero…, para…», reglas `RN`, pantallas `PA`, criterios **Dado/Cuando/Entonces** y un **«Listo cuando…»** (el escenario de punta a punta que la da por terminada) | El texto, **aprobado por ti**. Una decisión que contradice una `RN`/`DP` se pregunta ahora, con opciones y una recomendada |
+| 2 | **Repartir cada criterio en capas**: qué exige del backend (`[API]`), qué de la tienda (`[WEB]`) y qué solo se ve de punta a punta (`[E2E]`); lo de producto y guías va en `[DOC]` | La lista de tareas, cada una de **una capa**, con lo que se comprueba |
+| 3 | **Fijar el contrato y la pantalla.** Si alguna tarea es `[WEB]`, la HU lleva una sección **«Pantalla»**: **dónde** va lo que cambia (respecto a qué elemento), un croquis en texto si una frase no basta, los **estados**, los **textos exactos** de [`product/07`](product/07-contenido-y-mensajes.md), qué cambia entre móvil (360 px) y escritorio (1280 px) y la accesibilidad; reutiliza los [tokens y componentes](product/diseno/README.md) existentes (una pantalla nueva o un componente grande va antes en una tarea `[DOC]` que actualiza el wireframe y el mockup), o «Sin cambios visuales». Si alguna es `[API]`, lleva una sección **«Contrato»** con las rutas y métodos, el cuerpo, un **ejemplo JSON de la respuesta**, los errores nuevos, la compatibilidad (¿es aditivo?) y lo que no cambia; o «Sin cambios en el contrato». Es lo que une backend y tienda, y lo que tú apruebas sin leer código | Las secciones «Pantalla» y «Contrato» (el comprobador de la matriz las exige) |
+| 4 | **Ordenar**: `[DOC]` → `[API]` → `[WEB]` (la primera lleva `/cambio-de-contrato`) → `[E2E]`; anotar de qué depende cada una. Un cambio de contrato se hace primero **aditivo**: la compuerta no se rompe en ninguna tarea | El archivo de la HU en [`historias/`](historias/README.md), con 📝 en todo (pasan a ⬜ al aprobar) |
+| 5 | **Aprobar el desglose.** Hasta que lo apruebas no se escribe código | Las tareas listas para ejecutarse |
+
+**Tipo y rigor de cada tarea.** La tabla de tareas tiene una columna **Tipo** justo después de la capa. **Se elige por lo que cambia**, no por cómo se programa, y dice qué receta aplica:
+
+| Capa | Tipo | ¿Qué cambia? | Receta |
+|---|---|---|---|
+| `[API]` | `contrato` | **Lo que la API le ofrece a la tienda**: un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | `/nueva-ruta` si es un endpoint nuevo; `/cambio-de-contrato` en la primera `[WEB]` que lo use |
+| `[API]` | `regla` | **Cómo decide el negocio**: un cálculo, un límite, una condición | Pruebas primero y, si toca dinero, seguridad o concurrencia, 🔒 |
+| `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | `/nuevo-evento` (siempre 🔒) |
+| `[API]` | `base de datos` | Tablas, columnas, índices o restricciones | `/nueva-migracion` (siempre 🔒) |
+| `[API]` | `configuración` | Una variable de entorno | `/nueva-variable-entorno` |
+| `[WEB]` | `pantalla` | **Lo que se ve** | La «Pantalla» de la HU y la revisión en navegador real |
+| `[WEB]` | `comportamiento` | **Lo que la tienda hace**, sin cambiar lo que se ve (consultas a la API, estado, validaciones, el carrito) | Compuerta de la tienda |
+| `[DOC]` | `producto` o `guía` | Reglas, decisiones, historias, mensajes y diseño; o guías técnicas, README y comandos | Los documentos que toque |
+| `[E2E]` | `—` | El recorrido de punta a punta | Playwright |
+
+**🔒** junto al tipo marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar): solo en `[API]`, y `base de datos` y `evento` siempre la llevan. Un endpoint nuevo con lógica nueva son **dos tareas** (la `regla` y el `contrato`). `scripts/historias.py` valida el vocabulario y la marca.
+
+**Cada historia nueva es un archivo** (`historias/HU-nn-titulo.md`, a partir de la [plantilla](historias/_plantilla.md)) y **una ampliación de una historia anterior es una historia nueva** que dice en su encabezado `amplia: HU-22`: el histórico no se edita. **El contrato y la pantalla van por adelantado; el plan de implementación, no.** La historia no lista archivos ni clases porque se desactualizan: eso se decide justo antes de cada tarea (4.2). Una tarea está **lista para ejecutarse** cuando alguien puede escribir su primera prueba roja leyendo solo su fila; el detalle que necesita depende de ella:
+
+| Tarea | Detalle antes de ejecutarla |
+|---|---|
+| `[DOC]` y `[WEB]` simples | Un «Se comprueba» concreto |
+| `[WEB]` que cambia lo que se ve | + la **Pantalla** de la HU, y se revisa en un navegador real a 360 y 1280 px |
+| `[API]` que cambia la API | + el **Contrato** de la HU |
+| `[API]` con 🔒 (crítica: dominio, seguridad, dinero, concurrencia, migración, evento) | + reglas e invariantes |
+| `[E2E]` | El escenario paso a paso |
+
+**Diagramas (opcionales).** Cuando una frase o una tabla no basta, la historia puede llevar un diagrama Mermaid, uno por idea y pequeño: **secuencia** para el orden de una conversación entre piezas o cómo falla algo (en «Contrato»), **estados** para qué estados tiene algo (en «Pantalla»), **flujo** para una decisión con ramas o las dependencias entre tareas. Lleva los textos reales de la tienda y de la API, no duplica el contrato ni el croquis (que siguen siendo la fuente de verdad) y se actualiza en la misma tarea que cambie lo que muestra. GitHub y los editores lo dibujan; en la terminal se ve como texto, por eso va acompañado de una frase.
+
+Un habilitador `EN-nn` (arquitectura, rendimiento, seguridad, accesibilidad, despliegue) se desglosa igual, citando la regla `RN` o el requisito de [`product/08`](product/08-requisitos-de-experiencia.md) que lo justifica.
+
+**Ejemplo (piloto, aún sin implementar):** «en la lista no veo si hay stock y recién al pagar sale un aviso que no dice qué libro es» se convierte en tres historias nuevas, cada una en su archivo: HU-12 (ver el stock), HU-23 (el carrito marca los libros sin stock; amplía HU-22) y HU-35 (el error de pago nombra el libro; amplía HU-33), con diez tareas entre `[DOC]`, `[API]`, `[WEB]` y `[E2E]`. Están en [`historias/`](historias/README.md).
+
+### 4.2 El ciclo de una tarea (`/tarea`)
+
+Nueve pasos, en este orden. El ejemplo es una tarea real del corte 7 (histórica): **7.8** (`GET /me/orders`), que hoy sería una tarea `[API]` de la HU-40.
 
 | # | Paso | En la 7.8 |
 |---|---|---|
-| 1 | **Leer** la fila de la tarea, su «Se comprueba» y las reglas que cita | «cada comprador ve solo lo suyo, el administrador ve el de cualquier cliente, la paginación sigue igual»; reglas RN-36, RN-40 y DP-18 |
-| 2 | **Pruebas primero** y verlas fallar | `test/e2e/my-orders.e2e.spec.ts` (14 pruebas) falla porque la ruta no existe |
-| 3 | **Implementar** lo mínimo, con el estilo del código vecino | `my-orders.controller.ts`, `admin-order.controller.ts`, `list-orders.dto.ts` |
-| 4 | **Compuerta**: `scripts/verify.sh` | tipos, lint, formato, build, 1120 unitarias y 902 de integración y e2e |
-| 5 | **Mutaciones** si el código es crítico | 15 cambios deliberados, todos detectados |
-| 6 | **Documentos** en el mismo commit | casilla, fila del cuadro de tareas, «Decisiones y desvíos», bitácora con los conteos reales y `api-contrato.md` |
-| 7 | **Un commit** con prefijo `N.M:` | `7.8: Add GET /me/orders and move the admin history to /admin/orders` |
+| 1 | **Leer** la fila de la tarea, su «Se comprueba», de qué depende y las reglas que cita | «cada comprador ve solo lo suyo, el administrador ve el de cualquier cliente, la paginación sigue igual»; reglas RN-36, RN-40 y DP-18 |
+| 2 | **Receta y plan corto.** La columna **Tipo** de la fila dice qué receta cargar (`contrato` → `/nueva-ruta` si es un endpoint nuevo, `evento` → `/nuevo-evento`, `base de datos` → `/nueva-migracion`, `configuración` → `/nueva-variable-entorno`). El plan corto, solo en las tareas con **🔒** (críticas) o de varios archivos: en el modo de planificación, qué archivos, qué patrón se copia, qué pruebas y qué mutaciones; se aprueba y **no se guarda en un archivo** | (en el corte 7 no existía este paso) |
+| 3 | **Pruebas primero** y verlas fallar | `test/e2e/my-orders.e2e.spec.ts` (14 pruebas) falla porque la ruta no existe |
+| 4 | **Implementar** lo mínimo, con el estilo del código vecino | `my-orders.controller.ts`, `admin-order.controller.ts`, `list-orders.dto.ts` |
+| 5 | **Revisión visual** (solo `[WEB]` que cambia lo que se ve): la tienda en un navegador real (Playwright, con la API y el seed) a 360 y 1280 px, comparada con la **Pantalla** de la HU; se anota en la bitácora qué se revisó y qué se ajustó. No hay pruebas de captura píxel a píxel (se rompen con cualquier cambio de contenido); el contraste y los objetivos táctiles los cubre axe en la `[E2E]` | (en el corte 7 no había pantallas) |
+| 6 | **Compuerta**: `scripts/verify.sh` (detecta sola si tocaste backend, tienda o ambos) | tipos, lint, formato, build, 1120 unitarias y 902 de integración y e2e |
+| 7 | **Mutaciones** si la tarea lleva 🔒 (solo `[API]`) | 15 cambios deliberados, todos detectados |
+| 8 | **Documentos** en el mismo commit | casilla, fila de la tabla de la HU, «Decisiones y desvíos», bitácora con los conteos reales y `api-contrato.md` |
+| 9 | **Un commit** con el prefijo de la tarea y su capa | hoy: `HU-40.2 [API]: Add GET /me/orders…` (entonces: `7.8: …`) |
 
 Reglas del ciclo:
 
-- **Se detiene en el primer fallo.** Nunca se hace el commit con la compuerta en rojo.
-- **Los números de la documentación salen de la última ejecución**, copiados de la salida. Nunca de memoria (se corrigieron varias cifras así en el corte 7).
-- **Los documentos se marcan en los tres sitios** de `00-avance.md`: la casilla de la lista, la fila del cuadro de tareas (⬜ → ✅) y la bitácora.
-- **Si se pide un corte entero**, se encadenan sus tareas sin detenerse a informar entre una y otra; el informe va una vez, al final.
-- **Ramas:** una sola rama de trabajo para varios cortes (hoy `feature/mvp`). **No se abren pull requests ni se sube nada** sin que lo pida quien manda el proyecto.
+- **Se detiene en el primer fallo.** Nunca se hace el commit con la compuerta en rojo, y la compuerta, el cierre de los documentos y el commit van **en una sola cadena**.
+- **El contrato y la pantalla aprobados mandan.** Una tarea `[API]` cumple la sección «Contrato» de su HU tal cual, y una `[WEB]` que cambia lo que se ve cumple su «Pantalla» (ubicación, textos, estados, tonos); si al implementar hay que apartarse, se detiene y se vuelve a pedir aprobación: no se decide al programar.
+- **Una tarea, una capa.** Si al implementarla aparece trabajo en la otra capa, no se mezcla: se añade como tarea nueva de la HU (con su dependencia) y se te avisa.
+- **Los números de la documentación salen de la última ejecución**, copiados de la salida. Nunca de memoria.
+- **Los documentos se marcan en los tres sitios** del archivo de la HU: la casilla de la lista, la fila de la tabla de tareas (⬜ → ✅) y **su** bitácora. Después se regenera la matriz con `python3 scripts/historias.py` (también comprueba que el archivo está bien formado).
+- **Si se pide una HU entera** («haz la HU-12»), se encadenan sus tareas en orden sin detenerse a informar entre una y otra; el informe va una vez, al final.
+- **Cerrar la HU**: cuando todas sus tareas están ✅ **y** su «Listo cuando…» se ejecutó de verdad (la tarea `[E2E]`), el archivo pasa a `estado: cerrada` y la matriz muestra su fecha de cierre y su tiempo (salen de `git log`); el script no deja cerrar una HU sin `[E2E]` ni con tareas pendientes. Una HU con tareas hechas pero sin su `[E2E]` no está cerrada.
+- **Ramas:** una sola rama de trabajo para varias historias (hoy `feature/mvp`). **No se abren pull requests ni se sube nada** sin que lo pida quien manda el proyecto.
 
 ## 5. Cuánto rigor
 
@@ -112,7 +165,8 @@ Reglas del ciclo:
 | **Pruebas primero** | Siempre, en toda tarea |
 | **Compuerta** | Siempre, antes de cada commit |
 | **Mutaciones** | **Obligatorias** en dominio, seguridad (tokens, contraseñas, guards, roles, CORS, límites), dinero y precios, concurrencia y transacciones (outbox, reservas, idempotencia) y restricciones de la base. **Opcionales** en DTO de solo forma, documentación de Swagger, textos y cableado trivial |
-| **Frontend** | Compuerta (`vp check`, `vp test`, build). Las mutaciones automáticas son solo del backend |
+| **Tareas `[WEB]`** | Compuerta (`vp check`, `vp test`, build). Las mutaciones automáticas son solo de las tareas `[API]` |
+| **Tareas `[E2E]`** | Playwright contra el backend real (`pnpm run test:e2e`; también contra el build de producción y `test:perf` si la HU toca rendimiento). No están en la compuerta: se ejecutan a mano y se anotan sus conteos |
 
 Una prueba que no puede fallar no protege nada. Por eso, para el código crítico, se rompe a propósito y se mira si alguna prueba lo nota ([mutar](herramientas-de-trabajo.md#3-pruebas-de-mutación-scriptsmutatepy)).
 
@@ -120,7 +174,8 @@ Una prueba que no puede fallar no protege nada. Por eso, para el código crític
 
 | Quiero… | Comando de Claude | Se explica en |
 |---|---|---|
-| Hacer una tarea de un corte, de principio a fin | `/tarea` | [herramientas §4.1](herramientas-de-trabajo.md#41-tarea) |
+| Convertir una historia en tareas (desglose para aprobar) | `/hu` | [herramientas §4.8](herramientas-de-trabajo.md#48-hu) |
+| Hacer una tarea de una HU, de principio a fin | `/tarea` | [herramientas §4.1](herramientas-de-trabajo.md#41-tarea) |
 | Probar que las pruebas detectan errores | `/mutar` | [§4.2](herramientas-de-trabajo.md#42-mutar) |
 | Añadir un endpoint | `/nueva-ruta` | [§4.3](herramientas-de-trabajo.md#43-nueva-ruta) |
 | Añadir una variable de entorno | `/nueva-variable-entorno` | [§4.4](herramientas-de-trabajo.md#44-nueva-variable-entorno) |
@@ -133,8 +188,8 @@ Una prueba que no puede fallar no protege nada. Por eso, para el código crític
 
 El contrato es el OpenAPI que publica el backend (`/docs-json`). La tienda lo convierte en tipos (`apps/store-web/src/shared/api/schema.d.ts`, que **se sube a git**) y **solo** importa de `shared/api/types.ts`, nunca del archivo generado.
 
-- **Un cambio de la API** se hace primero en el backend (código, pruebas, compuerta y `api-contrato.md`) y después se propaga a la tienda con `/cambio-de-contrato`: regenerar `schema.d.ts` con el backend real levantado, ajustar los alias, `vp check` y `vp test`, y actualizar los documentos.
-- **Una decisión de producto que el cambio contradice** (`DP-nn`) no se resuelve en silencio: se pregunta. Ejemplo real: `DP-15` esperaba la dirección en `GET /orders/:id` y el backend cerró el corte 7 sin ella; se preguntó, se eligió añadirla y se documentó en producto, contrato y frontend.
+- **Un cambio de la API** se hace primero en una tarea `[API]` (código, pruebas, compuerta y `api-contrato.md`) y después se propaga a la tienda con `/cambio-de-contrato`, **dentro de la primera tarea `[WEB]`** de la HU (depende de la `[API]`): regenerar `schema.d.ts` con el backend real levantado, ajustar los alias, `vp check` y `vp test`, y actualizar los documentos.
+- **Una decisión de producto que el cambio contradice** (`DP-nn`) no se resuelve en silencio: se pregunta. Un cambio que **quita o renombra** algo que la tienda ya usa se hace en dos tareas (primero se añade lo nuevo y la tienda pasa a usarlo; después se quita lo viejo) para que la compuerta no se rompa entre una y otra. Ejemplo real: `DP-15` esperaba la dirección en `GET /orders/:id` y el backend cerró el corte 7 sin ella; se preguntó, se eligió añadirla y se documentó en producto, contrato y frontend.
 - **La tienda nunca calcula montos**: muestra los textos que devuelve la API (RN-08).
 
 ## 8. Trampas que ya costaron tiempo
@@ -157,7 +212,7 @@ La lista completa, con más detalle, está en el comando `/tarea`.
 
 ## 9. Cuándo preguntar y qué no hacer
 
-- **Se pregunta** cuando hay una decisión que cambia lo que se construye y no está en los documentos: se plantean **opciones con una recomendada (la primera)** y se espera la respuesta antes de aplicar. Una vez decidido, no se reabre.
+- **Se pregunta** cuando hay una decisión que cambia lo que se construye y no está en los documentos (incluido el texto de una HU nueva y su desglose en tareas, que se aprueban antes de escribir código): se plantean **opciones con una recomendada (la primera)** y se espera la respuesta antes de aplicar. Una vez decidido, no se reabre.
 - **No se pregunta** lo que tiene un valor por defecto convencional ni lo que se puede comprobar en el código.
 - **No se hace sin pedirlo:** abrir pull requests, subir ramas, cambiar el CI, tocar la base de desarrollo de quien trabaja, ni borrar archivos que no se han mirado.
 - **Se informa con honestidad:** los conteos reales, los errores propios y lo que quedó abierto. «Verificado» solo se dice de lo que se ejecutó, no de lo que se leyó.
@@ -166,25 +221,30 @@ La lista completa, con más detalle, está en el comando `/tarea`.
 
 | Quiero… | Digo… |
 |---|---|
-| Continuar el trabajo | «continúa con la siguiente tarea» (Claude usa `/tarea`) |
-| Un corte entero, sin interrupciones | «haz todo el corte 8» |
-| Una tarea concreta | «`/tarea 8.1`» |
+| Que una necesidad nueva pase por una historia | «quiero que la tienda muestre el stock» (Claude propone la HU y el desglose con `/hu`, y espera tu aprobación) |
+| Desglosar una historia que ya existe | «`/hu HU-40`» o «desglosa la HU-12» |
+| Continuar el trabajo | «continúa con la siguiente tarea» (Claude usa `/tarea` sobre la primera tarea ⬜ cuyas dependencias estén ✅) |
+| Una historia entera, sin interrupciones | «haz toda la HU-12» |
+| Una tarea concreta | «`/tarea HU-12.3`» |
 | Solo un plan, sin implementar | «solo la planificación por ahora» |
 | Decidir yo antes de que se aplique | «dame opciones con una recomendada» |
-| Revisar lo hecho | «¿qué queda pendiente?» (Claude lee «Problemas abiertos») |
+| Revisar lo hecho | «¿qué queda pendiente?» (Claude lee la matriz de `historias/README.md` y los «Problemas abiertos» de `avance.md`) |
 | Propagar un cambio a la tienda | «`/cambio-de-contrato`» |
 
 ## 11. Glosario de siglas
 
 | Sigla | Significa | Dónde |
 |---|---|---|
-| **N.M** | Tarea M del corte N del backend (`7.6`) | `backend/00-avance.md` |
-| **FN.M** | Tarea M del corte N de la tienda (`F4.6`) | `frontend/00-avance.md` |
+| **HU-nn.k** | Tarea k de la historia HU-nn (`HU-12.3`); su commit lleva también la capa | `historias/HU-nn-….md` |
+| **EN-nn** | Habilitador: trabajo técnico sin historia propia (arquitectura, rendimiento, seguridad…), ligado a una `RN` o a un requisito de `08` | `historias/EN-nn-….md` |
+| **[API] [WEB] [E2E] [DOC]** | La capa de una tarea: backend, tienda, recorrido de punta a punta contra el backend real, o producto y guías sin código | `historias/` |
+| **N.M / FN.M** | Tareas de los cortes anteriores a 2026-10-30 (`7.6`, `F4.6`); historial, no se reutilizan | `backend/00-avance.md`, `frontend/00-avance.md` |
 | **RN-nn** | Regla de negocio | `product/03-reglas-de-negocio.md` |
-| **HU-nn** | Historia de usuario | `product/04-historias-de-usuario.md` |
+| **HU-nn** | Historia de usuario. Las 20 anteriores a 2026-10-30, en `product/04-historias-de-usuario.md` (histórico); las nuevas, en su archivo de `historias/` | `historias/README.md` |
 | **PA-nn** | Pantalla | `product/06-pantallas-y-navegacion.md` |
 | **DP-nn** | Decisión de producto | `product/09-decisiones-y-preguntas.md` |
 | **D1…D8** | Decisiones de diseño del corte 7 (sesión, contraseñas, alta, cliente…) | `backend/00-avance.md`, corte 7 |
-| **Corte** | Un grupo de tareas con su «listo cuando» | los dos `00-avance.md` |
+| **Corte** | Antes: un grupo de tareas de una sola capa con su «listo cuando». Ahora el equivalente es la HU y su «Listo cuando» | los dos `00-avance.md` (historial) |
+| **Listo cuando** | El escenario de punta a punta que cierra una HU (lo ejecuta la tarea `[E2E]`) | `historias/` |
 | **Compuerta** | La cadena de comprobaciones antes de un commit | `scripts/verify.sh` |
 | **Mutación** | Un cambio deliberado del código para ver si las pruebas lo detectan | `scripts/mutate.py` |

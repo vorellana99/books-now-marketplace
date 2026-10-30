@@ -1,0 +1,414 @@
+{
+ "nota": "Datos históricos de las historias hechas antes de 2026-10-30 (cortes 0-10 del backend y F0-F6 de la tienda). Salen de `git log` (hora de Lima): inicio y cierre son las fechas del primer y el último commit de las tareas de la HU; minutos = suma, por cada commit de esas tareas, del hueco con el commit anterior con un tope de 60. Es una APROXIMACIÓN: las tareas compartidas entre varias HU (columna compartidas) se cuentan completas en cada una, y los cortes mezclaban historias. El mapeo HU → tareas lo hizo Claude a partir de lo que cada tarea construye; es auditable aquí.",
+ "tope_minutos": 60,
+ "historias": [
+  {
+   "id": "HU-01",
+   "titulo": "Registrarme",
+   "epica": "Cuenta",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 116,
+   "tareas_api": [
+    "7.1",
+    "7.3",
+    "7.5"
+   ],
+   "tareas_web": [
+    "F2.3"
+   ],
+   "compartidas": [
+    "7.3"
+   ]
+  },
+  {
+   "id": "HU-02",
+   "titulo": "Iniciar sesión",
+   "epica": "Cuenta",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 49,
+   "tareas_api": [
+    "7.2",
+    "7.3"
+   ],
+   "tareas_web": [
+    "F2.2"
+   ],
+   "compartidas": [
+    "7.3"
+   ]
+  },
+  {
+   "id": "HU-03",
+   "titulo": "Mantener la sesión",
+   "epica": "Cuenta",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 38,
+   "tareas_api": [
+    "7.4"
+   ],
+   "tareas_web": [
+    "F2.1"
+   ],
+   "compartidas": [
+    "7.4"
+   ]
+  },
+  {
+   "id": "HU-04",
+   "titulo": "Cerrar sesión",
+   "epica": "Cuenta",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 35,
+   "tareas_api": [
+    "7.4"
+   ],
+   "tareas_web": [
+    "F2.5"
+   ],
+   "compartidas": [
+    "7.4"
+   ]
+  },
+  {
+   "id": "HU-10",
+   "titulo": "Buscar libros",
+   "epica": "Catálogo",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 35,
+   "tareas_api": [
+    "6.1"
+   ],
+   "tareas_web": [
+    "F1.1",
+    "F1.2",
+    "F1.4"
+   ],
+   "compartidas": [
+    "F1.1"
+   ]
+  },
+  {
+   "id": "HU-11",
+   "titulo": "Ver un libro",
+   "epica": "Catálogo",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-27",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-27",
+   "minutos": 16,
+   "tareas_api": [
+    "3.4",
+    "3.5"
+   ],
+   "tareas_web": [
+    "F1.1",
+    "F1.3"
+   ],
+   "compartidas": [
+    "F1.1"
+   ]
+  },
+  {
+   "id": "HU-20",
+   "titulo": "Agregar un libro al carrito",
+   "epica": "Carrito",
+   "api": "—",
+   "web": "✅",
+   "inicio": "2026-10-30",
+   "cierre": "2026-10-30",
+   "api_hasta": null,
+   "minutos": 12,
+   "tareas_api": [],
+   "tareas_web": [
+    "F3.1",
+    "F3.2"
+   ],
+   "compartidas": []
+  },
+  {
+   "id": "HU-21",
+   "titulo": "Cambiar la cantidad o quitar un libro",
+   "epica": "Carrito",
+   "api": "—",
+   "web": "✅",
+   "inicio": "2026-10-30",
+   "cierre": "2026-10-30",
+   "api_hasta": null,
+   "minutos": 4,
+   "tareas_api": [],
+   "tareas_web": [
+    "F3.3"
+   ],
+   "compartidas": []
+  },
+  {
+   "id": "HU-22",
+   "titulo": "Ver el carrito",
+   "epica": "Carrito",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-29",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-29",
+   "minutos": 69,
+   "tareas_api": [
+    "8.1",
+    "8.2",
+    "8.3",
+    "8.4"
+   ],
+   "tareas_web": [
+    "F3.4",
+    "F4.1"
+   ],
+   "compartidas": []
+  },
+  {
+   "id": "HU-30",
+   "titulo": "Indicar la dirección de envío",
+   "epica": "Compra",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 30,
+   "tareas_api": [
+    "6.2",
+    "6.3"
+   ],
+   "tareas_web": [
+    "F4.2"
+   ],
+   "compartidas": []
+  },
+  {
+   "id": "HU-31",
+   "titulo": "Pagar y crear el pedido",
+   "epica": "Compra",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-27",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 123,
+   "tareas_api": [
+    "5.1",
+    "5.2",
+    "5.3",
+    "5.4",
+    "5.5",
+    "5.8",
+    "5.9",
+    "5.10",
+    "7.7"
+   ],
+   "tareas_web": [
+    "F4.3"
+   ],
+   "compartidas": [
+    "5.8",
+    "7.7",
+    "F4.3"
+   ]
+  },
+  {
+   "id": "HU-32",
+   "titulo": "Reintentar sin cobrar dos veces",
+   "epica": "Compra",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-27",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-27",
+   "minutos": 17,
+   "tareas_api": [
+    "5.6"
+   ],
+   "tareas_web": [
+    "F4.3"
+   ],
+   "compartidas": [
+    "F4.3"
+   ]
+  },
+  {
+   "id": "HU-33",
+   "titulo": "Entender por qué falló la compra",
+   "epica": "Compra",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-29",
+   "minutos": 22,
+   "tareas_api": [
+    "5.8",
+    "9.1"
+   ],
+   "tareas_web": [
+    "F4.4"
+   ],
+   "compartidas": [
+    "5.8"
+   ]
+  },
+  {
+   "id": "HU-34",
+   "titulo": "Ver la confirmación",
+   "epica": "Compra",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-27",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 33,
+   "tareas_api": [
+    "5.7",
+    "5.8"
+   ],
+   "tareas_web": [
+    "F4.5"
+   ],
+   "compartidas": [
+    "5.8"
+   ]
+  },
+  {
+   "id": "HU-40",
+   "titulo": "Ver mis pedidos",
+   "epica": "Pedidos",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 97,
+   "tareas_api": [
+    "6.9",
+    "7.8"
+   ],
+   "tareas_web": [
+    "F5.1"
+   ],
+   "compartidas": [
+    "6.9",
+    "7.8"
+   ]
+  },
+  {
+   "id": "HU-41",
+   "titulo": "Ver el detalle de un pedido",
+   "epica": "Pedidos",
+   "api": "✅",
+   "web": "✅",
+   "inicio": "2026-10-28",
+   "cierre": "2026-10-30",
+   "api_hasta": "2026-10-28",
+   "minutos": 42,
+   "tareas_api": [
+    "5.8",
+    "7.7"
+   ],
+   "tareas_web": [
+    "F5.2"
+   ],
+   "compartidas": [
+    "5.8",
+    "7.7"
+   ]
+  },
+  {
+   "id": "HU-50",
+   "titulo": "Crear un libro",
+   "epica": "Administración",
+   "api": "✅",
+   "web": "⬜",
+   "inicio": "2026-10-28",
+   "cierre": null,
+   "api_hasta": "2026-10-28",
+   "minutos": 71,
+   "tareas_api": [
+    "6.4",
+    "6.5",
+    "6.6",
+    "7.9"
+   ],
+   "tareas_web": [],
+   "compartidas": []
+  },
+  {
+   "id": "HU-51",
+   "titulo": "Editar o desactivar un libro",
+   "epica": "Administración",
+   "api": "✅",
+   "web": "⬜",
+   "inicio": "2026-10-28",
+   "cierre": null,
+   "api_hasta": "2026-10-28",
+   "minutos": 22,
+   "tareas_api": [
+    "6.7"
+   ],
+   "tareas_web": [],
+   "compartidas": []
+  },
+  {
+   "id": "HU-52",
+   "titulo": "Cargar stock",
+   "epica": "Administración",
+   "api": "✅",
+   "web": "⬜",
+   "inicio": "2026-10-28",
+   "cierre": null,
+   "api_hasta": "2026-10-28",
+   "minutos": 17,
+   "tareas_api": [
+    "6.8"
+   ],
+   "tareas_web": [],
+   "compartidas": []
+  },
+  {
+   "id": "HU-53",
+   "titulo": "Ver los pedidos de un cliente",
+   "epica": "Administración",
+   "api": "✅",
+   "web": "⬜",
+   "inicio": "2026-10-28",
+   "cierre": null,
+   "api_hasta": "2026-10-28",
+   "minutos": 80,
+   "tareas_api": [
+    "6.9",
+    "7.8"
+   ],
+   "tareas_web": [],
+   "compartidas": [
+    "6.9",
+    "7.8"
+   ]
+  }
+ ]
+}

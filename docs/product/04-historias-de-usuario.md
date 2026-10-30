@@ -27,6 +27,8 @@
 | [HU-52](#hu-52-cargar-stock) | Cargar stock | Administración | ✅ | ⬜ | Segunda etapa |
 | [HU-53](#hu-53-ver-los-pedidos-de-un-cliente) | Ver los pedidos de un cliente | Administración | ✅ | ⬜ | Segunda etapa |
 
+**❄️ Histórico congelado (desde 2026-10-30).** Este archivo guarda el texto de las 20 historias hechas hasta esa fecha y **ya no se edita**. Las historias nuevas, y las que amplían o cambian una de estas, se escriben **cada una en su propio archivo** de [`../historias/`](../historias/README.md), junto con la matriz de todas (estas 20 incluidas, con su fecha de cierre y su tiempo aproximado), sus tareas por capa y su bitácora.
+
 La columna **API** de las historias del corte 7 pasó a ✅ al cerrarse ese corte del backend (ver [00-avance](../backend/00-avance.md)); la de HU-22 pasó a ✅ al cerrarse el corte 8 (cotización). Ya ninguna historia espera al backend.
 
 ---

@@ -1,5 +1,7 @@
 # Backend: control de avance
 
+> **❄️ Historial congelado desde el 2026-10-30.** El trabajo nuevo se planifica y se registra por historia de usuario, cada una en su archivo de [`../historias/`](../historias/README.md) (con la matriz de todas las historias); lo transversal, en [`../avance.md`](../avance.md); a este archivo ya no se le añaden tareas, filas ni bitácora. Sigue valiendo como registro de lo que se hizo, de las decisiones y de los problemas abiertos que aún no se trasladaron (los vigentes están en el tablero nuevo).
+
 > Seguimiento de la implementación de `apps/main-api` según las fases de la guía. Se actualiza en cada commit que avance una tarea: marca la casilla, anota lo que cambió respecto a la guía y deja una línea en la [bitácora](#bitácora).
 
 **Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado
