@@ -67,6 +67,17 @@ Contra el backend real, con un libro agotado y otro con 3 unidades en el carrito
 | HU-23.1 | 🌐 WEB | 🖼️ pantalla | 🟢 normal | El carrito y la compra marcan los libros sin stock suficiente | Que la persona se entere en el carrito, y no en el pago, de qué libro ya no alcanza | HU-12.4 | ✏️ propuesta |
 | HU-23.2 | 🧪 E2E | 🔁 recorrido | 🟢 normal | El carrito sin stock de punta a punta | Comprobar con el backend real que el carrito bloquea y explica antes de pagar | HU-23.1 | ✏️ propuesta |
 
+## Ejecución
+
+> Lo completa `scripts/historias.py` (no se edita a mano): sella el **inicio** cuando una tarea pasa a `⏩ en-curso` y el **fin** cuando pasa a `✅ hecho`, con la hora de Lima. El **tiempo** es fin − inicio e **incluye las esperas** (aprobaciones, pausas); el tiempo de la matriz de `README.md` sale de git y no es el mismo dato.
+
+<!-- EJECUCION:INICIO (la completa scripts/historias.py: no editar a mano) -->
+| # | Inicio | Fin | Tiempo |
+|---|---|---|---|
+| HU-23.1 | — | — | — |
+| HU-23.2 | — | — | — |
+<!-- EJECUCION:FIN -->
+
 ## Detalle de las tareas
 
 ### HU-23.1 El carrito y la compra marcan los libros sin stock suficiente

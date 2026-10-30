@@ -5,7 +5,7 @@ Reúne TODAS las historias en una tabla: las 20 hechas antes de 2026-10-30 (dato
 vez desde git) y las nuevas, cada una en su archivo docs/historias/HU-nn-titulo.md (o EN-nn-… para un habilitador). De cada
 archivo nuevo lee el encabezado y la tabla de tareas; la fecha y el tiempo salen de `git log` (commits `HU-nn.k [CAPA]: …`).
 
-    python3 scripts/historias.py           # reescribe la matriz y comprueba
+    python3 scripts/historias.py           # sella inicio/fin de las tareas, reescribe la matriz y comprueba
     python3 scripts/historias.py --check   # solo comprueba (estructura); código de salida 1 si algo no cuadra
     python3 scripts/historias.py --tipos   # imprime la tabla de tipos de tarea (la fuente es docs/historias/_plantilla.md)
     python3 scripts/historias.py --formato # completa y corrige los iconos de la tabla de tareas de cada historia
@@ -44,6 +44,13 @@ TIPOS = {
     "E2E": ("recorrido",),
 }
 SIEMPRE_CRITICOS = ("base-de-datos", "evento")
+# La tabla «## Ejecución» de cada historia: el inicio (cuando la tarea pasa a en-curso) y el fin (cuando pasa a hecho) los sella el
+# script con la hora de Lima; el tiempo es fin − inicio. Se guardan en el archivo porque el commit de una tarea no puede contener
+# su propia hora
+EJEC_INICIO = "<!-- EJECUCION:INICIO (la completa scripts/historias.py: no editar a mano) -->"
+EJEC_FIN = "<!-- EJECUCION:FIN -->"
+SELLO = re.compile(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$")
+FORMATO_SELLO = "%Y-%m-%d %H:%M"
 ESTADOS_TAREA = ("propuesta", "pendiente", "en-curso", "hecho", "bloqueado")
 # Cada valor de las columnas estructuradas (Capa, Tipo, Rigor, Estado) se escribe «icono texto» y su icono es siempre el mismo:
 # el texto es el valor (kebab-case) y el icono lo acompaña. El comprobador exige que estén en TODAS las filas y que coincidan;
@@ -109,6 +116,8 @@ def _valor(kind, raw):
 
 def parse_rows(text):
     """[(id, [celdas sin recortar])] de las filas de la tabla de tareas (una fila es `| HU-nn.k | … |`)."""
+    if EJEC_INICIO in text and EJEC_FIN in text:  # las filas de «## Ejecución» también empiezan por un id de tarea: no son de la tabla de tareas
+        text = text.split(EJEC_INICIO, 1)[0] + text.split(EJEC_FIN, 1)[1]
     rows = []
     for line in text.splitlines():
         m = FILA.match(line)
@@ -242,6 +251,124 @@ def layer_status(tasks, capa):
     if all(s in ("pendiente", "propuesta") for s in states):
         return "⬜"
     return "🔄"
+
+
+# ---------- ejecución: inicio, fin y tiempo de cada tarea ----------
+
+def parse_execution(text):
+    """{id: {"inicio", "fin", "tiempo"}} de la tabla «## Ejecución» (None donde la celda es «—»); None si no existe la tabla."""
+    if EJEC_INICIO not in text or EJEC_FIN not in text:
+        return None
+    cuerpo = text.split(EJEC_INICIO, 1)[1].split(EJEC_FIN, 1)[0]
+    filas = {}
+    for line in cuerpo.splitlines():
+        m = FILA.match(line)
+        if m:
+            c = [x.strip() for x in m.group(2).split("|")]
+            if len(c) == 3:
+                filas[m.group(1)] = {k: (None if v in ("—", "") else v) for k, v in zip(("inicio", "fin", "tiempo"), c)}
+    return filas
+
+
+def elapsed(inicio, fin):
+    """El tiempo entre dos sellos «AAAA-MM-DD HH:MM», como texto («1 h 15 min»)."""
+    delta = datetime.strptime(fin, FORMATO_SELLO) - datetime.strptime(inicio, FORMATO_SELLO)
+    return fmt_minutes(delta.total_seconds() / 60)
+
+
+def render_execution(filas):
+    lines = [EJEC_INICIO, "| # | Inicio | Fin | Tiempo |", "|---|---|---|---|"]
+    for tid, e in filas:
+        lines.append(f"| {tid} | {e['inicio'] or '—'} | {e['fin'] or '—'} | {e['tiempo'] or '—'} |")
+    lines.append(EJEC_FIN)
+    return "\n".join(lines)
+
+
+def stamp_text(text, now):
+    """El texto con la tabla «## Ejecución» al día: sella el inicio de las tareas que pasaron a en-curso y el fin de las que pasaron a
+    hecho (sin pisar los sellos que ya existen), calcula el tiempo y deja una fila por tarea. Devuelve (texto, avisos)."""
+    tasks = parse_tasks(text)
+    if not tasks:
+        return text, []
+    existentes = parse_execution(text) or {}
+    sello, filas, avisos = now.strftime(FORMATO_SELLO), [], []
+    for tid, _, estado in tasks:
+        e = existentes.get(tid, {"inicio": None, "fin": None, "tiempo": None})
+        inicio, fin = e["inicio"], e["fin"]
+        if estado in ("en-curso", "hecho") and not inicio:
+            inicio = sello
+        if estado == "hecho" and not fin:
+            fin = sello
+            if e["inicio"] is None:
+                avisos.append(f"{tid} pasó a hecho sin pasar por en-curso: su inicio y su fin son la misma hora y su tiempo no es fiable")
+        valido = inicio and fin and SELLO.match(inicio) and SELLO.match(fin)
+        filas.append((tid, {"inicio": inicio, "fin": fin, "tiempo": elapsed(inicio, fin) if valido else (e["tiempo"] if inicio and fin else None)}))
+    bloque = render_execution(filas)
+    if EJEC_INICIO in text and EJEC_FIN in text:
+        antes, resto = text.split(EJEC_INICIO, 1)
+        _, despues = resto.split(EJEC_FIN, 1)
+        return f"{antes}{bloque}{despues}", avisos
+    seccion = ("## Ejecución\n\n> Lo completa `scripts/historias.py` (no se edita a mano): sella el **inicio** cuando una tarea pasa a `⏩ en-curso` y el **fin** "
+               "cuando pasa a `✅ hecho`, con la hora de Lima. El **tiempo** es fin − inicio e **incluye las esperas** (aprobaciones, pausas); "
+               "el tiempo de la matriz de `README.md` sale de git y no es el mismo dato.\n\n" + bloque + "\n\n")
+    ancla = "## Detalle de las tareas"
+    if ancla in text:
+        i = text.index(ancla)
+        return text[:i] + seccion + text[i:], avisos
+    return text.rstrip("\n") + "\n\n" + seccion, avisos
+
+
+def stamp_all(root, now):
+    """Sella las historias del repositorio; devuelve ([archivos cambiados], [avisos])."""
+    cambiados, avisos = [], []
+    for path in story_files(root):
+        antes = path.read_text(encoding="utf-8")
+        despues, av = stamp_text(antes, now)
+        avisos += [f"{path.name}: {a}" for a in av]
+        if despues != antes:
+            path.write_text(despues, encoding="utf-8")
+            cambiados.append(path.name)
+    return cambiados, avisos
+
+
+def _comprobar_ejecucion(nombre, text, tasks):
+    """Los errores de la tabla «## Ejecución»: una fila por tarea, sellos con formato, coherentes con el estado y con el tiempo."""
+    ej = parse_execution(text)
+    if ej is None:
+        return [f"{nombre}: falta la tabla «## Ejecución» (con sus marcas): ejecuta `python3 scripts/historias.py`"]
+    errores, estados = [], {tid: est for tid, _, est in tasks}
+    for tid in estados:
+        if tid not in ej:
+            errores.append(f"{nombre}: la tabla «Ejecución» no tiene fila para {tid}: ejecuta `python3 scripts/historias.py`")
+    for tid in ej:
+        if tid not in estados:
+            errores.append(f"{nombre}: la tabla «Ejecución» tiene una fila de {tid} y no existe esa tarea")
+    for tid, e in ej.items():
+        estado = estados.get(tid)
+        if estado is None:
+            continue
+        invalido = False
+        for campo in ("inicio", "fin"):
+            if e[campo] and not SELLO.match(e[campo]):
+                errores.append(f"{nombre}: {tid}: el {campo} «{e[campo]}» de «Ejecución» no tiene el formato AAAA-MM-DD HH:MM")
+                invalido = True
+        if invalido:
+            continue
+        if estado in ("pendiente", "propuesta") and (e["inicio"] or e["fin"] or e["tiempo"]):
+            errores.append(f"{nombre}: {tid} está {estado} y tiene sellos de ejecución")
+            continue
+        if estado in ("en-curso", "hecho") and not e["inicio"]:
+            errores.append(f"{nombre}: {tid} está {estado} y le falta el inicio en «Ejecución»: ejecuta `python3 scripts/historias.py`")
+        if estado == "hecho" and not e["fin"]:
+            errores.append(f"{nombre}: {tid} está hecha y le falta el fin en «Ejecución»: ejecuta `python3 scripts/historias.py`")
+        if estado != "hecho" and e["fin"]:
+            errores.append(f"{nombre}: {tid} no está hecha y tiene fin en «Ejecución»")
+        if e["inicio"] and e["fin"]:
+            if e["fin"] < e["inicio"]:
+                errores.append(f"{nombre}: {tid}: el fin es anterior al inicio")
+            elif e["tiempo"] != elapsed(e["inicio"], e["fin"]):
+                errores.append(f"{nombre}: {tid}: el tiempo «{e['tiempo']}» no es fin − inicio ({elapsed(e['inicio'], e['fin'])}): ejecuta `python3 scripts/historias.py`")
+    return errores
 
 
 # ---------- git: fechas y tiempos ----------
@@ -447,6 +574,7 @@ def check(root):
             errors += _comprobar_fila(path.name, tid, cells)
             if tid not in bloques:
                 errors.append(f"{path.name}: la tarea {tid} no tiene su bloque de detalle («### {tid} …» dentro de «## Detalle de las tareas», con «**Se comprueba**» y sus casillas)")
+        errors += _comprobar_ejecucion(path.name, text, tasks)
         ids = {tid for tid, _ in rows}
         for tid in bloques:
             if tid not in ids:
@@ -514,6 +642,11 @@ def main(argv):
         print(f"iconos al día en {cambiados} archivo(s)")
         return 0
     if "--check" not in argv:
+        cambiados, avisos = stamp_all(root, datetime.now(LIMA))
+        for nombre in cambiados:
+            print(f"ejecución: {nombre}")
+        for aviso in avisos:
+            print("⚠", aviso)
         write_matrix(root, git_commits(root))
         print("matriz actualizada: docs/historias/README.md")
     errors = check(root)

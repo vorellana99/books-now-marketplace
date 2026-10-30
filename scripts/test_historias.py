@@ -38,7 +38,21 @@ def bloque(tid, rigor, estado, checks=("una comprobación",), reglas=True):
     return "\n".join(lines)
 
 
-def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=True, sid="HU-12"):
+def ejecucion(tareas):
+    """La tabla «## Ejecución» coherente con el estado de cada tarea (hecho: inicio, fin y tiempo; en-curso: solo inicio)."""
+    filas = []
+    for t in tareas:
+        if t[4] == "hecho":
+            ini, fin, tm = "2026-10-30 09:00", "2026-10-30 09:30", "30 min"
+        elif t[4] == "en-curso":
+            ini, fin, tm = "2026-10-30 09:00", "—", "—"
+        else:
+            ini, fin, tm = "—", "—", "—"
+        filas.append(f"| {t[0]} | {ini} | {fin} | {tm} |")
+    return "## Ejecución\n\n" + h.EJEC_INICIO + "\n| # | Inicio | Fin | Tiempo |\n|---|---|---|---|\n" + "\n".join(filas) + "\n" + h.EJEC_FIN + "\n"
+
+
+def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=True, sid="HU-12", exec_=True):
     partes = [f"---\nid: {sid}\ntitulo: Ver si hay stock de un libro\ntipo: HU\nepica: Catálogo\nestado: {estado}\namplia:\n---\n", f"# {sid}\n"]
     if contrato:
         partes.append("## Contrato\n\nSin cambios en el contrato.\n")
@@ -46,6 +60,8 @@ def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=T
         partes.append("## Pantalla\n\nSin cambios visuales.\n")
     cab = "| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |\n|---|---|---|---|---|---|---|---|"
     partes.append("## Tareas\n\n" + cab + "\n" + "\n".join(fila(*t) for t in tareas) + "\n")
+    if exec_:
+        partes.append(ejecucion(tareas))
     if detalle:
         partes.append("## Detalle de las tareas\n\n" + "\n\n".join(bloque(t[0], t[3], t[4]) for t in tareas) + "\n")
     return "\n".join(partes)
@@ -207,6 +223,76 @@ class TablaDeTipos(unittest.TestCase):
         self.assertNotIn("**", texto)
         self.assertNotIn("`", texto)
         self.assertIn("Lo que la API ofrece", texto)
+
+
+class Ejecucion(unittest.TestCase):
+    NOW = datetime(2026, 10, 30, 11, 20, tzinfo=LIMA)
+
+    def test_lee_la_tabla_de_ejecucion(self):
+        ej = h.parse_execution(HU_OK)
+        self.assertEqual(ej["HU-12.1"], {"inicio": "2026-10-30 09:00", "fin": "2026-10-30 09:30", "tiempo": "30 min"})
+        self.assertEqual(ej["HU-12.3"], {"inicio": None, "fin": None, "tiempo": None})
+
+    def test_una_tarea_que_pasa_a_en_curso_recibe_su_inicio(self):
+        texto = hu([TAREAS[0], ("HU-12.2", "API", "regla", "critico", "en-curso")])
+        # la tarea 12.2 estaba en-curso sin sello: lo recibe ahora
+        sin_sello = texto.replace("| HU-12.2 | 2026-10-30 09:00 | — | — |", "| HU-12.2 | — | — | — |")
+        nuevo, avisos = h.stamp_text(sin_sello, self.NOW)
+        self.assertEqual(h.parse_execution(nuevo)["HU-12.2"], {"inicio": "2026-10-30 11:20", "fin": None, "tiempo": None})
+        self.assertEqual(avisos, [])
+
+    def test_una_tarea_que_pasa_a_hecho_recibe_su_fin_y_el_tiempo(self):
+        texto = hu([("HU-12.2", "API", "regla", "critico", "hecho")])
+        parcial = texto.replace("| HU-12.2 | 2026-10-30 09:00 | 2026-10-30 09:30 | 30 min |", "| HU-12.2 | 2026-10-30 09:50 | — | — |")
+        nuevo, _ = h.stamp_text(parcial, self.NOW)
+        self.assertEqual(h.parse_execution(nuevo)["HU-12.2"], {"inicio": "2026-10-30 09:50", "fin": "2026-10-30 11:20", "tiempo": "1 h 30 min"})
+
+    def test_no_pisa_los_sellos_que_ya_existen(self):
+        nuevo, _ = h.stamp_text(HU_OK, self.NOW)
+        self.assertEqual(nuevo, HU_OK)
+
+    def test_saltar_de_pendiente_a_hecho_avisa_que_el_tiempo_no_es_fiable(self):
+        texto = hu([("HU-12.2", "API", "regla", "critico", "hecho")])
+        sin_sellos = texto.replace("| HU-12.2 | 2026-10-30 09:00 | 2026-10-30 09:30 | 30 min |", "| HU-12.2 | — | — | — |")
+        nuevo, avisos = h.stamp_text(sin_sellos, self.NOW)
+        self.assertEqual(h.parse_execution(nuevo)["HU-12.2"], {"inicio": "2026-10-30 11:20", "fin": "2026-10-30 11:20", "tiempo": "0 min"})
+        self.assertTrue(any("HU-12.2" in a and "en-curso" in a for a in avisos))
+
+    def test_las_tareas_pendientes_no_reciben_sellos(self):
+        nuevo, _ = h.stamp_text(HU_OK, self.NOW)
+        self.assertEqual(h.parse_execution(nuevo)["HU-12.3"], {"inicio": None, "fin": None, "tiempo": None})
+
+    def test_crea_la_seccion_si_no_existe_y_una_fila_por_tarea(self):
+        sin_seccion = hu(exec_=False)
+        self.assertIsNone(h.parse_execution(sin_seccion))
+        nuevo, _ = h.stamp_text(sin_seccion, self.NOW)
+        ej = h.parse_execution(nuevo)
+        self.assertEqual(list(ej), ["HU-12.1", "HU-12.2", "HU-12.3", "HU-12.4"])
+        # la sección va entre la tabla de tareas y el detalle
+        self.assertLess(nuevo.index("## Tareas"), nuevo.index("## Ejecución"))
+        self.assertLess(nuevo.index("## Ejecución"), nuevo.index("## Detalle de las tareas"))
+
+    def test_agrega_la_fila_de_una_tarea_nueva_y_quita_la_de_una_que_ya_no_existe(self):
+        mas = hu(TAREAS + [("HU-12.5", "E2E", "recorrido", "normal", "pendiente")]).replace("| HU-12.5 | — | — | — |\n", "")
+        nuevo, _ = h.stamp_text(mas, self.NOW)
+        self.assertIn("HU-12.5", h.parse_execution(nuevo))
+        menos = HU_OK.replace("| HU-12.4 | — | — | — |\n", "")
+        self.assertNotIn("HU-12.4", h.parse_execution(menos))  # la fila sigue en la tabla de tareas, pero no aquí
+        nuevo, _ = h.stamp_text(menos, self.NOW)
+        self.assertIn("HU-12.4", h.parse_execution(nuevo))
+        huerfana = HU_OK.replace(h.EJEC_FIN, "| HU-12.9 | — | — | — |\n" + h.EJEC_FIN)
+        nuevo, _ = h.stamp_text(huerfana, self.NOW)
+        self.assertNotIn("HU-12.9", h.parse_execution(nuevo))
+
+    def test_el_tiempo_se_formatea(self):
+        self.assertEqual(h.elapsed("2026-10-30 09:00", "2026-10-30 09:00"), "0 min")
+        self.assertEqual(h.elapsed("2026-10-30 09:00", "2026-10-30 10:15"), "1 h 15 min")
+        self.assertEqual(h.elapsed("2026-10-30 09:00", "2026-10-31 09:00"), "24 h")
+
+    def test_es_idempotente(self):
+        una, _ = h.stamp_text(hu(exec_=False), self.NOW)
+        dos, _ = h.stamp_text(una, self.NOW + timedelta(hours=5))
+        self.assertEqual(una, dos)
 
 
 class Tiempo(unittest.TestCase):
@@ -512,6 +598,45 @@ class Comprobacion(unittest.TestCase):
 
     def test_una_tarea_normal_no_necesita_reglas_e_invariantes(self):
         self.assertEqual(self.errors(), [])  # HU-12.3 es normal y no las tiene
+
+    # --- ejecución ---
+    def test_falta_la_tabla_de_ejecucion(self):
+        self.con_tareas(TAREAS, exec_=False)
+        self.assertTrue(self.hay("Ejecución", "historias.py"))
+
+    def test_las_filas_de_ejecucion_son_las_de_las_tareas(self):
+        self.escribe(HU_OK.replace("| HU-12.4 | — | — | — |\n", ""))
+        self.assertTrue(self.hay("Ejecución", "HU-12.4"))
+        self.escribe(HU_OK.replace(h.EJEC_FIN, "| HU-12.9 | — | — | — |\n" + h.EJEC_FIN))
+        self.assertTrue(self.hay("Ejecución", "HU-12.9"))
+
+    def test_un_sello_con_formato_invalido(self):
+        self.escribe(HU_OK.replace("2026-10-30 09:00 | 2026-10-30 09:30", "30 oct 9:00 | 2026-10-30 09:30", 1))
+        self.assertTrue(self.hay("Ejecución", "HU-12.1", "formato"))
+
+    def test_una_tarea_hecha_necesita_inicio_y_fin(self):
+        self.escribe(HU_OK.replace("| HU-12.1 | 2026-10-30 09:00 | 2026-10-30 09:30 | 30 min |", "| HU-12.1 | 2026-10-30 09:00 | — | — |"))
+        self.assertTrue(self.hay("HU-12.1", "fin"))
+        self.escribe(HU_OK.replace("| HU-12.1 | 2026-10-30 09:00 | 2026-10-30 09:30 | 30 min |", "| HU-12.1 | — | — | — |"))
+        self.assertTrue(self.hay("HU-12.1", "inicio"))
+
+    def test_una_tarea_pendiente_no_tiene_sellos(self):
+        self.escribe(HU_OK.replace("| HU-12.3 | — | — | — |", "| HU-12.3 | 2026-10-30 09:00 | — | — |"))
+        self.assertTrue(self.hay("HU-12.3", "sello"))
+
+    def test_una_tarea_en_curso_tiene_inicio_y_no_fin(self):
+        self.con_tareas([TAREAS[0], TAREAS[1], ("HU-12.3", "API", "contrato", "normal", "en-curso"), TAREAS[3]])
+        self.assertEqual(self.errors(), [])
+        self.escribe(hu([TAREAS[0], TAREAS[1], ("HU-12.3", "API", "contrato", "normal", "en-curso"), TAREAS[3]]).replace("| HU-12.3 | 2026-10-30 09:00 | — | — |", "| HU-12.3 | — | — | — |"))
+        self.assertTrue(self.hay("HU-12.3", "inicio"))
+
+    def test_el_fin_no_puede_ser_anterior_al_inicio(self):
+        self.escribe(HU_OK.replace("2026-10-30 09:00 | 2026-10-30 09:30 | 30 min", "2026-10-30 09:30 | 2026-10-30 09:00 | 30 min", 1))
+        self.assertTrue(self.hay("HU-12.1", "anterior"))
+
+    def test_el_tiempo_es_fin_menos_inicio(self):
+        self.escribe(HU_OK.replace("| 30 min |", "| 45 min |", 1))
+        self.assertTrue(self.hay("HU-12.1", "tiempo"))
 
     # --- plantilla ---
     def test_una_plantilla_que_coincide_con_el_script_no_da_error(self):

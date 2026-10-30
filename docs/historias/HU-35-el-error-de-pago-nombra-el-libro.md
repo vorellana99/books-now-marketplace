@@ -96,6 +96,18 @@ Textos exactos (los dos van a `07-contenido-y-mensajes.md` en `HU-12.1`): «No h
 | HU-35.2 | 🌐 WEB | 🔀 comportamiento | 🟢 normal | El aviso de pago nombra el libro | Que el aviso diga «No hay suficientes unidades de «Título»» en lugar de «uno de tus libros» | HU-35.1 | ✏️ propuesta |
 | HU-35.3 | 🧪 E2E | 🔁 recorrido | 🟢 normal | La carrera de dos compradores | Comprobar con el backend real que el aviso nombra el libro cuando otra persona se lleva el último ejemplar | HU-35.2 | ✏️ propuesta |
 
+## Ejecución
+
+> Lo completa `scripts/historias.py` (no se edita a mano): sella el **inicio** cuando una tarea pasa a `⏩ en-curso` y el **fin** cuando pasa a `✅ hecho`, con la hora de Lima. El **tiempo** es fin − inicio e **incluye las esperas** (aprobaciones, pausas); el tiempo de la matriz de `README.md` sale de git y no es el mismo dato.
+
+<!-- EJECUCION:INICIO (la completa scripts/historias.py: no editar a mano) -->
+| # | Inicio | Fin | Tiempo |
+|---|---|---|---|
+| HU-35.1 | — | — | — |
+| HU-35.2 | — | — | — |
+| HU-35.3 | — | — | — |
+<!-- EJECUCION:FIN -->
+
 ## Detalle de las tareas
 
 ### HU-35.1 Los `422` `OUT_OF_STOCK` y `STOCK_ITEM_NOT_FOUND` llevan el `isbn`

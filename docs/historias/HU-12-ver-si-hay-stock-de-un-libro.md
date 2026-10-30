@@ -132,6 +132,20 @@ Resumen: 6 a 10 unidades → «Disponible», 2 a 5 → «Quedan N», 1 → «Que
 | HU-12.4 | 🌐 WEB | 🖼️ pantalla | 🟢 normal | Lista y detalle muestran la disponibilidad; el botón respeta el límite | Que la persona vea si hay stock desde la lista y el detalle, y no pueda agregar más de lo que hay | HU-12.3 | ✏️ propuesta |
 | HU-12.5 | 🧪 E2E | 🔁 recorrido | 🟢 normal | Catálogo y detalle contra el backend real | Comprobar de punta a punta que la persona ve la disponibilidad real | HU-12.4 | ✏️ propuesta |
 
+## Ejecución
+
+> Lo completa `scripts/historias.py` (no se edita a mano): sella el **inicio** cuando una tarea pasa a `⏩ en-curso` y el **fin** cuando pasa a `✅ hecho`, con la hora de Lima. El **tiempo** es fin − inicio e **incluye las esperas** (aprobaciones, pausas); el tiempo de la matriz de `README.md` sale de git y no es el mismo dato.
+
+<!-- EJECUCION:INICIO (la completa scripts/historias.py: no editar a mano) -->
+| # | Inicio | Fin | Tiempo |
+|---|---|---|---|
+| HU-12.1 | — | — | — |
+| HU-12.2 | — | — | — |
+| HU-12.3 | — | — | — |
+| HU-12.4 | — | — | — |
+| HU-12.5 | — | — | — |
+<!-- EJECUCION:FIN -->
+
 ## Detalle de las tareas
 
 ### HU-12.1 Aprobar y registrar la decisión de producto de las tres historias

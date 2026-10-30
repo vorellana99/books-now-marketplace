@@ -72,6 +72,17 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 | HU-nn.3 | 🌐 WEB | 🖼️ pantalla | 🟢 normal | … | … | HU-nn.2 | ✏️ propuesta |
 | HU-nn.4 | 🧪 E2E | 🔁 recorrido | 🟢 normal | … | … | HU-nn.3 | ✏️ propuesta |
 
+## Ejecución
+
+> **Inicio, fin y tiempo de cada tarea.** Lo completa `scripts/historias.py` (no se edita a mano): sella el **inicio** cuando una tarea pasa a `⏩ en-curso` y el **fin** cuando pasa a `✅ hecho`, con la hora de Lima; el **tiempo** es fin − inicio e **incluye las esperas** (aprobaciones, pausas). Una fila por tarea, en el mismo orden. Si la sección no existe, el script la crea la primera vez que se ejecuta. Es una tabla aparte para que la de tareas siga siendo un índice legible.
+
+<!-- EJECUCION:INICIO (la completa scripts/historias.py: no editar a mano) -->
+| # | Inicio | Fin | Tiempo |
+|---|---|---|---|
+| HU-nn.1 | — | — | — |
+| HU-nn.2 | — | — | — |
+<!-- EJECUCION:FIN -->
+
 ## Detalle de las tareas
 
 > Un bloque por tarea, con el mismo id que su fila. **Se comprueba** es una **lista de casillas** (`- [ ]`): cada una es algo concreto y verificable; se marcan (`- [x]`) al cumplirse y una tarea `hecho` las tiene todas marcadas. Una tarea está **lista para ejecutarse** cuando su primera comprobación basta para escribir la primera prueba roja. Una tarea con rigor `critico` lleva además **Reglas e invariantes** (lo que nunca debe dejar de cumplirse: es lo que las mutaciones comprueban). Detalle mínimo según la tarea: `[DOC]` y `[WEB]` simples, comprobaciones concretas; `[WEB]` que cambia lo que se ve, además la **Pantalla**, y se revisa en un navegador real a 360 y 1280 px; `[API]` que cambia la API, además el **Contrato**; `[E2E]`, el escenario paso a paso.
