@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useCallback, useId, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { useStore } from "zustand";
 import { useSession } from "@/features/auth/index.ts";
 import {
@@ -14,7 +14,7 @@ import { Alert } from "@/shared/ui/alert.tsx";
 import { Button } from "@/shared/ui/button.tsx";
 import { EmptyState } from "@/shared/ui/state-panel.tsx";
 import { addressStore } from "../address.store.ts";
-import { paymentOutcome } from "../errors.ts";
+import { chargedNote, paymentOutcome } from "../errors.ts";
 import { usePayment } from "../hooks/use-payment.ts";
 import { ShippingForm } from "../components/shipping-form.tsx";
 import type { ShippingInput } from "../schemas.ts";
@@ -38,6 +38,20 @@ export function CheckoutPage() {
   const [cardToken, setCardToken] = useState<string>(TEST_CARDS[0].token);
   const cardId = useId();
   const payment = usePayment();
+  const cardRef = useRef<HTMLSelectElement>(null);
+  // El resultado del último fallo de negocio (cambia solo cuando cambia el estado del pago)
+  const failure = useMemo(
+    () => (payment.state.status === "failed" ? paymentOutcome(payment.state.error) : undefined),
+    [payment.state],
+  );
+  // Un error de dirección se marca junto al campo (el servidor no dice cuál: se marca el teléfono, que es el que más falla)
+  const addressError = useMemo(
+    () =>
+      failure?.action === "fix-address"
+        ? { field: "phone" as const, message: failure.message }
+        : undefined,
+    [failure],
+  );
 
   const saveDraft = useCallback(
     (values: ShippingInput) => addressStore.getState().setDraft(userId, values),
@@ -100,6 +114,7 @@ export function CheckoutPage() {
                 defaultValues={initialDraft}
                 onChange={saveDraft}
                 disabled={payment.inProgress}
+                serverError={addressError}
                 onSubmit={(address) => void payment.pay(address, cardToken)}
               />
             </section>
@@ -117,6 +132,7 @@ export function CheckoutPage() {
                   <select
                     id={cardId}
                     value={cardToken}
+                    ref={cardRef}
                     onChange={(event) => setCardToken(event.target.value)}
                     className="h-11 rounded-md border border-input bg-card px-3 text-base"
                   >
@@ -176,8 +192,38 @@ export function CheckoutPage() {
                 {payment.state.message}
               </Alert>
             ) : null}
-            {payment.state.status === "failed" ? (
-              <Alert variant="error">{paymentOutcome(payment.state.error).message}</Alert>
+            {failure ? (
+              <Alert
+                variant="error"
+                action={
+                  failure.action === "go-cart" ? (
+                    <Button asChild variant="outline">
+                      <Link to="/carrito">Volver al carrito</Link>
+                    </Button>
+                  ) : failure.action === "change-card" ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        payment.reset();
+                        cardRef.current?.focus();
+                      }}
+                    >
+                      Probar con otra tarjeta
+                    </Button>
+                  ) : failure.action === "login" ? (
+                    <Button asChild variant="outline">
+                      <Link to="/ingresar" search={{ returnTo: "/compra" }}>
+                        {failure.message.startsWith("Esta cuenta")
+                          ? "Entrar con otra cuenta"
+                          : "Entrar"}
+                      </Link>
+                    </Button>
+                  ) : undefined
+                }
+              >
+                <p>{failure.message}</p>
+                {chargedNote(failure) ? <p>{chargedNote(failure)}</p> : null}
+              </Alert>
             ) : null}
             <Button type="submit" form="shipping-form" disabled={!canPay} className="w-full">
               {payment.inProgress

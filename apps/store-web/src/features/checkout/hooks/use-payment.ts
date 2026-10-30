@@ -128,6 +128,8 @@ export function usePayment() {
   return {
     state,
     pay: (address: ShippingAddress, cardToken: string) => run({ address, cardToken }),
+    // Quita el aviso de fallo (por ejemplo, para probar con otra tarjeta)
+    reset: () => update({ status: "idle" }),
     // Reintentar con lo mismo (y, por tanto, la misma clave)
     retry: () => (last.current ? run(last.current) : Promise.resolve()),
     inProgress,
