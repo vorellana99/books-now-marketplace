@@ -139,6 +139,22 @@ export function stockRepositoryContract(
         expect((failed as ConflictError).code).toBe('ORDER_ALREADY_RESERVED');
         expect(await s.levelOf(A)).toEqual({ available: 8, reserved: 2 });
       });
+
+      it('un pedido que ya tiene reservas no reserva otro libro: ORDER_ALREADY_RESERVED y el otro libro no se toca', async () => {
+        const s = await create();
+        await s.seed(A, 10);
+        await s.seed(B, 10);
+        const id = order();
+        await s.repo.reserve(id, [{ isbn: A, quantity: 2 }]);
+
+        const failed = await error(
+          s.repo.reserve(id, [{ isbn: B, quantity: 3 }]),
+        );
+
+        expect((failed as ConflictError).code).toBe('ORDER_ALREADY_RESERVED');
+        expect(await s.levelOf(B)).toEqual({ available: 10, reserved: 0 });
+        expect((await s.reservationsOf(id)).map((r) => r.isbn)).toEqual([A]);
+      });
     });
 
     describe('release', () => {
@@ -504,6 +520,36 @@ export function stockRepositoryContract(
             'ORDER_ALREADY_RESERVED',
           );
           expect(await s.levelOf(A)).toEqual({ available: 8, reserved: 2 });
+        } finally {
+          await restore();
+        }
+      });
+
+      it('el mismo pedido con libros distintos a la vez: entra uno solo y el otro es ORDER_ALREADY_RESERVED', async () => {
+        const s = await create();
+        await s.seed(A, 10);
+        await s.seed(B, 10);
+        const id = order();
+        const restore = await widen(s);
+        try {
+          const results = await Promise.allSettled([
+            s.repo.reserve(id, [{ isbn: A, quantity: 2 }]),
+            s.repo.reserve(id, [{ isbn: B, quantity: 3 }]),
+          ]);
+
+          expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(
+            1,
+          );
+          const rejected = results.find(
+            (r) => r.status === 'rejected',
+          ) as PromiseRejectedResult;
+          expect((rejected.reason as ConflictError).code).toBe(
+            'ORDER_ALREADY_RESERVED',
+          );
+          // se reservó un solo libro: el del que entró
+          expect(await s.reservationsOf(id)).toHaveLength(1);
+          const levels = [await s.levelOf(A), await s.levelOf(B)];
+          expect(levels.filter((l) => l?.reserved === 0)).toHaveLength(1);
         } finally {
           await restore();
         }

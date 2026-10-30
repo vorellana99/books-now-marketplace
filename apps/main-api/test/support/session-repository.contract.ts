@@ -179,6 +179,37 @@ export function sessionRepositoryContract(
         }
       });
 
+      it('una reutilización conserva el momento en que un token de la familia ya estaba revocado', async () => {
+        const s = await create();
+        const { refreshToken } = await open(s);
+        const rotate = async (token: string) => {
+          const outcome = await s.repo.rotate(hashOf(token), (f) =>
+            f?.rotate(new Date(), TTL),
+          );
+          return outcome?.kind === 'renewed' ? outcome.refreshToken : token;
+        };
+        const second = await rotate(refreshToken);
+        const third = await rotate(second);
+        const earlier = new Date(Date.now() - 2 * DAY);
+        // el primer token aparece revocado desde antes; el segundo, usado y sin revocar, se presenta de nuevo
+        await s.setDates((await byHash(s, refreshToken))?.id as string, {
+          revokedAt: earlier,
+        });
+
+        const outcome = await s.repo.rotate(hashOf(second), (f) =>
+          f?.rotate(new Date(), TTL),
+        );
+
+        expect(outcome?.kind).toBe('reused');
+        expect((await byHash(s, refreshToken))?.revokedAt?.toISOString()).toBe(
+          earlier.toISOString(),
+        );
+        for (const token of [second, third]) {
+          const row = await byHash(s, token);
+          expect(row?.revokedAt?.getTime()).toBeGreaterThan(earlier.getTime());
+        }
+      });
+
       it('un token inválido (vencido) no guarda nada', async () => {
         const s = await create();
         const { refreshToken } = await open(s);

@@ -53,10 +53,10 @@ describe('infrastructure/ se divide en http, persistence, adapters y consumers',
     },
   );
 
-  it('no puede tener archivos sueltos', () => {
-    expect(violations({ [`${D}/infrastructure/helper.ts`]: '' })).toHaveLength(
-      1,
-    );
+  it('no puede tener archivos sueltos, y el mensaje lo dice', () => {
+    const found = violations({ [`${D}/infrastructure/helper.ts`]: '' });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(/archivos sueltos/);
   });
 });
 
