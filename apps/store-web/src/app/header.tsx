@@ -3,11 +3,12 @@ import { Menu, Search } from "lucide-react";
 import { useState } from "react";
 import { SearchBox } from "@/app/search-box.tsx";
 import { AccountMenu, MobileAccount } from "@/features/auth/index.ts";
+import { CartLink } from "@/features/cart/index.ts";
 import { Button } from "@/shared/ui/button.tsx";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/shared/ui/sheet.tsx";
 
 // Wireframe: docs/product/diseno/03-wireframes.md#cabecera-y-navegación
-// El carrito (F3) y el menú de la cuenta (F2) se agregan en sus cortes: hoy no hay rutas a las que llevar
+// Falta «Mis pedidos» (llega con F5: la ruta aún no existe y un enlace tipado a una ruta inexistente no compila)
 export function Header() {
   const [searching, setSearching] = useState(false);
 
@@ -56,14 +57,15 @@ export function Header() {
           <Link to="/" className="hover:text-primary">
             Libros
           </Link>
-          <AccountMenu />
         </nav>
 
-        <div className="ml-auto md:hidden">
+        {/* Lo de la derecha: la búsqueda (solo móvil), el carrito con su contador y la cuenta (solo escritorio; en móvil
+            está en el menú) */}
+        <div className="ml-auto flex items-center gap-1 md:ml-0 md:gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="text-foreground"
+            className="text-foreground md:hidden"
             aria-label="Buscar"
             aria-expanded={searching}
             aria-controls="buscar-movil-panel"
@@ -71,6 +73,10 @@ export function Header() {
           >
             <Search aria-hidden="true" />
           </Button>
+          <CartLink />
+          <div className="hidden items-center gap-5 font-medium md:flex">
+            <AccountMenu />
+          </div>
         </div>
       </div>
 

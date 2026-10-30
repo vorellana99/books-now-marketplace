@@ -1,10 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import type { Book } from "@/shared/api/types.ts";
+import { AddToCartCardButton } from "@/features/cart/index.ts";
 import { BookCover } from "@/shared/ui/book-cover.tsx";
 import { Price } from "@/shared/ui/price.tsx";
 
 // Tarjeta de un libro en el catálogo: en móvil una fila (portada pequeña a la izquierda), desde `sm` una tarjeta vertical.
-// Todo el título es un enlace al detalle. No hay botón "Agregar" hasta el corte F3 (carrito)
+// Todo el título es un enlace al detalle; el botón «Agregar» es independiente (no navega)
 export function BookCard({ book }: { book: Book }) {
   return (
     <article className="flex h-full gap-3 rounded-lg border border-border bg-card p-3 sm:flex-col">
@@ -24,6 +25,7 @@ export function BookCard({ book }: { book: Book }) {
         </h3>
         <p className="text-sm text-muted-foreground">{book.author}</p>
         <Price money={book.price} className="mt-auto pt-1" />
+        <AddToCartCardButton book={book} />
       </div>
     </article>
   );

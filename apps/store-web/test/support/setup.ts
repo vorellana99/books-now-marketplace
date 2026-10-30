@@ -1,6 +1,7 @@
 import { cleanup } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll } from "vite-plus/test";
 import { cartStore } from "@/features/cart/cart.store.ts";
+import { dismissToast } from "@/features/cart/toast.store.ts";
 import { createLocks } from "./locks.ts";
 import { server } from "./server.ts";
 
@@ -18,6 +19,7 @@ afterEach(() => {
   server.resetHandlers();
   // El carrito de la pestaña vive en memoria además de en `localStorage`: también se reinicia entre pruebas
   cartStore.setState({ byUser: {} });
+  dismissToast();
   localStorage.clear();
   sessionStorage.clear();
 });

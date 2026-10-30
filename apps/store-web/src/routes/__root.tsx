@@ -1,5 +1,6 @@
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import { useSessionWatcher } from "@/features/auth/index.ts";
+import { CartToaster } from "@/features/cart/index.ts";
 import { AppShell } from "@/app/app-shell.tsx";
 import { ErrorPage } from "@/app/error-page.tsx";
 import { NotFoundPage } from "@/app/not-found-page.tsx";
@@ -10,6 +11,7 @@ function Root() {
   return (
     <AppShell>
       <Outlet />
+      <CartToaster />
     </AppShell>
   );
 }

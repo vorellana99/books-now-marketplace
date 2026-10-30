@@ -1,5 +1,6 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
+import { AddToCartButton } from "@/features/cart/index.ts";
 import { isApiError } from "@/shared/api/errors.ts";
 import { BookCover } from "@/shared/ui/book-cover.tsx";
 import { Button } from "@/shared/ui/button.tsx";
@@ -27,7 +28,7 @@ const BackLink = () => (
   </Link>
 );
 
-// PA-02 · Detalle del libro (HU-11). El botón "Agregar al carrito" no tiene efecto hasta el corte F3
+// PA-02 · Detalle del libro (HU-11)
 export function BookDetailPage() {
   const { isbn } = useParams({ from: "/libros/$isbn" });
   const query = useBook(isbn);
@@ -101,7 +102,7 @@ export function BookDetailPage() {
             {/* En móvil el precio y el botón van en una barra fija abajo; en escritorio, junto a los datos */}
             <div className="fixed inset-x-0 bottom-0 z-10 flex items-center justify-between gap-4 border-t border-border bg-card p-3 md:static md:z-auto md:justify-start md:border-0 md:bg-transparent md:p-0 md:pt-2">
               <Price money={book.price} size="large" />
-              <Button>Agregar al carrito</Button>
+              <AddToCartButton book={book} />
             </div>
           </div>
         </div>

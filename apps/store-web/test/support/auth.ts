@@ -48,6 +48,13 @@ export class FakeAuth {
     return this.issue(this.users.get(email) as FakeUser);
   }
 
+  // Deja una sesión ya iniciada en `localStorage`, como si la persona hubiera entrado antes en este navegador
+  signIn(email = "ana@example.com") {
+    const login = this.seedSession(email);
+    localStorage.setItem("libroya.refresh", login.refreshToken);
+    return login;
+  }
+
   isAccessValid = (token: string | null) => token !== null && this.accessValid.has(token);
   // El token de acceso vence: los que existían dejan de servir
   expireAccessTokens() {
