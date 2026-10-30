@@ -219,21 +219,22 @@ describe("PA-05: si la cotización falla", () => {
     },
   );
 
-  it("un 404 (el cliente de Ventas aún no existe tras registrarse) se reintenta una vez", async () => {
+  it("un 404 (el cliente de Ventas aún no existe tras registrarse) se reintenta mientras el Outbox lo crea", async () => {
     fill(CLEAN);
     let calls = 0;
     server.use(
       http.post(API("/orders/quote"), async ({ request }) => {
         calls += 1;
         const body = (await request.json()) as { items: QuoteItem[] };
-        return calls === 1
+        // Con una ráfaga de registros el Outbox puede tardar más de un reintento en crear el cliente
+        return calls <= 3
           ? apiError(404, "NOT_FOUND")
           : HttpResponse.json(quoteFor(body.items, PRICES));
       }),
     );
     await renderApp("/carrito");
     expect(await within(await summary()).findByText("S/ 100.00", { selector: "dd" })).toBeTruthy();
-    expect(calls).toBe(2);
+    expect(calls).toBe(4);
     expect(screen.queryByText("No pudimos calcular tu total.")).toBeNull();
   });
 
@@ -248,7 +249,8 @@ describe("PA-05: si la cotización falla", () => {
     );
     await renderApp("/carrito");
     expect(await screen.findByText("No pudimos calcular tu total.")).toBeTruthy();
-    expect(calls).toBe(2);
+    // la primera petición y 4 reintentos: no se insiste sin fin
+    expect(calls).toBe(5);
   });
 });
 

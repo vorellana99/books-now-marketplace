@@ -9,7 +9,14 @@ import {
   PASSWORD,
   SEEDED,
 } from "./support/api.ts";
-import { addFromDetail, DESKTOP, fillAddress, goToCheckout, signIn } from "./support/browser.ts";
+import {
+  addFromDetail,
+  DESKTOP,
+  fillAddress,
+  goToCheckout,
+  PRODUCTION_BUILD,
+  signIn,
+} from "./support/browser.ts";
 
 // F6.2 · El recorrido de compra contra el backend REAL, por la pantalla: lo que MSW no puede comprobar (el contrato de
 // verdad, el Outbox, la reserva de stock, el cobro simulado y la idempotencia)
@@ -86,6 +93,7 @@ test("registro → buscar → agregar → cotizar → pagar → confirmación �
 test("tarjeta rechazada (tok_declined): no se cobra, no se crea ningún pedido y con otra tarjeta se compra", async ({
   page,
 }) => {
+  test.skip(PRODUCTION_BUILD, "el build de producción no ofrece tarjetas de prueba");
   await addStock(SEEDED.clean, 20);
   const buyer = await createBuyer();
   await signIn(page, buyer);
@@ -215,4 +223,14 @@ test("un pedido ajeno no se ve: la API y la tienda dicen que no existe", async (
   await page.goto(`/pedidos/${orderId}`);
   await expect(page.getByRole("heading", { name: "No encontramos este pedido." })).toBeVisible();
   await expect(page.getByText("Ana")).toHaveCount(0);
+});
+
+test("el build de producción no ofrece tarjetas de prueba; el de desarrollo sí", async ({
+  page,
+}) => {
+  await addStock(SEEDED.clean, 20);
+  await signIn(page, await createBuyer());
+  await addFromDetail(page, SEEDED.clean);
+  await goToCheckout(page);
+  await expect(page.getByLabel("Tarjeta de prueba")).toHaveCount(PRODUCTION_BUILD ? 0 : 1);
 });

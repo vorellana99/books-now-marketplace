@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { addStock, createBuyer, SEEDED } from "./support/api.ts";
-import { DESKTOP, MOBILE, signIn } from "./support/browser.ts";
+import { DESKTOP, MOBILE, PRODUCTION_BUILD, signIn } from "./support/browser.ts";
 import { expectFocusAlwaysVisible, tabTo, type Trail } from "./support/keyboard.ts";
 
 // F6.1 · el recorrido de compra completo SOLO con teclado (Tab, Enter, Espacio y escribir): agregar un libro, el carrito, la
@@ -53,7 +53,7 @@ for (const [name, size] of [
       await page.keyboard.type(value);
     }
     // El selector de la tarjeta de prueba se maneja con el teclado (Aprobada es la primera opción)
-    await tabTo(page, "Tarjeta de prueba", trail);
+    if (!PRODUCTION_BUILD) await tabTo(page, "Tarjeta de prueba", trail);
     await expect(page.getByRole("button", { name: /^Pagar S\// })).toBeEnabled();
     await tabTo(page, /^Pagar S\//, trail);
     await page.keyboard.press("Enter");

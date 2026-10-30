@@ -381,30 +381,31 @@ describe("el intento anterior falló o cambió algo", () => {
 });
 
 describe("el cliente de Ventas todavía no existe (compra justo después de registrarse)", () => {
-  it("un 404 se reintenta una vez, con la misma clave", async () => {
-    const user = userEvent.setup();
-    orders.respondNext(() => apiError(404, "NOT_FOUND"));
-    const { router } = await open();
-    await fillAddress(user);
-    await pay(user);
-    await waitFor(() => expect(router.state.location.pathname).toMatch(/\/gracias$/));
-    expect(orders.requests).toHaveLength(2);
-    expect(orders.requests[1]!.key).toBe(orders.requests[0]!.key);
-  });
-
-  it("si el 404 persiste, muestra el error genérico y no reintenta más", async () => {
+  it("un 404 se reintenta varias veces mientras el Outbox crea el cliente, siempre con la misma clave", async () => {
     const user = userEvent.setup();
     orders.respondNext(
       () => apiError(404, "NOT_FOUND"),
       () => apiError(404, "NOT_FOUND"),
       () => apiError(404, "NOT_FOUND"),
     );
+    const { router } = await open();
+    await fillAddress(user);
+    await pay(user);
+    await waitFor(() => expect(router.state.location.pathname).toMatch(/\/gracias$/));
+    expect(orders.requests).toHaveLength(4);
+    expect(new Set(orders.requests.map((r) => r.key)).size).toBe(1);
+  });
+
+  it("si el 404 persiste, muestra el error genérico y no reintenta más", async () => {
+    const user = userEvent.setup();
+    orders.respondNext(...Array.from({ length: 7 }, () => () => apiError(404, "NOT_FOUND")));
     await open();
     await fillAddress(user);
     await pay(user);
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toContain("Algo salió mal");
-    expect(orders.requests).toHaveLength(2);
+    // la primera petición y 4 reintentos: no se insiste sin fin
+    expect(orders.requests).toHaveLength(5);
   });
 });
 

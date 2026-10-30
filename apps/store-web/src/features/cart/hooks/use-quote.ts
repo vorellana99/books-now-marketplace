@@ -10,7 +10,7 @@ export const quoteKey = (lines: Pick<CartLine, "isbn" | "quantity">[]) =>
 
 // HU-22: el total sale del backend, nunca de la tienda. Al cambiar el carrito se vuelve a pedir, y mientras llega se conserva
 // el anterior (atenuado en pantalla) sin dejar continuar. Un `404` justo después de registrarse puede ser que el cliente de
-// Ventas aún no existe: se reintenta una vez tras un par de segundos
+// Ventas aún no existe: se reintenta cada par de segundos, unos 8 s en total (`timing.newCustomerRetries`)
 export function useQuote(lines: CartLine[], enabled: boolean) {
   return useQuery({
     queryKey: quoteKey(lines),
@@ -20,7 +20,8 @@ export function useQuote(lines: CartLine[], enabled: boolean) {
     // La cotización siempre es del momento: no se reutiliza una vieja
     staleTime: 0,
     gcTime: 0,
-    retry: (failures, error) => failures < 1 && isApiError(error) && error.status === 404,
+    retry: (failures, error) =>
+      failures < timing.newCustomerRetries && isApiError(error) && error.status === 404,
     retryDelay: () => timing.newCustomerRetryMs,
   });
 }

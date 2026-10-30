@@ -100,7 +100,7 @@ stateDiagram-v2
 | `Fallido` | El mensaje del `errorCode`, con la acción correspondiente (volver al carrito, cambiar tarjeta, corregir dirección) | Siempre dice si se cobró |
 | `Confirmado` | Redirige a PA-07 y vacía el carrito | Muestra el `charged` real (RN-08) |
 
-Tras registrarse, la primera compra puede dar `404 NOT_FOUND` porque el cliente de Ventas se crea en segundo plano. El frontend reintenta **una vez** con la misma clave tras un par de segundos (HU-31) antes de mostrar el error. La clave se maneja como en [03](03-integracion-con-la-api.md#5-idempotencia-de-la-compra).
+Tras registrarse, la primera compra puede dar `404 NOT_FOUND` porque el cliente de Ventas se crea en segundo plano. El frontend reintenta con la misma clave **cada par de segundos, hasta 4 veces (unos 8 s)** (HU-31) antes de mostrar el error; lo mismo hace con la cotización (`POST /orders/quote`) del carrito. La clave se maneja como en [03](03-integracion-con-la-api.md#5-idempotencia-de-la-compra).
 
 La dirección se escribe en cada compra y no se recuerda (DP-13); solo se conserva mientras dure el intento (si se vuelve al carrito y se regresa).
 

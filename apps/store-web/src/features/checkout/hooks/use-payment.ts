@@ -67,7 +67,7 @@ export function usePayment() {
         .map(({ isbn, quantity }) => ({ isbn, quantity }));
       let forceNew = false;
       let renewed = false;
-      let notFoundRetried = false;
+      let notFoundRetries = 0;
       let polls = 0;
       try {
         for (;;) {
@@ -103,9 +103,10 @@ export function usePayment() {
                 forceNew = true;
                 continue;
               }
-              if (error.status === 404 && !notFoundRetried) {
-                // Justo después de registrarse, el cliente de Ventas se crea en segundo plano: se reintenta una vez
-                notFoundRetried = true;
+              if (error.status === 404 && notFoundRetries < timing.newCustomerRetries) {
+                // Justo después de registrarse, el cliente de Ventas se crea en segundo plano: se reintenta cada par de
+                // segundos con la misma clave, hasta `timing.newCustomerRetries` veces
+                notFoundRetries += 1;
                 await sleep(timing.newCustomerRetryMs);
                 continue;
               }

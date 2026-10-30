@@ -65,6 +65,8 @@ E2E_BASE_URL=http://localhost:4173 pnpm run test:e2e   # contra otra URL (por ej
 - `browser.ts`: `signIn` y `violations` (axe con las reglas de WCAG 2.2 AA en el navegador real).
 - `keyboard.ts`: `tabTo` recorre con `Tab` hasta un elemento por su nombre y anota si el foco se ve en cada parada.
 
+**Contra el build de producción** (lo que se despliega): `vp build && vp preview --port 4173`, y luego `E2E_BASE_URL=http://localhost:4173 E2E_PRODUCTION_BUILD=1 pnpm run test:e2e`. `E2E_PRODUCTION_BUILD=1` avisa a las pruebas de que allí el selector de «Tarjeta de prueba» no se dibuja (solo existe fuera de producción): se omiten las que necesitan `tok_declined` y una prueba comprueba que el selector no está. Todo lo demás (el recorrido de compra con la tarjeta aprobada, el corte de red, la recarga de una ruta del cliente, la accesibilidad y el teclado) se ejecuta igual.
+
 **El límite de intentos del backend** (`/auth/*`: 5 inicios de sesión por cuenta y 10 registros por dirección por minuto, `RATE_LIMIT_*`) también corre en los e2e. Por eso cada prueba crea su propio comprador y **planta su token de refresco una sola vez** en lugar de entrar por el formulario cada vez (el token se rota al usarse: plantarlo en cada navegación lo reutilizaría y la API revocaría la sesión), y `api.ts` espera el `Retry-After` de un `429` y repite. Si se quiere una tanda más rápida se puede levantar el backend con `RATE_LIMIT_LOGIN_IP`, `RATE_LIMIT_LOGIN_ACCOUNT` y `RATE_LIMIT_REGISTER_IP` altos.
 
 **El recorrido de compra (`purchase.e2e.ts`, 6 pruebas)**, por la pantalla y comprobando después lo que la API guardó de verdad (`GET /me/orders`):
@@ -89,7 +91,7 @@ E2E_BASE_URL=http://localhost:4173 pnpm run test:e2e   # contra otra URL (por ej
 | INP en el recorrido de compra (buscar, agregar, carrito, cantidad, continuar, escribir la dirección) | ≤ 200 ms | 48–80 ms |
 | JS y CSS iniciales sin comprimir | ≤ 700 kB (presupuesto) | 647 kB |
 
-Solo se baja el subconjunto latino de las tipografías (la prueba lo exige). `vp preview` no comprime: en producción el proxy inverso debe servir `gzip` o `br` (se documenta en el despliegue, tarea F6.4).
+Solo se baja el subconjunto latino de las tipografías (la prueba lo exige). `vp preview` no comprime: en producción el proxy inverso debe servir `gzip` o `br` (ver el [README de la tienda](../../apps/store-web/README.md#despliegue)).
 
 **Qué se corrigió**: la interacción más lenta era tocar «Continuar con la compra» o el carrito (232–256 ms): el trozo de la ruta se pedía recién al tocar y esperaba a la red. `src/app/preload.ts` precarga `/carrito`, `/compra` y `/pedidos` en un momento libre tras el primer pintado (`requestIdleCallback`, con un temporizador en Safari) y la interacción baja a 56–64 ms. Se comprobó con un A/B de dos builds servidos a la vez (con y sin precarga, 5 corridas cada uno: 56–64 ms contra 240–256 ms) y la prueba de INP falla sobre el build sin precarga.
 

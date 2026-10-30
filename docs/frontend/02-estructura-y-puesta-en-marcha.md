@@ -111,7 +111,7 @@ server: {
 },
 ```
 
-En producción el frontend y la API quedan en el **mismo origen** detrás de un proxy inverso que enruta `/api` al backend; si no fuera así, se necesita `CORS_ORIGINS` en el backend, con el origen exacto de la tienda y solo `https` (en producción el backend rechaza otros). Si hay un proxy delante de la API, el backend necesita además `TRUST_PROXY` con el número de proxies, o el límite de intentos contará la dirección del proxy y no la de cada cliente. Ver [00-avance](00-avance.md), F6.
+En producción el frontend y la API quedan en el **mismo origen** detrás de un proxy inverso que enruta `/api` al backend; si no fuera así, se necesita `CORS_ORIGINS` en el backend, con el origen exacto de la tienda y solo `https` (en producción el backend rechaza otros). Si hay un proxy delante de la API, el backend necesita además `TRUST_PROXY` con el número de proxies, o el límite de intentos contará la dirección del proxy y no la de cada cliente. El despliegue completo (proxy inverso con un ejemplo de nginx, caché, compresión y la lista de comprobación) está en el [README de la tienda](../../apps/store-web/README.md#despliegue).
 
 ## 4. Usuarios de prueba
 

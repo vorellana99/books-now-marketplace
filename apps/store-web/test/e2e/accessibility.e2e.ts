@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { addStock, createBuyer, placeOrder, SEEDED } from "./support/api.ts";
-import { DESKTOP, MOBILE, signIn, violations } from "./support/browser.ts";
+import { DESKTOP, MOBILE, PRODUCTION_BUILD, signIn, violations } from "./support/browser.ts";
 
 // F6.1 · axe con las reglas de WCAG 2.2 AA en el navegador real, en las pantallas de la tienda y en los dos anchos extremos
 // (360 px y escritorio). En jsdom axe no calcula estilos: aquí sí se comprueban el contraste y el tamaño de los objetivos
@@ -102,6 +102,8 @@ for (const [name, size] of viewports) {
       })) {
         await page.getByLabel(label).fill(value);
       }
+      // El aviso de tarjeta rechazada necesita el selector de pruebas, que el build de producción no dibuja
+      if (PRODUCTION_BUILD) return;
       await page.getByLabel("Tarjeta de prueba").selectOption("tok_declined");
       await page.getByRole("button", { name: /^Pagar S\// }).click();
       await clean(page, () => expect(page.getByText("Tu tarjeta fue rechazada.")).toBeVisible());

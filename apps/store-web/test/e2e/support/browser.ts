@@ -7,6 +7,10 @@ export const DESKTOP = { width: 1280, height: 800 };
 
 export const REFRESH_KEY = "libroya.refresh";
 
+// Con `E2E_PRODUCTION_BUILD=1` las pruebas se ejecutan contra el build de producción (`vp preview`): allí el selector de
+// «Tarjeta de prueba» no se dibuja (solo existe fuera de producción) y se paga con la tarjeta aprobada por defecto
+export const PRODUCTION_BUILD = process.env.E2E_PRODUCTION_BUILD === "1";
+
 // Deja la sesión de `buyer` iniciada en este navegador, como si hubiera entrado antes: planta su token de refresco **una sola
 // vez** (el token se rota al usarse: plantarlo en cada navegación lo reutilizaría y la API revocaría la sesión) y espera a que
 // la tienda lo canjee. El formulario de entrada se prueba en `purchase.e2e.ts`; aquí no se hace login por pantalla en cada
