@@ -1,4 +1,4 @@
-import { Notifier } from '../../src/contexts/sales/domain/order/notifier.port.js';
+import { Notifier } from '../../src/contexts/sales/domain/ports/notifier.port.js';
 
 export class FakeNotifier extends Notifier {
   readonly sent: { to: string; message: string; idempotencyKey?: string }[] =

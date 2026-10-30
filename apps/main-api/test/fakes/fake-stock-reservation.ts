@@ -2,7 +2,7 @@ import { OutOfStockError } from '../../src/contracts/inventory/stock.errors.js';
 import {
   StockReservation,
   type StockLine,
-} from '../../src/contexts/sales/domain/order/stock-reservation.port.js';
+} from '../../src/contexts/sales/domain/ports/stock-reservation.port.js';
 
 // Reserva en memoria. `released` guarda los pedidos cuya reserva se devolvió
 export class FakeStockReservation extends StockReservation {

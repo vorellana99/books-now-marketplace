@@ -88,118 +88,210 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │   │       └── db.health.ts
 │   │
 │   └── contexts/
+│       (árbol generado desde el código al cerrar el corte 10: los cuatro contextos tienen la misma forma;
+│        qué hace cada archivo está en 05-piezas-clave.md, «Convención por contexto»)
 │       ├── sales/
-│       │   ├── sales.module.ts                             ✅ hecho (5.9)
+│       │   ├── application/
+│       │   │   ├── jobs/
+│       │   │   │   ├── purge-checkouts.job.ts
+│       │   │   │   └── recover-checkouts.job.ts
+│       │   │   ├── services/
+│       │   │   │   └── order-pricer.ts
+│       │   │   ├── support/
+│       │   │   │   └── order-cursor.ts
+│       │   │   └── use-cases/
+│       │   │       ├── customer/
+│       │   │       │   ├── create-customer.command.ts
+│       │   │       │   └── create-customer.handler.ts
+│       │   │       └── order/
+│       │   │           ├── get-order.handler.ts
+│       │   │           ├── get-order.query.ts
+│       │   │           ├── list-customer-orders.handler.ts
+│       │   │           ├── list-customer-orders.query.ts
+│       │   │           ├── place-order.command.ts
+│       │   │           ├── place-order.handler.ts
+│       │   │           ├── quote-order.handler.ts
+│       │   │           └── quote-order.query.ts
 │       │   ├── domain/
-│       │   │   ├── order/
-│       │   │   │   ├── order.aggregate.ts
-│       │   │   │   ├── order-line.entity.ts
-│       │   │   │   ├── order.factory.ts
-│       │   │   │   ├── shipping-address.vo.ts              ✅ hecho (6.2)
-│       │   │   │   ├── order.repository.ts
-│       │   │   │   ├── checkout-log.port.ts
+│       │   │   ├── model/
+│       │   │   │   ├── customer/
+│       │   │   │   │   ├── customer.aggregate.ts
+│       │   │   │   │   └── email.vo.ts
+│       │   │   │   ├── order/
+│       │   │   │   │   ├── checkout-replay.ts
+│       │   │   │   │   ├── normalize-cart.ts
+│       │   │   │   │   ├── order-line.entity.ts
+│       │   │   │   │   ├── order-view.ts
+│       │   │   │   │   ├── order.aggregate.ts
+│       │   │   │   │   ├── order.factory.ts
+│       │   │   │   │   ├── request-hash.ts
+│       │   │   │   │   └── shipping-address.vo.ts
+│       │   │   │   └── pricing/
+│       │   │   │       ├── free-shipping.specification.ts
+│       │   │   │       ├── minimum-subtotal.specification.ts
+│       │   │   │       ├── premium-customer.specification.ts
+│       │   │   │       ├── premium-offer.specification.ts
+│       │   │   │       ├── price-breakdown.ts
+│       │   │   │       ├── pricing-context.ts
+│       │   │   │       ├── pricing-rules.ts
+│       │   │   │       └── pricing.service.ts
+│       │   │   ├── ports/
 │       │   │   │   ├── catalog-pricing.port.ts
-│       │   │   │   ├── stock-reservation.port.ts
-│       │   │   │   └── notifier.port.ts
-│       │   │   ├── customer/
-│       │   │   │   ├── customer.aggregate.ts
-│       │   │   │   ├── email.vo.ts
-│       │   │   │   └── customer.repository.ts
-│       │   │   ├── pricing/
-│       │   │   │   ├── pricing.service.ts
-│       │   │   │   ├── pricing-context.ts
-│       │   │   │   ├── free-shipping.specification.ts
-│       │   │   │   ├── minimum-subtotal.specification.ts
-│       │   │   │   ├── premium-customer.specification.ts
-│       │   │   │   └── premium-offer.specification.ts
-│       │   │   ├── payment/
-│       │   │   │   └── payment-gateway.port.ts
+│       │   │   │   ├── checkout-log.port.ts
+│       │   │   │   ├── customer.repository.ts
+│       │   │   │   ├── notifier.port.ts
+│       │   │   │   ├── order-history.port.ts
+│       │   │   │   ├── order.repository.ts
+│       │   │   │   ├── payment-gateway.port.ts
+│       │   │   │   └── stock-reservation.port.ts
 │       │   │   └── shared/
-│       │   │       ├── money.vo.ts   decimal.js
+│       │   │       ├── money.vo.ts
 │       │   │       └── specification.ts
-│       │   ├── application/order/
-│       │   │   ├── place-order.command.ts
-│       │   │   ├── place-order.handler.ts
-│       │   │   ├── get-order.query.ts                      ✅ hecho (5.8)
-│       │   │   ├── list-customer-orders.query.ts           ✅ hecho (6.9)
-│       │   │   ├── recover-checkouts.job.ts                saga: recupera checkouts a medias   ✅ hecho (5.6)
-│       │   │   └── send-order-confirmation.consumer.ts     consumidor `external` del Outbox   ✅ hecho (5.7)
-│       │   └── infrastructure/
-│       │       ├── order/
-│       │       │   ├── order.controller.ts                 ✅ hecho (5.8)
-│       │       │   ├── place-order.dto.ts                  ✅ hecho (5.8)
-│       │       │   ├── (ShippingAddressDto vive en place-order.dto.ts) ✅ hecho (6.3)
-│       │       │   ├── list-orders.dto.ts                  ✅ hecho (6.9) (nombre real)
-│       │       │   ├── get-order.handler.ts                ✅ hecho (5.8)
-│       │       │   ├── list-customer-orders.handler.ts     ✅ hecho (6.9); también order-cursor.ts y order-view.ts
-│       │       │   ├── prisma-order.repository.ts          ✅ hecho (5.3)
-│       │       │   ├── order.mapper.ts                     ✅ hecho (5.3)
-│       │       │   ├── prisma-checkout-log.adapter.ts      ✅ hecho (5.2)
-│       │       │   ├── catalog-in-process.adapter.ts       ✅ hecho (5.4)
-│       │       │   ├── inventory-in-process.adapter.ts     ✅ hecho (5.4)
-│       │       │   └── console-notifier.adapter.ts         ✅ hecho (5.4)
-│       │       ├── customer/
-│       │       │   ├── prisma-customer.repository.ts       ✅ hecho (5.2)
-│       │       │   └── create-customer.consumer.ts         ✅ hecho (7.5) consumidor `db` de identity.user.registered
-│       │       └── payment/
-│       │           ├── simulated-payment-gateway.adapter.ts   ✅ hecho (5.5); en la guía v5 se llamaba FakePaymentGateway
-│       │           └── external-payment.adapter.ts            ✅ hecho (5.5)
+│       │   ├── infrastructure/
+│       │   │   ├── adapters/
+│       │   │   │   ├── catalog-in-process.adapter.ts
+│       │   │   │   ├── console-notifier.adapter.ts
+│       │   │   │   ├── external-payment.adapter.ts
+│       │   │   │   ├── inventory-in-process.adapter.ts
+│       │   │   │   └── simulated-payment-gateway.adapter.ts
+│       │   │   └── persistence/
+│       │   │       ├── order-view.mapper.ts
+│       │   │       ├── order.mapper.ts
+│       │   │       ├── prisma-checkout-log.adapter.ts
+│       │   │       ├── prisma-customer.repository.ts
+│       │   │       ├── prisma-order-history.ts
+│       │   │       └── prisma-order.repository.ts
+│       │   ├── interface/
+│       │   │   ├── consumers/
+│       │   │   │   ├── create-customer.consumer.ts
+│       │   │   │   └── send-order-confirmation.consumer.ts
+│       │   │   └── http/
+│       │   │       ├── admin-order.controller.ts
+│       │   │       ├── list-orders.dto.ts
+│       │   │       ├── my-orders.controller.ts
+│       │   │       ├── order.controller.ts
+│       │   │       ├── order.response.ts
+│       │   │       ├── place-order.dto.ts
+│       │   │       └── quote-order.dto.ts
+│       │   └── sales.module.ts
 │       │
 │       ├── catalog/
-│       │   ├── catalog.module.ts
-│       │   ├── application/book/
-│       │   │   ├── search-books.query.ts                   ✅ hecho (6.1)
-│       │   │   ├── create-book.command.ts                  ✅ hecho (6.5)
-│       │   │   ├── update-book.command.ts                  ✅ hecho (6.7) también desactiva y reactiva (ver desvíos)
-│       │   │   └── admin-book.ts                           ✅ hecho (6.7) el libro + `active`, como lo ve la administración
-│       │   ├── domain/book/                            ✅ hecho (6.5 y 6.7): reglas de título, autor y precio
-│       │   │   ├── book-rules.ts
-│       │   │   ├── new-book.ts
-│       │   │   └── book-changes.ts
-│       │   └── infrastructure/book/                        todos usan Prisma directo
-│       │       ├── book.controller.ts
-│       │       ├── book-price.response.ts                  esquema de la respuesta, solo para Swagger
-│       │       ├── get-book-price.handler.ts
-│       │       ├── search-books.dto.ts                     ✅ hecho (6.1)
-│       │       ├── search-books.handler.ts                 ✅ hecho (6.1)
-│       │       ├── admin-book.controller.ts                ✅ hecho (6.5) guard en la clase
-│       │       ├── create-book.dto.ts                      ✅ hecho (6.5)
-│       │       ├── (UpdateBookDto vive en create-book.dto.ts)
-│       │       ├── create-book.handler.ts                  ✅ hecho (6.5) libro + evento en 1 transacción
-│       │       └── update-book.handler.ts                  ✅ hecho (6.7) datos, precio y estado en una transacción
+│       │   ├── application/
+│       │   │   └── use-cases/
+│       │   │       └── book/
+│       │   │           ├── admin-book.ts
+│       │   │           ├── create-book.command.ts
+│       │   │           ├── create-book.handler.ts
+│       │   │           ├── get-book-price.handler.ts
+│       │   │           ├── get-books-prices.handler.ts
+│       │   │           ├── search-books.handler.ts
+│       │   │           ├── search-books.query.ts
+│       │   │           ├── update-book.command.ts
+│       │   │           └── update-book.handler.ts
+│       │   ├── domain/
+│       │   │   ├── model/
+│       │   │   │   └── book/
+│       │   │   │       ├── book-changes.ts
+│       │   │   │       ├── book-rules.ts
+│       │   │   │       ├── book-view.ts
+│       │   │   │       ├── book.aggregate.ts
+│       │   │   │       └── new-book.ts
+│       │   │   └── ports/
+│       │   │       ├── book-catalog.port.ts
+│       │   │       └── book.repository.ts
+│       │   ├── infrastructure/
+│       │   │   └── persistence/
+│       │   │       ├── prisma-book-catalog.ts
+│       │   │       └── prisma-book.repository.ts
+│       │   ├── interface/
+│       │   │   └── http/
+│       │   │       ├── admin-book.controller.ts
+│       │   │       ├── book-price.response.ts
+│       │   │       ├── book.controller.ts
+│       │   │       ├── create-book.dto.ts
+│       │   │       └── search-books.dto.ts
+│       │   └── catalog.module.ts
 │       │
 │       ├── inventory/
-│       │   ├── inventory.module.ts
-│       │   ├── domain/stock/
-│       │   │   └── stock-item.aggregate.ts
-│       │   ├── application/stock/
-│       │   │   └── add-stock.command.ts                    ✅ hecho (6.8)
-│       │   └── infrastructure/stock/                       todos usan Prisma directo
-│       │       ├── reserve-stock.handler.ts                ✅ hecho (corte 3)
-│       │       ├── release-stock.handler.ts                ✅ hecho (corte 3)
-│       │       ├── lock-order.ts                           sortByIsbn: el orden de bloqueo de reservar y liberar
-│       │       ├── order-id.ts                             assertOrderId: el orderId debe ser un UUID
-│       │       ├── confirm-reservation.consumer.ts         consumidor `db` del Outbox   ✅ hecho (5.7)
-│       │       ├── create-stock-item.consumer.ts           ✅ hecho (6.6) consumidor `db`
-│       │       ├── admin-stock.controller.ts               ✅ hecho (6.8) guard en la clase
-│       │       ├── add-stock.dto.ts                        ✅ hecho (6.8)
-│       │       └── add-stock.handler.ts                    ✅ hecho (6.8)
+│       │   ├── application/
+│       │   │   ├── jobs/
+│       │   │   │   └── purge-reservations.job.ts
+│       │   │   └── use-cases/
+│       │   │       └── stock/
+│       │   │           ├── add-stock.command.ts
+│       │   │           ├── add-stock.handler.ts
+│       │   │           ├── confirm-reservation.command.ts
+│       │   │           ├── confirm-reservation.handler.ts
+│       │   │           ├── create-stock-item.command.ts
+│       │   │           ├── create-stock-item.handler.ts
+│       │   │           ├── release-stock.handler.ts
+│       │   │           └── reserve-stock.handler.ts
+│       │   ├── domain/
+│       │   │   ├── model/
+│       │   │   │   └── stock/
+│       │   │   │       └── stock-rules.ts
+│       │   │   └── ports/
+│       │   │       └── stock.repository.ts
+│       │   ├── infrastructure/
+│       │   │   └── persistence/
+│       │   │       ├── lock-order.ts
+│       │   │       └── prisma-stock.repository.ts
+│       │   ├── interface/
+│       │   │   ├── consumers/
+│       │   │   │   ├── confirm-reservation.consumer.ts
+│       │   │   │   └── create-stock-item.consumer.ts
+│       │   │   └── http/
+│       │   │       ├── add-stock.dto.ts
+│       │   │       └── admin-stock.controller.ts
+│       │   └── inventory.module.ts
 │       │
-│       └── identity/                                       (fase 15) usuarios, roles y guards
-│           ├── identity.module.ts                          ✅ hecho (7.1; 7.2 añade los tokens)
-│           ├── application/                                ✅ hecho: access-token-issuer.ts (7.2),
-│           │                                                  register-user.command.ts, login.command.ts (7.3),
-│           │                                                  session.ts, refresh-session.command.ts,
-│           │                                                  logout.command.ts (7.4)
-│           ├── domain/                                     ✅ hecho (7.1): email.vo.ts, password-policy.ts,
-│           │                                                  password-hasher.port.ts, user.aggregate.ts
-│           └── infrastructure/                             ✅ hecho: scrypt-password-hasher.ts (7.1), create-admin.ts (7.9),
-│                                                              auth-throttler.ts (7.10),
-│                                                              jwt-token.service.ts (7.2), register-user.handler.ts,
-│                                                              login.handler.ts, auth.controller.ts, auth.dto.ts,
-│                                                              auth.responses.ts (7.3), refresh-token.ts,
-│                                                              session.service.ts, refresh-session.handler.ts,
-│                                                              logout.handler.ts (7.4)
+│       └── identity/
+│           ├── application/
+│           │   ├── jobs/
+│           │   │   └── purge-refresh-tokens.job.ts
+│           │   ├── services/
+│           │   │   ├── create-admin.ts
+│           │   │   ├── session.service.ts
+│           │   │   └── session.ts
+│           │   └── use-cases/
+│           │       ├── session/
+│           │       │   ├── login.command.ts
+│           │       │   ├── login.handler.ts
+│           │       │   ├── logout.command.ts
+│           │       │   ├── logout.handler.ts
+│           │       │   ├── refresh-session.command.ts
+│           │       │   └── refresh-session.handler.ts
+│           │       └── user/
+│           │           ├── register-user.command.ts
+│           │           └── register-user.handler.ts
+│           ├── domain/
+│           │   ├── model/
+│           │   │   ├── session/
+│           │   │   │   ├── refresh-token.ts
+│           │   │   │   └── session.aggregate.ts
+│           │   │   └── user/
+│           │   │       ├── email.vo.ts
+│           │   │       ├── password-policy.ts
+│           │   │       └── user.aggregate.ts
+│           │   └── ports/
+│           │       ├── access-token-issuer.port.ts
+│           │       ├── password-hasher.port.ts
+│           │       ├── session.repository.ts
+│           │       └── user.repository.ts
+│           ├── infrastructure/
+│           │   ├── adapters/
+│           │   │   ├── jwt-token.service.ts
+│           │   │   └── scrypt-password-hasher.ts
+│           │   └── persistence/
+│           │       ├── prisma-session.repository.ts
+│           │       └── prisma-user.repository.ts
+│           ├── interface/
+│           │   └── http/
+│           │       ├── auth-throttler.ts
+│           │       ├── auth.controller.ts
+│           │       ├── auth.dto.ts
+│           │       └── auth.responses.ts
+│           └── identity.module.ts
 │
 └── test/
     ├── fakes/                                              ✅ hecho (corte 2); se importan desde index.ts
@@ -231,7 +323,9 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
         └── orders.e2e.spec.ts
 ```
 
-Los tests unitarios van en `test/unit/`, no junto al código.
+Desde el corte 9 (tarea `9.13`) `apps/main-api/` tiene un `Dockerfile` genérico de varias etapas y su `.dockerignore`: la imagen de la API (por defecto, sin root ni pruebas) y la etapa `migrate` para `prisma migrate deploy` como paso previo del despliegue. Se explica en el README del backend.
+
+Los tests unitarios van en `test/unit/`, no junto al código, y desde el corte 9 (tarea `9.12`) **repartidos por carpeta**, según dónde vive el código que prueban: `sales/`, `catalog/`, `identity/`, `inventory/`, `platform/` y `shared-kernel/`; `architecture/` para las reglas que cruzan contextos (`dependency-rules`, `contracts`, el uso de la configuración) y `tooling/` para los fakes, los builders, el seed y las ayudas de las propias pruebas. Una prueba suelta en la raíz de `test/unit/` hace fallar `architecture/test-layout.spec.ts`. Las de integración y e2e siguen planas.
 
 Las **specifications** del dominio usan el sufijo `.specification.ts` (en la guía v5 era `.spec.ts`). Con `.spec.ts`, Vitest las tomaría por archivos de test. Las clases no cambian de nombre (`MinimumSubtotalSpec`, `freeShippingSpec`).
 
@@ -240,13 +334,13 @@ Las **specifications** del dominio usan el sufijo `.specification.ts` (en la gu�
 | **Puertos como `abstract class`**, no `interface` | Sirven como token de inyección de Nest sin poner decoradores en el dominio |
 | **`contracts/` para comandos, queries y eventos públicos** | Un contexto usa a otro sin importar su código interno |
 | **Ventas → Inventario por `CommandBus`** (puerto `StockReservation`) | La reserva es sincrónica porque el pedido depende de ella |
-| **Handlers de queries en `infrastructure/`** (`GetOrderHandler`, `GetBookPriceHandler`) | Las lecturas no pasan por el dominio: leen directo con Prisma (lado de lectura de CQRS) |
+| **Los handlers de queries en `application/`** (`GetOrderHandler`, `GetBookPriceHandler`) | Las lecturas no reconstruyen el agregado, pero tampoco tocan Prisma: piden la vista a un puerto de lectura (`OrderHistory`, `BookCatalog`) y el adaptador de `infrastructure/persistence/` hace la consulta (corte 10) |
 | **Relay propio en vez del EventBus de Nest** | El EventBus no espera a los handlers ni propaga sus errores; el relay sí lo hace |
 | **Sufijo `.consumer.ts`** | Distingue una reacción del Outbox de un handler de comando |
 | **Saga mínima, sin `@Saga()` de Nest** | Las compensaciones ocurren en el handler; el checkout persistido y su job cubren las caídas |
-| **Inventario sin repositorio por ahora** | La reserva es un `UPDATE` atómico; un repositorio con bloqueo optimista no aportaría nada todavía. Por eso sus handlers usan Prisma directo y viven en `infrastructure/` (regla 3 de la arquitectura) |
+| **Inventario con un puerto de operaciones atómicas** | La reserva es un `UPDATE` atómico con bloqueos: `StockRepository` expone `reserve`, `release`, `confirm`, `add`, `createItem` y `purgeConfirmed` y `PrismaStockRepository` guarda el mismo SQL, así que los handlers de `application/` no tocan Prisma (corte 10) |
 | **Transacciones explícitas con `prisma.$transaction(tx => …)`** | Cada operación atómica vive en un solo lugar (nunca hay transacciones entre contextos), así que basta con pasar `tx`; sin librerías extra en un punto crítico |
-| **Consumidores que escriben en BD van en `infrastructure/`** | Reciben el `tx` de Prisma; los que solo llaman a servicios externos quedan en `application/` |
+| **Todos los consumidores van en `interface/consumers/`** | Son adaptadores de entrada finos: los `db` convierten el `tx` del relay en un `TransactionHandle` y envían un comando cuyo handler (en `application/`) tiene las reglas; los `external` llaman a un puerto. Ninguno de `application/` (corte 10) |
 | **`Money` con decimal.js** (en vez de céntimos `number`) | Exactitud con más de 2 decimales en valores intermedios (por ejemplo, el valor unitario sin IGV que exige SUNAT) y redondeo explícito al final |
 | **Imports relativos con `.js`** | Proyecto ESM: `import { Order } from './order.aggregate.js'` |
 
@@ -350,6 +444,10 @@ PASSWORD_HASH_LOG_N=15           # costo del hash de contraseñas (scrypt, N = 2
 OUTBOX_MAX_ATTEMPTS=8
 CHECKOUT_RECOVERY_MINUTES=10     # debe superar la duración máxima del handler (no solo de la petición HTTP)
 DB_STATEMENT_TIMEOUT_MS=5000     # límite de cada sentencia SQL; mantiene acotada la duración de la compra
+RETENTION_OUTBOX_DAYS=30         # corte 9: días que se guardan los datos terminados antes de purgarlos (outbox, checkouts, reservas y tokens de refresco)
+RETENTION_CHECKOUT_DAYS=30
+RETENTION_RESERVATION_DAYS=90
+RETENTION_REFRESH_TOKEN_DAYS=7
 ```
 
 **`platform/config/env.schema.ts`**: todo lo que llega de `.env` es texto; el schema lo convierte y valida al arrancar.
@@ -377,6 +475,7 @@ export const envSchema = z
     PASSWORD_HASH_LOG_N: z.coerce.number().int().min(4).max(20).default(15), // costo del hash de contraseñas (en producción, ≥ 15)
     OUTBOX_MAX_ATTEMPTS: z.coerce.number().int().min(1).default(8),
     CHECKOUT_RECOVERY_MINUTES: z.coerce.number().int().min(2).default(10),
+    RETENTION_OUTBOX_DAYS: z.coerce.number().int().min(1).max(3650).default(30), // y las otras tres RETENTION_*_DAYS (corte 9)
     DB_STATEMENT_TIMEOUT_MS: z.coerce.number().int().min(1).default(5000),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   })

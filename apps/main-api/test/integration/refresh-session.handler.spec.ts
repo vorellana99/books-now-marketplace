@@ -1,18 +1,17 @@
 import { createHash } from 'node:crypto';
 import { Logger, Module, type INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { LoginCommand } from '../../src/contexts/identity/application/login.command.js';
-import { LogoutCommand } from '../../src/contexts/identity/application/logout.command.js';
-import { RefreshSessionCommand } from '../../src/contexts/identity/application/refresh-session.command.js';
-import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
+import { LoginCommand } from '../../src/contexts/identity/application/use-cases/session/login.command.js';
+import { LogoutCommand } from '../../src/contexts/identity/application/use-cases/session/logout.command.js';
+import { RefreshSessionCommand } from '../../src/contexts/identity/application/use-cases/session/refresh-session.command.js';
+import { RegisterUserCommand } from '../../src/contexts/identity/application/use-cases/user/register-user.command.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
-import { RefreshSessionHandler } from '../../src/contexts/identity/infrastructure/refresh-session.handler.js';
-import { SessionService } from '../../src/contexts/identity/infrastructure/session.service.js';
+import { AccessTokenIssuer } from '../../src/contexts/identity/domain/ports/access-token-issuer.port.js';
 import { AccessTokenVerifier } from '../../src/platform/auth/access-token-verifier.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
-import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { AuthenticationError } from '../../src/shared-kernel/domain.errors.js';
 import {
+  failRefreshTokenInserts,
   query,
   resetDatabase,
   slowDownRefreshTokenUpdates,
@@ -425,40 +424,38 @@ describe('Sesiones: login, refresh y logout (PostgreSQL real, por el CommandBus)
   });
 
   describe('atomicidad', () => {
-    it('si no se puede entregar el token nuevo, el viejo no queda usado', async () => {
+    it('si no se puede emitir el token de acceso, el viejo no queda usado', async () => {
       await register();
       const session = await login();
-      const failing = new RefreshSessionHandler(app.get(PrismaService), {
-        open: async () => {
-          throw new Error('falló al abrir la sesión');
-        },
-      } as unknown as SessionService);
+      const spy = vi
+        .spyOn(app.get(AccessTokenIssuer), 'issue')
+        .mockRejectedValueOnce(new Error('falló al emitir el token'));
 
-      await expect(
-        failing.execute(new RefreshSessionCommand(session.refreshToken)),
-      ).rejects.toThrow('falló al abrir la sesión');
+      await expect(refresh(session.refreshToken)).rejects.toThrow(
+        'falló al emitir el token',
+      );
 
+      spy.mockRestore();
       expect((await rowOf(session.refreshToken)).used_at).toBeNull();
+      expect(await rows()).toHaveLength(1);
       await expect(refresh(session.refreshToken)).resolves.toBeDefined();
     });
 
-    it('si el token nuevo se guarda y luego algo falla, tampoco queda el nuevo ni el viejo usado', async () => {
+    it('si la base rechaza guardar el token nuevo, tampoco queda el viejo usado', async () => {
       await register();
       const session = await login();
-      const real = app.get(SessionService);
-      const failing = new RefreshSessionHandler(app.get(PrismaService), {
-        open: async (...args: Parameters<SessionService['open']>) => {
-          await real.open(...args);
-          throw new Error('falló tras guardar');
-        },
-      } as unknown as SessionService);
-
-      await expect(
-        failing.execute(new RefreshSessionCommand(session.refreshToken)),
-      ).rejects.toThrow('falló tras guardar');
+      const restore = await failRefreshTokenInserts();
+      try {
+        await expect(refresh(session.refreshToken)).rejects.toThrow(
+          /falló el guardado del token nuevo/,
+        );
+      } finally {
+        await restore();
+      }
 
       expect(await rows()).toHaveLength(1);
       expect((await rowOf(session.refreshToken)).used_at).toBeNull();
+      await expect(refresh(session.refreshToken)).resolves.toBeDefined();
     });
   });
 

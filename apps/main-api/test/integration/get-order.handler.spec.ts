@@ -4,15 +4,25 @@ import { QueryBus } from '@nestjs/cqrs';
 import {
   GetOrderQuery,
   type OrderRequester,
-} from '../../src/contexts/sales/application/order/get-order.query.js';
-import { GetOrderHandler } from '../../src/contexts/sales/infrastructure/order/get-order.handler.js';
+} from '../../src/contexts/sales/application/use-cases/order/get-order.query.js';
+import { ListCustomerOrdersQuery } from '../../src/contexts/sales/application/use-cases/order/list-customer-orders.query.js';
+import { ListCustomerOrdersHandler } from '../../src/contexts/sales/application/use-cases/order/list-customer-orders.handler.js';
+import { GetOrderHandler } from '../../src/contexts/sales/application/use-cases/order/get-order.handler.js';
+import { OrderHistory } from '../../src/contexts/sales/domain/ports/order-history.port.js';
+import { PrismaOrderHistory } from '../../src/contexts/sales/infrastructure/persistence/prisma-order-history.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { NotFoundError } from '../../src/shared-kernel/domain.errors.js';
 import { insertCustomer, insertOrder } from '../support/builders.js';
 import { resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 
-@Module({ providers: [GetOrderHandler] })
+@Module({
+  providers: [
+    GetOrderHandler,
+    ListCustomerOrdersHandler,
+    { provide: OrderHistory, useClass: PrismaOrderHistory },
+  ],
+})
 class OrderQueries {}
 
 describe('GetOrderHandler (PostgreSQL real, por el QueryBus)', () => {
@@ -60,6 +70,7 @@ describe('GetOrderHandler (PostgreSQL real, por el QueryBus)', () => {
           quantity: 2,
         },
       ],
+      shippingAddress: null, // un pedido sin dirección (anterior a que existiera)
     });
   });
 
@@ -198,6 +209,78 @@ describe('GetOrderHandler (PostgreSQL real, por el QueryBus)', () => {
       } finally {
         find.mockRestore();
       }
+    });
+  });
+
+  describe('la dirección de envío (DP-15)', () => {
+    const ADDRESS = {
+      recipient: 'María Quispe',
+      phone: '+51 987 654 321',
+      line1: 'Jr. Ucayali 150, Dpto 2',
+      district: 'Barranco',
+      province: 'Lima',
+      department: 'Lima',
+      reference: 'Casa de rejas verdes',
+    };
+
+    it('su dueño la ve completa: las siete partes', async () => {
+      const ana = await insertCustomer();
+      const order = await insertOrder(ana.id, { shipping: ADDRESS });
+
+      const view = await get(order.id, { userId: ana.id, role: 'BUYER' });
+
+      expect(view.shippingAddress).toEqual(ADDRESS);
+    });
+
+    it('un administrador la ve', async () => {
+      const ana = await insertCustomer();
+      const order = await insertOrder(ana.id, { shipping: ADDRESS });
+
+      const view = await get(order.id, { userId: randomUUID(), role: 'ADMIN' });
+
+      expect(view.shippingAddress).toEqual(ADDRESS);
+    });
+
+    it('una referencia ausente sale como null, no como texto vacío', async () => {
+      const ana = await insertCustomer();
+      const order = await insertOrder(ana.id, {
+        shipping: { ...ADDRESS, reference: null },
+      });
+
+      const view = await get(order.id, { userId: ana.id, role: 'BUYER' });
+
+      expect(view.shippingAddress?.reference).toBeNull();
+      expect(view.shippingAddress?.recipient).toBe('María Quispe');
+    });
+
+    it('otro comprador recibe el 404 de siempre, sin nada de la dirección', async () => {
+      const [ana, luis] = [
+        await insertCustomer({ email: 'ana@example.com' }),
+        await insertCustomer({ email: 'luis@example.com' }),
+      ];
+      const order = await insertOrder(ana.id, { shipping: ADDRESS });
+
+      const error = (await get(order.id, {
+        userId: luis.id,
+        role: 'BUYER',
+      }).catch((e: unknown) => e)) as NotFoundError;
+
+      expect(error).toBeInstanceOf(NotFoundError);
+      for (const part of ['Quispe', '987', 'Ucayali', 'rejas']) {
+        expect(error.message).not.toContain(part);
+      }
+    });
+
+    it('el detalle y la lista del mismo pedido traen la misma dirección', async () => {
+      const ana = await insertCustomer();
+      const order = await insertOrder(ana.id, { shipping: ADDRESS });
+
+      const detail = await get(order.id, { userId: ana.id, role: 'BUYER' });
+      const list = await queryBus.execute(
+        new ListCustomerOrdersQuery(ana.id, 10),
+      );
+
+      expect(list.items[0].shippingAddress).toEqual(detail.shippingAddress);
     });
   });
 });

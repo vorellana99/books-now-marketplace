@@ -375,9 +375,14 @@ describe('El flujo del corte 7 con curl y la aplicación compilada (e2e)', () =>
   });
 
   it('cada comprador ve solo lo suyo; otro recibe 404; el administrador ve todo', () => {
-    expect(
-      curl('GET', `/orders/${orderId}`, { token: nueva.token }).status,
-    ).toBe(200);
+    const own = curl('GET', `/orders/${orderId}`, { token: nueva.token });
+    expect(own.status).toBe(200);
+    // DP-15: el detalle trae la dirección y el teléfono a su dueño
+    expect(own.body.shippingAddress).toMatchObject({
+      recipient: ADDRESS.recipient,
+      phone: ADDRESS.phone,
+      line1: ADDRESS.line1,
+    });
 
     const foreign = curl('GET', `/orders/${orderId}`, { token: ana.token });
     const missing = curl('GET', `/orders/${randomUUID()}`, {
@@ -386,6 +391,8 @@ describe('El flujo del corte 7 con curl y la aplicación compilada (e2e)', () =>
     expect(foreign.status).toBe(404);
     expect(foreign.body.errorCode).toBe('NOT_FOUND');
     expect(foreign.text).not.toContain('Clean Architecture');
+    expect(foreign.text).not.toContain(ADDRESS.recipient);
+    expect(foreign.text).not.toContain(ADDRESS.phone);
     expect(missing.status).toBe(404);
 
     const mine = curl('GET', '/me/orders', { token: nueva.token });
@@ -394,9 +401,9 @@ describe('El flujo del corte 7 con curl y la aplicación compilada (e2e)', () =>
       [],
     );
 
-    expect(
-      curl('GET', `/orders/${orderId}`, { token: admin.token }).status,
-    ).toBe(200);
+    const asAdmin = curl('GET', `/orders/${orderId}`, { token: admin.token });
+    expect(asAdmin.status).toBe(200);
+    expect(asAdmin.body.shippingAddress.recipient).toBe(ADDRESS.recipient);
     const history = curl('GET', `/admin/orders?customerId=${nueva.id}`, {
       token: admin.token,
     });

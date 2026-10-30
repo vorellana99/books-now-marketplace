@@ -114,6 +114,10 @@ model Book {
   currency CatalogCurrency @default(PEN)
   active   Boolean         @default(true) // los libros se desactivan, no se borran
 
+  // La búsqueda de GET /books?q= hace ILIKE '%texto%' sobre título y autor: sin un índice de trigramas recorre toda la
+  // tabla. Los crea la migración (necesitan la extensión pg_trgm); se declaran aquí para que Prisma no los dé por sobrantes
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "books_title_trgm_idx")
+  @@index([author(ops: raw("gin_trgm_ops"))], type: Gin, map: "books_author_trgm_idx")
   @@map("books")
   @@schema("catalog")
 }

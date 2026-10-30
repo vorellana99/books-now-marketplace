@@ -4,18 +4,24 @@ import { posix } from 'node:path';
 //  - sales/domain:  solo decimal.js y node:*; puede usar shared-kernel, contracts y su propio domain
 //  - contracts:     solo @nestjs/cqrs y node:*; puede usar shared-kernel y otros contracts
 //  - shared-kernel: solo node:*; no depende de nada del proyecto
-//  - application/: puede usar Nest, pero no Prisma; las operaciones con la transacción van en infrastructure/
+//  - application/: puede usar Nest, pero no Prisma ni infrastructure/ (las dependencias van hacia adentro); lo que
+//    necesita de la base lo pide a un puerto de domain/ports/
 //  - un contexto no importa el código de otro: se hablan por contracts/
+// y las de estructura (`checkStructure`): los cuatro contextos tienen la misma forma, sin excepciones
 
 const DOMAIN_LIBRARIES = ['decimal.js'];
 const CONTRACT_LIBRARIES = ['@nestjs/cqrs'];
 
-/** Rutas importadas por un archivo, incluidos los imports de solo tipos, las re-exportaciones y los dinámicos. */
-export function importsOf(source: string): string[] {
-  const code = source
+function stripComments(source: string): string {
+  return source
     .replaceAll(/\/\*[\s\S]*?\*\//g, '') // comentarios de bloque
     .replaceAll(/^\s*\/\/.*$/gm, '') // comentarios de línea completos
     .replaceAll(/\s\/\/.*$/gm, ''); // comentarios al final de una línea
+}
+
+/** Rutas importadas por un archivo, incluidos los imports de solo tipos, las re-exportaciones y los dinámicos. */
+export function importsOf(source: string): string[] {
+  const code = stripComments(source);
   const specifiers: string[] = [];
   const statics =
     /^\s*(?:import|export)\b(?:[^;'"`]*?\bfrom)?\s*['"]([^'"]+)['"]/gm;
@@ -70,6 +76,12 @@ function reasonToReject(
       return 'application no puede usar Prisma; ponlo en infrastructure/';
     }
     if (
+      layer === 'interface' &&
+      (spec === 'prisma' || spec.startsWith('@prisma/'))
+    ) {
+      return 'interface no puede usar Prisma; pide lo que necesita a un puerto de domain/ports/';
+    }
+    if (
       layer === 'domain' &&
       !isNode(spec) &&
       !DOMAIN_LIBRARIES.includes(spec)
@@ -94,6 +106,26 @@ function reasonToReject(
 
   if (layer === 'application' && target.startsWith('src/platform/prisma/')) {
     return 'application no puede usar Prisma; ponlo en infrastructure/';
+  }
+
+  // Hexagonal: lo de afuera depende de lo de adentro, nunca al revés
+  if (layer === 'application' && targetZone === `${context}/infrastructure`) {
+    return 'application no puede importar infrastructure/; pide lo que necesita a un puerto de domain/ports/';
+  }
+  if (layer === 'application' && targetZone === `${context}/interface`) {
+    return 'application no puede importar interface/; la entrada depende de application/, no al revés';
+  }
+  // La entrada habla con los casos de uso, nunca con la salida ni con la base. Única excepción: el ayudante que convierte
+  // la transacción del relay en un identificador opaco, que los consumidores necesitan
+  if (layer === 'interface' && targetZone === `${context}/infrastructure`) {
+    return 'interface no puede importar infrastructure/; pide lo que necesita a un caso de uso o a un puerto';
+  }
+  if (
+    layer === 'interface' &&
+    target.startsWith('src/platform/prisma/') &&
+    !target.endsWith('/transaction-handle.js')
+  ) {
+    return 'interface no puede usar Prisma (solo platform/prisma/transaction-handle); pide lo que necesita a un caso de uso';
   }
 
   if (layer === 'domain') {
@@ -123,4 +155,208 @@ function reasonToReject(
     return 'un contexto no importa el código de otro; usa contracts/';
   }
   return undefined;
+}
+
+const INFRASTRUCTURE_FOLDERS = ['persistence', 'adapters'];
+const INTERFACE_FOLDERS = ['http', 'consumers'];
+const LAYERS = ['domain', 'application', 'interface', 'infrastructure'];
+const APPLICATION_FOLDERS = ['use-cases', 'services', 'jobs', 'support'];
+const DOMAIN_FOLDERS = ['model', 'ports', 'shared'];
+const RUNTIME_EXPORT =
+  /^\s*export\s+(?:async\s+)?(?:function|const|let|enum|class)\b/m;
+
+/** Violaciones de la estructura de carpetas de los contextos (ruta → código). Vacío si todo está bien. */
+export function checkStructure(files: Record<string, string>): string[] {
+  const violations: string[] = [];
+  const byContext = new Map<string, string[]>();
+  for (const file of Object.keys(files)) {
+    const m = /^src\/contexts\/([^/]+)\//.exec(file);
+    if (m) byContext.set(m[1], [...(byContext.get(m[1]) ?? []), file]);
+  }
+
+  for (const [context, paths] of byContext) {
+    const root = `src/contexts/${context}/`;
+    const moduleFile = `${root}${context}.module.ts`;
+    if (!paths.includes(moduleFile)) {
+      violations.push(`${root}: falta ${context}.module.ts`);
+    }
+    if (!paths.some((p) => p.startsWith(`${root}domain/ports/`))) {
+      violations.push(
+        `${root}domain/: falta la carpeta ports/ con los puertos`,
+      );
+    }
+    if (!paths.some((p) => p.startsWith(`${root}domain/model/`))) {
+      violations.push(
+        `${root}domain/: falta la carpeta model/ con los agregados y las reglas`,
+      );
+    }
+
+    for (const path of paths) {
+      const rel = path.slice(root.length);
+      const [first, second] = rel.split('/');
+      const code = stripComments(files[path]);
+
+      if (rel.includes('/') ? !LAYERS.includes(first) : path !== moduleFile) {
+        violations.push(
+          `${path}: la raíz de un contexto solo tiene domain/, application/, infrastructure/ y su módulo`,
+        );
+        continue;
+      }
+
+      if (first === 'domain') {
+        const inside = rel.slice('domain/'.length);
+        const top = inside.split('/')[0];
+        if (!inside.includes('/')) {
+          violations.push(
+            `${path}: domain/ no admite archivos sueltos; va en ${DOMAIN_FOLDERS.join(', ')}`,
+          );
+        } else if (!DOMAIN_FOLDERS.includes(top)) {
+          violations.push(
+            `${path}: domain/ solo se divide en ${DOMAIN_FOLDERS.join(', ')} (no ${top}/); los nombres del negocio van dentro de model/`,
+          );
+        } else if (top === 'model' && !/^model\/[^/]+\/[^/]+$/.test(inside)) {
+          violations.push(
+            `${path}: model/ no admite archivos sueltos ni subcarpetas dentro de la carpeta de un agregado: model/<agregado>/<archivo>`,
+          );
+        } else if (top === 'ports' && !/\.(repository|port)\.ts$/.test(path)) {
+          violations.push(
+            `${path}: un puerto de domain/ports/ termina en .repository.ts o .port.ts`,
+          );
+        }
+      }
+
+      if (first === 'application') {
+        const inside = rel.slice('application/'.length);
+        if (!inside.includes('/')) {
+          violations.push(
+            `${path}: application/ no admite archivos sueltos; va en ${APPLICATION_FOLDERS.join(', ')}`,
+          );
+        } else if (!APPLICATION_FOLDERS.includes(inside.split('/')[0])) {
+          violations.push(
+            `${path}: application/ solo se divide en ${APPLICATION_FOLDERS.join(', ')} (no ${inside.split('/')[0]}/)`,
+          );
+        }
+        if (isPureDomain(path, rel, code, files[path])) {
+          violations.push(
+            `${path}: es lógica pura (sin Nest, sin platform/ y sin puertos): va en domain/. Solo application/support/ admite un archivo así`,
+          );
+        }
+      }
+
+      if (
+        /\.(command|query|handler)\.ts$/.test(path) &&
+        !/^application\/use-cases\/[^/]+\/[^/]+$/.test(rel)
+      ) {
+        violations.push(
+          `${path}: los comandos, las consultas y los handlers viven en application/use-cases/<agregado>/`,
+        );
+      }
+
+      if (first === 'infrastructure') {
+        if (!rel.slice('infrastructure/'.length).includes('/')) {
+          violations.push(
+            `${path}: infrastructure/ no admite archivos sueltos; va en ${INFRASTRUCTURE_FOLDERS.join(', ')}`,
+          );
+        } else if (!INFRASTRUCTURE_FOLDERS.includes(second)) {
+          violations.push(
+            `${path}: infrastructure/ solo se divide en ${INFRASTRUCTURE_FOLDERS.join(', ')} (no ${second}/)`,
+          );
+        }
+      }
+
+      if (first === 'interface') {
+        const inside = rel.slice('interface/'.length);
+        if (!inside.includes('/')) {
+          violations.push(
+            `${path}: interface/ no admite archivos sueltos; va en ${INTERFACE_FOLDERS.join(', ')}`,
+          );
+        } else if (!INTERFACE_FOLDERS.includes(inside.split('/')[0])) {
+          violations.push(
+            `${path}: interface/ solo se divide en ${INTERFACE_FOLDERS.join(', ')} (no ${inside.split('/')[0]}/)`,
+          );
+        }
+      }
+
+      if (
+        first !== 'application' &&
+        /^\s*@(Command|Query)Handler\(/m.test(code)
+      ) {
+        violations.push(
+          `${path}: los handlers de CQRS (@CommandHandler, @QueryHandler) viven en application/`,
+        );
+      }
+      if (
+        !path.includes('/interface/consumers/') &&
+        /^\s*@OutboxHandler\(/m.test(code)
+      ) {
+        violations.push(
+          `${path}: los consumidores del Outbox (@OutboxHandler) viven en interface/consumers/`,
+        );
+      }
+      if (
+        /\.(controller|dto|response)\.ts$/.test(path) &&
+        !path.includes('/interface/http/')
+      ) {
+        violations.push(
+          `${path}: los controladores, los DTO y las respuestas viven en interface/http/`,
+        );
+      }
+      if (path.endsWith('.job.ts') && !/^application\/jobs\/[^/]+$/.test(rel)) {
+        violations.push(`${path}: los jobs viven en application/jobs/`);
+      }
+      if (
+        (first === 'application' ||
+          first === 'interface' ||
+          first === 'infrastructure') &&
+        /\babstract\s+class\b/.test(code)
+      ) {
+        violations.push(
+          `${path}: una clase abstracta es un puerto y vive en domain/ports/`,
+        );
+      }
+      if (
+        /\bclass\s+Prisma[A-Z]\w*/.test(code) &&
+        !path.includes('/infrastructure/persistence/')
+      ) {
+        violations.push(
+          `${path}: las clases Prisma* (adaptadores de la base) viven en infrastructure/persistence/`,
+        );
+      }
+
+      const inPorts = path.startsWith(`${root}domain/ports/`);
+      if (
+        first === 'domain' &&
+        !inPorts &&
+        /\.(port|repository)\.ts$/.test(path)
+      ) {
+        violations.push(`${path}: los puertos viven en domain/ports/`);
+      }
+      if (inPorts && !/\babstract\s+class\b/.test(code)) {
+        violations.push(
+          `${path}: un archivo de domain/ports/ declara un puerto (clase abstracta)`,
+        );
+      }
+    }
+  }
+  return violations;
+}
+
+// Un archivo de application/ que no es un comando, una consulta, un handler ni un job, que declara código que se ejecuta
+// y no usa Nest, platform/ ni ningún puerto, no orquesta nada: es lógica del dominio. Un archivo de solo tipos (un DTO o
+// un alias) no cuenta. application/support/ guarda lo que es formato de la API y no una regla (el cursor de paginación)
+function isPureDomain(
+  path: string,
+  rel: string,
+  code: string,
+  source: string,
+): boolean {
+  if (/\.(command|query|handler|job)\.ts$/.test(path)) return false;
+  if (rel.startsWith('application/support/')) return false;
+  if (!RUNTIME_EXPORT.test(code)) return false;
+  return !importsOf(source).some(
+    (spec) =>
+      spec.startsWith('@nestjs/') ||
+      spec.includes('/platform/') ||
+      spec.includes('domain/ports/'),
+  );
 }

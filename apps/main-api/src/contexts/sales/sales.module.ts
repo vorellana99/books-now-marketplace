@@ -1,31 +1,37 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OutboxModule } from '../../platform/outbox/outbox.module.js';
-import { PlaceOrderHandler } from './application/order/place-order.handler.js';
-import { RecoverCheckoutsJob } from './application/order/recover-checkouts.job.js';
-import { SendOrderConfirmationConsumer } from './application/order/send-order-confirmation.consumer.js';
-import { CustomerRepository } from './domain/customer/customer.repository.js';
-import { CatalogPricing } from './domain/order/catalog-pricing.port.js';
-import { CheckoutLog } from './domain/order/checkout-log.port.js';
-import { Notifier } from './domain/order/notifier.port.js';
-import { OrderRepository } from './domain/order/order.repository.js';
-import { StockReservation } from './domain/order/stock-reservation.port.js';
-import { PaymentGateway } from './domain/payment/payment-gateway.port.js';
-import { PricingService } from './domain/pricing/pricing.service.js';
-import { CreateCustomerConsumer } from './infrastructure/customer/create-customer.consumer.js';
-import { PrismaCustomerRepository } from './infrastructure/customer/prisma-customer.repository.js';
-import { CatalogInProcessAdapter } from './infrastructure/order/catalog-in-process.adapter.js';
-import { ConsoleNotifier } from './infrastructure/order/console-notifier.adapter.js';
-import { GetOrderHandler } from './infrastructure/order/get-order.handler.js';
-import { ListCustomerOrdersHandler } from './infrastructure/order/list-customer-orders.handler.js';
-import { InventoryInProcessAdapter } from './infrastructure/order/inventory-in-process.adapter.js';
-import { AdminOrderController } from './infrastructure/order/admin-order.controller.js';
-import { MyOrdersController } from './infrastructure/order/my-orders.controller.js';
-import { OrderController } from './infrastructure/order/order.controller.js';
-import { PrismaCheckoutLog } from './infrastructure/order/prisma-checkout-log.adapter.js';
-import { PrismaOrderRepository } from './infrastructure/order/prisma-order.repository.js';
-import { ExternalPaymentAdapter } from './infrastructure/payment/external-payment.adapter.js';
-import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-payment-gateway.adapter.js';
+import { OrderPricer } from './application/services/order-pricer.js';
+import { PlaceOrderHandler } from './application/use-cases/order/place-order.handler.js';
+import { QuoteOrderHandler } from './application/use-cases/order/quote-order.handler.js';
+import { PurgeCheckoutsJob } from './application/jobs/purge-checkouts.job.js';
+import { RecoverCheckoutsJob } from './application/jobs/recover-checkouts.job.js';
+import { CreateCustomerHandler } from './application/use-cases/customer/create-customer.handler.js';
+import { GetOrderHandler } from './application/use-cases/order/get-order.handler.js';
+import { ListCustomerOrdersHandler } from './application/use-cases/order/list-customer-orders.handler.js';
+import { OrderHistory } from './domain/ports/order-history.port.js';
+import { SendOrderConfirmationConsumer } from './interface/consumers/send-order-confirmation.consumer.js';
+import { PrismaOrderHistory } from './infrastructure/persistence/prisma-order-history.js';
+import { CustomerRepository } from './domain/ports/customer.repository.js';
+import { CatalogPricing } from './domain/ports/catalog-pricing.port.js';
+import { CheckoutLog } from './domain/ports/checkout-log.port.js';
+import { Notifier } from './domain/ports/notifier.port.js';
+import { OrderRepository } from './domain/ports/order.repository.js';
+import { StockReservation } from './domain/ports/stock-reservation.port.js';
+import { PaymentGateway } from './domain/ports/payment-gateway.port.js';
+import { PricingService } from './domain/model/pricing/pricing.service.js';
+import { CreateCustomerConsumer } from './interface/consumers/create-customer.consumer.js';
+import { PrismaCustomerRepository } from './infrastructure/persistence/prisma-customer.repository.js';
+import { CatalogInProcessAdapter } from './infrastructure/adapters/catalog-in-process.adapter.js';
+import { ConsoleNotifier } from './infrastructure/adapters/console-notifier.adapter.js';
+import { InventoryInProcessAdapter } from './infrastructure/adapters/inventory-in-process.adapter.js';
+import { AdminOrderController } from './interface/http/admin-order.controller.js';
+import { MyOrdersController } from './interface/http/my-orders.controller.js';
+import { OrderController } from './interface/http/order.controller.js';
+import { PrismaCheckoutLog } from './infrastructure/persistence/prisma-checkout-log.adapter.js';
+import { PrismaOrderRepository } from './infrastructure/persistence/prisma-order.repository.js';
+import { ExternalPaymentAdapter } from './infrastructure/adapters/external-payment.adapter.js';
+import { SimulatedPaymentGateway } from './infrastructure/adapters/simulated-payment-gateway.adapter.js';
 
 // Los puertos son clases abstractas y se importan como valor: Nest necesita la clase en runtime para inyectarla
 @Module({
@@ -34,12 +40,17 @@ import { SimulatedPaymentGateway } from './infrastructure/payment/simulated-paym
   providers: [
     PlaceOrderHandler,
     GetOrderHandler,
+    QuoteOrderHandler,
     ListCustomerOrdersHandler,
+    CreateCustomerHandler,
     SendOrderConfirmationConsumer,
     CreateCustomerConsumer,
     RecoverCheckoutsJob,
+    PurgeCheckoutsJob,
     PricingService,
+    OrderPricer,
     { provide: OrderRepository, useClass: PrismaOrderRepository },
+    { provide: OrderHistory, useClass: PrismaOrderHistory },
     { provide: CheckoutLog, useClass: PrismaCheckoutLog },
     { provide: CustomerRepository, useClass: PrismaCustomerRepository },
     { provide: CatalogPricing, useClass: CatalogInProcessAdapter },

@@ -7,6 +7,7 @@ import { IdentityModule } from './contexts/identity/identity.module.js';
 import { InventoryModule } from './contexts/inventory/inventory.module.js';
 import { SalesModule } from './contexts/sales/sales.module.js';
 import { envSchema } from './platform/config/env.schema.js';
+import { AuthModule } from './platform/auth/auth.module.js';
 import { HealthModule } from './platform/health/health.module.js';
 import { OutboxModule } from './platform/outbox/outbox.module.js';
 import { PrismaModule } from './platform/prisma/prisma.module.js';
@@ -26,6 +27,9 @@ import { PrismaModule } from './platform/prisma/prisma.module.js';
     InventoryModule,
     SalesModule,
     IdentityModule,
+    // Denegado por defecto: el guard global verifica con el puerto que Identidad implementa. Después de Identidad, para que
+    // el límite de intentos de /auth corte antes de gastar siquiera la verificación del token
+    AuthModule.register({ verifier: IdentityModule }),
   ],
 })
 export class AppModule {}

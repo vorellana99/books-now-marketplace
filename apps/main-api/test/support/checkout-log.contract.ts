@@ -3,7 +3,7 @@ import {
   RECOVERY_BATCH,
   type CheckoutLog,
   type CheckoutStatus,
-} from '../../src/contexts/sales/domain/order/checkout-log.port.js';
+} from '../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 
@@ -150,6 +150,99 @@ export function checkoutLogContract(
         await expect(s.log.abort(orderId)).resolves.toBeUndefined();
         await expect(s.log.abort(randomUUID())).resolves.toBeUndefined();
         expect(await s.statusOf(orderId)).toBe('ABORTED');
+      });
+    });
+
+    describe('purgeFinished (retención)', () => {
+      const DAY = 24 * 60; // minutos
+
+      // Un checkout con el estado y la antigüedad (en días) indicados
+      async function checkout(
+        s: CheckoutLogSubject,
+        status: 'PENDING' | 'COMPLETED' | 'ABORTED',
+        ageDays: number,
+      ) {
+        const made = await start(s);
+        if (status === 'COMPLETED')
+          await s.complete(made.orderId, Money.of('10.00'));
+        if (status === 'ABORTED') await s.log.abort(made.orderId);
+        await s.backdate(made.orderId, ageDays * DAY);
+        return made;
+      }
+
+      it('borra los COMPLETED y los ABORTED más viejos que el plazo y devuelve cuántos', async () => {
+        const s = await create();
+        const done = await checkout(s, 'COMPLETED', 31);
+        const aborted = await checkout(s, 'ABORTED', 31);
+
+        expect(await s.log.purgeFinished(30, 100)).toBe(2);
+
+        expect(await s.statusOf(done.orderId)).toBeUndefined();
+        expect(await s.statusOf(aborted.orderId)).toBeUndefined();
+      });
+
+      it('nunca borra un PENDING, por viejo que sea: la recuperación lo necesita', async () => {
+        const s = await create();
+        const stuck = await checkout(s, 'PENDING', 400);
+
+        expect(await s.log.purgeFinished(30, 100)).toBe(0);
+
+        expect(await s.statusOf(stuck.orderId)).toBe('PENDING');
+      });
+
+      it('no borra los recientes, ni uno justo dentro del plazo', async () => {
+        const s = await create();
+        const fresh = await checkout(s, 'COMPLETED', 1);
+        const edge = await checkout(s, 'ABORTED', 29);
+
+        expect(await s.log.purgeFinished(30, 100)).toBe(0);
+
+        expect(await s.statusOf(fresh.orderId)).toBe('COMPLETED');
+        expect(await s.statusOf(edge.orderId)).toBe('ABORTED');
+      });
+
+      it('el plazo es el que se pide: con 7 días, uno de 8 se borra y uno de 6 no', async () => {
+        const s = await create();
+        const old = await checkout(s, 'COMPLETED', 8);
+        const recent = await checkout(s, 'COMPLETED', 6);
+
+        expect(await s.log.purgeFinished(7, 100)).toBe(1);
+
+        expect(await s.statusOf(old.orderId)).toBeUndefined();
+        expect(await s.statusOf(recent.orderId)).toBe('COMPLETED');
+      });
+
+      it('borra como mucho `limit` por llamada, y el resto en la siguiente', async () => {
+        const s = await create();
+        for (let i = 0; i < 5; i++) await checkout(s, 'COMPLETED', 40);
+
+        expect(await s.log.purgeFinished(30, 2)).toBe(2);
+        expect(await s.log.purgeFinished(30, 2)).toBe(2);
+        expect(await s.log.purgeFinished(30, 2)).toBe(1);
+        expect(await s.log.purgeFinished(30, 2)).toBe(0);
+      });
+
+      it('borra primero los más antiguos', async () => {
+        const s = await create();
+        const oldest = await checkout(s, 'COMPLETED', 90);
+        const older = await checkout(s, 'COMPLETED', 60);
+        const old = await checkout(s, 'COMPLETED', 40);
+
+        await s.log.purgeFinished(30, 1);
+
+        expect(await s.statusOf(oldest.orderId)).toBeUndefined();
+        expect(await s.statusOf(older.orderId)).toBe('COMPLETED');
+        expect(await s.statusOf(old.orderId)).toBe('COMPLETED');
+      });
+
+      it('tras borrarlo, su Idempotency-Key se olvida: la clave sirve de nuevo', async () => {
+        const s = await create();
+        const made = await checkout(s, 'COMPLETED', 31);
+
+        await s.log.purgeFinished(30, 100);
+
+        expect(await s.log.findByKey(made.key)).toBeNull();
+        expect(await s.log.start(randomUUID(), made.key, 'hash-1')).toBe(true);
       });
     });
 

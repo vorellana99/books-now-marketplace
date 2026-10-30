@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { Module, type INestApplication } from '@nestjs/common';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
-import { ConfirmReservationConsumer } from '../../src/contexts/inventory/infrastructure/stock/confirm-reservation.consumer.js';
-import { SendOrderConfirmationConsumer } from '../../src/contexts/sales/application/order/send-order-confirmation.consumer.js';
-import { CustomerRepository } from '../../src/contexts/sales/domain/customer/customer.repository.js';
-import { Notifier } from '../../src/contexts/sales/domain/order/notifier.port.js';
-import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/customer/prisma-customer.repository.js';
+import { ConfirmReservationConsumer } from '../../src/contexts/inventory/interface/consumers/confirm-reservation.consumer.js';
+import { SendOrderConfirmationConsumer } from '../../src/contexts/sales/interface/consumers/send-order-confirmation.consumer.js';
+import { CustomerRepository } from '../../src/contexts/sales/domain/ports/customer.repository.js';
+import { Notifier } from '../../src/contexts/sales/domain/ports/notifier.port.js';
+import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/persistence/prisma-customer.repository.js';
 import { OrderPlacedEvent } from '../../src/contracts/sales/order-placed.event.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { OutboxRegistry } from '../../src/platform/outbox/outbox.registry.js';
@@ -25,7 +25,7 @@ import {
 import { resetDatabase } from '../support/database.js';
 import { createTestApp } from '../support/nest.js';
 import { FakeNotifier } from '../fakes/fake-notifier.js';
-import { InventoryInProcessAdapter } from '../../src/contexts/sales/infrastructure/order/inventory-in-process.adapter.js';
+import { InventoryInProcessAdapter } from '../../src/contexts/sales/infrastructure/adapters/inventory-in-process.adapter.js';
 import { CommandBus } from '@nestjs/cqrs';
 import { ADDRESS_PAYLOAD } from '../fakes/fixtures.js';
 

@@ -1,13 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import type { INestApplication } from '@nestjs/common';
-import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/order/prisma-checkout-log.adapter.js';
-import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/customer/prisma-customer.repository.js';
+import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/persistence/prisma-checkout-log.adapter.js';
+import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructure/persistence/prisma-customer.repository.js';
 import {
   RECOVERY_BATCH,
   RECOVERY_LOCK_MINUTES,
-} from '../../src/contexts/sales/domain/order/checkout-log.port.js';
-import { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
+} from '../../src/contexts/sales/domain/ports/checkout-log.port.js';
+import { Customer } from '../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import { insertCustomer } from '../support/builders.js';
@@ -16,6 +16,7 @@ import {
   type CheckoutLogSubject,
 } from '../support/checkout-log.contract.js';
 import {
+  holdRowLock,
   query,
   resetDatabase,
   useDatabaseTimeZone,
@@ -91,6 +92,28 @@ describe('PrismaCheckoutLog: lo que solo se puede probar con PostgreSQL real', (
       'SELECT count(*) AS n FROM sales.checkouts',
     );
     expect(Number(n)).toBe(1);
+  });
+
+  it('purgeFinished pasa de largo por un checkout que otra transacción tiene bloqueado, en vez de esperarla (SKIP LOCKED)', async () => {
+    const log = new PrismaCheckoutLog(prisma);
+    const ids = [randomUUID(), randomUUID(), randomUUID()];
+    for (const id of ids) {
+      await log.start(id, randomUUID(), 'h');
+      await log.abort(id);
+    }
+    await query(
+      "UPDATE sales.checkouts SET started_at = now() - interval '40 days'",
+    );
+    const release = await holdRowLock(
+      'SELECT 1 FROM sales.checkouts WHERE order_id = $1 FOR UPDATE',
+      [ids[2]],
+    );
+    try {
+      expect(await log.purgeFinished(30, 100)).toBe(2);
+    } finally {
+      await release();
+    }
+    expect(await log.purgeFinished(30, 100)).toBe(1);
   });
 
   it('guarda el requestId de la petición en la columna request_id', async () => {

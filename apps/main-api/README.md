@@ -10,6 +10,7 @@ Contenido: [Requisitos](#requisitos) · [Primer arranque](#primer-arranque) · [
 - pnpm
 - PostgreSQL **18**, con Docker o instalado en tu máquina. No sirve una versión anterior: el Outbox usa `uuidv7()`.
 - Docker: para la base de desarrollo si eliges esa opción, y siempre para `pnpm run test:e2e` (levanta su propio PostgreSQL)
+- Para los ejemplos con `curl` de este README: `curl`, **`jq`** (extrae los tokens de las respuestas), `uuidgen` (paquete `uuid-runtime`, para el `Idempotency-Key`) y `openssl` (para generar `JWT_SECRET`). En Ubuntu o WSL: `sudo apt-get install -y jq curl uuid-runtime openssl`. La lista completa, con las herramientas del resto del repo, está en los [requisitos previos de la guía de desarrollo](../../docs/guia-de-desarrollo.md#requisitos-previos)
 
 ## Primer arranque
 
@@ -64,8 +65,18 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `OUTBOX_MAX_ATTEMPTS` | `8` | Reintentos de una entrega de eventos antes de marcarla como fallida |
 | `CHECKOUT_RECOVERY_MINUTES` | `10` | Minutos tras los que se recupera una compra a medias (mínimo 2) |
 | `DB_STATEMENT_TIMEOUT_MS` | `5000` | Tiempo máximo de cada sentencia SQL, en milisegundos. Mantiene acotada la duración de una compra |
+| `RETENTION_OUTBOX_DAYS` | `30` | Días que se guarda un mensaje del outbox con todas sus entregas hechas antes de purgarlo (de 1 a 3650) |
+| `RETENTION_CHECKOUT_DAYS` | `30` | Días que se guarda un checkout `COMPLETED` o `ABORTED`. Purgarlo olvida su `Idempotency-Key` |
+| `RETENTION_RESERVATION_DAYS` | `90` | Días que se guarda una reserva `CONFIRMED` |
+| `RETENTION_REFRESH_TOKEN_DAYS` | `7` | Días que se guarda un token de refresco después de vencer, usarse o revocarse |
 
 `OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
+
+### Retención de datos
+
+Cada noche a las 3 (hora del servidor) corren cuatro jobs que borran, por lotes de 1000 y como mucho 100 lotes por vuelta, lo que ya terminó y superó su plazo: los mensajes del outbox con todas sus entregas hechas, los checkouts `COMPLETED` o `ABORTED`, las reservas `CONFIRMED` y los tokens de refresco vencidos, usados o revocados. **Nunca** borran lo pendiente, en curso o fallido: un checkout `PENDING` (lo necesita la recuperación), una reserva `HELD` (retiene stock), un mensaje con una entrega `PENDING` o `FAILED` (un evento sin entregar no se oculta por ser viejo) ni un token vigente. Varias instancias pueden correrlos a la vez sin pisarse (`FOR UPDATE SKIP LOCKED`). Cada job que borra algo lo anota en el log (`Purga de checkouts: 120 filas con más de 30 días`).
+
+Dos consecuencias a tener presentes: pasado `RETENTION_CHECKOUT_DAYS`, repetir una `Idempotency-Key` ya no devuelve el pedido original (por eso el plazo debe superar lo que tarde un cliente razonable en reintentar), y pasado `RETENTION_REFRESH_TOKEN_DAYS`, un token de refresco robado y ya usado se ve como desconocido (`401`) en vez de revocar la sesión.
 
 ## Base de datos
 
@@ -198,7 +209,7 @@ La reserva y la liberación de stock no tienen endpoint propio: las usa Ventas p
 
 ### Probar la autenticación
 
-La API usa un **token de acceso** de vida corta (15 minutos, `ACCESS_TOKEN_TTL_SECONDS`) que se manda en `Authorization: Bearer <token>`, y un **token de refresco** opaco que se cambia por otro par de tokens y sirve **una sola vez**. Todas las rutas piden sesión salvo el catálogo (`GET /books…`), `/health/*` y `/auth/*`. Los roles son `BUYER` (compra y ve lo suyo) y `ADMIN` (la administración). Con los datos de ejemplo cargados hay tres usuarios, todos con la contraseña `LibroYa-dev-2026`: `ana@example.com`, `luis@example.com` (premium) y `admin@example.com`. Los ejemplos usan [`jq`](https://jqlang.org) para sacar el token; si no lo tienes, cópialo a mano de la respuesta.
+La API usa un **token de acceso** de vida corta (15 minutos, `ACCESS_TOKEN_TTL_SECONDS`) que se manda en `Authorization: Bearer <token>`, y un **token de refresco** opaco que se cambia por otro par de tokens y sirve **una sola vez**. Todas las rutas piden sesión salvo el catálogo (`GET /books…`), `/health/*` y `/auth/*`. Los roles son `BUYER` (compra y ve lo suyo) y `ADMIN` (la administración). Con los datos de ejemplo cargados hay tres usuarios, todos con la contraseña `LibroYa-dev-2026`: `ana@example.com`, `luis@example.com` (premium) y `admin@example.com`. Los ejemplos usan [`jq`](https://jqlang.org) (es un requisito previo: `sudo apt-get install -y jq`) para sacar el token; si no lo tienes, cópialo a mano de la respuesta.
 
 ```bash
 # Registrarse: 201 { id, email, role: "BUYER" }. No inicia sesión. 409 EMAIL_ALREADY_REGISTERED si el correo ya existe;
@@ -255,6 +266,13 @@ curl -X POST http://localhost:3000/orders \
       "reference": "Frente al parque Kennedy"
     }
   }'
+
+# Cotizar antes de pagar: mismo cálculo que el cobro, sin reservar ni cobrar ni pedir dirección ni tarjeta
+# → 200 { currency, lines[{ isbn, unitPrice, quantity, subtotal }], subtotal, discount, shipping, total }
+curl -X POST http://localhost:3000/orders/quote \
+  -H "Authorization: Bearer $ANA" \
+  -H 'Content-Type: application/json' \
+  -d '{ "items": [{ "isbn": "9780132350884", "quantity": 2 }] }'
 
 # Consultar el pedido (su dueño o un administrador; para otro comprador es un 404, como si no existiera)
 curl -H "Authorization: Bearer $ANA" http://localhost:3000/orders/<orderId>
@@ -338,6 +356,23 @@ curl -X POST http://localhost:3000/admin/stock/9780134494166/additions -H "Autho
 
 El precio entra como sale: `{ "amount": "55.00", "currency": "PEN" }`, con el monto en texto.
 
+## Imagen de contenedor (despliegue)
+
+El `Dockerfile` de esta carpeta es genérico: sirve en cualquier plataforma que corra contenedores. Tiene dos imágenes, y **las migraciones no corren al arrancar la API** (para que varias instancias no migren a la vez):
+
+```bash
+docker build -t libroya-api .                         # la API: sin pnpm, sin pruebas ni código fuente, usuario `node`
+docker build --target migrate -t libroya-migrate .    # solo `prisma migrate deploy`
+
+# 1. Las migraciones, una vez por despliegue y antes de arrancar la API (necesita las variables DB_*)
+docker run --rm --env-file produccion.env libroya-migrate
+
+# 2. La API (con las variables de producción: ver «Variables de entorno»)
+docker run -d --env-file produccion.env -p 3000:3000 libroya-api
+```
+
+La imagen trae `NODE_ENV=production`, así que la validación de producción se aplica: sin `JWT_SECRET`, con `PAYMENT_PROVIDER=fake` o con `CORS_ORIGINS` que no sean https, **no arranca**. Su `HEALTHCHECK` consulta `/health/live`; el balanceador debe usar `/health/ready`. Las migraciones crean la extensión `pg_trgm`: el rol de la base debe poder (ver «Problemas frecuentes»). La imagen de la API pesa unos 560 MB. No hay un trabajo de CI que la construya: se construye a mano.
+
 ## Levantar la API
 
 ```bash
@@ -374,7 +409,7 @@ pnpm test                                        # unitarios
 pnpm run test:e2e                                # e2e e integración (levantan su propio PostgreSQL; requiere Docker)
 pnpm run test:watch                              # unitarios en modo observación
 pnpm run test:cov                                # unitarios con cobertura
-pnpm exec vitest run test/unit/env.schema.spec.ts   # un solo archivo
+pnpm exec vitest run test/unit/platform/env.schema.spec.ts   # un solo archivo
 pnpm exec vitest run -t "texto del test"             # un test por nombre
 ```
 
@@ -469,6 +504,7 @@ El workflow [`.github/workflows/main-api.yml`](../../.github/workflows/main-api.
 |---|---|
 | `No se pudo iniciar PostgreSQL en un contenedor` al correr `test:e2e` | Docker no está en marcha. Compruébalo con `docker info`. `pnpm test` (unitarios) funciona sin Docker |
 | `function uuidv7() does not exist` al migrar | La base no es PostgreSQL 18 |
+| `permission denied to create extension "pg_trgm"` al migrar | La migración `books_search_trigram_indexes` crea la extensión `pg_trgm` (índices de la búsqueda de libros). En un PostgreSQL administrado, habilítala desde su consola o con un rol que pueda crear extensiones; en el contenedor `postgres:18` ya está disponible |
 | `P3014: Prisma Migrate could not create the shadow database` | El usuario no tiene `CREATEDB`: `ALTER ROLE libroya CREATEDB;` |
 | `permission denied for schema public` al migrar | El usuario no es dueño de la base: `ALTER DATABASE libroya OWNER TO libroya;` |
 | `P1000: Authentication failed` | Usuario o contraseña de `DB_USER` / `DB_PASSWORD` incorrectos (o la base se creó con otros: ver el aviso de Docker) |

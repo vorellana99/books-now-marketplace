@@ -1,17 +1,25 @@
 import { Module } from '@nestjs/common';
 import { OutboxModule } from '../../platform/outbox/outbox.module.js';
-import { AdminBookController } from './infrastructure/book/admin-book.controller.js';
-import { BookController } from './infrastructure/book/book.controller.js';
-import { CreateBookHandler } from './infrastructure/book/create-book.handler.js';
-import { GetBookPriceHandler } from './infrastructure/book/get-book-price.handler.js';
-import { UpdateBookHandler } from './infrastructure/book/update-book.handler.js';
-import { SearchBooksHandler } from './infrastructure/book/search-books.handler.js';
+import { AdminBookController } from './interface/http/admin-book.controller.js';
+import { BookController } from './interface/http/book.controller.js';
+import { CreateBookHandler } from './application/use-cases/book/create-book.handler.js';
+import { GetBookPriceHandler } from './application/use-cases/book/get-book-price.handler.js';
+import { GetBooksPricesHandler } from './application/use-cases/book/get-books-prices.handler.js';
+import { BookCatalog } from './domain/ports/book-catalog.port.js';
+import { BookRepository } from './domain/ports/book.repository.js';
+import { PrismaBookCatalog } from './infrastructure/persistence/prisma-book-catalog.js';
+import { PrismaBookRepository } from './infrastructure/persistence/prisma-book.repository.js';
+import { UpdateBookHandler } from './application/use-cases/book/update-book.handler.js';
+import { SearchBooksHandler } from './application/use-cases/book/search-books.handler.js';
 
 @Module({
-  imports: [OutboxModule], // CreateBookHandler guarda el evento del libro con OutboxWriter
+  imports: [OutboxModule], // PrismaBookRepository guarda el evento del libro con OutboxWriter
   controllers: [BookController, AdminBookController],
   providers: [
+    { provide: BookRepository, useClass: PrismaBookRepository },
+    { provide: BookCatalog, useClass: PrismaBookCatalog },
     GetBookPriceHandler,
+    GetBooksPricesHandler,
     SearchBooksHandler,
     CreateBookHandler,
     UpdateBookHandler,

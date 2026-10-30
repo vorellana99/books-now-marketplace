@@ -3,7 +3,7 @@ import { QueryBus } from '@nestjs/cqrs';
 import {
   SearchBooksQuery,
   type BookPage,
-} from '../../src/contexts/catalog/application/book/search-books.query.js';
+} from '../../src/contexts/catalog/application/use-cases/book/search-books.query.js';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { insertBook } from '../support/builders.js';
 import { resetDatabase } from '../support/database.js';

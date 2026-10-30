@@ -70,7 +70,8 @@ Un guard es más simple que registrar controllers de forma condicional, que en N
 ### Fase 10: Listar y buscar libros
 
 ```ts
-// catalog/infrastructure/book/search-books.handler.ts
+// Versión de esta fase. Desde el corte 10 el handler (catalog/application/use-cases/book/search-books.handler.ts)
+// solo delega en el puerto BookCatalog.search, y esta consulta vive en infrastructure/persistence/prisma-book-catalog.ts
 @QueryHandler(SearchBooksQuery)
 export class SearchBooksHandler implements IQueryHandler<SearchBooksQuery> {
   constructor(private readonly prisma: PrismaService) {}
@@ -122,7 +123,7 @@ model Order {
 }
 ```
 
-- **El dominio la valida con el valor `ShippingAddress`** (`sales/domain/order/shipping-address.vo.ts`): recorta cada campo, exige los seis obligatorios, acota el largo (los mismos tamaños de las columnas), rechaza saltos de línea y otros caracteres de control, y pide un teléfono de al menos 6 dígitos con solo dígitos, espacios, `+`, `-` y paréntesis. `ShippingAddress.create` valida; `ShippingAddress.restore` lee lo que ya está en la base sin validar, para que una regla nueva no impida leer pedidos antiguos. El mapper trata la dirección con todas las columnas en nulo como "pedido anterior" (`null`) y una dirección a medias como un dato roto.
+- **El dominio la valida con el valor `ShippingAddress`** (`sales/domain/model/order/shipping-address.vo.ts`): recorta cada campo, exige los seis obligatorios, acota el largo (los mismos tamaños de las columnas), rechaza saltos de línea y otros caracteres de control, y pide un teléfono de al menos 6 dígitos con solo dígitos, espacios, `+`, `-` y paréntesis. `ShippingAddress.create` valida; `ShippingAddress.restore` lee lo que ya está en la base sin validar, para que una regla nueva no impida leer pedidos antiguos. El mapper trata la dirección con todas las columnas en nulo como "pedido anterior" (`null`) y una dirección a medias como un dato roto.
 - **El DTO valida la forma** como objeto anidado (`@ValidateNested`, `@IsObject`): obligatoria, los seis campos con texto no vacío y su largo máximo, y la referencia opcional; lo que falte es un `400`. **El contenido lo valida el dominio** (teléfono, caracteres de control): un `422 INVALID_SHIPPING_ADDRESS`, igual que un ISBN mal formado.
 - **Forma parte del hash de la `Idempotency-Key`:** un reintento con la misma clave y otra dirección responde `422 IDEMPOTENCY_KEY_REUSED`, igual que si cambiara el carrito. Cambian dos firmas:
 
@@ -135,7 +136,7 @@ new PlaceOrderCommand(key, userId /* el sub del token */, dto.items, dto.shippin
 hashRequest(customerId, items, address);
 ```
 - **`OrderPlacedEvent` pasa a `eventVersion = 2`** e incluye la dirección, porque Envíos la necesitará. Los consumidores actuales ignoran el campo nuevo. Los eventos ya guardados siguen siendo de la versión 1 y los consumidores los leen igual (hay un test que lo comprueba).
-- **`GET /orders/:id` no la devuelve** (decisión D2): el endpoint no tiene autenticación, y la calle y el teléfono son datos personales. La dirección viaja en el evento y, más adelante, en el historial de administración.
+- **`GET /orders/:id` no la devolvía** (decisión D2): sin autenticación, la calle y el teléfono eran datos personales al alcance de cualquiera con el UUID. **Desde el corte 7 sí la devuelve** a su dueño y a los administradores (DP-15), porque el endpoint ya está limitado a ellos: un pedido ajeno da `404` sin nada de la dirección. Viaja además en el evento y en `GET /me/orders` y `GET /admin/orders`.
 - **Cambiar `hashRequest` invalida las claves de idempotencia en vuelo:** una compra a medias iniciada antes de esta versión, reintentada después, daría `IDEMPOTENCY_KEY_REUSED`. Es aceptable antes de desplegar.
 
 ### Fase 12: Administrar libros y precios
@@ -157,12 +158,12 @@ hashRequest(customerId, items, address);
 - **Cambiar un precio no afecta pedidos ya hechos:** el precio quedó copiado en cada línea (snapshot).
 - **El handler de `CreateBookCommand` guarda el libro y su evento en la misma transacción:** `prisma.$transaction(async (tx) => { await tx.book.create({ … }); await this.outbox.append(tx, [new BookCreatedEvent(isbn)]); })`. El evento va en `contracts/catalog/book-created.event.ts`, con `aggregateId` = ISBN. Guardados por separado, una caída entre ambos dejaría un libro sin registro de stock.
 - **Al crear un libro también se crea su registro de stock en cero**, en Inventario. Se hace con un consumidor del Outbox (`inventory.create-stock-item`, tipo `db`) que reacciona a un evento nuevo, `catalog.book.created`. Así todo libro nuevo tiene su registro de stock. El caso de `STOCK_ITEM_NOT_FOUND` queda reducido a la breve ventana (alrededor de 1 s) entre que se crea el libro y el relay entrega el evento: si alguien compra justo entonces, recibe 422 y no se cobra nada, porque falla antes de reservar. En la práctica no ocurre, porque un libro recién creado tiene stock cero y no se puede vender hasta cargarle unidades (fase 13).
-- **El consumidor** (`CreateStockItemConsumer`, `inventory/infrastructure/stock/`) hace `createMany({ skipDuplicates: true })` con el `tx` del relay: un `INSERT … ON CONFLICT DO NOTHING`. Repetir la entrega, o dos entregas a la vez, deja un solo registro, y **nunca pisa un stock que ya exista**. Valida el ISBN del evento con `Isbn.create`: uno mal formado es un error, el relay lo reintenta y acaba `FAILED`, a la vista de `/health/outbox`. Mientras el relay no entrega el evento, comprar el libro da `STOCK_ITEM_NOT_FOUND`; después, `OUT_OF_STOCK` (hay un test de cada).
+- **El consumidor** (`CreateStockItemConsumer`, `inventory/interface/consumers/`) hace `createMany({ skipDuplicates: true })` con el `tx` del relay: un `INSERT … ON CONFLICT DO NOTHING`. Repetir la entrega, o dos entregas a la vez, deja un solo registro, y **nunca pisa un stock que ya exista**. Valida el ISBN del evento con `Isbn.create`: uno mal formado es un error, el relay lo reintenta y acaba `FAILED`, a la vista de `/health/outbox`. Mientras el relay no entrega el evento, comprar el libro da `STOCK_ITEM_NOT_FOUND`; después, `OUT_OF_STOCK` (hay un test de cada).
 
 ### Fase 13: Cargar stock
 
 ```ts
-// inventory/infrastructure/stock/add-stock.handler.ts
+// inventory/application/use-cases/stock/add-stock.handler.ts
 @CommandHandler(AddStockCommand)
 export class AddStockHandler implements ICommandHandler<AddStockCommand> {
   constructor(private readonly prisma: PrismaService) {}
@@ -194,7 +195,8 @@ export class AddStockHandler implements ICommandHandler<AddStockCommand> {
 ### Fase 14: Historial de pedidos
 
 ```ts
-// sales/infrastructure/order/list-customer-orders.handler.ts
+// Versión de esta fase. Desde el corte 10 el handler (sales/application/use-cases/order/list-customer-orders.handler.ts) pide la
+// página al puerto OrderHistory.listByCustomer, y esta consulta vive en infrastructure/persistence/prisma-order-history.ts
 @QueryHandler(ListCustomerOrdersQuery)
 export class ListCustomerOrdersHandler implements IQueryHandler<ListCustomerOrdersQuery> {
   constructor(private readonly prisma: PrismaService) {}
