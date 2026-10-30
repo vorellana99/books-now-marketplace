@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { OutboxModule } from '../../platform/outbox/outbox.module.js';
-import { AdminBookController } from './infrastructure/http/admin-book.controller.js';
-import { BookController } from './infrastructure/http/book.controller.js';
+import { AdminBookController } from './interface/http/admin-book.controller.js';
+import { BookController } from './interface/http/book.controller.js';
 import { CreateBookHandler } from './application/use-cases/book/create-book.handler.js';
 import { GetBookPriceHandler } from './application/use-cases/book/get-book-price.handler.js';
 import { GetBooksPricesHandler } from './application/use-cases/book/get-books-prices.handler.js';

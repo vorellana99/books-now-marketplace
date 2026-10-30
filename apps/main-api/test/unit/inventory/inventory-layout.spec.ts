@@ -13,17 +13,20 @@ const files = (dir: string) =>
 
 // Inventario sigue la misma arquitectura que Ventas e Identidad (tarea 10.7)
 describe('estructura de contexts/inventory', () => {
-  it('infrastructure/ solo tiene las carpetas http, persistence y consumers, y ningún archivo suelto', () => {
-    const folders = list('infrastructure')
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort((a, b) => a.localeCompare(b));
-    expect(folders).toEqual(['consumers', 'http', 'persistence']);
+  it('infrastructure/ solo tiene persistence y interface/ tiene http y consumers; ningún archivo suelto (tarea 10.18)', () => {
+    const folders = (dir: string) =>
+      list(dir)
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort((a, b) => a.localeCompare(b));
+    expect(folders('infrastructure')).toEqual(['persistence']);
+    expect(folders('interface')).toEqual(['consumers', 'http']);
     expect(files('infrastructure')).toEqual([]);
+    expect(files('interface')).toEqual([]);
   });
 
   it('http/ tiene el controlador y el DTO', () => {
-    expect(files('infrastructure/http')).toEqual([
+    expect(files('interface/http')).toEqual([
       'add-stock.dto.ts',
       'admin-stock.controller.ts',
     ]);
@@ -37,7 +40,7 @@ describe('estructura de contexts/inventory', () => {
   });
 
   it('consumers/ tiene los dos consumidores db del Outbox', () => {
-    expect(files('infrastructure/consumers')).toEqual([
+    expect(files('interface/consumers')).toEqual([
       'confirm-reservation.consumer.ts',
       'create-stock-item.consumer.ts',
     ]);

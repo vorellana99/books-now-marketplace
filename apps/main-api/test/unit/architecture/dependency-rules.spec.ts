@@ -239,10 +239,81 @@ describe('checkRules: detecta las violaciones', () => {
     it('infrastructure/ sí puede importar application/ y domain/ (para implementar puertos y enviar comandos)', () => {
       expect(
         violations(
-          'src/contexts/sales/infrastructure/consumers/c.ts',
+          'src/contexts/sales/infrastructure/persistence/c.ts',
           `import { C } from '../../application/customer/create-customer.command.js';\nimport { P } from '../../domain/ports/order.repository.js';`,
         ),
       ).toEqual([]);
+    });
+
+    describe('interface/ (quien llama al contexto, tarea 10.18)', () => {
+      const CONTROLLER =
+        'src/contexts/sales/interface/http/order.controller.ts';
+      const CONSUMER = 'src/contexts/sales/interface/consumers/c.consumer.ts';
+
+      it('puede importar application/, domain/, shared-kernel/, contracts/ y platform/', () => {
+        const source = [
+          `import { Controller } from '@nestjs/common';`,
+          `import { QueryBus } from '@nestjs/cqrs';`,
+          `import { PlaceOrderCommand } from '../../application/use-cases/order/place-order.command.js';`,
+          `import { Money } from '../../domain/shared/money.vo.js';`,
+          `import { DomainError } from '../../../../shared-kernel/domain.errors.js';`,
+          `import { OrderPlacedEvent } from '../../../../contracts/sales/order-placed.event.js';`,
+          `import { Roles } from '../../../../platform/auth/roles.decorator.js';`,
+        ].join('\n');
+        expect(violations(CONTROLLER, source)).toEqual([]);
+      });
+
+      it('no puede importar infrastructure/ de su contexto (se pide a un puerto)', () => {
+        const found = violations(
+          CONTROLLER,
+          `import { PrismaOrderRepository } from '../../infrastructure/persistence/prisma-order.repository.js';`,
+        );
+        expect(found).toHaveLength(1);
+        expect(found[0]).toMatch(/interface/);
+      });
+
+      it.each([
+        ['@prisma/client', `import { Prisma } from '@prisma/client';`],
+        [
+          'PrismaService',
+          `import { PrismaService } from '../../../../platform/prisma/prisma.service.js';`,
+        ],
+        [
+          'el cliente generado de Prisma',
+          `import { Prisma } from '../../../../platform/prisma/generated/client.js';`,
+        ],
+      ])('no puede importar %s', (_que, source) => {
+        expect(violations(CONSUMER, source)).toHaveLength(1);
+      });
+
+      it('el consumidor sí puede usar el ayudante de la transacción (platform/prisma/transaction-handle)', () => {
+        expect(
+          violations(
+            CONSUMER,
+            `import { toTransactionHandle } from '../../../../platform/prisma/transaction-handle.js';`,
+          ),
+        ).toEqual([]);
+      });
+
+      it.each(['domain', 'application'])(
+        '%s/ no puede importar interface/',
+        (layer) => {
+          const found = violations(
+            `src/contexts/sales/${layer}/x.ts`,
+            `import { OrderController } from '../interface/http/order.controller.js';`,
+          );
+          expect(found).toHaveLength(1);
+        },
+      );
+
+      it('otro contexto tampoco: se hablan por contracts/', () => {
+        expect(
+          violations(
+            CONTROLLER,
+            `import { BookController } from '../../../catalog/interface/http/book.controller.js';`,
+          ),
+        ).toHaveLength(1);
+      });
     });
 
     it('infrastructure/ sí puede usar Prisma', () => {

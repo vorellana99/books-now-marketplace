@@ -76,6 +76,12 @@ function reasonToReject(
       return 'application no puede usar Prisma; ponlo en infrastructure/';
     }
     if (
+      layer === 'interface' &&
+      (spec === 'prisma' || spec.startsWith('@prisma/'))
+    ) {
+      return 'interface no puede usar Prisma; pide lo que necesita a un puerto de domain/ports/';
+    }
+    if (
       layer === 'domain' &&
       !isNode(spec) &&
       !DOMAIN_LIBRARIES.includes(spec)
@@ -105,6 +111,21 @@ function reasonToReject(
   // Hexagonal: lo de afuera depende de lo de adentro, nunca al revés
   if (layer === 'application' && targetZone === `${context}/infrastructure`) {
     return 'application no puede importar infrastructure/; pide lo que necesita a un puerto de domain/ports/';
+  }
+  if (layer === 'application' && targetZone === `${context}/interface`) {
+    return 'application no puede importar interface/; la entrada depende de application/, no al revés';
+  }
+  // La entrada habla con los casos de uso, nunca con la salida ni con la base. Única excepción: el ayudante que convierte
+  // la transacción del relay en un identificador opaco, que los consumidores necesitan
+  if (layer === 'interface' && targetZone === `${context}/infrastructure`) {
+    return 'interface no puede importar infrastructure/; pide lo que necesita a un caso de uso o a un puerto';
+  }
+  if (
+    layer === 'interface' &&
+    target.startsWith('src/platform/prisma/') &&
+    !target.endsWith('/transaction-handle.js')
+  ) {
+    return 'interface no puede usar Prisma (solo platform/prisma/transaction-handle); pide lo que necesita a un caso de uso';
   }
 
   if (layer === 'domain') {
@@ -136,8 +157,9 @@ function reasonToReject(
   return undefined;
 }
 
-const INFRASTRUCTURE_FOLDERS = ['http', 'persistence', 'adapters', 'consumers'];
-const LAYERS = ['domain', 'application', 'infrastructure'];
+const INFRASTRUCTURE_FOLDERS = ['persistence', 'adapters'];
+const INTERFACE_FOLDERS = ['http', 'consumers'];
+const LAYERS = ['domain', 'application', 'interface', 'infrastructure'];
 const APPLICATION_FOLDERS = ['use-cases', 'services', 'jobs', 'support'];
 const DOMAIN_FOLDERS = ['model', 'ports', 'shared'];
 const RUNTIME_EXPORT =
@@ -233,11 +255,24 @@ export function checkStructure(files: Record<string, string>): string[] {
       if (first === 'infrastructure') {
         if (!rel.slice('infrastructure/'.length).includes('/')) {
           violations.push(
-            `${path}: infrastructure/ no admite archivos sueltos; va en http/, persistence/, adapters/ o consumers/`,
+            `${path}: infrastructure/ no admite archivos sueltos; va en ${INFRASTRUCTURE_FOLDERS.join(', ')}`,
           );
         } else if (!INFRASTRUCTURE_FOLDERS.includes(second)) {
           violations.push(
             `${path}: infrastructure/ solo se divide en ${INFRASTRUCTURE_FOLDERS.join(', ')} (no ${second}/)`,
+          );
+        }
+      }
+
+      if (first === 'interface') {
+        const inside = rel.slice('interface/'.length);
+        if (!inside.includes('/')) {
+          violations.push(
+            `${path}: interface/ no admite archivos sueltos; va en ${INTERFACE_FOLDERS.join(', ')}`,
+          );
+        } else if (!INTERFACE_FOLDERS.includes(inside.split('/')[0])) {
+          violations.push(
+            `${path}: interface/ solo se divide en ${INTERFACE_FOLDERS.join(', ')} (no ${inside.split('/')[0]}/)`,
           );
         }
       }
@@ -251,26 +286,28 @@ export function checkStructure(files: Record<string, string>): string[] {
         );
       }
       if (
-        !path.includes('/infrastructure/consumers/') &&
+        !path.includes('/interface/consumers/') &&
         /^\s*@OutboxHandler\(/m.test(code)
       ) {
         violations.push(
-          `${path}: los consumidores del Outbox (@OutboxHandler) viven en infrastructure/consumers/`,
+          `${path}: los consumidores del Outbox (@OutboxHandler) viven en interface/consumers/`,
         );
       }
       if (
-        path.endsWith('.controller.ts') &&
-        !path.includes('/infrastructure/http/')
+        /\.(controller|dto|response)\.ts$/.test(path) &&
+        !path.includes('/interface/http/')
       ) {
         violations.push(
-          `${path}: los controladores viven en infrastructure/http/`,
+          `${path}: los controladores, los DTO y las respuestas viven en interface/http/`,
         );
       }
       if (path.endsWith('.job.ts') && !/^application\/jobs\/[^/]+$/.test(rel)) {
         violations.push(`${path}: los jobs viven en application/jobs/`);
       }
       if (
-        (first === 'application' || first === 'infrastructure') &&
+        (first === 'application' ||
+          first === 'interface' ||
+          first === 'infrastructure') &&
         /\babstract\s+class\b/.test(code)
       ) {
         violations.push(

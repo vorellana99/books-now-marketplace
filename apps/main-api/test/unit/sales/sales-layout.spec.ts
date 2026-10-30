@@ -1,9 +1,11 @@
 import { existsSync, readdirSync } from 'node:fs';
 
-const BASE = 'src/contexts/sales/infrastructure';
-const files = (dir: string): string[] => {
+const ROOT = 'src/contexts/sales';
+const BASE = `${ROOT}/infrastructure`;
+const INTERFACE = `${ROOT}/interface`;
+const filesIn = (base: string, dir: string): string[] => {
   try {
-    return readdirSync(`${BASE}/${dir}`, { withFileTypes: true })
+    return readdirSync(`${base}/${dir}`, { withFileTypes: true })
       .filter((e) => e.isFile())
       .map((e) => e.name)
       .sort();
@@ -11,20 +13,30 @@ const files = (dir: string): string[] => {
     return [];
   }
 };
+const files = (dir: string) => filesIn(BASE, dir);
 
-// La infraestructura de Ventas tiene cuatro carpetas por lo que hace cada pieza (tarea 9.8). Sin esto, `order/` llegó a
-// mezclar 17 archivos de cuatro clases distintas
-describe('estructura de sales/infrastructure', () => {
-  it('solo tiene las carpetas http, persistence, adapters y consumers', () => {
+// La entrada (quien llama al contexto) va en interface/ y la salida (a quien llama el contexto) en infrastructure/ (tarea
+// 10.18). Antes `order/` llegó a mezclar 17 archivos de cuatro clases distintas (tarea 9.8)
+describe('estructura de sales/interface e infrastructure', () => {
+  it('infrastructure/ solo tiene persistence y adapters', () => {
     const folders = readdirSync(BASE, { withFileTypes: true })
       .filter((e) => e.isDirectory())
       .map((e) => e.name)
       .sort();
-    expect(folders).toEqual(['adapters', 'consumers', 'http', 'persistence']);
+    expect(folders).toEqual(['adapters', 'persistence']);
+  });
+
+  it('interface/ solo tiene http y consumers, y ningún archivo suelto', () => {
+    const folders = readdirSync(INTERFACE, { withFileTypes: true })
+      .filter((e) => e.isDirectory())
+      .map((e) => e.name)
+      .sort();
+    expect(folders).toEqual(['consumers', 'http']);
+    expect(filesIn(INTERFACE, '')).toEqual([]);
   });
 
   it('http/ tiene controladores, DTO y respuestas, y nada más', () => {
-    const names = files('http');
+    const names = filesIn(INTERFACE, 'http');
     expect(names.length).toBeGreaterThan(0);
     for (const name of names) {
       expect(name, name).toMatch(/\.(controller|dto|response)\.ts$/);
@@ -67,14 +79,14 @@ describe('estructura de sales/infrastructure', () => {
   });
 
   it('consumers/ tiene los dos consumidores del Outbox, el de la transacción del relay y el externo', () => {
-    expect(files('consumers')).toEqual([
+    expect(filesIn(INTERFACE, 'consumers')).toEqual([
       'create-customer.consumer.ts',
       'send-order-confirmation.consumer.ts',
     ]);
   });
 
   it('ninguna carpeta vieja sigue existiendo', () => {
-    for (const old of ['order', 'customer', 'payment']) {
+    for (const old of ['order', 'customer', 'payment', 'http', 'consumers']) {
       expect(files(old), old).toEqual([]);
     }
   });
@@ -150,7 +162,7 @@ describe('estructura de sales/application', () => {
       e.isDirectory() ? all(`${dir}/${e.name}`) : [`${dir}/${e.name}`],
     );
 
-  it('no tiene consumidores del Outbox: viven en infrastructure/consumers/', () => {
+  it('no tiene consumidores del Outbox: viven en interface/consumers/', () => {
     expect(all(APP).filter((f) => f.endsWith('.consumer.ts'))).toEqual([]);
   });
 

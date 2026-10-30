@@ -154,17 +154,6 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   │   ├── external-payment.adapter.ts
 │       │   │   │   ├── inventory-in-process.adapter.ts
 │       │   │   │   └── simulated-payment-gateway.adapter.ts
-│       │   │   ├── consumers/
-│       │   │   │   ├── create-customer.consumer.ts
-│       │   │   │   └── send-order-confirmation.consumer.ts
-│       │   │   ├── http/
-│       │   │   │   ├── admin-order.controller.ts
-│       │   │   │   ├── list-orders.dto.ts
-│       │   │   │   ├── my-orders.controller.ts
-│       │   │   │   ├── order.controller.ts
-│       │   │   │   ├── order.response.ts
-│       │   │   │   ├── place-order.dto.ts
-│       │   │   │   └── quote-order.dto.ts
 │       │   │   └── persistence/
 │       │   │       ├── order-view.mapper.ts
 │       │   │       ├── order.mapper.ts
@@ -172,6 +161,18 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │       ├── prisma-customer.repository.ts
 │       │   │       ├── prisma-order-history.ts
 │       │   │       └── prisma-order.repository.ts
+│       │   ├── interface/
+│       │   │   ├── consumers/
+│       │   │   │   ├── create-customer.consumer.ts
+│       │   │   │   └── send-order-confirmation.consumer.ts
+│       │   │   └── http/
+│       │   │       ├── admin-order.controller.ts
+│       │   │       ├── list-orders.dto.ts
+│       │   │       ├── my-orders.controller.ts
+│       │   │       ├── order.controller.ts
+│       │   │       ├── order.response.ts
+│       │   │       ├── place-order.dto.ts
+│       │   │       └── quote-order.dto.ts
 │       │   └── sales.module.ts
 │       │
 │       ├── catalog/
@@ -199,15 +200,16 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │       ├── book-catalog.port.ts
 │       │   │       └── book.repository.ts
 │       │   ├── infrastructure/
-│       │   │   ├── http/
-│       │   │   │   ├── admin-book.controller.ts
-│       │   │   │   ├── book-price.response.ts
-│       │   │   │   ├── book.controller.ts
-│       │   │   │   ├── create-book.dto.ts
-│       │   │   │   └── search-books.dto.ts
 │       │   │   └── persistence/
 │       │   │       ├── prisma-book-catalog.ts
 │       │   │       └── prisma-book.repository.ts
+│       │   ├── interface/
+│       │   │   └── http/
+│       │   │       ├── admin-book.controller.ts
+│       │   │       ├── book-price.response.ts
+│       │   │       ├── book.controller.ts
+│       │   │       ├── create-book.dto.ts
+│       │   │       └── search-books.dto.ts
 │       │   └── catalog.module.ts
 │       │
 │       ├── inventory/
@@ -231,15 +233,16 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   └── ports/
 │       │   │       └── stock.repository.ts
 │       │   ├── infrastructure/
-│       │   │   ├── consumers/
-│       │   │   │   ├── confirm-reservation.consumer.ts
-│       │   │   │   └── create-stock-item.consumer.ts
-│       │   │   ├── http/
-│       │   │   │   ├── add-stock.dto.ts
-│       │   │   │   └── admin-stock.controller.ts
 │       │   │   └── persistence/
 │       │   │       ├── lock-order.ts
 │       │   │       └── prisma-stock.repository.ts
+│       │   ├── interface/
+│       │   │   ├── consumers/
+│       │   │   │   ├── confirm-reservation.consumer.ts
+│       │   │   │   └── create-stock-item.consumer.ts
+│       │   │   └── http/
+│       │   │       ├── add-stock.dto.ts
+│       │   │       └── admin-stock.controller.ts
 │       │   └── inventory.module.ts
 │       │
 │       └── identity/
@@ -279,14 +282,15 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │           │   ├── adapters/
 │           │   │   ├── jwt-token.service.ts
 │           │   │   └── scrypt-password-hasher.ts
-│           │   ├── http/
-│           │   │   ├── auth-throttler.ts
-│           │   │   ├── auth.controller.ts
-│           │   │   ├── auth.dto.ts
-│           │   │   └── auth.responses.ts
 │           │   └── persistence/
 │           │       ├── prisma-session.repository.ts
 │           │       └── prisma-user.repository.ts
+│           ├── interface/
+│           │   └── http/
+│           │       ├── auth-throttler.ts
+│           │       ├── auth.controller.ts
+│           │       ├── auth.dto.ts
+│           │       └── auth.responses.ts
 │           └── identity.module.ts
 │
 └── test/
@@ -336,7 +340,7 @@ Las **specifications** del dominio usan el sufijo `.specification.ts` (en la gu�
 | **Saga mínima, sin `@Saga()` de Nest** | Las compensaciones ocurren en el handler; el checkout persistido y su job cubren las caídas |
 | **Inventario con un puerto de operaciones atómicas** | La reserva es un `UPDATE` atómico con bloqueos: `StockRepository` expone `reserve`, `release`, `confirm`, `add`, `createItem` y `purgeConfirmed` y `PrismaStockRepository` guarda el mismo SQL, así que los handlers de `application/` no tocan Prisma (corte 10) |
 | **Transacciones explícitas con `prisma.$transaction(tx => …)`** | Cada operación atómica vive en un solo lugar (nunca hay transacciones entre contextos), así que basta con pasar `tx`; sin librerías extra en un punto crítico |
-| **Todos los consumidores van en `infrastructure/consumers/`** | Son adaptadores de entrada finos: los `db` convierten el `tx` del relay en un `TransactionHandle` y envían un comando cuyo handler (en `application/`) tiene las reglas; los `external` llaman a un puerto. Ninguno de `application/` (corte 10) |
+| **Todos los consumidores van en `interface/consumers/`** | Son adaptadores de entrada finos: los `db` convierten el `tx` del relay en un `TransactionHandle` y envían un comando cuyo handler (en `application/`) tiene las reglas; los `external` llaman a un puerto. Ninguno de `application/` (corte 10) |
 | **`Money` con decimal.js** (en vez de céntimos `number`) | Exactitud con más de 2 decimales en valores intermedios (por ejemplo, el valor unitario sin IGV que exige SUNAT) y redondeo explícito al final |
 | **Imports relativos con `.js`** | Proyecto ESM: `import { Order } from './order.aggregate.js'` |
 

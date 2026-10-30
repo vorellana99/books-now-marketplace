@@ -36,10 +36,10 @@ describe('una sola arquitectura (documentada)', () => {
     for (const part of [
       'domain/ports/',
       'application/',
-      'infrastructure/http/',
+      'interface/http/',
       'infrastructure/persistence/',
       'infrastructure/adapters/',
-      'infrastructure/consumers/',
+      'interface/consumers/',
     ]) {
       expect(section, part).toContain(part);
     }
@@ -78,10 +78,10 @@ describe('una sola arquitectura (documentada)', () => {
     }
   });
 
-  it('01 y 02 dicen que application/ no usa Prisma ni infrastructure/, y que los consumidores van en consumers/', () => {
+  it('01 y 02 dicen que application/ no usa Prisma ni infrastructure/, y que los consumidores van en interface/consumers/', () => {
     expect(decisiones).toContain('structure-rules.spec.ts');
     expect(decisiones).toMatch(/`application\/`[^\n]*no[^\n]*Prisma/);
-    expect(estructura).toContain('infrastructure/consumers/');
+    expect(estructura).toContain('interface/consumers/');
     expect(estructura).not.toMatch(/Consumidores que escriben en BD van en/);
   });
 
@@ -126,6 +126,31 @@ describe('una sola arquitectura (documentada)', () => {
   });
 
   // Tarea 10.17: domain/ se ordena igual que application/, la raíz por tipo de pieza y los nombres del negocio dentro
+  // Tarea 10.18: la entrada (quien llama al contexto) y la salida (a quien llama) en carpetas distintas
+  it('explica la separación entre interface/ (entrada) e infrastructure/ (salida)', () => {
+    for (const part of [
+      'interface/http/',
+      'interface/consumers/',
+      'infrastructure/persistence/',
+      'infrastructure/adapters/',
+    ]) {
+      expect(section, part).toContain(part);
+    }
+    expect(section).toMatch(/quien llama al contexto/);
+    expect(section).toMatch(/a quien llama el contexto/);
+    expect(claude).toContain('interface/');
+  });
+
+  it('el controlador y el consumidor de ejemplo existen de verdad en interface/', () => {
+    for (const example of [
+      'sales/interface/http/order.controller.ts',
+      'sales/interface/consumers/create-customer.consumer.ts',
+    ]) {
+      expect(section, example).toContain(example);
+      expect(existsSync(`src/contexts/${example}`), example).toBe(true);
+    }
+  });
+
   it('explica cómo se ordena domain/: model/, ports/ y shared/', () => {
     for (const part of ['domain/model/', 'domain/ports/', 'domain/shared/']) {
       expect(section, part).toContain(part);
@@ -146,9 +171,9 @@ describe('una sola arquitectura (documentada)', () => {
     }
   });
 
-  it('/nuevo-evento manda el consumidor a infrastructure/consumers/', () => {
+  it('/nuevo-evento manda el consumidor a interface/consumers/', () => {
     const nuevoEvento = skills[0];
-    expect(nuevoEvento).toContain('infrastructure/consumers/');
+    expect(nuevoEvento).toContain('interface/consumers/');
   });
 });
 

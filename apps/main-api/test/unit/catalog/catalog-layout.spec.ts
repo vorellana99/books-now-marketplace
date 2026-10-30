@@ -13,17 +13,20 @@ const files = (dir: string) =>
 
 // Catálogo sigue la misma arquitectura que Ventas, Identidad e Inventario (tarea 10.10)
 describe('estructura de contexts/catalog', () => {
-  it('infrastructure/ solo tiene las carpetas http y persistence, y ningún archivo suelto', () => {
-    const folders = list('infrastructure')
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort((a, b) => a.localeCompare(b));
-    expect(folders).toEqual(['http', 'persistence']);
+  it('infrastructure/ solo tiene persistence e interface/ solo http (sin consumidores); ningún archivo suelto (tarea 10.18)', () => {
+    const folders = (dir: string) =>
+      list(dir)
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort((a, b) => a.localeCompare(b));
+    expect(folders('infrastructure')).toEqual(['persistence']);
+    expect(folders('interface')).toEqual(['http']);
     expect(files('infrastructure')).toEqual([]);
+    expect(files('interface')).toEqual([]);
   });
 
   it('http/ tiene los controladores, los DTO y las respuestas', () => {
-    expect(files('infrastructure/http')).toEqual([
+    expect(files('interface/http')).toEqual([
       'admin-book.controller.ts',
       'book-price.response.ts',
       'book.controller.ts',

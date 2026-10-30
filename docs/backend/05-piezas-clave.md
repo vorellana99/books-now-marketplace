@@ -14,7 +14,8 @@ Los cuatro contextos (Ventas, Catálogo, Inventario e Identidad) siguen **una so
 |---|---|---|
 | `domain/` | En `model/<agregado>/`, los agregados, objetos de valor, reglas puras (y specifications en Ventas) y los eventos que publica; en `ports/`, los **puertos**: clases abstractas que dicen qué necesita el contexto de afuera (`OrderRepository`, `StockRepository`, `BookCatalog`, `SessionRepository`, `PasswordHasher`…); y, si hace falta, `shared/` con lo que usan varios agregados del contexto (`Money` y `Specification` en Ventas) | `decimal.js`, `node:*`, `shared-kernel/`, `contracts/` y su propio `domain/` |
 | `application/` | Los casos de uso (comandos, consultas y **todos** sus handlers, los de escritura y los de lectura) en `use-cases/`, más los servicios de aplicación en `services/`, los jobs en `jobs/` y, en `support/`, lo que es formato de la API y no una regla. Hablan con los puertos, nunca con la base | Nest, su `domain/`, `shared-kernel/`, `contracts/` y `platform/` (menos Prisma); nunca su `infrastructure/` |
-| `infrastructure/` | Los adaptadores, en cuatro carpetas: `infrastructure/http/` (controladores, DTO y respuestas), `infrastructure/persistence/` (los repositorios y lectores de Prisma, con el SQL), `infrastructure/adapters/` (lo que sale del proceso: pasarela de pago, correo, hash de contraseñas, otro contexto en proceso) y `infrastructure/consumers/` (los `@OutboxHandler`) | Todo lo anterior, Prisma y `platform/` |
+| `interface/` | **Quien llama al contexto** (adaptadores de entrada): `interface/http/` (controladores, DTO y respuestas) e `interface/consumers/` (los `@OutboxHandler`, que reaccionan a un evento). Solo envían comandos y consultas | `application/`, `domain/`, `shared-kernel/`, `contracts/` y `platform/`; nunca `infrastructure/` ni Prisma (salvo el ayudante de la transacción del relay) |
+| `infrastructure/` | **A quien llama el contexto** (adaptadores de salida): `infrastructure/persistence/` (los repositorios y lectores de Prisma, con el SQL) e `infrastructure/adapters/` (lo que sale del proceso: pasarela de pago, correo, hash de contraseñas, otro contexto en proceso) | `domain/` (para implementar los puertos), Prisma y `platform/` |
 
 **Cómo se ordena `domain/`**, igual en los cuatro contextos y con la misma lógica que `application/`: la raíz es por *tipo de pieza* y los nombres del negocio van dentro.
 
@@ -25,6 +26,8 @@ Los cuatro contextos (Ventas, Catálogo, Inventario e Identidad) siguen **una so
 | `domain/shared/` | Opcional. Lo que usan varios agregados del mismo contexto; hoy solo Ventas (`domain/shared/money.vo.ts`) |
 
 Ni la raíz de `domain/` ni `model/` admiten archivos sueltos: un archivo suelto es un concepto que todavía no tiene carpeta.
+
+**Entrada y salida.** `interface/` e `infrastructure/` son los dos lados del núcleo (`domain/` + `application/`): `interface/` es quien llama al contexto (una petición HTTP, `sales/interface/http/order.controller.ts`, o un evento, `sales/interface/consumers/create-customer.consumer.ts`) e `infrastructure/` es a quien llama el contexto (la base, la pasarela de pago, el correo). Un contexto sin consumidores, como Catálogo, no tiene `interface/consumers/`.
 
 **Qué es un caso de uso.** Un comando o una consulta junto con su handler, en `application/use-cases/<agregado>/`. El handler orquesta: valida la entrada con el dominio, pide al puerto lo que necesita y devuelve una vista o nada; no contiene SQL ni reglas de negocio. Algunos comandos viven en `contracts/` porque otro contexto los envía, y en ese caso solo está el handler. Lo demás de `application/` tiene su carpeta (`application/services/`, `application/jobs/` y `application/support/`; la raíz de `application/` no admite archivos sueltos):
 
@@ -50,11 +53,11 @@ Cómo se reparten las cosas:
 
 - **Un handler nunca toca Prisma.** Pide al puerto lo que necesita (`books.save(book)`, `stock.reserve(orderId, lines)`, `sessions.rotate(hash, decidir)`) y el adaptador de `persistence/` lo hace con el mismo SQL de siempre. Las operaciones atómicas (la reserva de stock, la rotación del token de refresco) son **métodos del puerto**: el SQL no se esconde, vive en un solo lugar y se prueba contra la base real.
 - **Las lecturas también van por puertos**: `BookCatalog`, `OrderHistory`. Devuelven vistas, sin reconstruir el agregado.
-- **Un consumidor del Outbox es un adaptador de entrada fino.** Vive en `infrastructure/consumers/`, convierte `ctx.tx` en un identificador opaco (`TransactionHandle`, con `platform/prisma/transaction-handle.ts`) y envía un comando; las reglas están en el handler de `application/`. Los puertos aceptan ese identificador como `tx?` para que lo que escriben se confirme junto con la marca DONE de la entrega.
+- **Un consumidor del Outbox es un adaptador de entrada fino.** Vive en `interface/consumers/`, convierte `ctx.tx` en un identificador opaco (`TransactionHandle`, con `platform/prisma/transaction-handle.ts`) y envía un comando; las reglas están en el handler de `application/`. Los puertos aceptan ese identificador como `tx?` para que lo que escriben se confirme junto con la marca DONE de la entrega.
 - **Los puertos se prueban una vez para todos sus adaptadores**: un contrato (`test/support/*.contract.ts`) corre contra el fake en memoria y contra PostgreSQL real, así el fake con el que se prueban los casos de uso no se desvía de lo real.
 - **Las dependencias van hacia adentro**: `infrastructure/` conoce a `application/` y a `domain/`, nunca al revés. Un contexto nunca importa de otro: se hablan por `contracts/` y `shared-kernel/`.
 
-**Lo que hace cumplir cada test.** `test/unit/architecture/dependency-rules.spec.ts` comprueba los imports: un contexto no importa de otro, `domain/` no depende de Nest, de Prisma ni de `platform/`, `application/` no usa Prisma ni importa `infrastructure/`. `test/unit/architecture/structure-rules.spec.ts` comprueba la forma: la raíz del contexto solo tiene `domain/`, `application/`, `infrastructure/` y su módulo; `infrastructure/` solo se divide en `http/`, `persistence/`, `adapters/` y `consumers/`; `domain/` solo se divide en `model/<agregado>/`, `ports/` (todo puerto termina en `.repository.ts` o `.port.ts`) y `shared/`, sin archivos sueltos; `application/` solo se divide en `use-cases/`, `services/`, `jobs/` y `support/`, con los comandos, las consultas y los handlers bajo `use-cases/<agregado>/` y los jobs en `jobs/`; los `@OutboxHandler` van en `infrastructure/consumers/`; cada contexto tiene `domain/ports/`, todo puerto va ahí y ninguna clase abstracta vive fuera de él. Una excepción nueva se discute y se escribe en esos tests, no se improvisa en el código.
+**Lo que hace cumplir cada test.** `test/unit/architecture/dependency-rules.spec.ts` comprueba los imports: un contexto no importa de otro, `domain/` no depende de Nest, de Prisma ni de `platform/`, `application/` no usa Prisma ni importa `infrastructure/` ni `interface/`, e `interface/` no importa `infrastructure/` ni Prisma (la entrada habla con los casos de uso, no con la salida). `test/unit/architecture/structure-rules.spec.ts` comprueba la forma: la raíz del contexto solo tiene `domain/`, `application/`, `interface/`, `infrastructure/` y su módulo; `interface/` solo se divide en `http/` y `consumers/`, e `infrastructure/` en `persistence/` y `adapters/`; los controladores, DTO y respuestas viven en `interface/http/`; `domain/` solo se divide en `model/<agregado>/`, `ports/` (todo puerto termina en `.repository.ts` o `.port.ts`) y `shared/`, sin archivos sueltos; `application/` solo se divide en `use-cases/`, `services/`, `jobs/` y `support/`, con los comandos, las consultas y los handlers bajo `use-cases/<agregado>/` y los jobs en `jobs/`; los `@OutboxHandler` van en `interface/consumers/`; cada contexto tiene `domain/ports/`, todo puerto va ahí y ninguna clase abstracta vive fuera de él. Una excepción nueva se discute y se escribe en esos tests, no se improvisa en el código.
 
 **Regla práctica para el que añada algo:** una regla de negocio va en `domain/`; lo que el caso de uso necesita de afuera es un puerto en `domain/ports/` con su adaptador en `infrastructure/persistence/` o `adapters/`, su fake y su contrato; el caso de uso va en `application/use-cases/<agregado>/`; y lo que entra por HTTP o por un evento es un adaptador fino que envía el comando.
 
@@ -321,7 +324,7 @@ export class ReleaseStockHandler implements ICommandHandler<ReleaseStockCommand>
 ```
 
 ```ts
-// inventory/infrastructure/consumers/confirm-reservation.consumer.ts
+// inventory/interface/consumers/confirm-reservation.consumer.ts
 // Reacción a OrderPlaced: usa el tx del relay, así el efecto y la marca DONE se confirman juntos → una sola vez
 @OutboxHandler()
 @Injectable()
@@ -386,7 +389,7 @@ En esta fase los pedidos solo se crean. Cuando existan flujos que los modifiquen
 ### Email: el primer consumidor
 
 ```ts
-// sales/infrastructure/consumers/send-order-confirmation.consumer.ts
+// sales/interface/consumers/send-order-confirmation.consumer.ts
 @OutboxHandler()
 @Injectable()
 export class SendOrderConfirmationConsumer implements ExternalOutboxConsumer<OrderPlacedEvent> {
@@ -810,7 +813,7 @@ En JSON, una línea con petición en curso es `{"level":"log","pid":1,"timestamp
 ### HTTP, errores y arranque
 
 ```ts
-// sales/infrastructure/http/place-order.dto.ts: valida la forma; las reglas las protege el dominio
+// sales/interface/http/place-order.dto.ts: valida la forma; las reglas las protege el dominio
 class CartItemDto {
   @ApiProperty({ example: '9780132350884' }) @IsString() @IsNotEmpty() @MaxLength(32) isbn!: string;   // el dominio lo normaliza: INVALID_ISBN → 422
   @ApiProperty({ example: 1 }) @IsInt() @Min(1) quantity!: number;
@@ -828,7 +831,7 @@ export class PlaceOrderDto {
 // ShippingAddressDto: recipient, phone, line1, district, province, department (@Transform(trim) @IsString @IsNotEmpty
 // @MaxLength(SHIPPING_LIMITS.x)) y reference (@IsOptional, @MaxLength). El cliente nunca manda precios ni totales
 
-// sales/infrastructure/http/order.controller.ts
+// sales/interface/http/order.controller.ts
 @ApiTags('orders')
 @Controller('orders')   // sin @Public: toda ruta exige sesión por defecto (AuthGuard global)
 export class OrderController {

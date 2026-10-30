@@ -3,7 +3,7 @@ import { ApplicationConfig } from '@nestjs/core';
 import { Test } from '@nestjs/testing';
 import { AppModule } from '../../src/app.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
-import { AuthThrottlerGuard } from '../../src/contexts/identity/infrastructure/http/auth-throttler.js';
+import { AuthThrottlerGuard } from '../../src/contexts/identity/interface/http/auth-throttler.js';
 import { AuthGuard } from '../../src/platform/auth/auth.guard.js';
 import { createTestApp } from '../support/nest.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';

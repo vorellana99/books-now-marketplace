@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { SendOrderConfirmationConsumer } from '../../../src/contexts/sales/infrastructure/consumers/send-order-confirmation.consumer.js';
+import { SendOrderConfirmationConsumer } from '../../../src/contexts/sales/interface/consumers/send-order-confirmation.consumer.js';
 import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
 import { OrderPlacedEvent } from '../../../src/contracts/sales/order-placed.event.js';
 import type { DeliveryContext } from '../../../src/platform/outbox/outbox-consumer.js';

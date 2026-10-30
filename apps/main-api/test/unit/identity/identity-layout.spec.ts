@@ -14,17 +14,20 @@ const files = (dir: string) =>
 // Identidad sigue la misma arquitectura que Ventas (tarea 10.4): los casos de uso en application, los puertos en
 // domain/ports y la infraestructura repartida por lo que hace cada pieza
 describe('estructura de contexts/identity', () => {
-  it('infrastructure/ solo tiene las carpetas adapters, http y persistence, y ningún archivo suelto', () => {
-    const folders = list('infrastructure')
-      .filter((e) => e.isDirectory())
-      .map((e) => e.name)
-      .sort((a, b) => a.localeCompare(b));
-    expect(folders).toEqual(['adapters', 'http', 'persistence']);
+  it('infrastructure/ solo tiene adapters y persistence, y interface/ solo http; ningún archivo suelto (tarea 10.18)', () => {
+    const folders = (dir: string) =>
+      list(dir)
+        .filter((e) => e.isDirectory())
+        .map((e) => e.name)
+        .sort((a, b) => a.localeCompare(b));
+    expect(folders('infrastructure')).toEqual(['adapters', 'persistence']);
+    expect(folders('interface')).toEqual(['http']);
     expect(files('infrastructure')).toEqual([]);
+    expect(files('interface')).toEqual([]);
   });
 
   it('http/ tiene el controlador, los DTO, las respuestas y el guard del límite de intentos', () => {
-    expect(files('infrastructure/http')).toEqual(
+    expect(files('interface/http')).toEqual(
       [
         'auth-throttler.ts',
         'auth.controller.ts',

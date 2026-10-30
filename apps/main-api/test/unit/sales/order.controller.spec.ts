@@ -13,7 +13,7 @@ import { GetOrderQuery } from '../../../src/contexts/sales/application/use-cases
 import { QuoteOrderQuery } from '../../../src/contexts/sales/application/use-cases/order/quote-order.query.js';
 import { PlaceOrderCommand } from '../../../src/contexts/sales/application/use-cases/order/place-order.command.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
-import { OrderController } from '../../../src/contexts/sales/infrastructure/http/order.controller.js';
+import { OrderController } from '../../../src/contexts/sales/interface/http/order.controller.js';
 import { OutOfStockError } from '../../../src/contracts/inventory/stock.errors.js';
 import type { AuthenticatedUser } from '../../../src/platform/auth/authenticated-user.js';
 import { configureApp } from '../../../src/platform/http/configure-app.js';

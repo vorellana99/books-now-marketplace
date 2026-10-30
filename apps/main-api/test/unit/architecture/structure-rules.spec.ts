@@ -25,7 +25,7 @@ describe('checkStructure: el contexto de ejemplo cumple las reglas', () => {
 });
 
 describe('la raíz de cada contexto', () => {
-  it('solo tiene domain/, application/, infrastructure/ y su módulo', () => {
+  it('solo tiene domain/, application/, interface/, infrastructure/ y su módulo', () => {
     expect(violations({ [`${D}/shared/util.ts`]: '' })).toHaveLength(1);
     expect(violations({ [`${D}/helper.ts`]: '' })).toHaveLength(1);
   });
@@ -35,13 +35,17 @@ describe('la raíz de cada contexto', () => {
   });
 });
 
-describe('infrastructure/ se divide en http, persistence, adapters y consumers', () => {
-  it.each(['http', 'persistence', 'adapters', 'consumers'])(
-    'puede tener %s/',
+describe('infrastructure/ se divide en persistence y adapters (lo que el contexto llama)', () => {
+  it.each(['persistence', 'adapters'])('puede tener %s/', (dir) => {
+    expect(violations({ [`${D}/infrastructure/${dir}/x.ts`]: '' })).toEqual([]);
+  });
+
+  it.each(['http', 'consumers'])(
+    'no puede tener %s/: la entrada va en interface/',
     (dir) => {
-      expect(violations({ [`${D}/infrastructure/${dir}/x.ts`]: '' })).toEqual(
-        [],
-      );
+      const found = violations({ [`${D}/infrastructure/${dir}/x.ts`]: '' });
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatch(/persistence, adapters/);
     },
   );
 
@@ -61,6 +65,31 @@ describe('infrastructure/ se divide en http, persistence, adapters y consumers',
   });
 });
 
+describe('interface/ se divide en http y consumers (quien llama al contexto, tarea 10.18)', () => {
+  it.each(['http', 'consumers'])('puede tener %s/', (dir) => {
+    expect(violations({ [`${D}/interface/${dir}/x.ts`]: '' })).toEqual([]);
+  });
+
+  it.each(['persistence', 'adapters', 'jobs', 'order'])(
+    'no puede tener otra carpeta (%s/)',
+    (dir) => {
+      const found = violations({ [`${D}/interface/${dir}/x.ts`]: '' });
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatch(/http, consumers/);
+    },
+  );
+
+  it('no puede tener archivos sueltos, y el mensaje lo dice', () => {
+    const found = violations({ [`${D}/interface/helper.ts`]: '' });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(/archivos sueltos/);
+  });
+
+  it('un contexto sin consumidores no necesita consumers/, ni uno sin controladores http/', () => {
+    expect(violations({})).toEqual([]);
+  });
+});
+
 describe('los handlers de CQRS viven en application/', () => {
   const handler = `import { CommandHandler } from '@nestjs/cqrs';\n@CommandHandler(DoThing)\nexport class DoThingHandler {}`;
   const query = `import { QueryHandler } from '@nestjs/cqrs';\n@QueryHandler(AskThing)\nexport class AskThingHandler {}`;
@@ -68,11 +97,14 @@ describe('los handlers de CQRS viven en application/', () => {
   it.each([
     ['un @CommandHandler', handler],
     ['un @QueryHandler', query],
-  ])('%s en infrastructure/ es una violación', (_que, source) => {
-    for (const dir of ['persistence', 'http', 'adapters', 'consumers']) {
-      expect(
-        violations({ [`${D}/infrastructure/${dir}/h.ts`]: source }),
-      ).toHaveLength(1);
+  ])('%s en infrastructure/ o interface/ es una violación', (_que, source) => {
+    for (const path of [
+      `${D}/infrastructure/persistence/h.ts`,
+      `${D}/infrastructure/adapters/h.ts`,
+      `${D}/interface/http/h.ts`,
+      `${D}/interface/consumers/h.ts`,
+    ]) {
+      expect(violations({ [path]: source }), path).toHaveLength(1);
     }
   });
 
@@ -99,39 +131,42 @@ describe('los handlers de CQRS viven en application/', () => {
   });
 });
 
-describe('los consumidores del Outbox viven en infrastructure/consumers/', () => {
+describe('los consumidores del Outbox viven en interface/consumers/', () => {
   const consumer = `import { Injectable } from '@nestjs/common';\n@OutboxHandler()\n@Injectable()\nexport class C {}`;
 
   it.each([
     ['application/', `${D}/application/services/c.consumer.ts`],
     ['domain/', `${D}/domain/model/thing/c.consumer.ts`],
     ['infrastructure/persistence/', `${D}/infrastructure/persistence/c.ts`],
-    ['infrastructure/http/', `${D}/infrastructure/http/c.ts`],
+    ['infrastructure/adapters/', `${D}/infrastructure/adapters/c.ts`],
+    ['interface/http/', `${D}/interface/http/c.ts`],
   ])('un @OutboxHandler en %s es una violación', (_donde, path) => {
     expect(violations({ [path]: consumer })).toHaveLength(1);
   });
 
-  it('en infrastructure/consumers/ está permitido', () => {
+  it('en interface/consumers/ está permitido', () => {
     expect(
-      violations({
-        [`${D}/infrastructure/consumers/c.consumer.ts`]: consumer,
-      }),
+      violations({ [`${D}/interface/consumers/c.consumer.ts`]: consumer }),
     ).toEqual([]);
   });
 });
 
 describe('cada tipo de pieza en su carpeta', () => {
-  it('un controlador solo en infrastructure/http/', () => {
-    expect(
-      violations({ [`${D}/infrastructure/persistence/x.controller.ts`]: '' }),
-    ).toHaveLength(1);
-    expect(
-      violations({ [`${D}/application/services/x.controller.ts`]: '' }),
-    ).toHaveLength(1);
-    expect(
-      violations({ [`${D}/infrastructure/http/x.controller.ts`]: '' }),
-    ).toEqual([]);
-  });
+  it.each(['x.controller.ts', 'x.dto.ts', 'x.response.ts'])(
+    '%s (controlador, DTO o respuesta) solo en interface/http/',
+    (file) => {
+      expect(
+        violations({ [`${D}/infrastructure/persistence/${file}`]: '' }),
+      ).toHaveLength(1);
+      expect(
+        violations({ [`${D}/application/services/${file}`]: '' }),
+      ).toHaveLength(1);
+      expect(
+        violations({ [`${D}/interface/consumers/${file}`]: '' }),
+      ).toHaveLength(1);
+      expect(violations({ [`${D}/interface/http/${file}`]: '' })).toEqual([]);
+    },
+  );
 
   it('un job solo en application/', () => {
     expect(
@@ -226,6 +261,8 @@ describe('application/ se ordena en use-cases/, services/, jobs/ y support/ (tar
       ['application/use-cases/', `${APP}/use-cases/thing/g.ts`],
       ['infrastructure/adapters/', `${D}/infrastructure/adapters/g.ts`],
       ['infrastructure/persistence/', `${D}/infrastructure/persistence/g.ts`],
+      ['interface/http/', `${D}/interface/http/g.ts`],
+      ['interface/consumers/', `${D}/interface/consumers/g.ts`],
     ])('una clase abstracta en %s es una violación', (_donde, path) => {
       expect(message({ [path]: port })).toHaveLength(1);
     });
