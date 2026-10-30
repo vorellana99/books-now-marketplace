@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireSession } from "@/features/auth/index.ts";
-import { EmptyState } from "@/shared/ui/state-panel.tsx";
+import { CheckoutPage } from "@/features/checkout/index.ts";
 
-// PA-06 llega en la tarea F4.2. Mientras tanto la ruta existe, con su guardia de sesión, para que el carrito pueda continuar
+// PA-06 · Dirección y pago (con sesión). La ruta solo conecta: declara la URL, su acceso y qué pantalla muestra
 export const Route = createFileRoute("/compra")({
   beforeLoad: requireSession,
-  component: () => <EmptyState title="Estamos armando el pago" as="h1" />,
+  component: CheckoutPage,
 });
