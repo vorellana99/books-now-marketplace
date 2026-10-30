@@ -50,7 +50,10 @@ backend() {
 frontend() {
   cd "$ROOT/apps/store-web" || exit 1
   pnpm exec vp check 2>&1 | tail -3 | grep -q "pass:" || fail "vp check (formato, lint o tipos)"; echo "✓ vp check"
+  local LAST=.verify-last-failure.txt; rm -f "$LAST"
   local T; T=$(pnpm exec vp test 2>&1); echo "$T" | grep -E "Tests "
+  # Una prueba que falla deja su nombre y su salida completa: sin ellos una falla intermitente no se puede diagnosticar
+  if echo "$T" | grep -qE "^ *(×|FAIL) "; then echo "$T" | grep -E "^ *(×|FAIL) " | head -10; echo "$T" > "$LAST"; echo "(salida completa en apps/store-web/$LAST)"; fi
   echo "$T" | grep -qE "Tests +[0-9]+ passed" || fail "tests del frontend sin resumen"
   echo "$T" | grep -qE "Tests +[0-9]+ failed" && fail "tests del frontend"
   pnpm run build >/dev/null 2>&1 || fail "build del frontend"; echo "✓ build"

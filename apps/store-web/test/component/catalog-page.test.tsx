@@ -54,7 +54,8 @@ describe("PA-01 Catálogo: la lista", () => {
   });
 
   it("no tiene violaciones de accesibilidad", async () => {
-    server.use(searchHandler(() => page(twenty(), { total: 45 })));
+    // Seis tarjetas y el total de 45: axe con las veinte tardaba ~5 s, el límite de una prueba, y fallaba con la máquina cargada
+    server.use(searchHandler(() => page(twenty().slice(0, 6), { total: 45 })));
     const { container } = await renderApp("/");
     await screen.findByRole("heading", { name: "Libro 01" });
     await expectNoA11yViolations(container);

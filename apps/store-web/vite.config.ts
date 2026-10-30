@@ -31,6 +31,8 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       include: ["test/**/*.test.{ts,tsx}"],
       setupFiles: ["test/support/setup.ts"],
+      // axe recorre todo el DOM de una pantalla: con la máquina cargada una prueba de accesibilidad puede pasar de los 5 s por defecto
+      testTimeout: 15_000,
     },
     fmt: { ignorePatterns: generated },
     lint: {
