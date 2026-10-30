@@ -16,6 +16,7 @@ import { Route as IngresarRouteImport } from './routes/ingresar'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as LibrosIsbnRouteImport } from './routes/libros.$isbn'
 import { Route as PedidosIndexRouteImport } from './routes/pedidos.index'
+import { Route as PedidosIdIndexRouteImport } from './routes/pedidos.$id.index'
 import { Route as PedidosIdGraciasRouteImport } from './routes/pedidos.$id.gracias'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +54,11 @@ const PedidosIndexRoute = PedidosIndexRouteImport.update({
   path: '/pedidos/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PedidosIdIndexRoute = PedidosIdIndexRouteImport.update({
+  id: '/pedidos/$id/',
+  path: '/pedidos/$id/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PedidosIdGraciasRoute = PedidosIdGraciasRouteImport.update({
   id: '/pedidos/$id/gracias',
   path: '/pedidos/$id/gracias',
@@ -68,6 +74,7 @@ export interface FileRoutesByFullPath {
   '/libros/$isbn': typeof LibrosIsbnRoute
   '/pedidos/': typeof PedidosIndexRoute
   '/pedidos/$id/gracias': typeof PedidosIdGraciasRoute
+  '/pedidos/$id/': typeof PedidosIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +85,7 @@ export interface FileRoutesByTo {
   '/libros/$isbn': typeof LibrosIsbnRoute
   '/pedidos': typeof PedidosIndexRoute
   '/pedidos/$id/gracias': typeof PedidosIdGraciasRoute
+  '/pedidos/$id': typeof PedidosIdIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +97,7 @@ export interface FileRoutesById {
   '/libros/$isbn': typeof LibrosIsbnRoute
   '/pedidos/': typeof PedidosIndexRoute
   '/pedidos/$id/gracias': typeof PedidosIdGraciasRoute
+  '/pedidos/$id/': typeof PedidosIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +110,7 @@ export interface FileRouteTypes {
     | '/libros/$isbn'
     | '/pedidos/'
     | '/pedidos/$id/gracias'
+    | '/pedidos/$id/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +121,7 @@ export interface FileRouteTypes {
     | '/libros/$isbn'
     | '/pedidos'
     | '/pedidos/$id/gracias'
+    | '/pedidos/$id'
   id:
     | '__root__'
     | '/'
@@ -121,6 +132,7 @@ export interface FileRouteTypes {
     | '/libros/$isbn'
     | '/pedidos/'
     | '/pedidos/$id/gracias'
+    | '/pedidos/$id/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +144,7 @@ export interface RootRouteChildren {
   LibrosIsbnRoute: typeof LibrosIsbnRoute
   PedidosIndexRoute: typeof PedidosIndexRoute
   PedidosIdGraciasRoute: typeof PedidosIdGraciasRoute
+  PedidosIdIndexRoute: typeof PedidosIdIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PedidosIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pedidos/$id/': {
+      id: '/pedidos/$id/'
+      path: '/pedidos/$id'
+      fullPath: '/pedidos/$id/'
+      preLoaderRoute: typeof PedidosIdIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pedidos/$id/gracias': {
       id: '/pedidos/$id/gracias'
       path: '/pedidos/$id/gracias'
@@ -204,6 +224,7 @@ const rootRouteChildren: RootRouteChildren = {
   LibrosIsbnRoute: LibrosIsbnRoute,
   PedidosIndexRoute: PedidosIndexRoute,
   PedidosIdGraciasRoute: PedidosIdGraciasRoute,
+  PedidosIdIndexRoute: PedidosIdIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

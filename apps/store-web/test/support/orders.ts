@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw";
-import type { Order, Quote } from "@/shared/api/types.ts";
+import type { Order, OrderHistoryItem, OrderHistoryPage, Quote } from "@/shared/api/types.ts";
 import { API } from "./books.ts";
 
 export type QuoteItem = { isbn: string; quantity: number };
@@ -71,6 +71,26 @@ export const orderDetail = (overrides: Partial<Order> = {}): Order => ({
   },
   ...overrides,
 });
+
+// Un ítem del historial (`GET /me/orders`): el pedido más su fecha
+export const historyItem = (overrides: Partial<OrderHistoryItem> = {}): OrderHistoryItem => ({
+  ...orderDetail(),
+  createdAt: "2026-10-28T10:00:00.000Z",
+  ...overrides,
+});
+
+export const historyPage = (
+  items: OrderHistoryItem[],
+  nextCursor: string | null = null,
+): OrderHistoryPage => ({ items, nextCursor });
+
+export const myOrdersHandler = (
+  respond: (url: URL) => OrderHistoryPage | Response | Promise<OrderHistoryPage | Response>,
+) =>
+  http.get(API("/me/orders"), async ({ request }) => {
+    const result = await respond(new URL(request.url));
+    return result instanceof Response ? result : HttpResponse.json(result);
+  });
 
 export const orderDetailHandler = (
   respond: (id: string) => Order | Response | Promise<Order | Response>,

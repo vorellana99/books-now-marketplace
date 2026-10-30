@@ -45,7 +45,19 @@ describe("PA-07 Confirmación", () => {
       await screen.findByRole("heading", { name: "¡Gracias por tu compra!", level: 1 }),
     ).toBeTruthy();
     expect(screen.getByText("Te enviamos un email de confirmación.")).toBeTruthy();
-    expect(screen.getByText(ID)).toBeTruthy();
+    // El número son los primeros 8 caracteres del id, en mayúsculas (wireframe PA-07)
+    expect(screen.getByText("#0B6F2F0E")).toBeTruthy();
+  });
+
+  it("el número de pedido se puede copiar completo", async () => {
+    server.use(orderDetailHandler(() => orderDetail({ id: ID })));
+    const user = userEvent.setup();
+    await renderApp(`/pedidos/${ID}/gracias`);
+    await user.click(
+      await screen.findByRole("button", { name: "Copiar el número de pedido completo" }),
+    );
+    expect(await navigator.clipboard.readText()).toBe(ID);
+    expect(await screen.findByText("Copiado")).toBeTruthy();
   });
 
   it("lista los libros con su cantidad y su precio, y el total cobrado con su moneda", async () => {
@@ -145,7 +157,7 @@ describe("PA-07 Confirmación", () => {
     first.unmount();
     await renderApp(`/pedidos/${ID}/gracias`);
     expect(await screen.findByText("S/ 95.00")).toBeTruthy();
-    expect(screen.getByText(ID)).toBeTruthy();
+    expect(screen.getByText("#0B6F2F0E")).toBeTruthy();
     expect(reads).toBe(2);
   });
 
@@ -295,7 +307,7 @@ describe("PA-07 Confirmación: al terminar una compra", () => {
     expect(await screen.findByRole("heading", { name: "¡Gracias por tu compra!" })).toBeTruthy();
     const created = [...orders.created.values()][0]!;
     expect(router.state.location.pathname).toBe(`/pedidos/${created.orderId}/gracias`);
-    expect(screen.getByText(created.orderId)).toBeTruthy();
+    expect(screen.getByText(`#${created.orderId.slice(0, 8).toUpperCase()}`)).toBeTruthy();
     expect(screen.getByRole("list", { name: "Libros del pedido" }).textContent).toContain(
       "Clean Code",
     );

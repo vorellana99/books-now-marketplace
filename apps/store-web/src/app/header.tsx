@@ -8,7 +8,7 @@ import { Button } from "@/shared/ui/button.tsx";
 import { Sheet, SheetClose, SheetContent, SheetTrigger } from "@/shared/ui/sheet.tsx";
 
 // Wireframe: docs/product/diseno/03-wireframes.md#cabecera-y-navegación
-// Falta «Mis pedidos» (llega con F5: la ruta aún no existe y un enlace tipado a una ruta inexistente no compila)
+// «Mis pedidos» vive en el menú de la cuenta (escritorio) y en el menú móvil: solo con sesión
 export function Header() {
   const [searching, setSearching] = useState(false);
 

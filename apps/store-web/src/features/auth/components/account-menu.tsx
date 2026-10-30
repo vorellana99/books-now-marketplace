@@ -42,6 +42,9 @@ export function AccountMenu() {
       <DropdownMenuContent>
         <DropdownMenuLabel>{user?.email}</DropdownMenuLabel>
         <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/pedidos">Mis pedidos</Link>
+        </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void signOut()}>Cerrar sesión</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -73,6 +76,11 @@ export function MobileAccount() {
   return (
     <>
       <p className="px-2 pt-3 text-sm text-muted-foreground">{user?.email}</p>
+      <SheetClose asChild>
+        <Link to="/pedidos" className={row}>
+          Mis pedidos
+        </Link>
+      </SheetClose>
       <SheetClose asChild>
         <button type="button" onClick={() => void signOut()} className={`${row} w-full text-left`}>
           Cerrar sesión

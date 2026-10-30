@@ -109,8 +109,12 @@ export class ShippingAddressResponse {
   @ApiProperty({ example: 'Barranco' }) district!: string;
   @ApiProperty({ example: 'Lima' }) province!: string;
   @ApiProperty({ example: 'Lima' }) department!: string;
-  @ApiProperty({ example: 'Casa de rejas verdes', nullable: true }) reference!:
-    string | null;
+  @ApiProperty({
+    type: String,
+    example: 'Casa de rejas verdes',
+    nullable: true,
+  })
+  reference!: string | null;
 }
 
 // El pedido con su dirección: lo que ve su dueño o un administrador
@@ -137,6 +141,7 @@ export class OrderHistoryResponse {
   items!: OrderHistoryItemResponse[];
 
   @ApiProperty({
+    type: String,
     nullable: true,
     description:
       'Cursor de la página siguiente; null en la última. Se pasa tal cual en ?cursor=',

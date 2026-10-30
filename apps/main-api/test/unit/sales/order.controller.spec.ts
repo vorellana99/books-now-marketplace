@@ -14,6 +14,7 @@ import { QuoteOrderQuery } from '../../../src/contexts/sales/application/use-cas
 import { PlaceOrderCommand } from '../../../src/contexts/sales/application/use-cases/order/place-order.command.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import { OrderController } from '../../../src/contexts/sales/interface/http/order.controller.js';
+import { MyOrdersController } from '../../../src/contexts/sales/interface/http/my-orders.controller.js';
 import { OutOfStockError } from '../../../src/contracts/inventory/stock.errors.js';
 import type { AuthenticatedUser } from '../../../src/platform/auth/authenticated-user.js';
 import { configureApp } from '../../../src/platform/http/configure-app.js';
@@ -63,7 +64,7 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
-      controllers: [OrderController],
+      controllers: [OrderController, MyOrdersController],
       providers: [
         { provide: CommandBus, useValue: commandBus },
         { provide: QueryBus, useValue: queryBus },
@@ -758,6 +759,26 @@ describe('OrderController (capa HTTP, con los buses simulados)', () => {
       ).toEqual(['charged', 'id', 'lines', 'shippingAddress', 'status']);
       expect(detail.properties.shippingAddress.nullable).toBe(true);
       expect(detail.required).toContain('shippingAddress');
+    });
+
+    it('declara como texto (nulable) el cursor del historial y la referencia de la dirección, para que el cliente generado no los tipee como objetos', () => {
+      const doc = SwaggerModule.createDocument(
+        app,
+        new DocumentBuilder().build(),
+      );
+      const schemas = doc.components!.schemas as Record<
+        string,
+        {
+          properties: Record<string, { type?: string; nullable?: boolean }>;
+        }
+      >;
+      expect(schemas.OrderHistoryResponse.properties.nextCursor).toMatchObject({
+        type: 'string',
+        nullable: true,
+      });
+      expect(
+        schemas.ShippingAddressResponse.properties.reference,
+      ).toMatchObject({ type: 'string', nullable: true });
     });
 
     it('documenta la dirección de envío con sus siete campos, la referencia opcional', () => {

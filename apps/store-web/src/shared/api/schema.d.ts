@@ -547,7 +547,7 @@ export interface components {
             /** @example Lima */
             department: string;
             /** @example Casa de rejas verdes */
-            reference: Record<string, never> | null;
+            reference: string | null;
         };
         OrderDetailResponse: {
             /** Format: uuid */
@@ -577,7 +577,7 @@ export interface components {
         OrderHistoryResponse: {
             items: components["schemas"]["OrderHistoryItemResponse"][];
             /** @description Cursor de la página siguiente; null en la última. Se pasa tal cual en ?cursor= */
-            nextCursor: Record<string, never> | null;
+            nextCursor: string | null;
         };
         CredentialsDto: {
             /**
