@@ -46,3 +46,77 @@ export const quoteHandler = (
     const result = await respond(body.items, body);
     return result instanceof Response ? result : HttpResponse.json(result);
   });
+
+type Charged = { amount: string; currency: "PEN" | "USD" };
+export type PlacedRequest = {
+  key: string | null;
+  authorization: string | null;
+  body: {
+    cardToken?: string;
+    items?: QuoteItem[];
+    shippingAddress?: Record<string, string>;
+    customerId?: string;
+  };
+};
+
+// El servidor de pedidos simulado, con la regla de idempotencia de la API real (RN-21): la misma clave devuelve el mismo
+// pedido sin crear otro. Sirve para probar el pago sin esperar tres segundos de pasarela
+export class FakeOrders {
+  requests: PlacedRequest[] = [];
+  // pedidos creados, por clave de idempotencia
+  created = new Map<string, { orderId: string; charged: Charged }>();
+  private queue: ((create: () => Response) => Response)[] = [];
+
+  private readonly prices: Record<string, string>;
+  // Si se da, una petición con un token de acceso que no sirve recibe `401` (como la API real)
+  private readonly accepts: ((accessToken: string | null) => boolean) | undefined;
+
+  constructor(prices: Record<string, string>, accepts?: (accessToken: string | null) => boolean) {
+    this.prices = prices;
+    this.accepts = accepts;
+  }
+
+  // La próxima petición se atiende pero la respuesta se pierde (red caída): el pedido SÍ se creó
+  dropNextResponse() {
+    this.queue.push((create) => {
+      create();
+      return HttpResponse.error();
+    });
+    return this;
+  }
+
+  // Las próximas peticiones responden esto, sin crear nada
+  respondNext(...responses: (() => Response)[]) {
+    for (const respond of responses) this.queue.push(() => respond());
+    return this;
+  }
+
+  get orderCount() {
+    return this.created.size;
+  }
+
+  handlers = () => [
+    http.post(API("/orders"), async ({ request }) => {
+      const body = (await request.json()) as PlacedRequest["body"];
+      const key = request.headers.get("Idempotency-Key");
+      const authorization = request.headers.get("Authorization");
+      this.requests.push({ key, authorization, body });
+      if (this.accepts && !this.accepts(authorization?.replace("Bearer ", "") ?? null)) {
+        return HttpResponse.json(
+          { statusCode: 401, errorCode: "UNAUTHENTICATED", message: "x" },
+          { status: 401 },
+        );
+      }
+      const create = (): Response => {
+        const existing = key ? this.created.get(key) : undefined;
+        if (existing) return HttpResponse.json(existing, { status: 201 });
+        const quote = quoteFor(body.items ?? [], this.prices);
+        const order = { orderId: crypto.randomUUID(), charged: quote.total };
+        if (key) this.created.set(key, order);
+        return HttpResponse.json(order, { status: 201 });
+      };
+      const next = this.queue.shift();
+      return next ? next(create) : create();
+    }),
+  ];
+}

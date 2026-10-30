@@ -41,13 +41,29 @@ type AlertProps = {
   action?: ReactNode;
   // Sustituye el icono, por ejemplo por un indicador de carga
   icon?: ReactNode;
+  // Por defecto el rol sale de la variante; se cambia cuando el aviso necesita otro (y un nombre para distinguirlo)
+  role?: "alert" | "status";
+  label?: string;
   className?: string;
 };
 
-export function Alert({ variant = "info", title, children, action, icon, className }: AlertProps) {
+export function Alert({
+  variant = "info",
+  title,
+  children,
+  action,
+  icon,
+  role,
+  label,
+  className,
+}: AlertProps) {
   const Icon = icons[variant];
   return (
-    <div role={roles[variant]} className={cn(alertVariants({ variant }), className)}>
+    <div
+      role={role ?? roles[variant]}
+      aria-label={label}
+      className={cn(alertVariants({ variant }), className)}
+    >
       {icon ?? <Icon aria-hidden="true" className="size-5 shrink-0" />}
       <div className="flex min-w-0 flex-col items-start gap-2">
         {title ? <strong className="font-semibold">{title}</strong> : null}

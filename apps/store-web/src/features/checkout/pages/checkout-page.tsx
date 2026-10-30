@@ -14,6 +14,8 @@ import { Alert } from "@/shared/ui/alert.tsx";
 import { Button } from "@/shared/ui/button.tsx";
 import { EmptyState } from "@/shared/ui/state-panel.tsx";
 import { addressStore } from "../address.store.ts";
+import { paymentOutcome } from "../errors.ts";
+import { usePayment } from "../hooks/use-payment.ts";
 import { ShippingForm } from "../components/shipping-form.tsx";
 import type { ShippingInput } from "../schemas.ts";
 
@@ -35,6 +37,7 @@ export function CheckoutPage() {
   const [initialDraft] = useState(draft);
   const [cardToken, setCardToken] = useState<string>(TEST_CARDS[0].token);
   const cardId = useId();
+  const payment = usePayment();
 
   const saveDraft = useCallback(
     (values: ShippingInput) => addressStore.getState().setDraft(userId, values),
@@ -77,7 +80,12 @@ export function CheckoutPage() {
 
   const quoted = quote.data;
   const quoteBusy = quote.isFetching;
-  const canPay = quoted !== undefined && !quoteBusy && !quote.isError && !revalidation.checking;
+  const canPay =
+    quoted !== undefined &&
+    !quoteBusy &&
+    !quote.isError &&
+    !revalidation.checking &&
+    !payment.inProgress;
 
   return (
     <>
@@ -88,7 +96,12 @@ export function CheckoutPage() {
           <div className="flex flex-col gap-8">
             <section aria-labelledby="envio" className="flex flex-col gap-4">
               <h2 id="envio">Envío</h2>
-              <ShippingForm defaultValues={initialDraft} onChange={saveDraft} onSubmit={() => {}} />
+              <ShippingForm
+                defaultValues={initialDraft}
+                onChange={saveDraft}
+                disabled={payment.inProgress}
+                onSubmit={(address) => void payment.pay(address, cardToken)}
+              />
             </section>
             <section aria-labelledby="pago" className="flex flex-col gap-3">
               <h2 id="pago">Pago</h2>
@@ -139,12 +152,45 @@ export function CheckoutPage() {
             ) : quoted ? (
               <OrderSummary quote={quoted} busy={quoteBusy} />
             ) : null}
+            {payment.state.status === "sending" || payment.state.status === "waiting" ? (
+              <Alert variant="info" role="status" label="Estado del pago">
+                {payment.state.status === "waiting" ? (
+                  <p>Estamos procesando tu pago. Espera un momento.</p>
+                ) : (
+                  <>
+                    <p className="font-semibold">Procesando tu pago…</p>
+                    <p>No cierres esta página.</p>
+                  </>
+                )}
+              </Alert>
+            ) : null}
+            {payment.state.status === "uncertain" ? (
+              <Alert
+                variant="warning"
+                action={
+                  <Button variant="outline" onClick={() => void payment.retry()}>
+                    Reintentar
+                  </Button>
+                }
+              >
+                {payment.state.message}
+              </Alert>
+            ) : null}
+            {payment.state.status === "failed" ? (
+              <Alert variant="error">{paymentOutcome(payment.state.error).message}</Alert>
+            ) : null}
             <Button type="submit" form="shipping-form" disabled={!canPay} className="w-full">
-              {quoted ? `Pagar ${formatMoney(quoted.total)}` : "Pagar"}
+              {payment.inProgress
+                ? "Procesando…"
+                : quoted
+                  ? `Pagar ${formatMoney(quoted.total)}`
+                  : "Pagar"}
             </Button>
-            <Button asChild variant="ghost" className="w-full">
-              <Link to="/carrito">Volver al carrito</Link>
-            </Button>
+            {payment.inProgress ? null : (
+              <Button asChild variant="ghost" className="w-full">
+                <Link to="/carrito">Volver al carrito</Link>
+              </Button>
+            )}
           </aside>
         </div>
       </div>

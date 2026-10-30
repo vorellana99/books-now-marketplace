@@ -1,4 +1,6 @@
 // Lo único que otras funcionalidades y las rutas pueden importar del carrito
+export { cartStore } from "./cart.store.ts";
+export { timing } from "./timing.ts";
 export { AddToCartButton, AddToCartCardButton } from "./components/add-to-cart-button.tsx";
 export { CartLink } from "./components/cart-link.tsx";
 export { CartToaster } from "./components/cart-toaster.tsx";
