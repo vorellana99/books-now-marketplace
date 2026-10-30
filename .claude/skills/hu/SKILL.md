@@ -31,19 +31,7 @@ Reglas del desglose:
 - **Orden:** `[DOC]` → `[API]` → `[WEB]` → `[E2E]`, y cada tarea dice **de cuál depende**. Lo que no depende de nada anterior puede ir antes.
 - **Una tarea nunca deja la compuerta en rojo.** Un cambio de contrato es primero **aditivo** (se añade el campo nuevo; la tienda pasa a usarlo); quitar o renombrar lo viejo es otra tarea posterior.
 - **Si al implementar aparece trabajo de otra capa**, no se mezcla: es una tarea nueva con su dependencia y se avisa.
-- **Tipo y rigor de cada tarea** (columna «Tipo», justo después de la capa). **Se elige por lo que cambia**, no por cómo se programa, y se escribe exacto en **kebab-case** (minúsculas, sin acentos ni símbolos, con guiones en vez de espacios): dice qué receta aplica y si es crítica.
-
-  | Capa | Tipo | ¿Qué cambia? | Receta |
-  |---|---|---|---|
-  | `[API]` | `contrato` | **Lo que la API le ofrece a la tienda**: un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | `/nueva-ruta` si es un endpoint nuevo; la primera `[WEB]` que lo use, `/cambio-de-contrato` |
-  | `[API]` | `regla` | **Cómo decide el negocio**: un cálculo, un límite, una condición | Pruebas primero y, si toca dinero, seguridad o concurrencia, 🔒 |
-  | `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | `/nuevo-evento` (siempre 🔒) |
-  | `[API]` | `base-de-datos` | Tablas, columnas, índices o restricciones | `/nueva-migracion` (siempre 🔒) |
-  | `[API]` | `configuracion` | Una variable de entorno | `/nueva-variable-entorno` |
-  | `[WEB]` | `pantalla` | **Lo que se ve**: componentes, textos, disposición | La «Pantalla» de la HU y la revisión en navegador real |
-  | `[WEB]` | `comportamiento` | **Lo que la tienda hace** sin cambiar lo que se ve: consultas a la API, estado, validaciones, el carrito | Compuerta de la tienda |
-  | `[DOC]` | `producto` o `guia` | `RN`/`DP`/HU/mensajes/diseño, o guías técnicas, README y comandos | Los documentos que toque |
-  | `[E2E]` | `recorrido` | El recorrido contra el backend real | Playwright |
+- **Tipo y rigor de cada tarea** (columna «Tipo», justo después de la capa). **Se elige por lo que cambia**, no por cómo se programa, y se escribe exacto en **kebab-case** (minúsculas, sin acentos ni símbolos, con guiones en vez de espacios). **La tabla de tipos —qué cambia cada uno, ejemplos, si es «siempre 🔒» y su receta— está en `docs/historias/_plantilla.md`: léela antes de tipar las tareas** (o `python3 scripts/historias.py --tipos`). Resumen: `[API]`: `contrato` (lo que la API le ofrece a la tienda: un endpoint, **un campo más en una respuesta**, un error), `regla` (cómo decide el negocio), `evento`, `base-de-datos`, `configuracion`; `[WEB]`: `pantalla` (lo que se ve), `comportamiento` (lo que la tienda hace sin cambiar lo que se ve); `[DOC]`: `producto`, `guia`; `[E2E]`: `recorrido`.
 
   **🔒** junto al tipo marca una tarea **crítica**: mutaciones obligatorias y plan corto antes de codificar. Solo en `[API]`. Se marca cuando la tarea toca dinero y precios, seguridad (tokens, contraseñas, guards, roles, CORS, límites), concurrencia y transacciones (outbox, reservas, idempotencia), restricciones de la base o reglas del dominio críticas; `base-de-datos` y `evento` siempre la llevan (el comprobador lo exige). **Un endpoint nuevo con lógica nueva son dos tareas** (la `regla` y el `contrato`); si una tarea mezcla tipos, elige el que decide la receta y el rigor, o pártela.
 - **Lista para ejecutar:** una tarea está lista cuando alguien puede escribir su primera prueba roja leyendo solo su fila. El detalle mínimo depende de la tarea:

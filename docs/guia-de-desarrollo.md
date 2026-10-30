@@ -99,21 +99,7 @@ Dos fases: primero la **historia** se convierte en tareas (una vez, con tu aprob
 | 4 | **Ordenar**: `[DOC]` → `[API]` → `[WEB]` (la primera lleva `/cambio-de-contrato`) → `[E2E]`; anotar de qué depende cada una. Un cambio de contrato se hace primero **aditivo**: la compuerta no se rompe en ninguna tarea | El archivo de la HU en [`historias/`](historias/README.md), con 📝 en todo (pasan a ⬜ al aprobar) |
 | 5 | **Aprobar el desglose.** Hasta que lo apruebas no se escribe código | Las tareas listas para ejecutarse |
 
-**Tipo y rigor de cada tarea.** La tabla de tareas tiene una columna **Tipo** justo después de la capa. **Se elige por lo que cambia**, no por cómo se programa, se escribe exacto en **kebab-case** (minúsculas, sin acentos ni símbolos, con guiones en lugar de espacios) y dice qué receta aplica:
-
-| Capa | Tipo | ¿Qué cambia? | Receta |
-|---|---|---|---|
-| `[API]` | `contrato` | **Lo que la API le ofrece a la tienda**: un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | `/nueva-ruta` si es un endpoint nuevo; `/cambio-de-contrato` en la primera `[WEB]` que lo use |
-| `[API]` | `regla` | **Cómo decide el negocio**: un cálculo, un límite, una condición | Pruebas primero y, si toca dinero, seguridad o concurrencia, 🔒 |
-| `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | `/nuevo-evento` (siempre 🔒) |
-| `[API]` | `base-de-datos` | Tablas, columnas, índices o restricciones | `/nueva-migracion` (siempre 🔒) |
-| `[API]` | `configuracion` | Una variable de entorno | `/nueva-variable-entorno` |
-| `[WEB]` | `pantalla` | **Lo que se ve** | La «Pantalla» de la HU y la revisión en navegador real |
-| `[WEB]` | `comportamiento` | **Lo que la tienda hace**, sin cambiar lo que se ve (consultas a la API, estado, validaciones, el carrito) | Compuerta de la tienda |
-| `[DOC]` | `producto` o `guia` | Reglas, decisiones, historias, mensajes y diseño; o guías técnicas, README y comandos | Los documentos que toque |
-| `[E2E]` | `recorrido` | El recorrido de punta a punta | Playwright |
-
-**🔒** junto al tipo marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar): solo en `[API]`, y `base-de-datos` y `evento` siempre la llevan. Un endpoint nuevo con lógica nueva son **dos tareas** (la `regla` y el `contrato`). `scripts/historias.py` valida el vocabulario y la marca.
+**Tipo y rigor de cada tarea.** La tabla de tareas tiene una columna **Tipo** justo después de la capa, que **se elige por lo que cambia** (no por cómo se programa) y se escribe exacto, en **kebab-case**. `[API]`: `contrato` (lo que la API le ofrece a la tienda: un endpoint, **un campo más en una respuesta**, un error), `regla` (cómo decide el negocio), `evento`, `base-de-datos`, `configuracion`; `[WEB]`: `pantalla` (lo que se ve), `comportamiento` (lo que la tienda hace sin cambiar lo que se ve); `[DOC]`: `producto`, `guia`; `[E2E]`: `recorrido`. **La tabla completa, con ejemplos y la receta de cada tipo, está en la [plantilla de historias](historias/_plantilla.md)** (también: `python3 scripts/historias.py --tipos`). **🔒** junto al tipo marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar): solo en `[API]`, y `base-de-datos` y `evento` siempre la llevan. Un endpoint nuevo con lógica nueva son **dos tareas** (la `regla` y el `contrato`). `scripts/historias.py` valida el vocabulario y lo compara con esa tabla.
 
 **Cada historia nueva es un archivo** (`historias/HU-nn-titulo.md`, a partir de la [plantilla](historias/_plantilla.md)) y **una ampliación de una historia anterior es una historia nueva** que dice en su encabezado `amplia: HU-22`: el histórico no se edita. **El contrato y la pantalla van por adelantado; el plan de implementación, no.** La historia no lista archivos ni clases porque se desactualizan: eso se decide justo antes de cada tarea (4.2). Una tarea está **lista para ejecutarse** cuando alguien puede escribir su primera prueba roja leyendo solo su fila; el detalle que necesita depende de ella:
 
@@ -138,7 +124,7 @@ Nueve pasos, en este orden. El ejemplo es una tarea real del corte 7 (histórica
 | # | Paso | En la 7.8 |
 |---|---|---|
 | 1 | **Leer** la fila de la tarea, su «Se comprueba», de qué depende y las reglas que cita | «cada comprador ve solo lo suyo, el administrador ve el de cualquier cliente, la paginación sigue igual»; reglas RN-36, RN-40 y DP-18 |
-| 2 | **Receta y plan corto.** La columna **Tipo** de la fila dice qué receta cargar (`contrato` → `/nueva-ruta` si es un endpoint nuevo, `evento` → `/nuevo-evento`, `base-de-datos` → `/nueva-migracion`, `configuracion` → `/nueva-variable-entorno`). El plan corto, solo en las tareas con **🔒** (críticas) o de varios archivos: en el modo de planificación, qué archivos, qué patrón se copia, qué pruebas y qué mutaciones; se aprueba y **no se guarda en un archivo** | (en el corte 7 no existía este paso) |
+| 2 | **Receta y plan corto.** La columna **Tipo** de la fila dice qué receta cargar (la **receta por tipo** está en la [plantilla de historias](historias/_plantilla.md)). El plan corto, solo en las tareas con **🔒** (críticas) o de varios archivos: en el modo de planificación, qué archivos, qué patrón se copia, qué pruebas y qué mutaciones; se aprueba y **no se guarda en un archivo** | (en el corte 7 no existía este paso) |
 | 3 | **Pruebas primero** y verlas fallar | `test/e2e/my-orders.e2e.spec.ts` (14 pruebas) falla porque la ruta no existe |
 | 4 | **Implementar** lo mínimo, con el estilo del código vecino | `my-orders.controller.ts`, `admin-order.controller.ts`, `list-orders.dto.ts` |
 | 5 | **Revisión visual** (solo `[WEB]` que cambia lo que se ve): la tienda en un navegador real (Playwright, con la API y el seed) a 360 y 1280 px, comparada con la **Pantalla** de la HU; se anota en la bitácora qué se revisó y qué se ajustó. No hay pruebas de captura píxel a píxel (se rompen con cualquier cambio de contenido); el contraste y los objetivos táctiles los cubre axe en la `[E2E]` | (en el corte 7 no había pantallas) |

@@ -45,6 +45,23 @@ Sin cambios visuales.
 """
 
 
+PLANTILLA_OK = """# plantilla
+
+> | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre 🔒? |
+> |---|---|---|---|---|
+> | `[API]` | `contrato` | Lo que la API ofrece | Un campo más | no |
+> | `[API]` | `regla` | Cómo decide el negocio | Un límite | no |
+> | `[API]` | `evento` | Un aviso entre partes | Reaccionar a algo | sí |
+> | `[API]` | `base-de-datos` | Las tablas | Una columna | sí |
+> | `[API]` | `configuracion` | Una variable de entorno | `JWT_SECRET` | no |
+> | `[WEB]` | `pantalla` | Lo que se ve | Mover un botón | no |
+> | `[WEB]` | `comportamiento` | Lo que la tienda hace | Pedir un campo | no |
+> | `[DOC]` | `producto` | Reglas y decisiones | `RN-13` | no |
+> | `[DOC]` | `guia` | Guías técnicas | `CLAUDE.md` | no |
+> | `[E2E]` | `recorrido` | El recorrido de punta a punta | — | no |
+"""
+
+
 class Parseo(unittest.TestCase):
     def test_encabezado(self):
         meta = h.parse_front_matter(HU_OK)
@@ -76,6 +93,34 @@ class Parseo(unittest.TestCase):
         self.assertEqual(h.layer_status(tareas, "WEB"), "⬜")
         self.assertEqual(h.layer_status(tareas, "DOC"), "✅")
         self.assertEqual(h.layer_status(tareas, "E2E"), "—")  # no hay tareas de esa capa
+
+
+class TablaDeTipos(unittest.TestCase):
+    def test_lee_la_tabla_de_la_plantilla(self):
+        tipos = h.parse_types_table(PLANTILLA_OK)
+        self.assertEqual(tipos["API"], ["contrato", "regla", "evento", "base-de-datos", "configuracion"])
+        self.assertEqual(tipos["WEB"], ["pantalla", "comportamiento"])
+        self.assertEqual(tipos["E2E"], ["recorrido"])
+
+    def test_lee_cuales_son_siempre_criticos(self):
+        self.assertEqual(h.parse_always_critical(PLANTILLA_OK), {"evento", "base-de-datos"})
+
+    def test_el_script_y_la_tabla_coinciden(self):
+        self.assertEqual({c: tuple(t) for c, t in h.parse_types_table(PLANTILLA_OK).items()}, h.TIPOS)
+        self.assertEqual(h.parse_always_critical(PLANTILLA_OK), set(h.SIEMPRE_CRITICOS))
+
+    def test_imprime_la_tabla_para_consultarla(self):
+        texto = h.render_types(PLANTILLA_OK)
+        self.assertIn("[API] contrato", texto)
+        self.assertIn("Lo que la API ofrece", texto)
+        self.assertIn("siempre 🔒", texto)  # base-de-datos y evento
+        self.assertIn("_plantilla.md", texto)
+
+    def test_la_salida_de_tipos_no_lleva_marcas_de_markdown(self):
+        texto = h.render_types(PLANTILLA_OK.replace("Lo que la API ofrece", "**Lo que la API ofrece**").replace("`JWT_SECRET`", "`JWT_SECRET` y `X`"))
+        self.assertNotIn("**", texto)
+        self.assertNotIn("`", texto)
+        self.assertIn("Lo que la API ofrece", texto)
 
 
 class Tiempo(unittest.TestCase):
@@ -262,6 +307,21 @@ class Comprobacion(unittest.TestCase):
         for tipo in ("contrato", "regla", "evento", "base-de-datos", "configuracion"):
             self.assertIn(tipo, mensaje)
 
+    def test_el_error_de_tipo_apunta_a_la_plantilla(self):
+        self.file.write_text(HU_OK.replace("[API] | contrato", "[API] | cosa"), encoding="utf-8")
+        self.assertTrue(any("_plantilla.md" in e for e in self.errors()))
+
+    def test_una_plantilla_que_coincide_con_el_script_no_da_error(self):
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK, encoding="utf-8")
+        self.assertEqual(self.errors(), [])
+
+    def test_una_plantilla_que_se_desincroniza_del_script_da_error(self):
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace("| `[WEB]` | `pantalla` |", "| `[WEB]` | `vista` |"), encoding="utf-8")
+        errores = self.errors()
+        self.assertTrue(any("_plantilla.md" in e and "WEB" in e for e in errores))
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace("| Un aviso entre partes | Reaccionar a algo | sí |", "| Un aviso entre partes | Reaccionar a algo | no |"), encoding="utf-8")
+        self.assertTrue(any("🔒" in e and "_plantilla.md" in e for e in self.errors()))
+
     def test_una_tarea_sin_tipo(self):
         self.file.write_text(HU_OK.replace("[API] | contrato", "[API] |  "), encoding="utf-8")
         self.assertTrue(any("tipo" in e and "HU-12.3" in e for e in self.errors()))
@@ -306,6 +366,11 @@ class Comprobacion(unittest.TestCase):
 
 class DocumentosReales(unittest.TestCase):
     """Lo que de verdad hay en docs/historias: debe cumplir las mismas reglas."""
+
+    def test_la_tabla_de_tipos_de_la_plantilla_coincide_con_el_script(self):
+        plantilla = (ROOT / "docs" / "historias" / "_plantilla.md").read_text(encoding="utf-8")
+        self.assertEqual({c: tuple(t) for c, t in h.parse_types_table(plantilla).items()}, h.TIPOS)
+        self.assertEqual(h.parse_always_critical(plantilla), set(h.SIEMPRE_CRITICOS))
 
     def test_los_documentos_del_repositorio_pasan_la_comprobacion(self):
         self.assertEqual(h.check(ROOT), [])

@@ -38,18 +38,22 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 
 > **Tipo** (segunda columna): dice qué receta aplica y **se elige por lo que cambia**, no por cómo se programa. Los nombres se escriben exactos, en **kebab-case** (minúsculas, sin acentos ni símbolos y con guiones en lugar de espacios):
 >
-> | Capa | Tipo | ¿Qué cambia? | Ejemplos |
-> |---|---|---|---|
-> | `[API]` | `contrato` | **Lo que la API le ofrece a la tienda** | Un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo |
-> | `[API]` | `regla` | **Cómo decide el negocio** | Un cálculo, un límite («máximo 10»), una condición |
-> | `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | Reaccionar a «se registró un usuario» |
-> | `[API]` | `base-de-datos` | Las tablas, columnas, índices o restricciones | Una columna nueva |
-> | `[API]` | `configuracion` | Una variable de entorno | `JWT_SECRET` |
-> | `[WEB]` | `pantalla` | **Lo que se ve** | Mover un botón, un texto nuevo, un aviso |
-> | `[WEB]` | `comportamiento` | **Lo que la tienda hace**, sin cambiar lo que se ve | Pedir el campo nuevo a la API, el estado del carrito, validar un formulario |
-> | `[DOC]` | `producto` | Reglas, decisiones, historias, mensajes, diseño | `RN-13`, un `DP` |
-> | `[DOC]` | `guia` | Guías técnicas, README, comandos | `CLAUDE.md` |
-> | `[E2E]` | `recorrido` | El recorrido de punta a punta | — |
+> | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre 🔒? |
+> |---|---|---|---|---|
+> | `[API]` | `contrato` | **Lo que la API le ofrece a la tienda** | Un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | no |
+> | `[API]` | `regla` | **Cómo decide el negocio** | Un cálculo, un límite («máximo 10»), una condición | no |
+> | `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | Reaccionar a «se registró un usuario» | sí |
+> | `[API]` | `base-de-datos` | Las tablas, columnas, índices o restricciones | Una columna nueva | sí |
+> | `[API]` | `configuracion` | Una variable de entorno | `JWT_SECRET` | no |
+> | `[WEB]` | `pantalla` | **Lo que se ve** | Mover un botón, un texto nuevo, un aviso | no |
+> | `[WEB]` | `comportamiento` | **Lo que la tienda hace**, sin cambiar lo que se ve | Pedir el campo nuevo a la API, el estado del carrito, validar un formulario | no |
+> | `[DOC]` | `producto` | Reglas, decisiones, historias, mensajes, diseño | `RN-13`, un `DP` | no |
+> | `[DOC]` | `guia` | Guías técnicas, README, comandos | `CLAUDE.md` | no |
+> | `[E2E]` | `recorrido` | El recorrido de punta a punta | — | no |
+>
+> **Esta es la única tabla de tipos** (la guía, los comandos y los índices la enlazan; `python3 scripts/historias.py --tipos` la imprime y el comprobador exige que coincida con `scripts/historias.py`). La columna «¿Siempre 🔒?» la lee el script: no la cambies sin cambiarlo.
+>
+> **Receta por tipo** (qué comando o documento seguir al ejecutar la tarea): `contrato` → `/nueva-ruta` si es un endpoint nuevo y, en la primera tarea `[WEB]` que lo use, `/cambio-de-contrato`; `regla` → pruebas primero y, si toca dinero, seguridad o concurrencia, 🔒; `evento` → `/nuevo-evento`; `base-de-datos` → `/nueva-migracion`; `configuracion` → `/nueva-variable-entorno`; `pantalla` → la sección «Pantalla» de la HU y la revisión en un navegador real; `comportamiento` → la compuerta de la tienda (y `/cambio-de-contrato` si consume un contrato nuevo); `producto` y `guia` → los documentos que toque; `recorrido` → Playwright contra el backend real.
 >
 > Un endpoint nuevo con lógica nueva son **dos tareas**: la `regla` y el `contrato`. **🔒** junto al tipo marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar): solo en `[API]`, y `base-de-datos` y `evento` siempre la llevan.
 >

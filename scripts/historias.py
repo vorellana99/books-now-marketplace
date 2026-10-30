@@ -7,6 +7,7 @@ archivo nuevo lee el encabezado y la tabla de tareas; la fecha y el tiempo salen
 
     python3 scripts/historias.py           # reescribe la matriz y comprueba
     python3 scripts/historias.py --check   # solo comprueba (estructura); código de salida 1 si algo no cuadra
+    python3 scripts/historias.py --tipos   # imprime la tabla de tipos de tarea (la fuente es docs/historias/_plantilla.md)
 
 Solo usa la biblioteca estándar. Pruebas: cd scripts && python3 -m unittest test_historias
 """
@@ -27,7 +28,10 @@ REQUERIDOS = ("id", "titulo", "tipo", "epica", "estado")
 # `| HU-12.2 | [API] | regla 🔒 | Tarea | Se comprueba | Depende de | Estado |`
 TAREA = re.compile(r"^\|\s*((?:HU|EN)-\d+\.\d+)\s*\|\s*\[(API|WEB|E2E|DOC)\]\s*\|([^|]*)\|.*\|\s*(⬜|🔄|✅|📝|⛔)\s*\|\s*$")
 RIGOR = "🔒"  # tarea crítica: mutaciones obligatorias y plan corto antes de codificar (solo [API])
-# Tipo de cada capa: dice qué receta aplica. Siempre en kebab-case (minúsculas, sin acentos ni símbolos, con guiones en vez de espacios)
+# Tipo de cada capa: dice qué receta aplica. Siempre en kebab-case (minúsculas, sin acentos ni símbolos, con guiones en vez de espacios).
+# La DESCRIPCIÓN de cada tipo (qué cambia, ejemplos, receta) vive en docs/historias/_plantilla.md: si cambias esta lista, cambia
+# también esa tabla (parse_types_table y check() las comparan y `python3 scripts/historias.py --check` falla si difieren)
+PLANTILLA = "docs/historias/_plantilla.md"
 TIPOS = {
     "API": ("contrato", "regla", "evento", "base-de-datos", "configuracion"),
     "WEB": ("pantalla", "comportamiento"),
@@ -71,6 +75,39 @@ def parse_task_types(text):
             cell = m.group(3).strip()
             rows.append((m.group(1), m.group(2), cell.replace(RIGOR, "").strip(), RIGOR in cell))
     return rows
+
+
+# `> | `[API]` | `contrato` | Qué cambia | Ejemplos | no |` (la tabla de tipos de la plantilla)
+FILA_TIPO = re.compile(r"^>\s*\|\s*`\[(API|WEB|E2E|DOC)\]`\s*\|\s*`([a-z0-9-]+)`\s*\|\s*([^|]*?)\s*\|\s*([^|]*?)\s*\|\s*(sí|no)\s*\|\s*$")
+
+
+def _filas_tipo(text):
+    return [m.groups() for m in (FILA_TIPO.match(line) for line in text.splitlines()) if m]
+
+
+def parse_types_table(text):
+    """{capa: [tipos]} de la tabla de tipos de la plantilla, en el orden en que aparecen."""
+    tipos = {}
+    for capa, tipo, *_ in _filas_tipo(text):
+        tipos.setdefault(capa, []).append(tipo)
+    return tipos
+
+
+def parse_always_critical(text):
+    """Los tipos que la tabla marca «sí» en la columna «¿Siempre 🔒?»."""
+    return {tipo for _, tipo, _, _, siempre in _filas_tipo(text) if siempre == "sí"}
+
+
+def render_types(text):
+    """La tabla de tipos de la plantilla, lista para leer en la terminal (`--tipos`)."""
+    lines = ["Tipos de tarea (elige por lo que cambia):", ""]
+    quitar = lambda t: t.replace("**", "").replace("`", "")  # la terminal no dibuja Markdown
+    for capa, tipo, cambia, ejemplos, siempre in _filas_tipo(text):
+        cambia, ejemplos = quitar(cambia), quitar(ejemplos)
+        extra = f" · siempre {RIGOR}" if siempre == "sí" else ""
+        lines.append(f"  [{capa}] {tipo} — {cambia} (ej.: {ejemplos}){extra}")
+    lines += ["", f"Fuente: {PLANTILLA}. {RIGOR} = tarea crítica (mutaciones obligatorias y plan corto; solo [API])."]
+    return "\n".join(lines)
 
 
 def section(text, title):
@@ -258,7 +295,7 @@ def check(root):
                 errors.append(f"{path.name}: la tarea {tid} no es de {sid}")
         for tid, capa, tipo, critica in parse_task_types(text):
             if tipo not in TIPOS[capa]:
-                errors.append(f"{path.name}: la tarea {tid} [{capa}] tiene un tipo «{tipo}» no válido (usa {', '.join(TIPOS[capa])})")
+                errors.append(f"{path.name}: la tarea {tid} [{capa}] tiene un tipo «{tipo}» no válido (usa {', '.join(TIPOS[capa])}). Los tipos y sus ejemplos están en {PLANTILLA} (o `python3 scripts/historias.py --tipos`)")
             if critica and capa != "API":
                 errors.append(f"{path.name}: la tarea {tid} lleva {RIGOR} y solo las tareas [API] pueden ser críticas (mutaciones y plan corto)")
             if tipo in SIEMPRE_CRITICOS and not critica and capa == "API":
@@ -275,6 +312,15 @@ def check(root):
         if meta["estado"] == "propuesta" and any(s in ("✅", "🔄") for _, _, s in tasks):
             errors.append(f"{path.name}: es una propuesta pero tiene tareas hechas o en curso")
         expected[sid] = ESTADOS[meta["estado"]]
+    plantilla = Path(root) / PLANTILLA
+    if plantilla.exists():
+        texto = plantilla.read_text(encoding="utf-8")
+        tabla = parse_types_table(texto)
+        for capa, tipos in TIPOS.items():
+            if set(tabla.get(capa, [])) != set(tipos):
+                errors.append(f"{PLANTILLA}: los tipos de [{capa}] de la tabla ({', '.join(tabla.get(capa, [])) or 'ninguno'}) no coinciden con los de scripts/historias.py ({', '.join(tipos)})")
+        if parse_always_critical(texto) != set(SIEMPRE_CRITICOS):
+            errors.append(f"{PLANTILLA}: los tipos «siempre {RIGOR}» de la tabla ({', '.join(sorted(parse_always_critical(texto)))}) no coinciden con los de scripts/historias.py ({', '.join(SIEMPRE_CRITICOS)})")
     cells = matrix_cells(root)
     for sid, estado in expected.items():
         if sid not in cells:
@@ -289,6 +335,9 @@ def check(root):
 
 def main(argv):
     root = Path(__file__).resolve().parent.parent
+    if "--tipos" in argv:
+        print(render_types((root / PLANTILLA).read_text(encoding="utf-8")))
+        return 0
     if "--check" not in argv:
         write_matrix(root, git_commits(root))
         print("matriz actualizada: docs/historias/README.md")
