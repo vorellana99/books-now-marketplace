@@ -247,13 +247,13 @@ Las **specifications** del dominio usan el sufijo `.specification.ts` (en la gu�
 | **Puertos como `abstract class`**, no `interface` | Sirven como token de inyección de Nest sin poner decoradores en el dominio |
 | **`contracts/` para comandos, queries y eventos públicos** | Un contexto usa a otro sin importar su código interno |
 | **Ventas → Inventario por `CommandBus`** (puerto `StockReservation`) | La reserva es sincrónica porque el pedido depende de ella |
-| **Handlers de queries en `infrastructure/`** (`GetOrderHandler`, `GetBookPriceHandler`) | Las lecturas no pasan por el dominio: leen directo con Prisma (lado de lectura de CQRS) |
+| **Los handlers de queries en `application/`** (`GetOrderHandler`, `GetBookPriceHandler`) | Las lecturas no reconstruyen el agregado, pero tampoco tocan Prisma: piden la vista a un puerto de lectura (`OrderHistory`, `BookCatalog`) y el adaptador de `infrastructure/persistence/` hace la consulta (corte 10) |
 | **Relay propio en vez del EventBus de Nest** | El EventBus no espera a los handlers ni propaga sus errores; el relay sí lo hace |
 | **Sufijo `.consumer.ts`** | Distingue una reacción del Outbox de un handler de comando |
 | **Saga mínima, sin `@Saga()` de Nest** | Las compensaciones ocurren en el handler; el checkout persistido y su job cubren las caídas |
-| **Inventario sin repositorio por ahora** | La reserva es un `UPDATE` atómico; un repositorio con bloqueo optimista no aportaría nada todavía. Por eso sus handlers usan Prisma directo y viven en `infrastructure/` (regla 3 de la arquitectura) |
+| **Inventario con un puerto de operaciones atómicas** | La reserva es un `UPDATE` atómico con bloqueos: `StockRepository` expone `reserve`, `release`, `confirm`, `add`, `createItem` y `purgeConfirmed` y `PrismaStockRepository` guarda el mismo SQL, así que los handlers de `application/` no tocan Prisma (corte 10) |
 | **Transacciones explícitas con `prisma.$transaction(tx => …)`** | Cada operación atómica vive en un solo lugar (nunca hay transacciones entre contextos), así que basta con pasar `tx`; sin librerías extra en un punto crítico |
-| **Consumidores que escriben en BD van en `infrastructure/`** | Reciben el `tx` de Prisma; los que solo llaman a servicios externos quedan en `application/` |
+| **Todos los consumidores van en `infrastructure/consumers/`** | Son adaptadores de entrada finos: los `db` convierten el `tx` del relay en un `TransactionHandle` y envían un comando cuyo handler (en `application/`) tiene las reglas; los `external` llaman a un puerto. Ninguno de `application/` (corte 10) |
 | **`Money` con decimal.js** (en vez de céntimos `number`) | Exactitud con más de 2 decimales en valores intermedios (por ejemplo, el valor unitario sin IGV que exige SUNAT) y redondeo explícito al final |
 | **Imports relativos con `.js`** | Proyecto ESM: `import { Order } from './order.aggregate.js'` |
 
