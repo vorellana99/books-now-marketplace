@@ -20,8 +20,8 @@
 | [HU-32](#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ | ✅ | Tienda MVP |
 | [HU-33](#hu-33-entender-por-qué-falló-la-compra) | Entender por qué falló la compra | Compra | ✅ | ✅ | Tienda MVP |
 | [HU-34](#hu-34-ver-la-confirmación) | Ver la confirmación | Compra | ✅ | ✅ | Tienda MVP |
-| [HU-40](#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ✅ | ⬜ | Tienda MVP |
-| [HU-41](#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ | ⬜ | Tienda MVP |
+| [HU-40](#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ✅ | ✅ | Tienda MVP |
+| [HU-41](#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ | ✅ | Tienda MVP |
 | [HU-50](#hu-50-crear-un-libro) | Crear un libro | Administración | ✅ | ⬜ | Segunda etapa |
 | [HU-51](#hu-51-editar-o-desactivar-un-libro) | Editar o desactivar un libro | Administración | ✅ | ⬜ | Segunda etapa |
 | [HU-52](#hu-52-cargar-stock) | Cargar stock | Administración | ✅ | ⬜ | Segunda etapa |

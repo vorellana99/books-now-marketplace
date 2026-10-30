@@ -5,7 +5,8 @@ import { orderNumber } from "../order-number.ts";
 const COPIED_MS = 2000;
 
 // El número corto del pedido, con un botón que copia el `id` completo (el que sirve para pedir ayuda)
-export function OrderNumber({ id }: { id: string }) {
+// `showNumber={false}` deja solo el botón, cuando el número ya está en un título
+export function OrderNumber({ id, showNumber = true }: { id: string; showNumber?: boolean }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
@@ -23,7 +24,7 @@ export function OrderNumber({ id }: { id: string }) {
 
   return (
     <span className="inline-flex items-center gap-2">
-      <span className="money font-semibold">{orderNumber(id)}</span>
+      {showNumber ? <span className="money font-semibold">{orderNumber(id)}</span> : null}
       <button
         type="button"
         onClick={() => void copy()}
