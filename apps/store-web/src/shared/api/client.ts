@@ -24,8 +24,8 @@ const baseUrl = new URL(env.VITE_API_BASE_URL, globalThis.location.origin).href.
 
 const isAuthRequest = (url: string) => new URL(url).pathname.includes("/auth/");
 
-// Copia de cada petición, para poder repetirla si el cuerpo ya se consumió al enviarla
-const sent = new Map<string, Request>();
+// Copia de cada petición, para poder repetirla si el cuerpo ya se consumió al enviarla, y el token con el que salió
+const sent = new Map<string, { request: Request; token: string | null }>();
 
 const withSession: Middleware = {
   onRequest({ request, id }) {
@@ -33,15 +33,20 @@ const withSession: Middleware = {
     if (token) request.headers.set("Authorization", `Bearer ${token}`);
     // La API acepta este identificador o genera otro, y lo devuelve: sirve de código de soporte en un error
     request.headers.set("X-Request-Id", crypto.randomUUID());
-    sent.set(id, request.clone());
+    sent.set(id, { request: request.clone(), token });
     return request;
   },
   async onResponse({ request, response, id }) {
-    const original = sent.get(id);
+    const entry = sent.get(id);
     sent.delete(id);
-    if (response.status !== 401 || isAuthRequest(request.url) || !original) return response;
+    if (response.status !== 401 || isAuthRequest(request.url) || !entry) return response;
+    const original = entry.request;
+    // Si otra petición ya renovó el token mientras esta volvía, basta con repetirla con el nuevo: renovar otra vez
+    // gastaría un token de refresco de más
+    const alreadyRenewed =
+      session.getAccessToken() !== null && session.getAccessToken() !== entry.token;
     // Token vencido: se renueva una vez y se repite la petición original
-    if (!(await session.refreshSession())) return response;
+    if (!alreadyRenewed && !(await session.refreshSession())) return response;
     const token = session.getAccessToken();
     if (token) original.headers.set("Authorization", `Bearer ${token}`);
     return globalThis.fetch(original);

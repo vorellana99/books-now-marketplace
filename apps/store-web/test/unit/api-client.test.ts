@@ -93,6 +93,34 @@ describe("renovación tras un 401", () => {
     expect(seen).toEqual(["Bearer viejo", "Bearer nuevo"]);
   });
 
+  it("si otra petición ya renovó el token cuando llega el 401, repite con el token nuevo sin renovar otra vez", async () => {
+    // El token que se lee al enviar es "viejo"; para cuando llega el 401, la sesión ya tiene "nuevo"
+    let reads = 0;
+    const refreshSession = vi.fn(() => Promise.resolve(true));
+    configureApi({
+      getAccessToken: () => (reads++ === 0 ? "viejo" : "nuevo"),
+      refreshSession,
+    });
+    const seen: (string | null)[] = [];
+    server.use(
+      http.get(URL("/books/:isbn"), ({ request }) => {
+        const authorization = request.headers.get("Authorization");
+        seen.push(authorization);
+        return authorization === "Bearer nuevo"
+          ? HttpResponse.json(bookBody)
+          : HttpResponse.json({ statusCode: 401, errorCode: "UNAUTHENTICATED" }, { status: 401 });
+      }),
+    );
+
+    const book = await unwrap(
+      api.GET("/books/{isbn}", { params: { path: { isbn: "9780132350884" } } }),
+    );
+
+    expect(book.title).toBe("Clean Code");
+    expect(refreshSession).not.toHaveBeenCalled();
+    expect(seen).toEqual(["Bearer viejo", "Bearer nuevo"]);
+  });
+
   it("repite también una petición con cuerpo (el cuerpo no se pierde)", async () => {
     let token = "viejo";
     configureApi({
