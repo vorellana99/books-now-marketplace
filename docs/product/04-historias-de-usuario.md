@@ -82,7 +82,7 @@ Reglas: RN-35 · `POST /auth/logout`
 Reglas: RN-12 · Pantallas: PA-01 · `GET /books?q=&page=&pageSize=`
 
 - **Dado** que abro el catálogo sin buscar, **cuando** carga, **entonces** veo los libros activos ordenados por título, de 20 en 20, con título, autor y precio.
-- **Dado** que escribo en el buscador, **cuando** envío la búsqueda, **entonces** veo los libros cuyo título o autor coinciden, sin distinguir mayúsculas ni acentos, y la URL guarda la búsqueda y la página (se puede compartir).
+- **Dado** que escribo en el buscador, **cuando** envío la búsqueda, **entonces** veo los libros cuyo título o autor coinciden, sin distinguir mayúsculas (los acentos cuentan: la API busca con `ILIKE`, ver [problema abierto 10 del frontend](../frontend/00-avance.md#problemas-abiertos)), y la URL guarda la búsqueda y la página (se puede compartir).
 - **Dado** una búsqueda sin resultados, **cuando** carga, **entonces** veo un mensaje vacío con una sugerencia ("No encontramos libros para «x»") y la opción de limpiar la búsqueda.
 - **Dado** que hay más de una página, **cuando** pulso "siguiente", **entonces** veo la página siguiente y sé en cuál estoy y cuántos resultados hay en total.
 - **Dado** que la carga tarda o falla, **cuando** ocurre, **entonces** veo un estado de carga y, si falla, un mensaje con la opción de reintentar.

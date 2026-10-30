@@ -41,6 +41,13 @@
   --danger-bg: #fcebea;
   --danger-border: #efb3af;
   --gold: #c8963e;
+  /* Los seis tonos de la portada tipográfica (docs/product/diseno/01-tokens.md): granate, verde, azul, ocre, ciruela, pizarra */
+  --cover-1: #7a2e3a;
+  --cover-2: #2f5d50;
+  --cover-3: #2b4a6f;
+  --cover-4: #7a5a1e;
+  --cover-5: #5b3a66;
+  --cover-6: #3f4a52;
   --radius: 0.5rem;
 }
 
@@ -78,6 +85,12 @@
   --color-danger-bg: var(--danger-bg);
   --color-danger-border: var(--danger-border);
   --color-gold: var(--gold);
+  --color-cover-1: var(--cover-1);
+  --color-cover-2: var(--cover-2);
+  --color-cover-3: var(--cover-3);
+  --color-cover-4: var(--cover-4);
+  --color-cover-5: var(--cover-5);
+  --color-cover-6: var(--cover-6);
   --radius-md: var(--radius);
   --radius-lg: calc(var(--radius) + 4px);
   --font-sans: "Inter Variable", system-ui, sans-serif;

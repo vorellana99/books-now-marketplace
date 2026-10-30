@@ -1,8 +1,15 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vite-plus/test";
+import { beforeEach, describe, expect, it } from "vite-plus/test";
 import { expectNoA11yViolations } from "../support/axe.ts";
+import { book, page, searchHandler } from "../support/books.ts";
 import { renderApp } from "../support/render.tsx";
+import { server } from "../support/server.ts";
+
+// Desde F1 la ruta `/` carga el catálogo: estas pruebas miran el armazón, no la lista
+beforeEach(() => {
+  server.use(searchHandler(() => page([book()])));
+});
 
 describe("layout y cabecera", () => {
   it("tiene el enlace para saltar al contenido como primer elemento enfocable", async () => {
@@ -53,7 +60,8 @@ describe("layout y cabecera", () => {
 
   it("el buscador de la cabecera no tiene un botón oculto: sería una parada de teclado invisible", async () => {
     await renderApp("/");
-    for (const form of screen.getAllByRole("search")) {
+    // Solo los de la cabecera: el de la propia página (móvil) sí lleva su botón, visible
+    for (const form of within(screen.getByRole("banner")).getAllByRole("search")) {
       expect(within(form).queryByRole("button", { name: "Buscar" })).toBeNull();
     }
   });
