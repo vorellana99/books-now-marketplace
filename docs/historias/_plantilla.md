@@ -36,22 +36,22 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 
 ## Tareas
 
-> **Tipo** (segunda columna): dice qué receta aplica y **se elige por lo que cambia**, no por cómo se programa:
+> **Tipo** (segunda columna): dice qué receta aplica y **se elige por lo que cambia**, no por cómo se programa. Los nombres se escriben exactos, en **kebab-case** (minúsculas, sin acentos ni símbolos y con guiones en lugar de espacios):
 >
 > | Capa | Tipo | ¿Qué cambia? | Ejemplos |
 > |---|---|---|---|
 > | `[API]` | `contrato` | **Lo que la API le ofrece a la tienda** | Un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo |
 > | `[API]` | `regla` | **Cómo decide el negocio** | Un cálculo, un límite («máximo 10»), una condición |
 > | `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | Reaccionar a «se registró un usuario» |
-> | `[API]` | `base de datos` | Las tablas, columnas, índices o restricciones | Una columna nueva |
-> | `[API]` | `configuración` | Una variable de entorno | `JWT_SECRET` |
+> | `[API]` | `base-de-datos` | Las tablas, columnas, índices o restricciones | Una columna nueva |
+> | `[API]` | `configuracion` | Una variable de entorno | `JWT_SECRET` |
 > | `[WEB]` | `pantalla` | **Lo que se ve** | Mover un botón, un texto nuevo, un aviso |
 > | `[WEB]` | `comportamiento` | **Lo que la tienda hace**, sin cambiar lo que se ve | Pedir el campo nuevo a la API, el estado del carrito, validar un formulario |
 > | `[DOC]` | `producto` | Reglas, decisiones, historias, mensajes, diseño | `RN-13`, un `DP` |
-> | `[DOC]` | `guía` | Guías técnicas, README, comandos | `CLAUDE.md` |
-> | `[E2E]` | `—` | El recorrido de punta a punta | — |
+> | `[DOC]` | `guia` | Guías técnicas, README, comandos | `CLAUDE.md` |
+> | `[E2E]` | `recorrido` | El recorrido de punta a punta | — |
 >
-> Un endpoint nuevo con lógica nueva son **dos tareas**: la `regla` y el `contrato`. **🔒** junto al tipo marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar): solo en `[API]`, y `base de datos` y `evento` siempre la llevan.
+> Un endpoint nuevo con lógica nueva son **dos tareas**: la `regla` y el `contrato`. **🔒** junto al tipo marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar): solo en `[API]`, y `base-de-datos` y `evento` siempre la llevan.
 >
 > **Diagrama opcional: de flujo** con las dependencias entre tareas, solo si son más de 5 o cruzan varias historias.
 >
@@ -62,7 +62,7 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 | HU-nn.1 | [DOC] | producto | … | … | — | 📝 |
 | HU-nn.2 | [API] | contrato | … | … | HU-nn.1 | 📝 |
 | HU-nn.3 | [WEB] | pantalla | … | … | HU-nn.2 | 📝 |
-| HU-nn.4 | [E2E] | — | … | … | HU-nn.3 | 📝 |
+| HU-nn.4 | [E2E] | recorrido | … | … | HU-nn.3 | 📝 |
 
 - [ ] HU-nn.1 [DOC] … Se comprueba: …
 

@@ -238,16 +238,28 @@ class Comprobacion(unittest.TestCase):
         self.assertTrue(any("tipo" in e and "HU-12.4" in e for e in self.errors()))
 
     def test_los_nombres_antiguos_ya_no_valen(self):
-        for viejo, capa in (("ruta", "API"), ("dominio", "API"), ("migración", "API"), ("config", "API"), ("datos", "WEB")):
-            otra = "WEB" if capa == "WEB" else "API"
-            fila = "[API] | contrato" if capa == "API" else "[WEB] | pantalla"
-            self.file.write_text(HU_OK.replace(fila, f"[{otra}] | {viejo}"), encoding="utf-8")
+        fila_por_capa = {"API": "[API] | contrato", "WEB": "[WEB] | pantalla", "DOC": "[DOC] | producto"}
+        for viejo, capa in (("ruta", "API"), ("dominio", "API"), ("migración", "API"), ("config", "API"), ("datos", "WEB"),
+                            ("base de datos", "API"), ("configuración", "API"), ("guía", "DOC")):
+            self.file.write_text(HU_OK.replace(fila_por_capa[capa], f"[{capa}] | {viejo}"), encoding="utf-8")
             self.assertTrue(any("tipo" in e for e in self.errors()), viejo)
+        conE2E = HU_OK + "| HU-12.5 | [E2E] | — | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
+        self.file.write_text(conE2E, encoding="utf-8")
+        self.assertTrue(any("tipo" in e and "HU-12.5" in e for e in self.errors()))
+
+    def test_las_mayusculas_no_valen(self):
+        self.file.write_text(HU_OK.replace("[API] | contrato", "[API] | Contrato"), encoding="utf-8")
+        self.assertTrue(any("tipo" in e and "HU-12.3" in e for e in self.errors()))
+
+    def test_todos_los_tipos_son_kebab_case(self):
+        for capa, tipos in h.TIPOS.items():
+            for tipo in tipos:
+                self.assertRegex(tipo, r"^[a-z0-9]+(-[a-z0-9]+)*$", f"{capa}: {tipo}")
 
     def test_el_error_lista_los_tipos_validos_de_la_capa(self):
         self.file.write_text(HU_OK.replace("[API] | contrato", "[API] | cosa"), encoding="utf-8")
         mensaje = " ".join(self.errors())
-        for tipo in ("contrato", "regla", "evento", "base de datos", "configuración"):
+        for tipo in ("contrato", "regla", "evento", "base-de-datos", "configuracion"):
             self.assertIn(tipo, mensaje)
 
     def test_una_tarea_sin_tipo(self):
@@ -255,7 +267,7 @@ class Comprobacion(unittest.TestCase):
         self.assertTrue(any("tipo" in e and "HU-12.3" in e for e in self.errors()))
 
     def test_migracion_y_evento_siempre_son_criticos(self):
-        for tipo in ("base de datos", "evento"):
+        for tipo in ("base-de-datos", "evento"):
             self.file.write_text(HU_OK.replace("[API] | contrato", f"[API] | {tipo}"), encoding="utf-8")
             self.assertTrue(any("🔒" in e and "HU-12.3" in e for e in self.errors()), tipo)
             self.file.write_text(HU_OK.replace("[API] | contrato", f"[API] | {tipo} 🔒"), encoding="utf-8")
@@ -266,10 +278,10 @@ class Comprobacion(unittest.TestCase):
         self.assertTrue(any("🔒" in e and "HU-12.4" in e for e in self.errors()))
 
     def test_las_tareas_e2e_no_llevan_tipo(self):
-        conE2E = HU_OK + "| HU-12.5 | [E2E] | — | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
+        conE2E = HU_OK + "| HU-12.5 | [E2E] | recorrido | Recorrido | lo que sea | HU-12.4 | ⬜ |\n"
         self.file.write_text(conE2E, encoding="utf-8")
         self.assertEqual(self.errors(), [])
-        self.file.write_text(conE2E.replace("[E2E] | —", "[E2E] | contrato"), encoding="utf-8")
+        self.file.write_text(conE2E.replace("[E2E] | recorrido", "[E2E] | contrato"), encoding="utf-8")
         self.assertTrue(any("tipo" in e and "HU-12.5" in e for e in self.errors()))
 
     def test_una_historia_cerrada_con_tareas_pendientes(self):

@@ -27,14 +27,14 @@ REQUERIDOS = ("id", "titulo", "tipo", "epica", "estado")
 # `| HU-12.2 | [API] | regla 🔒 | Tarea | Se comprueba | Depende de | Estado |`
 TAREA = re.compile(r"^\|\s*((?:HU|EN)-\d+\.\d+)\s*\|\s*\[(API|WEB|E2E|DOC)\]\s*\|([^|]*)\|.*\|\s*(⬜|🔄|✅|📝|⛔)\s*\|\s*$")
 RIGOR = "🔒"  # tarea crítica: mutaciones obligatorias y plan corto antes de codificar (solo [API])
-# Tipo de cada capa: dice qué receta aplica. Las [E2E] no llevan tipo (—)
+# Tipo de cada capa: dice qué receta aplica. Siempre en kebab-case (minúsculas, sin acentos ni símbolos, con guiones en vez de espacios)
 TIPOS = {
-    "API": ("contrato", "regla", "evento", "base de datos", "configuración"),
+    "API": ("contrato", "regla", "evento", "base-de-datos", "configuracion"),
     "WEB": ("pantalla", "comportamiento"),
-    "DOC": ("producto", "guía"),
-    "E2E": ("—",),
+    "DOC": ("producto", "guia"),
+    "E2E": ("recorrido",),
 }
-SIEMPRE_CRITICOS = ("base de datos", "evento")
+SIEMPRE_CRITICOS = ("base-de-datos", "evento")
 
 
 class HistoriaError(Exception):

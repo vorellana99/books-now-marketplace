@@ -31,21 +31,21 @@ Reglas del desglose:
 - **Orden:** `[DOC]` → `[API]` → `[WEB]` → `[E2E]`, y cada tarea dice **de cuál depende**. Lo que no depende de nada anterior puede ir antes.
 - **Una tarea nunca deja la compuerta en rojo.** Un cambio de contrato es primero **aditivo** (se añade el campo nuevo; la tienda pasa a usarlo); quitar o renombrar lo viejo es otra tarea posterior.
 - **Si al implementar aparece trabajo de otra capa**, no se mezcla: es una tarea nueva con su dependencia y se avisa.
-- **Tipo y rigor de cada tarea** (columna «Tipo», justo después de la capa). **Se elige por lo que cambia**, no por cómo se programa: dice qué receta aplica y si es crítica.
+- **Tipo y rigor de cada tarea** (columna «Tipo», justo después de la capa). **Se elige por lo que cambia**, no por cómo se programa, y se escribe exacto en **kebab-case** (minúsculas, sin acentos ni símbolos, con guiones en vez de espacios): dice qué receta aplica y si es crítica.
 
   | Capa | Tipo | ¿Qué cambia? | Receta |
   |---|---|---|---|
   | `[API]` | `contrato` | **Lo que la API le ofrece a la tienda**: un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | `/nueva-ruta` si es un endpoint nuevo; la primera `[WEB]` que lo use, `/cambio-de-contrato` |
   | `[API]` | `regla` | **Cómo decide el negocio**: un cálculo, un límite, una condición | Pruebas primero y, si toca dinero, seguridad o concurrencia, 🔒 |
   | `[API]` | `evento` | Un aviso entre partes del sistema (Outbox) | `/nuevo-evento` (siempre 🔒) |
-  | `[API]` | `base de datos` | Tablas, columnas, índices o restricciones | `/nueva-migracion` (siempre 🔒) |
-  | `[API]` | `configuración` | Una variable de entorno | `/nueva-variable-entorno` |
+  | `[API]` | `base-de-datos` | Tablas, columnas, índices o restricciones | `/nueva-migracion` (siempre 🔒) |
+  | `[API]` | `configuracion` | Una variable de entorno | `/nueva-variable-entorno` |
   | `[WEB]` | `pantalla` | **Lo que se ve**: componentes, textos, disposición | La «Pantalla» de la HU y la revisión en navegador real |
   | `[WEB]` | `comportamiento` | **Lo que la tienda hace** sin cambiar lo que se ve: consultas a la API, estado, validaciones, el carrito | Compuerta de la tienda |
-  | `[DOC]` | `producto` o `guía` | `RN`/`DP`/HU/mensajes/diseño, o guías técnicas, README y comandos | Los documentos que toque |
-  | `[E2E]` | `—` | El recorrido contra el backend real | Playwright |
+  | `[DOC]` | `producto` o `guia` | `RN`/`DP`/HU/mensajes/diseño, o guías técnicas, README y comandos | Los documentos que toque |
+  | `[E2E]` | `recorrido` | El recorrido contra el backend real | Playwright |
 
-  **🔒** junto al tipo marca una tarea **crítica**: mutaciones obligatorias y plan corto antes de codificar. Solo en `[API]`. Se marca cuando la tarea toca dinero y precios, seguridad (tokens, contraseñas, guards, roles, CORS, límites), concurrencia y transacciones (outbox, reservas, idempotencia), restricciones de la base o reglas del dominio críticas; `base de datos` y `evento` siempre la llevan (el comprobador lo exige). **Un endpoint nuevo con lógica nueva son dos tareas** (la `regla` y el `contrato`); si una tarea mezcla tipos, elige el que decide la receta y el rigor, o pártela.
+  **🔒** junto al tipo marca una tarea **crítica**: mutaciones obligatorias y plan corto antes de codificar. Solo en `[API]`. Se marca cuando la tarea toca dinero y precios, seguridad (tokens, contraseñas, guards, roles, CORS, límites), concurrencia y transacciones (outbox, reservas, idempotencia), restricciones de la base o reglas del dominio críticas; `base-de-datos` y `evento` siempre la llevan (el comprobador lo exige). **Un endpoint nuevo con lógica nueva son dos tareas** (la `regla` y el `contrato`); si una tarea mezcla tipos, elige el que decide la receta y el rigor, o pártela.
 - **Lista para ejecutar:** una tarea está lista cuando alguien puede escribir su primera prueba roja leyendo solo su fila. El detalle mínimo depende de la tarea:
 
   | Tarea | Detalle antes de ejecutarla |
@@ -65,7 +65,7 @@ Reglas del desglose:
 ## 3. Dejarlo en el tablero
 
 Crea `docs/historias/HU-nn-titulo-en-minusculas.md` desde la plantilla (el nombre empieza por el id; `estado: propuesta`):
-- El encabezado, la historia, sus criterios, su «Listo cuando», la sección **«## Pantalla»** (obligatoria si hay tareas `[WEB]`: **dónde** va lo que cambia, un croquis en texto si una frase no basta, los **estados**, los **textos exactos** de `product/07`, qué cambia entre móvil y escritorio y la accesibilidad; reutiliza `product/diseno/`; una pantalla nueva o un componente grande va antes en una tarea `[DOC]` que actualiza el wireframe y el mockup; o «Sin cambios visuales»; el comprobador la exige), la sección **«## Contrato»** (obligatoria si hay tareas `[API]`: rutas y métodos, cuerpo, ejemplo JSON de la respuesta, errores nuevos, compatibilidad y qué no cambia; o «Sin cambios en el contrato»; el comprobador la exige), la tabla de tareas (`# | Capa | Tipo | Tarea | Se comprueba | Depende de | Estado`, todas 📝; el comprobador valida que el tipo sea de la capa y que `base de datos` y `evento` lleven 🔒) y las casillas.
+- El encabezado, la historia, sus criterios, su «Listo cuando», la sección **«## Pantalla»** (obligatoria si hay tareas `[WEB]`: **dónde** va lo que cambia, un croquis en texto si una frase no basta, los **estados**, los **textos exactos** de `product/07`, qué cambia entre móvil y escritorio y la accesibilidad; reutiliza `product/diseno/`; una pantalla nueva o un componente grande va antes en una tarea `[DOC]` que actualiza el wireframe y el mockup; o «Sin cambios visuales»; el comprobador la exige), la sección **«## Contrato»** (obligatoria si hay tareas `[API]`: rutas y métodos, cuerpo, ejemplo JSON de la respuesta, errores nuevos, compatibilidad y qué no cambia; o «Sin cambios en el contrato»; el comprobador la exige), la tabla de tareas (`# | Capa | Tipo | Tarea | Se comprueba | Depende de | Estado`, todas 📝; el comprobador valida que el tipo sea de la capa y que `base-de-datos` y `evento` lleven 🔒) y las casillas.
 - Su bitácora con una fila («desglosada, pendiente de aprobación»).
 - Ejecuta `python3 scripts/historias.py`: agrega la fila a la matriz y comprueba que el archivo está bien formado.
 - **No toques** `product/04` (histórico), `RN`, `DP` ni el código todavía: eso lo hace la tarea `[DOC]` cuando el usuario apruebe.
