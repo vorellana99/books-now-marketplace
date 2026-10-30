@@ -1,5 +1,5 @@
 import { Logger } from '@nestjs/common';
-import { Notifier } from '../../domain/order/notifier.port.js';
+import { Notifier } from '../../domain/ports/notifier.port.js';
 
 // Todavía no hay proveedor de email: el correo se escribe en el log. Como el log lleva el requestId, se puede
 // seguir una compra desde la petición hasta el correo que dispara.

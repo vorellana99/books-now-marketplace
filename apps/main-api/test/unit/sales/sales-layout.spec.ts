@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 
 const BASE = 'src/contexts/sales/infrastructure';
 const files = (dir: string): string[] => {
@@ -76,5 +76,39 @@ describe('estructura de sales/infrastructure', () => {
     for (const old of ['order', 'customer', 'payment']) {
       expect(files(old), old).toEqual([]);
     }
+  });
+});
+
+// Los puertos de Ventas viven donde los de los otros tres contextos: domain/ports/ (tarea 10.11)
+describe('estructura de sales/domain', () => {
+  const DOMAIN = 'src/contexts/sales/domain';
+  const names = (dir: string) =>
+    existsSync(`${DOMAIN}/${dir}`)
+      ? readdirSync(`${DOMAIN}/${dir}`, { withFileTypes: true })
+          .filter((e) => e.isFile())
+          .map((e) => e.name)
+          .sort((a, b) => a.localeCompare(b))
+      : [];
+
+  it('domain/ports/ tiene los siete puertos', () => {
+    expect(names('ports')).toEqual([
+      'catalog-pricing.port.ts',
+      'checkout-log.port.ts',
+      'customer.repository.ts',
+      'notifier.port.ts',
+      'order.repository.ts',
+      'payment-gateway.port.ts',
+      'stock-reservation.port.ts',
+    ]);
+  });
+
+  it('ningún puerto queda junto a su agregado ni en la carpeta de pagos', () => {
+    for (const dir of ['order', 'customer', 'payment']) {
+      const leftovers = names(dir).filter(
+        (f) => f.endsWith('.port.ts') || f.endsWith('.repository.ts'),
+      );
+      expect(leftovers, dir).toEqual([]);
+    }
+    expect(names('payment')).toEqual([]);
   });
 });

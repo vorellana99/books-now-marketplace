@@ -1,5 +1,5 @@
 import type { Money } from '../shared/money.vo.js';
-import type { Order } from './order.aggregate.js';
+import type { Order } from '../order/order.aggregate.js';
 
 export abstract class OrderRepository {
   abstract findById(id: string): Promise<Order | null>;

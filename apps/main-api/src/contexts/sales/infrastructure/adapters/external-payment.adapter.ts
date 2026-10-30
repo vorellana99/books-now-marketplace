@@ -1,7 +1,7 @@
 import {
   PaymentGateway,
   type PaymentResult,
-} from '../../domain/payment/payment-gateway.port.js';
+} from '../../domain/ports/payment-gateway.port.js';
 import type { Money } from '../../domain/shared/money.vo.js';
 
 export const PAYMENT_TIMEOUT_MS = 10_000;

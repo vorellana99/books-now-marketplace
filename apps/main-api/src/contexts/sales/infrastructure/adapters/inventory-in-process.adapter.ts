@@ -5,7 +5,7 @@ import { ReserveStockCommand } from '../../../../contracts/inventory/reserve-sto
 import {
   StockReservation,
   type StockLine,
-} from '../../domain/order/stock-reservation.port.js';
+} from '../../domain/ports/stock-reservation.port.js';
 
 // Ventas habla con Inventario solo por sus comandos (`contracts/`). OutOfStockError y StockItemNotFoundError
 // llegan con su clase, para que el filtro HTTP las responda como 422

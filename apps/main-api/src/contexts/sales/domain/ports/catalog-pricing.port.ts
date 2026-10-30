@@ -1,4 +1,4 @@
-import type { PricedCartItem } from './order.factory.js';
+import type { PricedCartItem } from '../order/order.factory.js';
 
 export interface CartItem {
   isbn: string;

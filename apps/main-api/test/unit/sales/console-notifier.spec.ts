@@ -1,6 +1,6 @@
 import { ConsoleLogger, Logger } from '@nestjs/common';
 import { ConsoleNotifier } from '../../../src/contexts/sales/infrastructure/adapters/console-notifier.adapter.js';
-import { Notifier } from '../../../src/contexts/sales/domain/order/notifier.port.js';
+import { Notifier } from '../../../src/contexts/sales/domain/ports/notifier.port.js';
 import { RequestAwareLogger } from '../../../src/platform/observability/request-aware.logger.js';
 import { RequestContext } from '../../../src/platform/observability/request-context.js';
 

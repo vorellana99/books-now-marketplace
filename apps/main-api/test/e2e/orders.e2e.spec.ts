@@ -3,7 +3,7 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
-import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
+import { PaymentGateway } from '../../src/contexts/sales/domain/ports/payment-gateway.port.js';
 import type { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';

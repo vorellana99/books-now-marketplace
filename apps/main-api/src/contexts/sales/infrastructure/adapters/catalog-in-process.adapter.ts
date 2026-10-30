@@ -5,7 +5,7 @@ import { NotFoundError } from '../../../../shared-kernel/domain.errors.js';
 import {
   CatalogPricing,
   type CartItem,
-} from '../../domain/order/catalog-pricing.port.js';
+} from '../../domain/ports/catalog-pricing.port.js';
 import type { PricedCartItem } from '../../domain/order/order.factory.js';
 
 // Ventas habla con Catálogo solo por su contrato (`contracts/`), nunca con su código interno

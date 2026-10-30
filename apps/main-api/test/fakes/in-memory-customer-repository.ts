@@ -1,5 +1,5 @@
 import type { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
-import { CustomerRepository } from '../../src/contexts/sales/domain/customer/customer.repository.js';
+import { CustomerRepository } from '../../src/contexts/sales/domain/ports/customer.repository.js';
 
 export class InMemoryCustomerRepository extends CustomerRepository {
   private readonly byId: Map<string, Customer>;

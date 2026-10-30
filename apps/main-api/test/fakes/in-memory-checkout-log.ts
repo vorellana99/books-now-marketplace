@@ -4,7 +4,7 @@ import {
   CheckoutLog,
   type CheckoutRecord,
   type CheckoutStatus,
-} from '../../src/contexts/sales/domain/order/checkout-log.port.js';
+} from '../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import type { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 

@@ -95,16 +95,10 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   │   ├── order.aggregate.ts
 │       │   │   │   ├── order-line.entity.ts
 │       │   │   │   ├── order.factory.ts
-│       │   │   │   ├── shipping-address.vo.ts              ✅ hecho (6.2)
-│       │   │   │   ├── order.repository.ts
-│       │   │   │   ├── checkout-log.port.ts
-│       │   │   │   ├── catalog-pricing.port.ts
-│       │   │   │   ├── stock-reservation.port.ts
-│       │   │   │   └── notifier.port.ts
+│       │   │   │   └── shipping-address.vo.ts              ✅ hecho (6.2)
 │       │   │   ├── customer/
 │       │   │   │   ├── customer.aggregate.ts
-│       │   │   │   ├── email.vo.ts
-│       │   │   │   └── customer.repository.ts
+│       │   │   │   └── email.vo.ts
 │       │   │   ├── pricing/
 │       │   │   │   ├── pricing.service.ts
 │       │   │   │   ├── pricing-context.ts
@@ -112,7 +106,13 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   │   ├── minimum-subtotal.specification.ts
 │       │   │   │   ├── premium-customer.specification.ts
 │       │   │   │   └── premium-offer.specification.ts
-│       │   │   ├── payment/
+│       │   │   ├── ports/                                  los puertos (10.11)
+│       │   │   │   ├── order.repository.ts
+│       │   │   │   ├── customer.repository.ts
+│       │   │   │   ├── checkout-log.port.ts
+│       │   │   │   ├── catalog-pricing.port.ts
+│       │   │   │   ├── stock-reservation.port.ts
+│       │   │   │   ├── notifier.port.ts
 │       │   │   │   └── payment-gateway.port.ts
 │       │   │   └── shared/
 │       │   │       ├── money.vo.ts   decimal.js

@@ -4,8 +4,8 @@ import { PlaceOrderCommand } from '../../../src/contexts/sales/application/order
 import { OrderPricer } from '../../../src/contexts/sales/application/order/order-pricer.js';
 import { PlaceOrderHandler } from '../../../src/contexts/sales/application/order/place-order.handler.js';
 import { hashRequest } from '../../../src/contexts/sales/application/order/request-hash.js';
-import type { CatalogPricing } from '../../../src/contexts/sales/domain/order/catalog-pricing.port.js';
-import type { CustomerRepository } from '../../../src/contexts/sales/domain/customer/customer.repository.js';
+import type { CatalogPricing } from '../../../src/contexts/sales/domain/ports/catalog-pricing.port.js';
+import type { CustomerRepository } from '../../../src/contexts/sales/domain/ports/customer.repository.js';
 import type { ShippingAddressData } from '../../../src/contexts/sales/domain/order/shipping-address.vo.js';
 import { PricingService } from '../../../src/contexts/sales/domain/pricing/pricing.service.js';
 import type { OrderPlacedEvent } from '../../../src/contracts/sales/order-placed.event.js';

@@ -1,7 +1,7 @@
 import {
   RECOVERY_BATCH,
   RECOVERY_LOCK_MINUTES,
-} from '../../../src/contexts/sales/domain/order/checkout-log.port.js';
+} from '../../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import { PAYMENT_TIMEOUT_MS } from '../../../src/contexts/sales/infrastructure/adapters/external-payment.adapter.js';
 import { envSchema } from '../../../src/platform/config/env.schema.js';
 import { BATCH, LEASE_MS } from '../../../src/platform/outbox/outbox.relay.js';

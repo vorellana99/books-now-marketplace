@@ -1,4 +1,4 @@
-import { PaymentGateway } from '../../../src/contexts/sales/domain/payment/payment-gateway.port.js';
+import { PaymentGateway } from '../../../src/contexts/sales/domain/ports/payment-gateway.port.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import { SimulatedPaymentGateway } from '../../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 

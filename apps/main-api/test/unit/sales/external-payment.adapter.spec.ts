@@ -5,7 +5,7 @@ import {
   type ServerResponse,
 } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { PaymentGateway } from '../../../src/contexts/sales/domain/payment/payment-gateway.port.js';
+import { PaymentGateway } from '../../../src/contexts/sales/domain/ports/payment-gateway.port.js';
 import { Money } from '../../../src/contexts/sales/domain/shared/money.vo.js';
 import {
   ExternalPaymentAdapter,

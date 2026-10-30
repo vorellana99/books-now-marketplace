@@ -2,9 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { RequestContext } from '../../../../platform/observability/request-context.js';
-import { CheckoutLog } from '../../domain/order/checkout-log.port.js';
-import { StockReservation } from '../../domain/order/stock-reservation.port.js';
-import { PaymentGateway } from '../../domain/payment/payment-gateway.port.js';
+import { CheckoutLog } from '../../domain/ports/checkout-log.port.js';
+import { StockReservation } from '../../domain/ports/stock-reservation.port.js';
+import { PaymentGateway } from '../../domain/ports/payment-gateway.port.js';
 
 // Recupera las compras que se quedaron a medias (el proceso cayó o una compensación falló): reembolsa, libera la
 // reserva y anula el checkout. Los tres pasos son idempotentes, así que repetirlos no hace daño

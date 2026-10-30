@@ -6,7 +6,7 @@ import { PrismaCustomerRepository } from '../../src/contexts/sales/infrastructur
 import {
   RECOVERY_BATCH,
   RECOVERY_LOCK_MINUTES,
-} from '../../src/contexts/sales/domain/order/checkout-log.port.js';
+} from '../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';

@@ -1,5 +1,5 @@
 import { Query } from '@nestjs/cqrs';
-import type { CartItem } from '../../domain/order/catalog-pricing.port.js';
+import type { CartItem } from '../../domain/ports/catalog-pricing.port.js';
 import type { Currency, Money } from '../../domain/shared/money.vo.js';
 
 export interface QuoteLine {

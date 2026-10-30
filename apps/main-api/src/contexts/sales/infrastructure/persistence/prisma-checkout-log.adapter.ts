@@ -7,7 +7,7 @@ import {
   RECOVERY_BATCH,
   RECOVERY_LOCK_MINUTES,
   type CheckoutRecord,
-} from '../../domain/order/checkout-log.port.js';
+} from '../../domain/ports/checkout-log.port.js';
 import { Money } from '../../domain/shared/money.vo.js';
 import { isUniqueViolation } from '../../../../platform/prisma/unique-violation.js';
 

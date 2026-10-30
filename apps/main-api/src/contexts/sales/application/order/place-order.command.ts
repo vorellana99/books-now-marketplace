@@ -1,6 +1,6 @@
 import { Command } from '@nestjs/cqrs';
 import type { ShippingAddressData } from '../../domain/order/shipping-address.vo.js';
-import type { CartItem } from '../../domain/order/catalog-pricing.port.js';
+import type { CartItem } from '../../domain/ports/catalog-pricing.port.js';
 import type { Money } from '../../domain/shared/money.vo.js';
 
 export interface PlaceOrderResult {

@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { runPurge } from '../../../../platform/retention/purge-in-batches.js';
-import { CheckoutLog } from '../../domain/order/checkout-log.port.js';
+import { CheckoutLog } from '../../domain/ports/checkout-log.port.js';
 
 // Borra cada noche los checkouts ya terminados (COMPLETED o ABORTED) con más de RETENTION_CHECKOUT_DAYS días. Un PENDING
 // no se toca nunca. Purgar un checkout olvida su Idempotency-Key: pasado el plazo, la misma clave ya no devuelve el pedido

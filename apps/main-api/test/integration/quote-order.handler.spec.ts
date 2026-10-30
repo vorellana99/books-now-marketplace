@@ -5,7 +5,7 @@ import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { PlaceOrderCommand } from '../../src/contexts/sales/application/order/place-order.command.js';
 import { QuoteOrderQuery } from '../../src/contexts/sales/application/order/quote-order.query.js';
-import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
+import { PaymentGateway } from '../../src/contexts/sales/domain/ports/payment-gateway.port.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import {

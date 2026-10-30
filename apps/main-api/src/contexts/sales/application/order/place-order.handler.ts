@@ -7,12 +7,12 @@ import {
 import {
   CheckoutLog,
   type CheckoutRecord,
-} from '../../domain/order/checkout-log.port.js';
+} from '../../domain/ports/checkout-log.port.js';
 import type { Order } from '../../domain/order/order.aggregate.js';
 import { ShippingAddress } from '../../domain/order/shipping-address.vo.js';
-import { OrderRepository } from '../../domain/order/order.repository.js';
-import { StockReservation } from '../../domain/order/stock-reservation.port.js';
-import { PaymentGateway } from '../../domain/payment/payment-gateway.port.js';
+import { OrderRepository } from '../../domain/ports/order.repository.js';
+import { StockReservation } from '../../domain/ports/stock-reservation.port.js';
+import { PaymentGateway } from '../../domain/ports/payment-gateway.port.js';
 import type { Money } from '../../domain/shared/money.vo.js';
 import {
   PlaceOrderCommand,

@@ -5,8 +5,8 @@ import type {
   ExternalOutboxConsumer,
 } from '../../../../platform/outbox/outbox-consumer.js';
 import { OutboxHandler } from '../../../../platform/outbox/outbox-handler.decorator.js';
-import { CustomerRepository } from '../../domain/customer/customer.repository.js';
-import { Notifier } from '../../domain/order/notifier.port.js';
+import { CustomerRepository } from '../../domain/ports/customer.repository.js';
+import { Notifier } from '../../domain/ports/notifier.port.js';
 
 // Avisa al cliente de que su pedido fue recibido. El relay lo ejecuta fuera de toda transacción y puede entregar
 // el mismo evento más de una vez, así que el eventId viaja como clave de idempotencia

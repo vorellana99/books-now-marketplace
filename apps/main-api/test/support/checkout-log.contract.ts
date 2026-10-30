@@ -3,7 +3,7 @@ import {
   RECOVERY_BATCH,
   type CheckoutLog,
   type CheckoutStatus,
-} from '../../src/contexts/sales/domain/order/checkout-log.port.js';
+} from '../../src/contexts/sales/domain/ports/checkout-log.port.js';
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 

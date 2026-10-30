@@ -88,20 +88,20 @@ flowchart LR
 ### Dominio: puertos y eventos
 
 ```ts
-// sales/domain/order/stock-reservation.port.ts
+// sales/domain/ports/stock-reservation.port.ts
 export abstract class StockReservation {
   abstract reserve(orderId: string, lines: { isbn: string; quantity: number }[]): Promise<void>; // lanza OutOfStockError
   abstract release(orderId: string): Promise<void>;
 }
 
-// sales/domain/order/order.repository.ts
+// sales/domain/ports/order.repository.ts
 export abstract class OrderRepository {
   abstract findById(id: string): Promise<Order | null>;
   abstract save(order: Order, charged: Money): Promise<void>;         // también marca el checkout COMPLETED
   abstract nextId(): string;
 }
 
-// sales/domain/order/checkout-log.port.ts: el estado de la saga
+// sales/domain/ports/checkout-log.port.ts: el estado de la saga
 export abstract class CheckoutLog {
   abstract start(orderId: string, idempotencyKey: string, requestHash: string): Promise<boolean>; // false si la clave ya existe
   abstract findByKey(idempotencyKey: string): Promise<CheckoutRecord | null>;  // { orderId, status, requestHash, charged: Money | null }: Money.of(chargedAmount.toString(), currency)

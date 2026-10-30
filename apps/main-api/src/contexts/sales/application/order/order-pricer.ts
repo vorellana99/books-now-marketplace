@@ -1,11 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { NotFoundError } from '../../../../shared-kernel/domain.errors.js';
 import { Customer } from '../../domain/customer/customer.aggregate.js';
-import { CustomerRepository } from '../../domain/customer/customer.repository.js';
+import { CustomerRepository } from '../../domain/ports/customer.repository.js';
 import {
   CatalogPricing,
   type CartItem,
-} from '../../domain/order/catalog-pricing.port.js';
+} from '../../domain/ports/catalog-pricing.port.js';
 import { OrderFactory } from '../../domain/order/order.factory.js';
 import type { Order } from '../../domain/order/order.aggregate.js';
 import type { ShippingAddress } from '../../domain/order/shipping-address.vo.js';
