@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EmptyState } from "@/shared/ui/state-panel.tsx";
+import { BookDetailPage } from "@/features/catalog/index.ts";
 
-// PA-02 llega en la tarea F1.3. Mientras tanto la ruta existe para que las tarjetas del catálogo tengan adónde llevar
+// PA-02 · Detalle del libro. La ruta solo conecta: declara la URL y qué pantalla muestra
 export const Route = createFileRoute("/libros/$isbn")({
-  component: () => <EmptyState title="Estamos armando el detalle" as="h1" />,
+  component: BookDetailPage,
 });
