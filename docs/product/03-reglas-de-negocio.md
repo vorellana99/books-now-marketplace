@@ -1,6 +1,8 @@
 # Reglas de negocio
 
 > Cada regla tiene un identificador `RN-nn` para citarla desde las historias y las guías. Quien aplica la regla en el sistema es **siempre el backend**: la tienda web puede mostrarla o anticiparla, pero no es la fuente del resultado.
+>
+> **Este documento dice siempre lo que es verdad hoy.** Cuando una historia cambia una regla, se **reescribe** aquí (no se le añade «ahora además…») y su línea termina con la marca `Cambios: HU-nn (AAAA-MM-DD)`, que acumula historias; si el texto anterior importa, `· antes: «…»` en la misma línea. Una regla retirada se deja con «Retirada». Qué cambió, cuándo y por qué historia: [cambios.md](cambios.md) (lo genera `scripts/historias.py`; el procedimiento, en la sección «Impacto en el producto» de la [plantilla de historias](../historias/_plantilla.md)).
 
 ## Precio y total
 

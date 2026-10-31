@@ -1,6 +1,8 @@
 # Decisiones y preguntas abiertas
 
 > Registro de las decisiones de producto (`DP-nn`). Si una pregunta está **Abierta**, quien implemente no inventa la respuesta: se decide aquí primero y se actualiza el documento afectado.
+>
+> **Este documento dice siempre lo que es verdad hoy.** Una decisión que otra reemplaza **no se borra**: se marca «reemplazada por DP-nn» (la nueva se agrega con su propio número) y lleva la marca `Cambios: HU-nn (AAAA-MM-DD)`. Qué cambió y cuándo: [cambios.md](cambios.md).
 
 **Estados:** ✅ Decidida · 🟡 Abierta con propuesta · ⬜ Abierta sin propuesta
 

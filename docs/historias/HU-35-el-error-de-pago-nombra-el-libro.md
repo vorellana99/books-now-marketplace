@@ -5,6 +5,7 @@ tipo: HU
 epica: Compra
 estado: propuesta
 amplia: HU-33
+reemplaza:
 ---
 
 # HU-35 El error de pago nombra el libro sin stock
@@ -87,6 +88,16 @@ Resumen: el pedido de A falla en Inventario, la API devuelve el `isbn` y la tien
 ```
 
 Textos exactos (los dos van a `07-contenido-y-mensajes.md` en `HU-12.1`): «No hay suficientes unidades de «{título}». No se te cobró nada.» y ««{título}» ya no está disponible. No se te cobró nada.»; sin título, el mensaje de hoy. Un título largo se parte en varias líneas sin desbordar a 360 px.
+
+## Impacto en el producto
+
+> Esta historia describe el **cambio**; lo vigente está en las reglas, decisiones y pantallas que enlaza (los documentos de `docs/product/` dicen siempre lo que es verdad hoy). Cada fila *pendiente* se escribe en su documento en la tarea `[DOC]`, antes del código, y pasa a *hecho* cuando la línea de ese documento lleva la marca «Cambios: HU-35 (fecha)». Una historia no se cierra con filas pendientes; `python3 scripts/historias.py` genera con estas tablas el [registro de cambios](../product/cambios.md).
+
+| Documento | Qué cambia | Acción | Estado |
+|---|---|---|---|
+| [PA-06](../product/06-pantallas-y-navegacion.md) | El aviso de falta de stock nombra el libro (solo cambia el texto) | modifica | pendiente |
+| [07-contenido-y-mensajes](../product/07-contenido-y-mensajes.md) | Textos de `OUT_OF_STOCK` y `STOCK_ITEM_NOT_FOUND` con el título del libro | modifica | pendiente |
+| [api-contrato](../api-contrato.md) | `isbn` en el cuerpo del `422` de `OUT_OF_STOCK` y `STOCK_ITEM_NOT_FOUND` | modifica | pendiente |
 
 ## Tareas
 

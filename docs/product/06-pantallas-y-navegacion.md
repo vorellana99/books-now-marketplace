@@ -1,6 +1,8 @@
 # Pantallas y navegación
 
 > Inventario de pantallas de la tienda web MVP. Las rutas son **provisionales**: el frontend las fija en su guía. Las pantallas de administración quedan fuera de esta etapa ([DP-03](09-decisiones-y-preguntas.md)).
+>
+> **Este documento dice siempre lo que es verdad hoy**: una historia que cambia una pantalla reescribe aquí su fila y su viñeta, y deja la marca `Cambios: HU-nn (AAAA-MM-DD)` en la línea (ver [cambios.md](cambios.md)).
 
 ## Mapa del sitio
 

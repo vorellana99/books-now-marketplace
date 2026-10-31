@@ -4,8 +4,10 @@
 Reúne TODAS las historias en una tabla: las 20 hechas antes de 2026-10-30 (datos en docs/historias/legado.json, calculados una
 vez desde git) y las nuevas, cada una en su archivo docs/historias/HU-nn-titulo.md (o EN-nn-… para un habilitador). De cada
 archivo nuevo lee el encabezado y la tabla de tareas; la fecha y el tiempo salen de `git log` (commits `HU-nn.k [CAPA]: …`).
+También lee la sección «Impacto en el producto» de cada historia: comprueba que lo que cita existe y que, al hacerse, deja su marca
+«Cambios: HU-nn» en la regla, decisión o pantalla; y con ella genera docs/product/cambios.md (qué cambió, cuándo y por qué historia).
 
-    python3 scripts/historias.py           # sella inicio/fin de las tareas, reescribe la matriz y comprueba
+    python3 scripts/historias.py           # sella inicio/fin de las tareas, reescribe la matriz y el registro de cambios y comprueba
     python3 scripts/historias.py --check   # solo comprueba (estructura); código de salida 1 si algo no cuadra
     python3 scripts/historias.py --tipos   # imprime la tabla de tipos de tarea (la fuente es docs/historias/_plantilla.md)
     python3 scripts/historias.py --formato # completa y corrige los iconos de la tabla de tareas de cada historia
@@ -13,6 +15,7 @@ archivo nuevo lee el encabezado y la tabla de tareas; la fecha y el tiempo salen
 Solo usa la biblioteca estándar. Pruebas: cd scripts && python3 -m unittest test_historias
 """
 import json
+import posixpath
 import re
 import subprocess
 import sys
@@ -64,6 +67,30 @@ ICONOS = {
     "rigor": {"critico": "🔴", "normal": "🟢"},
     "estado": {"propuesta": "\u270f\ufe0f", "pendiente": "⏳", "en-curso": "⏩", "hecho": "✅", "bloqueado": "⛔"},
 }
+
+
+# «## Impacto en el producto»: qué documentos VIVOS del producto toca la historia. Esos documentos (RN, PA, DP, guías) dicen siempre
+# lo que es verdad hoy; la historia es el registro del cambio. Cada fila es `| Documento | Qué cambia | Acción | Estado |`
+IMPACTO = "Impacto en el producto"
+SIN_IMPACTO = "Sin impacto en el producto"
+ACCIONES = ("agrega", "modifica", "retira")
+ESTADOS_IMPACTO = ("pendiente", "hecho")
+VIVOS = {
+    "RN": "docs/product/03-reglas-de-negocio.md",
+    "PA": "docs/product/06-pantallas-y-navegacion.md",
+    "DP": "docs/product/09-decisiones-y-preguntas.md",
+}
+ITEM = re.compile(r"^(RN|PA|DP)-\d+$")
+CAMBIOS = "docs/product/cambios.md"
+CAMBIOS_INICIO = "<!-- CAMBIOS:INICIO (la genera scripts/historias.py: no editar a mano) -->"
+CAMBIOS_FIN = "<!-- CAMBIOS:FIN -->"
+CAMBIOS_ENCABEZADO = (
+    "# Registro de cambios del producto\n\n"
+    "> Las reglas (`RN`), pantallas (`PA`), decisiones (`DP`) y demás documentos de esta carpeta dicen **siempre lo que es verdad hoy**; "
+    "este registro dice qué historia cambió cada uno y cuándo. Lo genera `python3 scripts/historias.py` desde la sección «Impacto en el "
+    "producto» de cada historia (`docs/historias/`): no se edita a mano. Una fila *pendiente* es un cambio aprobado o propuesto que "
+    "todavía no está escrito en el documento vivo.\n\n"
+)
 
 
 class HistoriaError(Exception):
@@ -465,7 +492,10 @@ def new_rows(root, commits):
 
 
 def build_rows(root, commits):
+    reemplazadas = superseded(root)
     rows = legacy_rows(root) + new_rows(root, commits)
+    for row in rows:
+        row["estado"] = _estado_matriz(row["estado"], row["id"], reemplazadas)
     return sorted(rows, key=lambda r: sort_key(r["id"]))
 
 
@@ -488,6 +518,186 @@ def write_matrix(root, commits):
     head, rest = text.split(START, 1)
     _, tail = rest.split(END, 1)
     readme.write_text(f"{head}{START}\n{render_matrix(build_rows(root, commits))}\n{END}{tail}", encoding="utf-8")
+
+
+# ---------- impacto en el producto: lo vivo se mantiene al día y la historia deja el rastro ----------
+
+def _limpia_doc(raw):
+    """El documento de una fila de impacto: sin comillas de código; de un enlace, su id si el texto es RN-nn/DP-nn/PA-nn y, si no,
+    la ruta de su destino relativa a docs/ («[contenido](../product/07-contenido-y-mensajes.md)» → «product/07-contenido-y-mensajes.md»;
+    los enlaces se escriben desde docs/historias/)."""
+    raw = raw.strip()
+    enlace = re.match(r"^\[([^\]]*)\]\(([^)]*)\)$", raw)
+    if enlace:
+        texto = enlace.group(1).strip("` ").strip()
+        return texto if ITEM.match(texto) else posixpath.normpath(posixpath.join("historias", enlace.group(2).split("#")[0]))
+    return raw.strip("` ").strip()
+
+
+def parse_impact(text):
+    """None si no hay sección; si no, {"sin": declara «Sin impacto», "filas": [(documento, qué, acción, estado)], "malas": [filas mal formadas]}."""
+    cuerpo = section(text, IMPACTO)
+    if cuerpo is None:
+        return None
+    filas, malas = [], []
+    for line in cuerpo.splitlines():
+        line = line.strip()
+        if not line.startswith("|") or set(line) <= set("|-: "):
+            continue
+        partes = [p.strip() for p in line.strip("|").split("|")]
+        if partes[0] == "Documento":
+            continue
+        if len(partes) != 4:
+            malas.append(line)
+            continue
+        filas.append((_limpia_doc(partes[0]), partes[1], partes[2], partes[3]))
+    return {"sin": SIN_IMPACTO in cuerpo, "filas": filas, "malas": malas}
+
+
+def item_lines(root, item):
+    """Las líneas que DEFINEN una regla, decisión o pantalla en su documento: `| RN-13 | …` o `- **PA-02 …`."""
+    path = Path(root) / VIVOS[item[:2]]
+    if not path.exists():
+        return []
+    patron = re.compile(rf"^\s*(?:\|\s*|[-*]\s+\*\*){re.escape(item)}\b")
+    return [line for line in path.read_text(encoding="utf-8").splitlines() if patron.match(line)]
+
+
+def has_change_mark(lines, sid):
+    """¿Alguna línea lleva «Cambios: … HU-nn …»? (la marca acumula historias: «Cambios: HU-12 (2026-10-31), HU-30 (…)»)."""
+    return any(re.search(rf"Cambios:[^|]*\b{re.escape(sid)}\b", line) for line in lines)
+
+
+def _errores_documento(root, nombre, sid, doc, accion, estado):
+    """Los errores de UNA fila de impacto sobre un documento: existe, y si está hecha, dejó su marca."""
+    if ITEM.match(doc):
+        donde, lineas = VIVOS[doc[:2]], item_lines(root, doc)
+        existe = bool(lineas)
+    elif re.search(r"\.\w+$", doc):
+        donde, lineas = f"docs/{doc}", []
+        existe = (Path(root) / "docs" / doc).exists()
+    else:
+        return [f"{nombre}: «## {IMPACTO}» cita «{doc}», que no es una regla, decisión o pantalla (RN-nn, DP-nn, PA-nn) ni una ruta de documento con extensión, relativa a docs/ (por ejemplo product/07-contenido-y-mensajes.md)"]
+    if not existe and (accion != "agrega" or estado == "hecho"):
+        quien = "no existe en" if ITEM.match(doc) else "no existe:"
+        return [f"{nombre}: «## {IMPACTO}» cita {doc} ({accion}, {estado}) y {quien} {donde}"]
+    if not existe or estado != "hecho" or not ITEM.match(doc):
+        return []
+    errores = []
+    if not has_change_mark(lineas, sid):
+        errores.append(f"{nombre}: {doc} está marcado como hecho en «## {IMPACTO}» y su línea de {donde} no lleva «Cambios: {sid} (fecha)»")
+    if accion == "retira" and not any(re.search(r"retirad|reemplazad", linea, re.I) for linea in lineas):
+        errores.append(f"{nombre}: {doc} se retira y su línea de {donde} no dice que está retirada (o «reemplazada por …»)")
+    return errores
+
+
+def _errores_impacto(root, nombre, sid, estado_hu, text):
+    impacto = parse_impact(text)
+    if impacto is None:
+        return [f"{nombre}: le falta la sección «## {IMPACTO}» (una tabla `Documento | Qué cambia | Acción | Estado` con las reglas, decisiones, pantallas y guías que toca, o «{SIN_IMPACTO}»)"]
+    errores = [f"{nombre}: una fila de «## {IMPACTO}» no tiene 4 columnas (Documento | Qué cambia | Acción | Estado; una celda no puede llevar «|»): {linea}" for linea in impacto["malas"]]
+    if not impacto["filas"] and not impacto["malas"] and not impacto["sin"]:
+        errores.append(f"{nombre}: «## {IMPACTO}» no tiene tabla ni dice «{SIN_IMPACTO}»")
+    for doc, que, accion, estado in impacto["filas"]:
+        if accion not in ACCIONES:
+            errores.append(f"{nombre}: {doc}: la acción «{accion}» no es válida en «## {IMPACTO}» (usa {', '.join(ACCIONES)})")
+        if estado not in ESTADOS_IMPACTO:
+            errores.append(f"{nombre}: {doc}: el estado «{estado}» no es válido en «## {IMPACTO}» (usa {', '.join(ESTADOS_IMPACTO)})")
+        if accion in ACCIONES and estado in ESTADOS_IMPACTO:
+            errores += _errores_documento(root, nombre, sid, doc, accion, estado)
+    if estado_hu == "cerrada" and any(e == "pendiente" for _, _, _, e in impacto["filas"]):
+        errores.append(f"{nombre}: está cerrada pero tiene cambios de producto pendientes en «## {IMPACTO}» (cada uno debe quedar escrito en su documento y marcado «hecho»)")
+    return errores
+
+
+def conflicts(root):
+    """Avisos (no errores): dos historias abiertas con un cambio PENDIENTE sobre el mismo documento; hay que decidir el orden."""
+    por_doc = {}
+    for path in story_files(root):
+        text = path.read_text(encoding="utf-8")
+        meta = parse_front_matter(text)
+        impacto = parse_impact(text)
+        if meta.get("estado") == "cerrada" or not impacto:
+            continue
+        for doc, _, _, estado in impacto["filas"]:
+            if estado == "pendiente" and meta["id"] not in por_doc.setdefault(doc, []):
+                por_doc[doc].append(meta["id"])
+    return [f"{doc} lo cambian a la vez {', '.join(sids)}, que siguen abiertas: decidan el orden (o fusiónenlas) antes de redactar el cambio"
+            for doc, sids in por_doc.items() if len(sids) > 1]
+
+
+def superseded(root):
+    """{id de la historia reemplazada: id de la que la reemplaza}, del campo `reemplaza:` del encabezado."""
+    mapa = {}
+    for path in story_files(root):
+        meta = parse_front_matter(path.read_text(encoding="utf-8"))
+        if meta.get("reemplaza"):
+            mapa[meta["reemplaza"]] = meta["id"]
+    return mapa
+
+
+def _estado_matriz(estado, sid, reemplazadas):
+    return f"{estado} · superada por {reemplazadas[sid]}" if sid in reemplazadas else estado
+
+
+def _fecha_del_cambio(text, tasks):
+    """AAAA-MM-DD en que terminó la última tarea [DOC] hecha de la historia (cuando se escribieron los documentos), o «—»."""
+    ejecucion = parse_execution(text) or {}
+    fines = [ejecucion[tid]["fin"] for tid, capa, estado in tasks if capa == "DOC" and estado == "hecho" and ejecucion.get(tid, {}).get("fin")]
+    return max(fines)[:10] if fines else "—"
+
+
+def _enlace_documento(doc):
+    if ITEM.match(doc):
+        return f"[{doc}]({Path(VIVOS[doc[:2]]).name})"
+    destino = posixpath.relpath(f"docs/{doc}", "docs/product")
+    return f"[{doc}]({destino})"
+
+
+def render_changes(root):
+    """La tabla del registro: primero lo ya escrito, por fecha; al final lo pendiente."""
+    filas = []
+    for path in story_files(root):
+        text = path.read_text(encoding="utf-8")
+        meta, impacto = parse_front_matter(text), parse_impact(text)
+        if not impacto:
+            continue
+        fecha = _fecha_del_cambio(text, parse_tasks(text))
+        for doc, que, accion, estado in impacto["filas"]:
+            hecho = estado == "hecho"
+            clave = (0 if hecho else 1, (fecha if fecha != "—" else "9999") if hecho else "", sort_key(meta["id"]), len(filas))
+            filas.append((clave, f"| {fecha if hecho else '—'} | [{meta['id']}](../historias/{path.name}) | {_enlace_documento(doc)} | {accion} | {que} | {estado} |"))
+    if not filas:
+        return "_Todavía no hay cambios registrados._"
+    cabecera = ["| Fecha | Historia | Documento | Acción | Qué cambia | Estado |", "|---|---|---|---|---|---|"]
+    return "\n".join(cabecera + [fila for _, fila in sorted(filas)])
+
+
+def write_changes(root):
+    path = Path(root) / CAMBIOS
+    tabla = f"{CAMBIOS_INICIO}\n{render_changes(root)}\n{CAMBIOS_FIN}"
+    if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(CAMBIOS_ENCABEZADO + tabla + "\n", encoding="utf-8")
+        return
+    text = path.read_text(encoding="utf-8")
+    if CAMBIOS_INICIO not in text or CAMBIOS_FIN not in text:
+        raise HistoriaError(f"faltan las marcas {CAMBIOS_INICIO!r} y {CAMBIOS_FIN!r} en {path}")
+    head, rest = text.split(CAMBIOS_INICIO, 1)
+    _, tail = rest.split(CAMBIOS_FIN, 1)
+    path.write_text(f"{head}{tabla}{tail}", encoding="utf-8")
+
+
+def _errores_registro(root):
+    path = Path(root) / CAMBIOS
+    aviso = f"{CAMBIOS} está desactualizado o no existe: ejecuta `python3 scripts/historias.py`"
+    if not path.exists():
+        return [aviso]
+    text = path.read_text(encoding="utf-8")
+    if CAMBIOS_INICIO not in text or CAMBIOS_FIN not in text:
+        return [f"{CAMBIOS}: faltan las marcas {CAMBIOS_INICIO!r} y {CAMBIOS_FIN!r}"]
+    actual = text.split(CAMBIOS_INICIO, 1)[1].split(CAMBIOS_FIN, 1)[0].strip()
+    return [] if actual == render_changes(root).strip() else [aviso]
 
 
 # ---------- comprobación (solo estructura: no depende de git) ----------
@@ -541,7 +751,7 @@ def check(root):
     errors = []
     legacy = {x["id"] for x in json.loads((Path(root) / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))["historias"]}
     seen = set(legacy)
-    expected = {}
+    expected, reemplazos = {}, {}
     for path in story_files(root):
         try:
             text = path.read_text(encoding="utf-8")
@@ -595,6 +805,7 @@ def check(root):
             errors.append(f"{path.name}: tiene tareas [API] y le falta la sección «## Contrato» (rutas, cuerpos, ejemplo, errores y compatibilidad; o «Sin cambios en el contrato»)")
         if any(c == "WEB" for _, c, _ in tasks) and not section(text, "Pantalla"):
             errors.append(f"{path.name}: tiene tareas [WEB] y le falta la sección «## Pantalla» (dónde va lo que cambia, estados, textos exactos, móvil y escritorio, accesibilidad; o «Sin cambios visuales»)")
+        errors += _errores_impacto(root, path.name, sid, meta["estado"], text)
         if meta["estado"] == "cerrada":
             if any(s != "hecho" for _, _, s in tasks) or not tasks:
                 errors.append(f"{path.name}: está cerrada pero tiene tareas sin hacer")
@@ -603,6 +814,13 @@ def check(root):
         if meta["estado"] == "propuesta" and any(s in ("hecho", "en-curso") for _, _, s in tasks):
             errors.append(f"{path.name}: es una propuesta pero tiene tareas hechas o en curso")
         expected[sid] = ESTADOS[meta["estado"]]
+        if meta.get("reemplaza"):
+            reemplazos[sid] = meta["reemplaza"]
+    for sid, viejo in reemplazos.items():
+        if viejo == sid or viejo not in seen:
+            errors.append(f"{sid}: «reemplaza: {viejo}» no es una historia que exista (y una historia no puede reemplazarse a sí misma)")
+    reemplazadas = {viejo: sid for sid, viejo in reemplazos.items()}
+    expected = {sid: _estado_matriz(estado, sid, reemplazadas) for sid, estado in expected.items()}
     plantilla = Path(root) / PLANTILLA
     if plantilla.exists():
         texto = plantilla.read_text(encoding="utf-8")
@@ -622,7 +840,7 @@ def check(root):
     for sid in legacy:
         if sid not in cells:
             errors.append(f"la matriz no tiene fila para {sid} (histórica): ejecuta `python3 scripts/historias.py`")
-    return errors
+    return errors + _errores_registro(root)
 
 
 def main(argv):
@@ -649,6 +867,10 @@ def main(argv):
             print("⚠", aviso)
         write_matrix(root, git_commits(root))
         print("matriz actualizada: docs/historias/README.md")
+        write_changes(root)
+        print(f"registro de cambios actualizado: {CAMBIOS}")
+    for aviso in conflicts(root):
+        print("⚠", aviso)
     errors = check(root)
     for e in errors:
         print("✗", e)

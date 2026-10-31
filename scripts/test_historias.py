@@ -52,12 +52,23 @@ def ejecucion(tareas):
     return "## Ejecución\n\n" + h.EJEC_INICIO + "\n| # | Inicio | Fin | Tiempo |\n|---|---|---|---|\n" + "\n".join(filas) + "\n" + h.EJEC_FIN + "\n"
 
 
-def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=True, sid="HU-12", exec_=True):
-    partes = [f"---\nid: {sid}\ntitulo: Ver si hay stock de un libro\ntipo: HU\nepica: Catálogo\nestado: {estado}\namplia:\n---\n", f"# {sid}\n"]
+SIN_IMPACTO = "## Impacto en el producto\n\nSin impacto en el producto.\n"
+
+
+def impacto(filas):
+    """La sección «## Impacto en el producto» con una tabla (documento, qué cambia, acción, estado)."""
+    cab = "| Documento | Qué cambia | Acción | Estado |\n|---|---|---|---|"
+    return "## Impacto en el producto\n\n" + cab + "\n" + "\n".join(f"| {a} | {b} | {c} | {d} |" for a, b, c, d in filas) + "\n"
+
+
+def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=True, sid="HU-12", exec_=True, impacto_=SIN_IMPACTO, reemplaza=""):
+    partes = [f"---\nid: {sid}\ntitulo: Ver si hay stock de un libro\ntipo: HU\nepica: Catálogo\nestado: {estado}\namplia:\nreemplaza: {reemplaza}\n---\n", f"# {sid}\n"]
     if contrato:
         partes.append("## Contrato\n\nSin cambios en el contrato.\n")
     if pantalla:
         partes.append("## Pantalla\n\nSin cambios visuales.\n")
+    if impacto_:
+        partes.append(impacto_)
     cab = "| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |\n|---|---|---|---|---|---|---|---|"
     partes.append("## Tareas\n\n" + cab + "\n" + "\n".join(fila(*t) for t in tareas) + "\n")
     if exec_:
@@ -391,7 +402,7 @@ class Matriz(unittest.TestCase):
             h.write_matrix(self.root, self.commits)
 
 
-class Comprobacion(unittest.TestCase):
+class Entorno(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
@@ -402,6 +413,7 @@ class Comprobacion(unittest.TestCase):
         self.file.write_text(HU_OK, encoding="utf-8")
         (self.dir / "README.md").write_text(f"{h.START}\n{h.END}\n", encoding="utf-8")
         h.write_matrix(self.root, [])
+        h.write_changes(self.root)
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -418,6 +430,8 @@ class Comprobacion(unittest.TestCase):
     def hay(self, *palabras):
         return any(all(p in e for p in palabras) for e in self.errors())
 
+
+class Comprobacion(Entorno):
     # --- lo básico ---
     def test_todo_en_orden(self):
         self.assertEqual(self.errors(), [])
@@ -654,6 +668,276 @@ class Comprobacion(unittest.TestCase):
         self.assertTrue(self.hay("critico", "_plantilla.md"))
 
 
+RN_13 = "| RN-13 | **Stock** | Antes de cobrar se aparta el stock |"
+PA_02 = "| PA-02 | Detalle del libro | `/libros/:isbn` |"
+DP_05 = "| DP-05 | Datos del libro | El MVP usa solo lo que entrega la API |"
+
+
+class Impacto(Entorno):
+    """«## Impacto en el producto»: los documentos vivos (RN, DP, PA, guías) dicen siempre lo vigente y cada historia dice qué toca."""
+
+    def setUp(self):
+        super().setUp()
+        self.prod = self.root / "docs" / "product"
+        self.prod.mkdir(parents=True, exist_ok=True)
+        self.vivos(rn=RN_13, pa=PA_02, dp=DP_05)
+        (self.prod / "07-contenido-y-mensajes.md").write_text("# contenido\n", encoding="utf-8")
+        (self.root / "docs" / "api-contrato.md").write_text("# contrato\n", encoding="utf-8")
+
+    def vivos(self, rn="", pa="", dp=""):
+        for nombre, filas in (("03-reglas-de-negocio.md", rn), ("06-pantallas-y-navegacion.md", pa), ("09-decisiones-y-preguntas.md", dp)):
+            (self.prod / nombre).write_text(f"# doc\n\n| ID | Texto | Detalle |\n|---|---|---|\n{filas}\n", encoding="utf-8")
+
+    def con_impacto(self, filas, **kw):
+        self.escribe(hu(impacto_=impacto(filas), **kw))
+        h.write_changes(self.root)
+
+    # --- la sección ---
+    def test_sin_impacto_declarado_es_valido(self):
+        self.assertEqual(self.errors(), [])
+
+    def test_falta_la_seccion(self):
+        self.escribe(hu(impacto_=""))
+        self.assertTrue(self.hay("Impacto en el producto"))
+
+    def test_una_seccion_sin_tabla_ni_declaracion_no_vale(self):
+        self.escribe(hu(impacto_="## Impacto en el producto\n\nPor definir.\n"))
+        self.assertTrue(self.hay("Impacto en el producto"))
+
+    def test_una_tabla_con_filas_validas(self):
+        self.con_impacto([("RN-13", "Disponibilidad orientativa", "modifica", "pendiente")])
+        self.assertEqual(self.errors(), [])
+
+    def test_accion_o_estado_fuera_del_vocabulario(self):
+        self.con_impacto([("RN-13", "x", "cambia", "pendiente")])
+        self.assertTrue(self.hay("RN-13", "cambia"))
+        self.con_impacto([("RN-13", "x", "modifica", "listo")])
+        self.assertTrue(self.hay("RN-13", "listo"))
+
+    def test_una_accion_invalida_da_un_solo_error_y_no_una_cascada(self):
+        self.con_impacto([("RN-13", "x", "cambia", "hecho")])  # además le faltaría la marca «Cambios», pero primero hay que arreglar la acción
+        self.assertEqual(len(self.errors()), 1)
+
+    def test_una_fila_con_columnas_de_mas(self):
+        self.escribe(hu(impacto_=SIN_IMPACTO.replace("Sin impacto en el producto.", "| RN-13 | x | y | modifica | pendiente |")))
+        self.assertTrue(self.hay("Impacto en el producto", "4 columnas"))
+
+    # --- lo que se cita existe ---
+    def test_una_regla_que_no_existe(self):
+        self.con_impacto([("RN-99", "x", "modifica", "pendiente")])
+        self.assertTrue(self.hay("RN-99", "03-reglas-de-negocio.md"))
+
+    def test_cada_id_se_busca_en_su_documento(self):
+        self.con_impacto([("PA-02", "x", "modifica", "pendiente"), ("DP-05", "x", "modifica", "pendiente")])
+        self.assertEqual(self.errors(), [])
+        self.con_impacto([("PA-03", "x", "modifica", "pendiente")])
+        self.assertTrue(self.hay("PA-03", "06-pantallas-y-navegacion.md"))
+        self.con_impacto([("DP-25", "x", "modifica", "pendiente")])
+        self.assertTrue(self.hay("DP-25", "09-decisiones-y-preguntas.md"))
+
+    def test_una_regla_nueva_pendiente_aun_no_existe(self):
+        self.con_impacto([("DP-25", "Disponibilidad", "agrega", "pendiente")])
+        self.assertEqual(self.errors(), [])
+
+    def test_una_regla_nueva_hecha_ya_tiene_que_existir(self):
+        self.con_impacto([("DP-25", "Disponibilidad", "agrega", "hecho")])
+        self.assertTrue(self.hay("DP-25", "09-decisiones-y-preguntas.md"))
+
+    def test_un_documento_citado_por_su_ruta(self):
+        self.con_impacto([("product/07-contenido-y-mensajes.md", "Textos nuevos", "modifica", "pendiente"), ("api-contrato.md", "available", "modifica", "pendiente")])
+        self.assertEqual(self.errors(), [])
+        self.con_impacto([("product/no-existe.md", "x", "modifica", "pendiente")])
+        self.assertTrue(self.hay("product/no-existe.md"))
+
+    def test_un_documento_que_no_es_ni_id_ni_ruta(self):
+        self.con_impacto([("la guía", "x", "modifica", "pendiente")])
+        self.assertTrue(self.hay("la guía"))
+
+    def test_el_documento_puede_ir_con_comillas_o_enlace(self):
+        self.con_impacto([("`RN-13`", "x", "modifica", "pendiente"), ("[PA-02](../product/06-pantallas-y-navegacion.md)", "x", "modifica", "pendiente")])
+        self.assertEqual(self.errors(), [])
+
+    def test_un_enlace_con_nombre_legible_se_resuelve_por_su_destino(self):
+        self.con_impacto([("[contenido](../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente"), ("[el contrato](../api-contrato.md)", "x", "modifica", "pendiente")])
+        self.assertEqual(self.errors(), [])
+        self.con_impacto([("[contenido](../product/no-existe.md)", "x", "modifica", "pendiente")])
+        self.assertTrue(self.hay("product/no-existe.md"))
+
+    # --- la marca «Cambios» en el documento vivo ---
+    def test_una_fila_hecha_exige_la_marca_cambios_en_el_documento(self):
+        self.con_impacto([("RN-13", "x", "modifica", "hecho")])
+        self.assertTrue(self.hay("RN-13", "Cambios: HU-12"))
+        self.vivos(rn=RN_13[:-2] + " · Cambios: HU-12 (2026-10-31) |", pa=PA_02, dp=DP_05)
+        self.assertEqual(self.errors(), [])
+
+    def test_la_marca_de_otra_historia_no_vale(self):
+        self.vivos(rn=RN_13[:-2] + " · Cambios: HU-30 (2026-10-31) |")
+        self.con_impacto([("RN-13", "x", "modifica", "hecho")])
+        self.assertTrue(self.hay("RN-13", "Cambios: HU-12"))
+
+    def test_la_marca_puede_acumular_historias(self):
+        self.vivos(rn=RN_13[:-2] + " · Cambios: HU-30 (2026-10-30), HU-12 (2026-10-31) |")
+        self.con_impacto([("RN-13", "x", "modifica", "hecho")])
+        self.assertEqual(self.errors(), [])
+
+    def test_la_marca_de_un_id_prefijo_no_confunde(self):
+        self.vivos(rn=RN_13[:-2] + " · Cambios: HU-120 (2026-10-31) |")
+        self.con_impacto([("RN-13", "x", "modifica", "hecho")])
+        self.assertTrue(self.hay("RN-13", "Cambios: HU-12"))
+
+    def test_una_pantalla_puede_llevar_la_marca_en_su_vineta(self):
+        self.vivos(pa=PA_02 + "\n- **PA-02 Detalle.** Muestra el stock. Cambios: HU-12 (2026-10-31)")
+        self.con_impacto([("PA-02", "x", "modifica", "hecho")])
+        self.assertEqual(self.errors(), [])
+
+    def test_retirar_exige_que_el_documento_diga_que_esta_retirado(self):
+        self.vivos(dp=DP_05[:-2] + " · Cambios: HU-12 (2026-10-31) |")
+        self.con_impacto([("DP-05", "x", "retira", "hecho")])
+        self.assertTrue(self.hay("DP-05", "retirad"))
+        self.vivos(dp=DP_05[:-2] + " · reemplazada por DP-25 · Cambios: HU-12 (2026-10-31) |")
+        self.assertEqual(self.errors(), [])
+
+    def test_los_archivos_no_llevan_marca(self):
+        self.con_impacto([("product/07-contenido-y-mensajes.md", "Textos", "modifica", "hecho")])
+        self.assertEqual(self.errors(), [])
+
+    # --- cierre ---
+    def test_una_historia_cerrada_no_puede_tener_impactos_pendientes(self):
+        todas = [(t[0], t[1], t[2], t[3], "hecho") for t in TAREAS] + [("HU-12.5", "E2E", "recorrido", "normal", "hecho")]
+        self.escribe(hu(todas, estado="cerrada", impacto_=impacto([("RN-13", "x", "modifica", "pendiente")])))
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+        self.assertTrue(self.hay("cerrada", "Impacto"))
+        self.escribe(hu(todas, estado="cerrada", impacto_=impacto([("RN-13", "x", "modifica", "hecho")])))
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+        self.vivos(rn=RN_13[:-2] + " · Cambios: HU-12 (2026-10-31) |", pa=PA_02, dp=DP_05)
+        self.assertEqual(self.errors(), [])
+
+    # --- choques entre historias abiertas ---
+    def otra(self, sid, estado, estado_fila="pendiente", doc="RN-13"):
+        nombre = f"{sid}-otra.md"
+        tareas = [(f"{sid}.1", "DOC", "producto", "normal", "pendiente")]
+        (self.dir / nombre).write_text(hu(tareas, estado=estado, sid=sid, impacto_=impacto([(doc, "x", "modifica", estado_fila)])), encoding="utf-8")
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+
+    def test_dos_historias_abiertas_que_tocan_lo_mismo_se_avisan(self):
+        self.con_impacto([("RN-13", "x", "modifica", "pendiente")])
+        self.otra("HU-30", "aprobada")
+        avisos = h.conflicts(self.root)
+        self.assertEqual(len(avisos), 1)
+        self.assertIn("RN-13", avisos[0])
+        self.assertIn("HU-12", avisos[0])
+        self.assertIn("HU-30", avisos[0])
+
+    def test_no_hay_choque_si_tocan_cosas_distintas_o_una_ya_esta_hecha(self):
+        self.con_impacto([("RN-13", "x", "modifica", "pendiente")])
+        self.otra("HU-30", "aprobada", doc="PA-02")
+        self.assertEqual(h.conflicts(self.root), [])
+        self.otra("HU-31", "aprobada", estado_fila="hecho")
+        self.assertEqual(h.conflicts(self.root), [])
+
+    def test_una_historia_cerrada_no_cuenta_como_abierta(self):
+        self.con_impacto([("RN-13", "x", "modifica", "pendiente")])
+        self.otra("HU-30", "cerrada")
+        self.assertEqual(h.conflicts(self.root), [])
+
+    def test_una_historia_solo_propuesta_tambien_cuenta_como_abierta(self):
+        self.con_impacto([("RN-13", "x", "modifica", "pendiente")])
+        self.otra("HU-30", "propuesta")
+        self.assertEqual(len(h.conflicts(self.root)), 1)
+
+    # --- reemplaza ---
+    def test_una_historia_que_reemplaza_a_otra_marca_la_matriz(self):
+        self.escribe(hu(reemplaza="HU-12"))
+        self.assertTrue(self.hay("reemplaza", "HU-12"))  # no puede reemplazarse a sí misma
+        self.escribe(HU_OK)
+        (self.dir / "HU-30-nueva.md").write_text(hu([("HU-30.1", "DOC", "producto", "normal", "pendiente")], sid="HU-30", reemplaza="HU-12"), encoding="utf-8")
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+        self.assertEqual(self.errors(), [])
+        self.assertIn("superada por HU-30", h.matrix_cells(self.root)["HU-12"]["Estado"])
+
+    def test_reemplazar_una_historia_que_no_existe(self):
+        self.escribe(hu(reemplaza="HU-77"))
+        self.assertTrue(self.hay("reemplaza", "HU-77"))
+
+    def test_reemplazar_una_historia_del_historico(self):
+        (self.dir / "legado.json").write_text(
+            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-05", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            encoding="utf-8",
+        )
+        self.escribe(hu(reemplaza="HU-05"))
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+        self.assertEqual(self.errors(), [])
+        self.assertIn("superada por HU-12", h.matrix_cells(self.root)["HU-05"]["Estado"])
+
+
+class RegistroDeCambios(Entorno):
+    """docs/product/cambios.md: el registro cronológico que genera el script a partir de las tablas de impacto."""
+
+    def setUp(self):
+        super().setUp()
+        self.prod = self.root / "docs" / "product"
+        self.prod.mkdir(parents=True, exist_ok=True)
+        for nombre in ("03-reglas-de-negocio.md", "06-pantallas-y-navegacion.md", "09-decisiones-y-preguntas.md"):
+            (self.prod / nombre).write_text("# doc\n\n| ID | Texto | Detalle |\n|---|---|---|\n| RN-13 | **Stock** | x · Cambios: HU-12 (2026-10-30) |\n", encoding="utf-8")
+        self.log = self.prod / "cambios.md"
+
+    def test_se_crea_si_no_existe_y_lleva_las_marcas(self):
+        self.log.unlink(missing_ok=True)
+        h.write_changes(self.root)
+        texto = self.log.read_text(encoding="utf-8")
+        self.assertIn(h.CAMBIOS_INICIO, texto)
+        self.assertIn(h.CAMBIOS_FIN, texto)
+
+    def test_sin_impactos_dice_que_no_hay_cambios(self):
+        h.write_changes(self.root)
+        self.assertIn("Todavía no hay cambios", self.log.read_text(encoding="utf-8"))
+
+    def test_lista_cada_fila_con_su_historia_documento_y_estado(self):
+        self.escribe(hu(impacto_=impacto([("RN-13", "Disponibilidad orientativa", "modifica", "pendiente")])))
+        h.write_changes(self.root)
+        texto = self.log.read_text(encoding="utf-8")
+        self.assertIn("HU-12", texto)
+        self.assertIn("RN-13", texto)
+        self.assertIn("Disponibilidad orientativa", texto)
+        self.assertIn("modifica", texto)
+        self.assertIn("pendiente", texto)
+
+    def test_las_hechas_van_primero_ordenadas_por_fecha_y_las_pendientes_al_final(self):
+        hecho = [("HU-30.1", "DOC", "producto", "normal", "hecho")]
+        (self.dir / "HU-30-hecha.md").write_text(
+            hu(hecho, sid="HU-30", impacto_=impacto([("RN-13", "Cambio ya aplicado", "modifica", "hecho")])), encoding="utf-8")
+        self.escribe(hu(impacto_=impacto([("RN-13", "Cambio por aplicar", "modifica", "pendiente")])))
+        h.write_changes(self.root)
+        texto = self.log.read_text(encoding="utf-8")
+        self.assertLess(texto.index("Cambio ya aplicado"), texto.index("Cambio por aplicar"))
+        self.assertIn("2026-10-30", texto)  # la fecha sale del fin de la tarea [DOC] hecha
+
+    def test_conserva_lo_escrito_fuera_de_las_marcas(self):
+        h.write_changes(self.root)
+        texto = self.log.read_text(encoding="utf-8")
+        self.log.write_text("# Mi encabezado\n\n" + texto[texto.index(h.CAMBIOS_INICIO):] + "\npie\n", encoding="utf-8")
+        h.write_changes(self.root)
+        texto = self.log.read_text(encoding="utf-8")
+        self.assertIn("# Mi encabezado", texto)
+        self.assertTrue(texto.rstrip().endswith("pie"))
+
+    def test_el_comprobador_detecta_un_registro_desactualizado(self):
+        self.assertEqual(self.errors(), [])
+        self.escribe(hu(impacto_=impacto([("RN-13", "Otro", "modifica", "pendiente")])))
+        self.assertTrue(self.hay("cambios.md"))
+        h.write_changes(self.root)
+        self.assertEqual(self.errors(), [])
+
+    def test_el_comprobador_detecta_que_falta_el_registro(self):
+        self.log.unlink()
+        self.assertTrue(self.hay("cambios.md"))
+
+
 class DocumentosReales(unittest.TestCase):
     """Lo que de verdad hay en docs/historias: debe cumplir las mismas reglas."""
 
@@ -664,6 +948,11 @@ class DocumentosReales(unittest.TestCase):
 
     def test_los_documentos_del_repositorio_pasan_la_comprobacion(self):
         self.assertEqual(h.check(ROOT), [])
+
+    def test_el_registro_de_cambios_esta_al_dia(self):
+        registro = (ROOT / h.CAMBIOS).read_text(encoding="utf-8")
+        inicio, fin = registro.index(h.CAMBIOS_INICIO), registro.index(h.CAMBIOS_FIN)
+        self.assertEqual(registro[inicio + len(h.CAMBIOS_INICIO):fin].strip(), h.render_changes(ROOT).strip())
 
     def test_los_archivos_ya_tienen_el_formato_canonico(self):
         for path in h.story_files(ROOT):

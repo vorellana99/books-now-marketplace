@@ -5,6 +5,7 @@ tipo: HU
 epica: Carrito
 estado: propuesta
 amplia: HU-22
+reemplaza:
 ---
 
 # HU-23 El carrito marca los libros sin stock suficiente
@@ -59,6 +60,16 @@ Contra el backend real, con un libro agotado y otro con 3 unidades en el carrito
 **Pantalla de pago directa (`PA-06`, `/compra`):** el mismo `EmptyState` que hoy se muestra con un libro no disponible, con el título «Hay libros en tu carrito sin stock suficiente.», la lista de títulos y el botón «Volver al carrito».
 
 **Móvil y escritorio:** el mensaje ocupa todo el ancho de la línea en 360 px y se alinea a la izquierda en 1280 px; el `Alert` de arriba y el botón no cambian de lugar. Todo con texto además del color; objetivos táctiles de al menos 44 px; se revisa en un navegador real a 360 y 1280 px y con axe en `HU-23.2`.
+
+## Impacto en el producto
+
+> Esta historia describe el **cambio**; lo vigente está en las reglas, decisiones y pantallas que enlaza (los documentos de `docs/product/` dicen siempre lo que es verdad hoy). Cada fila *pendiente* se escribe en su documento en la tarea `[DOC]`, antes del código, y pasa a *hecho* cuando la línea de ese documento lleva la marca «Cambios: HU-23 (fecha)». Una historia no se cierra con filas pendientes; `python3 scripts/historias.py` genera con estas tablas el [registro de cambios](../product/cambios.md).
+
+| Documento | Qué cambia | Acción | Estado |
+|---|---|---|---|
+| [PA-05](../product/06-pantallas-y-navegacion.md) | La línea del carrito marca «Agotado» o «Solo quedan N», limita la cantidad y bloquea «Continuar con la compra» | modifica | pendiente |
+| [PA-06](../product/06-pantallas-y-navegacion.md) | Entrar directo a la compra con libros sin stock nombra los libros y vuelve al carrito | modifica | pendiente |
+| [07-contenido-y-mensajes](../product/07-contenido-y-mensajes.md) | Textos del carrito: «Agotado: quítalo para continuar», «Solo quedan N: baja la cantidad» | modifica | pendiente |
 
 ## Tareas
 

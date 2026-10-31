@@ -5,6 +5,7 @@ tipo: HU
 epica: Catálogo
 estado: propuesta
 amplia:
+reemplaza:
 ---
 
 # HU-12 Ver si hay stock de un libro
@@ -122,6 +123,23 @@ Resumen: 6 a 10 unidades → «Disponible», 2 a 5 → «Quedan N», 1 → «Que
 
 **Todo igual en 360 y 1280 px** salvo la posición en el detalle de arriba. El botón conserva su alto táctil de al menos 44 px y el contraste de los tonos sale de los tokens (se comprueba con axe en `HU-12.5`).
 
+## Impacto en el producto
+
+> Esta historia describe el **cambio**; lo vigente está en las reglas, decisiones y pantallas que enlaza (los documentos de `docs/product/` dicen siempre lo que es verdad hoy). Cada fila *pendiente* se escribe en su documento en la tarea `[DOC]`, antes del código, y pasa a *hecho* cuando la línea de ese documento lleva la marca «Cambios: HU-12 (fecha)». Una historia no se cierra con filas pendientes; `python3 scripts/historias.py` genera con estas tablas el [registro de cambios](../product/cambios.md).
+
+| Documento | Qué cambia | Acción | Estado |
+|---|---|---|---|
+| [RN-13](../product/03-reglas-de-negocio.md) | La API expone una disponibilidad orientativa con tope 10, no la cantidad real | modifica | pendiente |
+| [DP-05](../product/09-decisiones-y-preguntas.md) | «Stock visible» deja de ser pendiente de API (y sale de la lista de preguntas abiertas de ese documento) | modifica | pendiente |
+| [DP-25](../product/09-decisiones-y-preguntas.md) | Disponibilidad orientativa con tope 10, dentro de `GET /books*` | agrega | pendiente |
+| [PA-01](../product/06-pantallas-y-navegacion.md) | La tarjeta muestra la nota de disponibilidad y el botón respeta el límite | modifica | pendiente |
+| [PA-02](../product/06-pantallas-y-navegacion.md) | El detalle muestra la nota de disponibilidad y el botón respeta el límite | modifica | pendiente |
+| [00-vision-y-alcance](../product/00-vision-y-alcance.md) | «Stock visible» sale de «fuera de alcance» | modifica | pendiente |
+| [07-contenido-y-mensajes](../product/07-contenido-y-mensajes.md) | Textos de la nota de disponibilidad: «Disponible», «Quedan N», «Agotado», «Solo quedan N» | modifica | pendiente |
+| [03-wireframes](../product/diseno/03-wireframes.md) | Wireframes de PA-01 y PA-02 con la nota de disponibilidad | modifica | pendiente |
+| [mockup PA-02](../product/diseno/mockups/index.html) | El mockup del detalle con la nota de disponibilidad | modifica | pendiente |
+| [api-contrato](../api-contrato.md) | `available` en `GET /books` y `GET /books/:isbn` | modifica | pendiente |
+
 ## Tareas
 
 | # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |
@@ -157,6 +175,7 @@ Resumen: 6 a 10 unidades → «Disponible», 2 a 5 → «Quedan N», 1 → «Que
 - [ ] `00-vision` sin «stock visible» en «fuera de alcance»; PA-01, PA-02 y PA-05, los wireframes y el mockup PA-02 actualizados
 - [ ] `07-contenido` con los textos «Disponible», «Quedan N», «Agotado» y los del error con título
 - [ ] un `grep` de «no se muestra stock» no deja restos, y `product/04` no se toca (histórico)
+- [ ] las filas de «Impacto en el producto» de HU-12, HU-23 y HU-35 que toca esta tarea quedan `hecho`, con la marca `Cambios: HU-nn (fecha)` en la línea de cada regla, decisión o pantalla, y `python3 scripts/historias.py` regenera `product/cambios.md` sin errores
 
 ### HU-12.2 Inventario: leer la disponibilidad con tope
 
