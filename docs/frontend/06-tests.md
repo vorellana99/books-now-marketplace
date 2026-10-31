@@ -86,7 +86,7 @@ E2E_BASE_URL=http://localhost:4173 pnpm run test:e2e   # contra otra URL (por ej
 
 | Indicador | Objetivo | Medido (peor perfil) |
 |---|---|---|
-| LCP del catálogo | ≤ 2.5 s | 1.9–2.1 s (2.07 s el 2026-10-31; 0.73 s con una 4G típica de 9 Mbps) |
+| LCP del catálogo | ≤ 2.5 s | 1.9–2.0 s (0.73 s con una 4G típica de 9 Mbps) |
 | CLS | ≤ 0.1 | 0.001 |
 | INP en el recorrido de compra (buscar, agregar, carrito, cantidad, continuar, escribir la dirección) | ≤ 200 ms | 48–80 ms |
 | JS y CSS iniciales sin comprimir | ≤ 700 kB (presupuesto) | 647 kB |
