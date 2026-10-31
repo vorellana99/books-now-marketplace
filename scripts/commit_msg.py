@@ -5,7 +5,8 @@
 
 Solo mira los commits que EMPIEZAN por `HU-nn` o `EN-nn` (los de una tarea): el asunto debe ser
 `HU-12.3 [API]: Add availability to GET /books`, la tarea tiene que existir en alguna historia de docs/historias/fase-n/, su capa
-tiene que ser la de la tarea, solo puede nombrar UNA tarea y no pasa de 72 caracteres. Cualquier otro commit (`Process: …`, un arreglo,
+tiene que ser la de la tarea, solo puede nombrar UNA tarea y no pasa de 72 caracteres. El correlativo 0 (`EN-03.0 [DOC]: …`) no es
+una tarea: es el commit que registra la historia o el habilitador, antes de ejecutar nada; vale si la historia existe y es de capa DOC. Cualquier otro commit (`Process: …`, un arreglo,
 una fusión) pasa sin validar.
 
 Solo usa la biblioteca estándar. Pruebas: cd scripts && python3 -m unittest test_commit_msg
@@ -21,6 +22,7 @@ DE_TAREA = re.compile(r"^(?:HU|EN)-\d")  # lo que obliga a validar: un asunto qu
 FORMATO = re.compile(r"^((?:HU|EN)-\d+\.\d+) \[(API|WEB|E2E|DOC)\]: (\S.*)$")
 OTRA_TAREA = re.compile(r"\b(?:HU|EN)-\d+\.\d+\b")
 EJEMPLO = "HU-12.3 [API]: Add availability to GET /books"
+REGISTRO = ".0"  # el correlativo 0: registrar la historia o el habilitador (no es una tarea de la tabla)
 
 
 def subject(text):
@@ -45,6 +47,13 @@ def errors_for(asunto, root):
     tarea, capa = m.group(1), m.group(2)
     if OTRA_TAREA.search(asunto[len(tarea):]):
         errores.append("un commit es de una sola tarea: el asunto nombra otra además de " + tarea)
+    if tarea.endswith(REGISTRO):  # el registro de la historia o del habilitador: no es una fila de la tabla de tareas
+        historia = tarea[: -len(REGISTRO)]
+        if historia not in {path.stem for path in h.story_files(root)}:
+            errores.append(f"la historia {historia} no existe en docs/historias/fase-n/ (el commit {tarea} registra una historia o un habilitador que ya tiene su archivo)")
+        elif capa != "DOC":
+            errores.append(f"el commit de registro {tarea} es de la capa [DOC] y dice [{capa}]")
+        return errores
     capas = {tid: c for path in h.story_files(root) for tid, c, _ in h.parse_tasks(path.read_text(encoding="utf-8"))}
     if tarea not in capas:
         errores.append(f"la tarea {tarea} no existe en ninguna historia de docs/historias/fase-n/ (¿está en la tabla de tareas de su archivo?)")

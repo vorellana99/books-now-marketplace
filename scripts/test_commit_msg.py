@@ -78,6 +78,25 @@ class Asunto(Entorno):
     def test_nombrar_la_historia_en_la_descripcion_no_es_otra_tarea(self):
         self.assertEqual(self.errores("HU-12.3 [API]: Follow the contract of HU-12"), [])
 
+    # --- el correlativo 0: el commit que registra la historia o el habilitador ---
+    def test_el_commit_de_registro_usa_el_correlativo_cero_y_la_capa_doc(self):
+        self.assertEqual(self.errores("HU-12.0 [DOC]: Register the story"), [])
+        self.assertEqual(self.errores("EN-01.0 [DOC]: Register the enabler"), [])
+
+    def test_el_registro_es_de_capa_doc(self):
+        self.assertTrue(self.hay("HU-12.0 [API]: Register the story", "HU-12.0", "[DOC]"))
+
+    def test_el_registro_necesita_que_la_historia_exista(self):
+        self.assertTrue(self.hay("HU-99.0 [DOC]: Register the story", "HU-99", "no existe"))
+
+    def test_el_registro_tambien_es_de_una_sola_tarea(self):
+        self.assertTrue(self.hay("HU-12.0 [DOC]: Register it and HU-12.1 too", "una sola tarea"))
+
+    def test_un_numero_que_termina_en_cero_no_es_el_registro(self):
+        # HU-12.10 es la tarea 10 (no existe), no el registro de HU-12
+        self.assertTrue(self.hay("HU-12.10 [DOC]: x", "HU-12.10", "no existe"))
+        self.assertFalse(self.hay("HU-12.10 [DOC]: x", "registra"))
+
     def test_el_asunto_no_pasa_de_72_caracteres(self):
         largo = "HU-12.3 [API]: " + "x" * (c.MAX - len("HU-12.3 [API]: "))
         self.assertEqual(len(largo), 72)
