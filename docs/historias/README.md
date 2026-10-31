@@ -7,7 +7,7 @@
 ## Matriz
 
 <!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->
-### Abiertas (7)
+### Abiertas (8)
 
 | ID | Fase | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -18,6 +18,7 @@
 | [HU-51](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) | [Fase 1](fase-1/README.md) | Editar o desactivar un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 22 min |
 | [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | [Fase 1](fase-1/README.md) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
 | [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | [Fase 1](fase-1/README.md) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
+| [EN-02](fase-2/EN-02.md) | [Fase 2](fase-2/README.md) | Comprobación final de toda la solución | Calidad | 🔄 en curso | — no aplica | — no aplica | — | 1 / 3 | 2026-10-31 → en curso · 37 min |
 
 ### Cerradas e histórico (17)
 
