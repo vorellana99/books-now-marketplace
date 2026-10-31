@@ -826,6 +826,75 @@ PA_02 = "| PA-02 | Detalle del libro | `/libros/:isbn` |"
 DP_05 = "| DP-05 | Datos del libro | El MVP usa solo lo que entrega la API |"
 
 
+IDEA = "---\nid: {sid}\ntitulo: Una idea por madurar\ntipo: {tipo}\nepica: Compra\nestado: idea\namplia:\nreemplaza:\n---\n\n# {sid} Una idea por madurar\n\n**Origen:** un hallazgo. **Por qué importa:** porque sí.\n"
+
+
+class Ideas(Entorno):
+    """El estado `idea`: un pendiente que se registra en la matriz con solo un encabezado y una frase."""
+
+    def idea(self, sid="HU-30", tipo="HU", texto=None):
+        (self.fase / f"{sid}.md").write_text(texto if texto is not None else IDEA.format(sid=sid, tipo=tipo), encoding="utf-8")
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+
+    def test_una_idea_solo_necesita_el_encabezado(self):
+        self.idea()
+        self.assertEqual(self.errors(), [])
+
+    def test_una_idea_no_pide_tareas_contrato_pantalla_ni_impacto_ni_ejecucion(self):
+        self.idea()
+        self.assertNotIn("## Tareas", (self.fase / "HU-30.md").read_text(encoding="utf-8"))
+        self.assertEqual(self.errors(), [])
+
+    def test_un_habilitador_idea_no_necesita_ligado(self):
+        self.idea("EN-04", "EN")
+        self.assertEqual(self.errors(), [])
+
+    def test_la_misma_idea_como_propuesta_si_pide_todo(self):
+        self.idea(texto=IDEA.format(sid="HU-30", tipo="HU").replace("estado: idea", "estado: propuesta"))
+        self.assertTrue(self.hay("HU-30.md", "Impacto en el producto"))
+
+    def test_un_habilitador_propuesto_si_pide_ligado(self):
+        self.idea("EN-04", "EN", texto=IDEA.format(sid="EN-04", tipo="EN").replace("estado: idea", "estado: propuesta"))
+        self.assertTrue(self.hay("EN-04.md", "ligado"))
+
+    def test_una_idea_conserva_el_encabezado_obligatorio(self):
+        (self.fase / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU").replace("epica: Compra\n", ""), encoding="utf-8")
+        self.assertTrue(self.hay("HU-30.md", "epica"))
+
+    def test_una_idea_no_puede_tener_tareas_hechas_ni_en_curso(self):
+        con_tarea = hu([("HU-30.1", "DOC", "producto", "normal", "hecho")], sid="HU-30").replace("estado: aprobada", "estado: idea")
+        self.idea(texto=con_tarea)
+        self.assertTrue(self.hay("HU-30.md", "idea", "hechas o en curso"))
+
+    def test_el_estado_idea_aparece_en_los_estados_validos(self):
+        self.escribe(HU_OK.replace("estado: aprobada", "estado: soñada"))
+        self.assertTrue(self.hay("estado", "idea"))
+
+    def test_una_idea_figura_en_abiertas_de_la_matriz_con_su_icono(self):
+        self.idea()
+        celdas = h.matrix_cells(self.root)
+        self.assertEqual(celdas["HU-30"]["Estado"], "💡 idea")
+        texto = h.render_matrix(h.build_rows(self.root, []))
+        abiertas, cerradas = texto.split("### Cerradas e histórico")
+        self.assertIn("HU-30", abiertas)
+        self.assertNotIn("HU-30", cerradas)
+
+    def test_sellar_una_idea_no_le_crea_la_tabla_de_ejecucion(self):
+        texto = IDEA.format(sid="HU-30", tipo="HU")
+        self.assertEqual(h.stamp_text(texto, at(9))[0], texto)
+
+    def test_una_idea_no_aparece_en_el_registro_de_cambios_ni_en_los_choques(self):
+        self.idea()
+        self.assertEqual(h.conflicts(self.root), [])
+        self.assertNotIn("HU-30", h.render_changes(self.root))
+
+    def test_una_idea_puede_reemplazar_a_otra_historia(self):
+        self.idea(texto=IDEA.format(sid="HU-30", tipo="HU").replace("reemplaza:", "reemplaza: HU-12"))
+        self.assertEqual(self.errors(), [])
+        self.assertIn("superada por HU-30", h.matrix_cells(self.root)["HU-12"]["Estado"])
+
+
 class Habilitadores(Entorno):
     """El tipo `refactor` y la ligadura obligatoria de los habilitadores (`EN-nn`)."""
 
@@ -1191,6 +1260,14 @@ class DocumentosReales(unittest.TestCase):
         registro = (ROOT / h.CAMBIOS).read_text(encoding="utf-8")
         inicio, fin = registro.index(h.CAMBIOS_INICIO), registro.index(h.CAMBIOS_FIN)
         self.assertEqual(registro[inicio + len(h.CAMBIOS_INICIO):fin].strip(), h.render_changes(ROOT).strip())
+
+    def test_la_plantilla_de_una_idea_existe_y_es_una_idea(self):
+        texto = (ROOT / "docs" / "historias" / "_idea.md").read_text(encoding="utf-8")
+        meta = h.parse_front_matter(texto)
+        self.assertEqual(meta["estado"], "idea")
+        for campo in h.REQUERIDOS:
+            self.assertIn(campo, meta)
+        self.assertIn("propuesta", texto)  # explica cómo se promueve
 
     def test_los_archivos_ya_tienen_el_formato_canonico(self):
         for path in h.story_files(ROOT):

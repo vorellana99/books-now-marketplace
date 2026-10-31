@@ -32,7 +32,9 @@ END = "<!-- MATRIZ:FIN -->"
 # Las 20 historias anteriores (legado.json) son de la fase 1
 FASE = re.compile(r"^fase-(\d+)$")
 FASE_LEGADO = 1
-ESTADOS = {"propuesta": "📝 propuesta", "aprobada": "⬜ aprobada", "en-curso": "🔄 en curso", "cerrada": "✅ cerrada"}
+# `idea` (💡) es un pendiente que solo registra un encabezado y una frase (docs/historias/_idea.md): no pide tareas, contrato, pantalla,
+# impacto ni ligadura hasta que se promueve a `propuesta` completando la plantilla
+ESTADOS = {"idea": "💡 idea", "propuesta": "📝 propuesta", "aprobada": "⬜ aprobada", "en-curso": "🔄 en curso", "cerrada": "✅ cerrada"}
 CAPAS = ("DOC", "API", "WEB", "E2E")
 REQUERIDOS = ("id", "titulo", "tipo", "epica", "estado")
 # Una fila de la tabla de tareas: `| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |`
@@ -863,10 +865,17 @@ def check(root):
         if sid in seen:
             errors.append(f"{path.name}: id repetido ({sid})")
         seen.add(sid)
-        errors += _errores_ligado(root, path.name, meta)
         if meta["estado"] not in ESTADOS:
             errors.append(f"{path.name}: estado «{meta['estado']}» no válido (usa {', '.join(ESTADOS)})")
             continue
+        if meta["estado"] == "idea":  # solo el encabezado: sin tareas, secciones ni ligadura hasta que se promueva a propuesta
+            if any(s in ("hecho", "en-curso") for _, _, s in parse_tasks(text)):
+                errors.append(f"{path.name}: es una idea pero tiene tareas hechas o en curso (promuévela a propuesta completando la plantilla)")
+            expected[sid] = ESTADOS["idea"]
+            if meta.get("reemplaza"):
+                reemplazos[sid] = meta["reemplaza"]
+            continue
+        errors += _errores_ligado(root, path.name, meta)
         rows = parse_rows(text)
         bloques = parse_detail_blocks(text)
         tasks = parse_tasks(text)
