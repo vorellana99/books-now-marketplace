@@ -1,0 +1,4 @@
+#!/bin/sh
+# Valida el asunto de los commits de una tarea de historia (HU-nn.k [CAPA]: …); el resto de commits pasa.
+# Se activa una sola vez por clon:  git config core.hooksPath .githooks
+exec python3 "$(git rev-parse --show-toplevel)/scripts/commit_msg.py" "$1"
