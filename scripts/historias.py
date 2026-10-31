@@ -459,11 +459,11 @@ def legacy_rows(root):
         closed = x["cierre"] is not None
         rows.append({
             "id": x["id"], "titulo": x["titulo"], "epica": x["epica"],
-            "estado": ESTADOS["cerrada"] if closed else "🔄 API hecha, Web pendiente",
+            "estado": ESTADOS["cerrada"] if closed else ESTADOS["en-curso"],  # qué falta lo dicen las columnas API y Web
             "api": x["api"], "web": x["web"],
             "inicio": x["inicio"], "cierre": x["cierre"] or "—",
             "tiempo": "≈ " + fmt_minutes(x["minutos"]),
-            "tareas": f"{len(x['tareas_api']) + len(x['tareas_web'])} (histórico)",
+            "tareas": f"{len(x['tareas_api']) + len(x['tareas_web'])} (histórico)", "producto": "—",
             "detalle": f"[texto](../product/04-historias-de-usuario.md#{slug(x['id'] + ' ' + x['titulo'])})",
         })
     return rows
@@ -478,6 +478,7 @@ def new_rows(root, commits):
         stats = story_stats(meta["id"], commits)
         done = sum(1 for _, _, s in tasks if s == "hecho")
         closed = meta["estado"] == "cerrada"
+        filas = (parse_impact(text) or {"filas": []})["filas"]
         rows.append({
             "id": meta["id"], "titulo": meta["titulo"], "epica": meta["epica"],
             "estado": ESTADOS.get(meta["estado"], meta["estado"]),
@@ -486,6 +487,7 @@ def new_rows(root, commits):
             "cierre": stats["fin"].date().isoformat() if stats and closed else "—",
             "tiempo": fmt_minutes(stats["minutos"]) if stats else "—",
             "tareas": f"{done} / {len(tasks)}",
+            "producto": f"{sum(1 for f in filas if f[3] == 'hecho')} / {len(filas)}" if filas else "—",
             "detalle": f"[{meta['id']}]({path.name})",
         })
     return rows
@@ -499,15 +501,50 @@ def build_rows(root, commits):
     return sorted(rows, key=lambda r: sort_key(r["id"]))
 
 
-COLUMNS = (("id", "ID"), ("titulo", "Historia"), ("epica", "Épica"), ("estado", "Estado"), ("api", "API"), ("web", "Web"),
-           ("inicio", "Inicio"), ("cierre", "Cierre"), ("tiempo", "Tiempo"), ("tareas", "Tareas"), ("detalle", "Detalle"))
+# La matriz son dos tablas dentro de las marcas: «Abiertas» (lo que todavía se trabaja, con todas las columnas) y «Cerradas e
+# histórico» (lo terminado, con lo mínimo). El ID es el enlace a la historia; API y Web se escriben «icono texto»; las fechas y el tiempo
+# van en una sola columna
+ABIERTAS = "Abiertas"
+CERRADAS = "Cerradas e histórico"
+COLS_ABIERTAS = ("ID", "Historia", "Épica", "Estado", "API", "Web", "Cambios de producto", "Tareas", "Fechas y tiempo")
+COLS_CERRADAS = ("ID", "Historia", "Épica", "Estado", "Cierre y tiempo")
+CAPA_TEXTO = {"✅": "✅ hecha", "🔄": "🔄 en curso", "⬜": "⬜ pendiente", "—": "— no aplica"}
+ID_FILA = re.compile(r"\b((?:HU|EN)-\d+)\b")
+
+
+def is_closed(row):
+    return row["estado"].startswith(ESTADOS["cerrada"])
+
+
+def _celda_matriz(row, columna):
+    if columna == "ID":
+        return f"[{row['id']}]({re.search(r'\]\(([^)]*)\)', row['detalle']).group(1)})"
+    if columna == "Fechas y tiempo":
+        if row["inicio"] == "—":
+            return "—"
+        return f"{row['inicio']} → {row['cierre'] if row['cierre'] != '—' else 'en curso'} · {row['tiempo']}"
+    if columna == "Cierre y tiempo":
+        return f"{row['cierre']} · {row['tiempo']}"
+    clave = {"Historia": "titulo", "Épica": "epica", "Estado": "estado", "Tareas": "tareas", "Cambios de producto": "producto"}.get(columna)
+    if columna in ("API", "Web"):
+        return CAPA_TEXTO[row[columna.lower()]]
+    return str(row[clave])
+
+
+def _tabla_matriz(rows, columnas, vacio):
+    if not rows:
+        return vacio
+    lineas = ["| " + " | ".join(columnas) + " |", "|" + "|".join("---" for _ in columnas) + "|"]
+    for row in rows:
+        lineas.append("| " + " | ".join(_celda_matriz(row, c) for c in columnas) + " |")
+    return "\n".join(lineas)
 
 
 def render_matrix(rows):
-    lines = ["| " + " | ".join(name for _, name in COLUMNS) + " |", "|" + "|".join("---" for _ in COLUMNS) + "|"]
-    for row in rows:
-        lines.append("| " + " | ".join(str(row[key]) for key, _ in COLUMNS) + " |")
-    return "\n".join(lines)
+    abiertas = [r for r in rows if not is_closed(r)]
+    cerradas = [r for r in rows if is_closed(r)]
+    return (f"### {ABIERTAS} ({len(abiertas)})\n\n{_tabla_matriz(abiertas, COLS_ABIERTAS, '_No hay historias abiertas._')}\n\n"
+            f"### {CERRADAS} ({len(cerradas)})\n\n{_tabla_matriz(cerradas, COLS_CERRADAS, '_Todavía no hay historias cerradas._')}")
 
 
 def write_matrix(root, commits):
@@ -703,17 +740,19 @@ def _errores_registro(root):
 # ---------- comprobación (solo estructura: no depende de git) ----------
 
 def matrix_cells(root):
-    """{id: {columna: texto}} de la tabla que hay ahora en el README."""
+    """{id: {columna: texto}} de las dos tablas que hay ahora en el README (cada una con su propio encabezado)."""
     text = (Path(root) / "docs" / "historias" / "README.md").read_text(encoding="utf-8")
     if START not in text or END not in text:
         return {}
-    table = text.split(START, 1)[1].split(END, 1)[0].strip().splitlines()
-    names = [name for _, name in COLUMNS]
-    cells = {}
-    for line in table[2:]:
+    cells, nombres = {}, []
+    for line in text.split(START, 1)[1].split(END, 1)[0].strip().splitlines():
+        if not line.startswith("|") or set(line) <= set("|-: "):
+            continue
         parts = [p.strip() for p in line.strip().strip("|").split("|")]
-        if len(parts) == len(names):
-            cells[parts[0]] = dict(zip(names, parts))
+        if parts[0] == "ID":
+            nombres = parts
+        elif nombres and len(parts) == len(nombres) and ID_FILA.search(parts[0]):
+            cells[ID_FILA.search(parts[0]).group(1)] = dict(zip(nombres, parts))
     return cells
 
 

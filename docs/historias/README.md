@@ -1,44 +1,52 @@
 # Historias de usuario: matriz y archivos
 
-> Aquí están **todas** las historias de LibroYa en una sola tabla: las 20 que se hicieron antes del 2026-10-30 (histórico) y las nuevas. **Cada historia nueva vive en su propio archivo de esta carpeta** (`HU-12-ver-si-hay-stock-de-un-libro.md`): su texto, sus criterios, su «Listo cuando…», sus tareas por capa, sus decisiones y su bitácora. Lo transversal (problemas abiertos, decisiones generales) está en [`../avance.md`](../avance.md).
+> Aquí están **todas** las historias de LibroYa en dos tablas, **Abiertas** (lo que todavía se trabaja) y **Cerradas e histórico**: las 20 que se hicieron antes del 2026-10-30 y las nuevas. **Cada historia nueva vive en su propio archivo de esta carpeta** (`HU-12-ver-si-hay-stock-de-un-libro.md`): su texto, sus criterios, su «Listo cuando…», sus tareas por capa, sus decisiones y su bitácora. Lo transversal (problemas abiertos, decisiones generales) está en [`../avance.md`](../avance.md).
 
-**Leyenda:** 📝 propuesta (sin aprobar) · ⬜ aprobada · 🔄 en curso · ✅ cerrada · — no aplica. La matriz se regenera con `python3 scripts/historias.py`; no se edita a mano.
+**Leyenda:** estado de la historia: 📝 propuesta (sin aprobar) · ⬜ aprobada · 🔄 en curso · ✅ cerrada. Columnas API y Web: ✅ hecha · 🔄 en curso · ⬜ pendiente · — no aplica. La matriz se regenera con `python3 scripts/historias.py`; no se edita a mano.
 
 ## Matriz
 
 <!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->
-| ID | Historia | Épica | Estado | API | Web | Inicio | Cierre | Tiempo | Tareas | Detalle |
-|---|---|---|---|---|---|---|---|---|---|---|
-| HU-01 | Registrarme | Cuenta | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 1 h 56 min | 4 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-01-registrarme) |
-| HU-02 | Iniciar sesión | Cuenta | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 49 min | 3 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-02-iniciar-sesión) |
-| HU-03 | Mantener la sesión | Cuenta | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 38 min | 2 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-03-mantener-la-sesión) |
-| HU-04 | Cerrar sesión | Cuenta | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 35 min | 2 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-04-cerrar-sesión) |
-| HU-10 | Buscar libros | Catálogo | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 35 min | 4 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-10-buscar-libros) |
-| HU-11 | Ver un libro | Catálogo | ✅ cerrada | ✅ | ✅ | 2026-10-27 | 2026-10-30 | ≈ 16 min | 4 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-11-ver-un-libro) |
-| HU-12 | Ver si hay stock de un libro | Catálogo | 📝 propuesta | ⬜ | ⬜ | — | — | — | 0 / 5 | [HU-12](HU-12-ver-si-hay-stock-de-un-libro.md) |
-| HU-20 | Agregar un libro al carrito | Carrito | ✅ cerrada | — | ✅ | 2026-10-30 | 2026-10-30 | ≈ 12 min | 2 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-20-agregar-un-libro-al-carrito) |
-| HU-21 | Cambiar la cantidad o quitar un libro | Carrito | ✅ cerrada | — | ✅ | 2026-10-30 | 2026-10-30 | ≈ 4 min | 1 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-21-cambiar-la-cantidad-o-quitar-un-libro) |
-| HU-22 | Ver el carrito | Carrito | ✅ cerrada | ✅ | ✅ | 2026-10-29 | 2026-10-30 | ≈ 1 h 9 min | 6 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-22-ver-el-carrito) |
-| HU-23 | El carrito marca los libros sin stock suficiente | Carrito | 📝 propuesta | — | ⬜ | — | — | — | 0 / 2 | [HU-23](HU-23-el-carrito-marca-los-libros-sin-stock-suficiente.md) |
-| HU-30 | Indicar la dirección de envío | Compra | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 30 min | 3 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-30-indicar-la-dirección-de-envío) |
-| HU-31 | Pagar y crear el pedido | Compra | ✅ cerrada | ✅ | ✅ | 2026-10-27 | 2026-10-30 | ≈ 2 h 3 min | 10 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-31-pagar-y-crear-el-pedido) |
-| HU-32 | Reintentar sin cobrar dos veces | Compra | ✅ cerrada | ✅ | ✅ | 2026-10-27 | 2026-10-30 | ≈ 17 min | 2 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-32-reintentar-sin-cobrar-dos-veces) |
-| HU-33 | Entender por qué falló la compra | Compra | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 22 min | 3 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-33-entender-por-qué-falló-la-compra) |
-| HU-34 | Ver la confirmación | Compra | ✅ cerrada | ✅ | ✅ | 2026-10-27 | 2026-10-30 | ≈ 33 min | 3 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-34-ver-la-confirmación) |
-| HU-35 | El error de pago nombra el libro sin stock | Compra | 📝 propuesta | ⬜ | ⬜ | — | — | — | 0 / 3 | [HU-35](HU-35-el-error-de-pago-nombra-el-libro.md) |
-| HU-40 | Ver mis pedidos | Pedidos | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 1 h 37 min | 3 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-40-ver-mis-pedidos) |
-| HU-41 | Ver el detalle de un pedido | Pedidos | ✅ cerrada | ✅ | ✅ | 2026-10-28 | 2026-10-30 | ≈ 42 min | 3 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-41-ver-el-detalle-de-un-pedido) |
-| HU-50 | Crear un libro | Administración | 🔄 API hecha, Web pendiente | ✅ | ⬜ | 2026-10-28 | — | ≈ 1 h 11 min | 4 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-50-crear-un-libro) |
-| HU-51 | Editar o desactivar un libro | Administración | 🔄 API hecha, Web pendiente | ✅ | ⬜ | 2026-10-28 | — | ≈ 22 min | 1 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) |
-| HU-52 | Cargar stock | Administración | 🔄 API hecha, Web pendiente | ✅ | ⬜ | 2026-10-28 | — | ≈ 17 min | 1 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-52-cargar-stock) |
-| HU-53 | Ver los pedidos de un cliente | Administración | 🔄 API hecha, Web pendiente | ✅ | ⬜ | 2026-10-28 | — | ≈ 1 h 20 min | 2 (histórico) | [texto](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) |
+### Abiertas (7)
+
+| ID | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |
+|---|---|---|---|---|---|---|---|---|
+| [HU-12](HU-12-ver-si-hay-stock-de-un-libro.md) | Ver si hay stock de un libro | Catálogo | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 10 | 0 / 5 | — |
+| [HU-23](HU-23-el-carrito-marca-los-libros-sin-stock-suficiente.md) | El carrito marca los libros sin stock suficiente | Carrito | 📝 propuesta | — no aplica | ⬜ pendiente | 0 / 3 | 0 / 2 | — |
+| [HU-35](HU-35-el-error-de-pago-nombra-el-libro.md) | El error de pago nombra el libro sin stock | Compra | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 3 | 0 / 3 | — |
+| [HU-50](../product/04-historias-de-usuario.md#hu-50-crear-un-libro) | Crear un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 4 (histórico) | 2026-10-28 → en curso · ≈ 1 h 11 min |
+| [HU-51](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) | Editar o desactivar un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 22 min |
+| [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
+| [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
+
+### Cerradas e histórico (16)
+
+| ID | Historia | Épica | Estado | Cierre y tiempo |
+|---|---|---|---|---|
+| [HU-01](../product/04-historias-de-usuario.md#hu-01-registrarme) | Registrarme | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 1 h 56 min |
+| [HU-02](../product/04-historias-de-usuario.md#hu-02-iniciar-sesión) | Iniciar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 49 min |
+| [HU-03](../product/04-historias-de-usuario.md#hu-03-mantener-la-sesión) | Mantener la sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 38 min |
+| [HU-04](../product/04-historias-de-usuario.md#hu-04-cerrar-sesión) | Cerrar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 35 min |
+| [HU-10](../product/04-historias-de-usuario.md#hu-10-buscar-libros) | Buscar libros | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 35 min |
+| [HU-11](../product/04-historias-de-usuario.md#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 16 min |
+| [HU-20](../product/04-historias-de-usuario.md#hu-20-agregar-un-libro-al-carrito) | Agregar un libro al carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 12 min |
+| [HU-21](../product/04-historias-de-usuario.md#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | ✅ cerrada | 2026-10-30 · ≈ 4 min |
+| [HU-22](../product/04-historias-de-usuario.md#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 1 h 9 min |
+| [HU-30](../product/04-historias-de-usuario.md#hu-30-indicar-la-dirección-de-envío) | Indicar la dirección de envío | Compra | ✅ cerrada | 2026-10-30 · ≈ 30 min |
+| [HU-31](../product/04-historias-de-usuario.md#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | ✅ cerrada | 2026-10-30 · ≈ 2 h 3 min |
+| [HU-32](../product/04-historias-de-usuario.md#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ cerrada | 2026-10-30 · ≈ 17 min |
+| [HU-33](../product/04-historias-de-usuario.md#hu-33-entender-por-qué-falló-la-compra) | Entender por qué falló la compra | Compra | ✅ cerrada | 2026-10-30 · ≈ 22 min |
+| [HU-34](../product/04-historias-de-usuario.md#hu-34-ver-la-confirmación) | Ver la confirmación | Compra | ✅ cerrada | 2026-10-30 · ≈ 33 min |
+| [HU-40](../product/04-historias-de-usuario.md#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 1 h 37 min |
+| [HU-41](../product/04-historias-de-usuario.md#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 42 min |
 <!-- MATRIZ:FIN -->
 
 **Cómo se lee**
 
-- **Estado, API y Web de una historia nueva** salen de su archivo: el estado es el del encabezado; API y Web, de sus tareas (`[API]`, `[WEB]`): ✅ todas hechas, 🔄 alguna, ⬜ ninguna, — no tiene tareas de esa capa. **Tareas** = hechas / total.
-- **Inicio, Cierre y Tiempo** salen de `git log` (hora de Lima): los commits `HU-nn.k [CAPA]: …` de la historia. El **tiempo** suma, por cada commit, los minutos desde el commit anterior (de cualquier historia) con un **tope de 60** para no contar noches ni pausas. La fecha de **cierre** solo existe cuando la historia está cerrada.
-- **Las 20 historias anteriores (histórico)** tienen el **texto** en [`../product/04-historias-de-usuario.md`](../product/04-historias-de-usuario.md) (congelado, enlace en «Detalle») y sus datos en [`legado.json`](legado.json). Su **tiempo es aproximado** (`≈`): se construyeron en cortes que mezclaban varias historias, así que las tareas compartidas se cuentan completas en cada una (la lista está en `legado.json`) y el mapeo historia → tareas es una reconstrucción. HU-50 a HU-53 tienen la API hecha y la tienda pendiente (no tienen cierre).
+- **Dos tablas.** **Abiertas** (propuestas, aprobadas, en curso y las históricas con la web pendiente) lleva todas las columnas; **Cerradas e histórico** solo ID, historia, épica, estado y cierre. Una historia pasa sola de una a otra al cerrarse. El **ID es el enlace** al archivo de la historia (o, en las 20 anteriores, a su texto en `product/04`). Una historia reemplazada por otra lo dice en su estado («superada por HU-nn»).
+- **Estado, API y Web de una historia nueva** salen de su archivo: el estado es el del encabezado; API y Web, de sus tareas (`[API]`, `[WEB]`): hecha si todas lo están, en curso si alguna, pendiente si ninguna, no aplica si no tiene tareas de esa capa. **Tareas** = hechas / total. **Cambios de producto** = filas hechas / total de su sección «Impacto en el producto» (`—` si no tiene filas).
+- **Fechas y tiempo** («inicio → cierre · tiempo» en Abiertas, «cierre · tiempo» en Cerradas) salen de `git log` (hora de Lima): los commits `HU-nn.k [CAPA]: …` de la historia. El **tiempo** suma, por cada commit, los minutos desde el commit anterior (de cualquier historia) con un **tope de 60** para no contar noches ni pausas. Mientras la historia está abierta, el cierre dice «en curso»; sin commits todavía, la columna es `—`.
+- **Las 20 historias anteriores (histórico)** tienen el **texto** en [`../product/04-historias-de-usuario.md`](../product/04-historias-de-usuario.md) (congelado; es el enlace del ID) y sus datos en [`legado.json`](legado.json). Su **tiempo es aproximado** (`≈`): se construyeron en cortes que mezclaban varias historias, así que las tareas compartidas se cuentan completas en cada una (la lista está en `legado.json`) y el mapeo historia → tareas es una reconstrucción. HU-50 a HU-53 tienen la API hecha y la tienda pendiente (no tienen cierre).
 
 ## Cómo se trabaja una historia
 

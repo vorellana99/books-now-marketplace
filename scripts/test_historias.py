@@ -366,11 +366,12 @@ class Matriz(unittest.TestCase):
         self.assertTrue(row["tiempo"].startswith("≈ "))
         self.assertIn("../product/04-historias-de-usuario.md#hu-01-registrarme", row["detalle"])
         self.assertEqual(row["estado"], "✅ cerrada")
+        self.assertEqual(row["producto"], "—")  # las anteriores no tienen sección de impacto
 
     def test_una_historia_antigua_con_la_web_pendiente_no_tiene_cierre(self):
         row = h.build_rows(self.root, self.commits)[2]
         self.assertEqual((row["api"], row["web"], row["cierre"]), ("✅", "⬜", "—"))
-        self.assertEqual(row["estado"], "🔄 API hecha, Web pendiente")
+        self.assertEqual(row["estado"], "🔄 en curso")  # el detalle (API hecha, Web pendiente) lo dan las columnas API y Web
 
     def test_una_historia_nueva_toma_capas_tareas_y_tiempo_de_su_archivo_y_de_git(self):
         row = h.build_rows(self.root, self.commits)[1]
@@ -393,8 +394,95 @@ class Matriz(unittest.TestCase):
         text = readme.read_text(encoding="utf-8")
         self.assertTrue(text.startswith("antes\n"))
         self.assertTrue(text.endswith("después\n"))
-        self.assertIn("| HU-12 |", text)
+        self.assertIn("[HU-12](HU-12-ver-si-hay-stock-de-un-libro.md)", text)
         self.assertNotIn("viejo", text)
+
+    # --- diseño de la matriz: dos tablas, ID con enlace, «icono texto», fechas y tiempo en una columna ---
+    def tablas(self, producto_hu=None):
+        """(texto de «Abiertas», texto de «Cerradas e histórico») de la matriz que se escribiría."""
+        if producto_hu:
+            (self.root / "docs" / "historias" / "HU-12-ver-si-hay-stock-de-un-libro.md").write_text(producto_hu, encoding="utf-8")
+        texto = h.render_matrix(h.build_rows(self.root, self.commits))
+        abiertas, cerradas = texto.split("### Cerradas e histórico")
+        return abiertas, cerradas
+
+    def test_dos_tablas_lo_abierto_arriba_y_lo_cerrado_debajo(self):
+        abiertas, cerradas = self.tablas()
+        self.assertTrue(abiertas.lstrip().startswith("### Abiertas"))
+        self.assertIn("HU-12", abiertas)
+        self.assertIn("HU-50", abiertas)  # histórica con la web pendiente: sigue abierta
+        self.assertNotIn("HU-01", abiertas)
+        self.assertIn("HU-01", cerradas)
+        self.assertNotIn("HU-12", cerradas)
+        self.assertNotIn("HU-50", cerradas)
+
+    def test_el_id_es_el_enlace_y_no_hay_columna_detalle(self):
+        abiertas, cerradas = self.tablas()
+        self.assertIn("| [HU-12](HU-12-ver-si-hay-stock-de-un-libro.md) |", abiertas)
+        self.assertIn("| [HU-01](../product/04-historias-de-usuario.md#hu-01-registrarme) |", cerradas)
+        self.assertNotIn("Detalle", abiertas + cerradas)
+
+    def test_api_y_web_se_escriben_icono_y_texto(self):
+        abiertas, _ = self.tablas()
+        fila_12 = next(l for l in abiertas.splitlines() if "HU-12" in l)
+        self.assertIn("| 🔄 en curso | ⬜ pendiente |", fila_12)  # API en curso, Web pendiente
+        fila_50 = next(l for l in abiertas.splitlines() if "HU-50" in l)
+        self.assertIn("| ✅ hecha | ⬜ pendiente |", fila_50)
+
+    def test_una_capa_sin_tareas_dice_no_aplica(self):
+        solo_doc = [("HU-12.1", "DOC", "producto", "normal", "pendiente")]
+        abiertas, _ = self.tablas(hu(solo_doc, contrato=False, pantalla=False))
+        self.assertIn("| — no aplica | — no aplica |", next(l for l in abiertas.splitlines() if "HU-12" in l))
+
+    def test_fechas_y_tiempo_van_en_una_sola_columna(self):
+        abiertas, cerradas = self.tablas()
+        self.assertIn("| 2026-10-28 → en curso · ≈ 1 h 11 min |", abiertas)
+        self.assertIn("| 2026-10-30 → en curso · 30 min |", abiertas)
+        self.assertIn("| 2026-10-30 · ≈ 1 h 56 min |", cerradas)  # cerradas: «cierre · tiempo»
+
+    def test_una_historia_sin_commits_no_tiene_fechas(self):
+        self.commits = []
+        abiertas, _ = self.tablas()
+        self.assertTrue(next(l for l in abiertas.splitlines() if "HU-12" in l).rstrip().endswith("| — |"))
+
+    def test_las_cerradas_llevan_solo_id_historia_epica_estado_y_cierre(self):
+        _, cerradas = self.tablas()
+        self.assertIn("| ID | Historia | Épica | Estado | Cierre y tiempo |", cerradas)
+
+    def test_la_columna_de_cambios_de_producto_cuenta_hechos_sobre_total(self):
+        impacto_ = impacto([("RN-13", "x", "modifica", "hecho"), ("PA-02", "y", "modifica", "pendiente")])
+        row = next(r for r in h.build_rows(self.root, self.commits) if r["id"] == "HU-12")
+        self.assertEqual(row["producto"], "—")  # sin filas de impacto
+        (self.root / "docs" / "historias" / "HU-12-ver-si-hay-stock-de-un-libro.md").write_text(hu(impacto_=impacto_), encoding="utf-8")
+        row = next(r for r in h.build_rows(self.root, self.commits) if r["id"] == "HU-12")
+        self.assertEqual(row["producto"], "1 / 2")
+        abiertas, cerradas = self.tablas()
+        self.assertIn("Cambios de producto", abiertas)
+        self.assertNotIn("Cambios de producto", cerradas)
+
+    def test_sin_historias_abiertas_lo_dice(self):
+        (self.root / "docs" / "historias" / "legado.json").write_text(
+            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-01", "titulo": "Registrarme", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-30", "minutos": 116, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            encoding="utf-8")
+        (self.root / "docs" / "historias" / "HU-12-ver-si-hay-stock-de-un-libro.md").unlink()
+        abiertas, _ = self.tablas()
+        self.assertIn("No hay historias abiertas", abiertas)
+
+    def test_matrix_cells_lee_las_dos_tablas_por_id(self):
+        readme = self.root / "docs" / "historias" / "README.md"
+        readme.write_text(f"{h.START}\n{h.END}\n", encoding="utf-8")
+        h.write_matrix(self.root, self.commits)
+        celdas = h.matrix_cells(self.root)
+        self.assertEqual(set(celdas), {"HU-01", "HU-12", "HU-50"})
+        self.assertEqual(celdas["HU-01"]["Estado"], "✅ cerrada")
+        self.assertEqual(celdas["HU-12"]["Estado"], "⬜ aprobada")
+        self.assertEqual(celdas["HU-50"]["Estado"], "🔄 en curso")
+
+    def test_una_historia_cerrada_pasa_de_una_tabla_a_la_otra(self):
+        todas = [(t[0], t[1], t[2], t[3], "hecho") for t in TAREAS] + [("HU-12.5", "E2E", "recorrido", "normal", "hecho")]
+        abiertas, cerradas = self.tablas(hu(todas, estado="cerrada"))
+        self.assertNotIn("HU-12", abiertas)
+        self.assertIn("HU-12", cerradas)
 
     def test_sin_marcas_es_un_error(self):
         (self.root / "docs" / "historias" / "README.md").write_text("sin marcas", encoding="utf-8")
