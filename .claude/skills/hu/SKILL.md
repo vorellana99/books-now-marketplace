@@ -13,7 +13,7 @@ Todo cambio de producto parte de una historia de usuario (`HU-nn`). Una HU puede
 
 1. Lee la historia si existe (las anteriores a 2026-10-30 están en `docs/product/04-historias-de-usuario.md` como **histórico: no se editan**; las nuevas, en `docs/historias/`), o la necesidad dicha por el usuario. **Una ampliación o un cambio de una historia anterior es una historia NUEVA** con su propio número y `amplia: HU-nn` en el encabezado. Si es una HU nueva, redáctala: «Como…, quiero…, para…», reglas `RN`, pantallas `PA`, rutas, criterios **Dado/Cuando/Entonces** y un **«Listo cuando…»** (el escenario de punta a punta que la da por terminada).
 2. Busca qué reglas `RN` (03), decisiones `DP` (09), mensajes (07) y pantallas (06) toca. **Si algo contradice una regla o decisión escrita** (ejemplo: RN-13 decía «la API no expone el stock»), eso no se resuelve en silencio: pregunta con opciones y una recomendada (primera) y espera.
-3. Si no es una historia (arquitectura, rendimiento, seguridad, accesibilidad, despliegue), es un **habilitador `EN-nn`**: cita la `RN` o el requisito de `docs/product/08-requisitos-de-experiencia.md` que lo justifica.
+3. Si no es una historia (arquitectura, rendimiento, seguridad, accesibilidad, despliegue), es un **habilitador `EN-nn`**: pon en `ligado:` del encabezado (el comprobador lo exige y verifica que exista) la `RN`, la `DP` o el requisito de `docs/product/08-requisitos-de-experiencia.md` que lo justifica o respalda. Una reorganización del código que no cambia el comportamiento se desglosa como una tarea de tipo `refactor` (receta en la plantilla).
 4. Explora el código con subagentes de solo lectura si hace falta (qué existe ya, qué patrón copiar), sin modificar nada.
 
 ## 2. Repartir en tareas

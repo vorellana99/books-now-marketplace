@@ -61,8 +61,8 @@ def impacto(filas):
     return "## Impacto en el producto\n\n" + cab + "\n" + "\n".join(f"| {a} | {b} | {c} | {d} |" for a, b, c, d in filas) + "\n"
 
 
-def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=True, sid="HU-12", exec_=True, impacto_=SIN_IMPACTO, reemplaza=""):
-    partes = [f"---\nid: {sid}\ntitulo: Ver si hay stock de un libro\ntipo: HU\nepica: Catálogo\nestado: {estado}\namplia:\nreemplaza: {reemplaza}\n---\n", f"# {sid}\n"]
+def hu(tareas=TAREAS, estado="aprobada", contrato=True, pantalla=True, detalle=True, sid="HU-12", exec_=True, impacto_=SIN_IMPACTO, reemplaza="", tipo="HU", ligado=""):
+    partes = [f"---\nid: {sid}\ntitulo: Ver si hay stock de un libro\ntipo: {tipo}\nepica: Catálogo\nestado: {estado}\namplia:\nreemplaza: {reemplaza}\nligado: {ligado}\n---\n", f"# {sid}\n"]
     if contrato:
         partes.append("## Contrato\n\nSin cambios en el contrato.\n")
     if pantalla:
@@ -95,8 +95,10 @@ PLANTILLA_OK = "\n".join(
         _fila_tipo("API", "evento", "Un aviso entre partes", "Reaccionar a algo", "sí"),
         _fila_tipo("API", "base-de-datos", "Las tablas", "Una columna", "sí"),
         _fila_tipo("API", "configuracion", "Una variable de entorno", "`JWT_SECRET`", "no"),
+        _fila_tipo("API", "refactor", "La estructura del código, no su comportamiento", "Renombrar o mover un archivo", "no"),
         _fila_tipo("WEB", "pantalla", "Lo que se ve", "Mover un botón", "no"),
         _fila_tipo("WEB", "comportamiento", "Lo que la tienda hace", "Pedir un campo", "no"),
+        _fila_tipo("WEB", "refactor", "La estructura del código de la tienda", "Mover un componente", "no"),
         _fila_tipo("DOC", "producto", "Reglas y decisiones", "`RN-13`", "no"),
         _fila_tipo("DOC", "guia", "Guías técnicas", "`CLAUDE.md`", "no"),
         _fila_tipo("E2E", "recorrido", "El recorrido de punta a punta", "—", "no"),
@@ -204,8 +206,8 @@ class Iconos(unittest.TestCase):
 class TablaDeTipos(unittest.TestCase):
     def test_lee_la_tabla_de_la_plantilla(self):
         tipos = h.parse_types_table(PLANTILLA_OK)
-        self.assertEqual(tipos["API"], ["contrato", "regla", "evento", "base-de-datos", "configuracion"])
-        self.assertEqual(tipos["WEB"], ["pantalla", "comportamiento"])
+        self.assertEqual(tipos["API"], ["contrato", "regla", "evento", "base-de-datos", "configuracion", "refactor"])
+        self.assertEqual(tipos["WEB"], ["pantalla", "comportamiento", "refactor"])
         self.assertEqual(tipos["E2E"], ["recorrido"])
 
     def test_lee_cuales_son_siempre_criticos(self):
@@ -822,6 +824,84 @@ class Comprobacion(Entorno):
 RN_13 = "| RN-13 | **Stock** | Antes de cobrar se aparta el stock |"
 PA_02 = "| PA-02 | Detalle del libro | `/libros/:isbn` |"
 DP_05 = "| DP-05 | Datos del libro | El MVP usa solo lo que entrega la API |"
+
+
+class Habilitadores(Entorno):
+    """El tipo `refactor` y la ligadura obligatoria de los habilitadores (`EN-nn`)."""
+
+    LIGADO = "backend/05-piezas-clave.md#convención-por-contexto"
+
+    def setUp(self):
+        super().setUp()
+        (self.root / "docs" / "backend").mkdir(parents=True)
+        (self.root / "docs" / "backend" / "05-piezas-clave.md").write_text("# piezas\n", encoding="utf-8")
+        prod = self.root / "docs" / "product"
+        prod.mkdir(parents=True, exist_ok=True)
+        (prod / "03-reglas-de-negocio.md").write_text("# rn\n\n| ID | Regla |\n|---|---|\n| RN-13 | **Stock** |\n", encoding="utf-8")
+
+    def habilitador(self, ligado, tareas=(("EN-01.1", "API", "refactor", "normal", "pendiente"),), **kw):
+        (self.fase / "EN-01.md").write_text(hu(list(tareas), sid="EN-01", tipo="EN", ligado=ligado, **kw), encoding="utf-8")
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+
+    # --- el tipo refactor ---
+    def test_refactor_es_un_tipo_de_api_y_de_web_con_su_icono(self):
+        self.assertIn("refactor", h.TIPOS["API"])
+        self.assertIn("refactor", h.TIPOS["WEB"])
+        self.assertEqual(h.cell("tipo", "refactor"), "♻️ refactor")
+
+    def test_una_tarea_refactor_de_api_o_de_web_es_valida(self):
+        self.con_tareas([("HU-12.1", "API", "refactor", "normal", "pendiente"), ("HU-12.2", "WEB", "refactor", "normal", "pendiente")])
+        self.assertEqual(self.errors(), [])
+
+    def test_refactor_no_existe_en_doc_ni_en_e2e(self):
+        for capa in ("DOC", "E2E"):
+            self.con_tareas([("HU-12.1", capa, "producto" if capa == "DOC" else "recorrido", "normal", "pendiente")])
+            self.escribe(self.file.read_text(encoding="utf-8").replace(h.cell("tipo", "producto" if capa == "DOC" else "recorrido"), "♻️ refactor"))
+            self.assertTrue(self.hay("refactor", "no válido"), capa)
+
+    def test_un_refactor_critico_es_valido_en_api_pero_no_en_web(self):
+        self.con_tareas([("HU-12.1", "API", "refactor", "critico", "pendiente")])
+        self.assertEqual(self.errors(), [])
+        self.con_tareas([("HU-12.1", "WEB", "refactor", "critico", "pendiente")])
+        self.assertTrue(self.hay("critico", "[API]"))
+
+    def test_la_plantilla_debe_describir_refactor_en_api_y_en_web(self):
+        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK, encoding="utf-8")
+        self.assertEqual(self.errors(), [])
+        sin_web = "\n".join(l for l in PLANTILLA_OK.splitlines() if not (h.cell("capa", "WEB") in l and "refactor" in l))
+        (self.dir / "_plantilla.md").write_text(sin_web, encoding="utf-8")
+        self.assertTrue(self.hay("_plantilla.md", "WEB"))
+
+    # --- un habilitador se liga a algo ---
+    def test_un_habilitador_ligado_a_una_decision_de_arquitectura_es_valido(self):
+        self.habilitador(self.LIGADO)
+        self.assertEqual(self.errors(), [])
+
+    def test_un_habilitador_sin_ligadura_es_un_error(self):
+        self.habilitador("")
+        self.assertTrue(self.hay("EN-01.md", "ligado"))
+
+    def test_la_ligadura_a_un_documento_que_no_existe(self):
+        self.habilitador("backend/no-existe.md#algo")
+        self.assertTrue(self.hay("EN-01.md", "backend/no-existe.md"))
+
+    def test_la_ligadura_a_una_regla_de_negocio(self):
+        self.habilitador("RN-13")
+        self.assertEqual(self.errors(), [])
+        self.habilitador("RN-99")
+        self.assertTrue(self.hay("EN-01.md", "RN-99"))
+
+    def test_la_ligadura_que_no_es_regla_ni_documento(self):
+        self.habilitador("la arquitectura")
+        self.assertTrue(self.hay("EN-01.md", "la arquitectura"))
+
+    def test_una_historia_no_necesita_ligadura(self):
+        self.assertEqual(self.errors(), [])  # HU-12 sin `ligado:`
+
+    def test_un_habilitador_cerrado_no_necesita_tarea_e2e(self):
+        self.habilitador(self.LIGADO, tareas=(("EN-01.1", "API", "refactor", "normal", "hecho"),), estado="cerrada")
+        self.assertEqual(self.errors(), [])
 
 
 class Impacto(Entorno):

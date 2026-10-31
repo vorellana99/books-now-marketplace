@@ -47,8 +47,8 @@ RIGORES = (CRITICO, NORMAL)
 # también esa tabla (parse_types_table y check() las comparan y `python3 scripts/historias.py --check` falla si difieren)
 PLANTILLA = "docs/historias/_plantilla.md"
 TIPOS = {
-    "API": ("contrato", "regla", "evento", "base-de-datos", "configuracion"),
-    "WEB": ("pantalla", "comportamiento"),
+    "API": ("contrato", "regla", "evento", "base-de-datos", "configuracion", "refactor"),
+    "WEB": ("pantalla", "comportamiento", "refactor"),
     "DOC": ("producto", "guia"),
     "E2E": ("recorrido",),
 }
@@ -69,6 +69,7 @@ ICONOS = {
     "tipo": {
         "contrato": "📜", "regla": "📐", "evento": "⚡", "base-de-datos": "🧊", "configuracion": "\U0001f6e0\ufe0f",
         "pantalla": "\U0001f5bc\ufe0f", "comportamiento": "🔀", "producto": "📦", "guia": "📘", "recorrido": "🔁",
+        "refactor": "\u267b\ufe0f",  # ♻️ lleva el selector de emoji (U+FE0F)
     },
     "rigor": {"critico": "🔴", "normal": "🟢"},
     "estado": {"propuesta": "\u270f\ufe0f", "pendiente": "⏳", "en-curso": "⏩", "hecho": "✅", "bloqueado": "⛔"},
@@ -648,6 +649,23 @@ def _errores_documento(root, nombre, sid, doc, accion, estado):
     return errores
 
 
+def _errores_ligado(root, nombre, meta):
+    """Un habilitador (`EN-nn`) no nace de una persona que pide algo, así que se liga a su porqué: una regla (RN-nn), una decisión
+    (DP-nn) o un documento de docs/ (con ancla opcional). Una historia no necesita `ligado:`."""
+    if meta.get("tipo") != "EN":
+        return []
+    ligado = meta.get("ligado", "")
+    donde = "una regla o decisión (RN-nn, DP-nn) o un documento de docs/, por ejemplo backend/05-piezas-clave.md#convención-por-contexto"
+    if not ligado:
+        return [f"{nombre}: un habilitador se liga a algo y le falta `ligado:` en el encabezado ({donde})"]
+    if ITEM.match(ligado):
+        return [] if item_lines(root, ligado) else [f"{nombre}: `ligado: {ligado}` no existe en {VIVOS[ligado[:2]]}"]
+    ruta = ligado.split("#")[0]
+    if re.search(r"\.\w+$", ruta):
+        return [] if (Path(root) / "docs" / ruta).exists() else [f"{nombre}: `ligado: {ligado}` apunta a docs/{ruta}, que no existe"]
+    return [f"{nombre}: `ligado: {ligado}` no es una regla, una decisión ni la ruta de un documento ({donde})"]
+
+
 def _errores_impacto(root, nombre, sid, estado_hu, text, base="historias"):
     impacto = parse_impact(text, base)
     if impacto is None:
@@ -845,6 +863,7 @@ def check(root):
         if sid in seen:
             errors.append(f"{path.name}: id repetido ({sid})")
         seen.add(sid)
+        errors += _errores_ligado(root, path.name, meta)
         if meta["estado"] not in ESTADOS:
             errors.append(f"{path.name}: estado «{meta['estado']}» no válido (usa {', '.join(ESTADOS)})")
             continue

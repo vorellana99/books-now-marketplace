@@ -225,7 +225,7 @@ La lista completa, con más detalle, está en el comando `/tarea`.
 | Sigla | Significa | Dónde |
 |---|---|---|
 | **HU-nn.k** | Tarea k de la historia HU-nn (`HU-12.3`); su commit lleva también la capa | `historias/fase-n/HU-nn.md` |
-| **EN-nn** | Habilitador: trabajo técnico sin historia propia (arquitectura, rendimiento, seguridad…), ligado a una `RN` o a un requisito de `08` | `historias/fase-n/EN-nn.md` |
+| **EN-nn** | Habilitador: trabajo técnico sin historia propia (arquitectura, rendimiento, seguridad…), ligado (`ligado:` en el encabezado, obligatorio) a una `RN`, una `DP`, un requisito de `08` o una decisión de arquitectura de `docs/backend/`; sus reorganizaciones de código son tareas de tipo `refactor` | `historias/fase-n/EN-nn.md` |
 | **[API] [WEB] [E2E] [DOC]** | La capa de una tarea: backend, tienda, recorrido de punta a punta contra el backend real, o producto y guías sin código | `historias/` |
 | **N.M / FN.M** | Tareas de los cortes anteriores a 2026-10-30 (`7.6`, `F4.6`); historial, no se reutilizan | `backend/00-avance.md`, `frontend/00-avance.md` |
 | **RN-nn** | Regla de negocio | `product/03-reglas-de-negocio.md` |
