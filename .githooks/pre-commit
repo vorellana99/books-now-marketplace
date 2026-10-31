@@ -1,0 +1,4 @@
+#!/bin/sh
+# Rechaza un commit que modifique, borre o renombre un archivo de historial congelado («❄️ Historial congelado desde …»).
+# Se activa una sola vez por clon:  git config core.hooksPath .githooks
+exec python3 "$(git rev-parse --show-toplevel)/scripts/pre_commit.py"

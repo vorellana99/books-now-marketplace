@@ -7,7 +7,7 @@
 ## Matriz
 
 <!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->
-### Abiertas (19)
+### Abiertas (18)
 
 | ID | Fase | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -21,7 +21,6 @@
 | [HU-51](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) | [Fase 1](fase-1/README.md) | Editar o desactivar un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 22 min |
 | [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | [Fase 1](fase-1/README.md) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
 | [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | [Fase 1](fase-1/README.md) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
-| [EN-03](fase-2/EN-03.md) | [Fase 2](fase-2/README.md) | Congelar los archivos de avance y no duplicar la información | Documentación | 🔄 en curso | — no aplica | — no aplica | — | 4 / 5 | 2026-10-31 → en curso · 12 min |
 | [EN-04](fase-2/EN-04.md) | [Fase 2](fase-2/README.md) | Ordenar los nombres de archivo que rompen la convención de sufijos | Arquitectura | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 | [EN-05](fase-2/EN-05.md) | [Fase 2](fase-2/README.md) | Que los operationId de Swagger sean legibles para un generador de código | API | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 | [EN-06](fase-2/EN-06.md) | [Fase 2](fase-2/README.md) | Cerrar o proteger /docs, /docs-json y /health/outbox en producción | Seguridad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
@@ -31,7 +30,7 @@
 | [EN-10](fase-2/EN-10.md) | [Fase 2](fase-2/README.md) | Poner un tiempo máximo a cada entrega del relay del Outbox | Confiabilidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 | [EN-11](fase-2/EN-11.md) | [Fase 2](fase-2/README.md) | Vigilar los fallos intermitentes de las pruebas | Calidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 
-### Cerradas e histórico (18)
+### Cerradas e histórico (19)
 
 | ID | Fase | Historia | Épica | Estado | Cierre y tiempo |
 |---|---|---|---|---|---|
@@ -53,6 +52,7 @@
 | [HU-41](../product/04-historias-de-usuario.md#hu-41-ver-el-detalle-de-un-pedido) | [Fase 1](fase-1/README.md) | Ver el detalle de un pedido | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 42 min |
 | [EN-01](fase-2/EN-01.md) | [Fase 2](fase-2/README.md) | Ordenar application/services/ de Ventas e Identidad | Arquitectura | ✅ cerrada | 2026-10-31 · 0 min |
 | [EN-02](fase-2/EN-02.md) | [Fase 2](fase-2/README.md) | Comprobación final de toda la solución | Calidad | ✅ cerrada | 2026-10-31 · 37 min |
+| [EN-03](fase-2/EN-03.md) | [Fase 2](fase-2/README.md) | Congelar los archivos de avance y no duplicar la información | Documentación | ✅ cerrada | 2026-10-31 · 25 min |
 <!-- MATRIZ:FIN -->
 
 **Cómo se lee**
