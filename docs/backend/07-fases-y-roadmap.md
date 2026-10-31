@@ -1,5 +1,7 @@
 # Backend: orden de implementación y siguientes funcionalidades
 
+> **❄️ Historial congelado desde el 2026-10-31. Este archivo no se actualizará más.** Se conserva como registro de lo que se hizo. Hoy cada tipo de información está en otro sitio: lo que se hizo, en `git log` y en la bitácora de cada historia o habilitador; lo pendiente, en la [matriz de historias](../historias/README.md) (incluidas las ideas); cómo es el sistema, en los documentos vivos (`product/`, `api-contrato.md`, `backend/`, `frontend/`, la guía de desarrollo); y por qué se decidió algo, junto a su regla.
+
 > Secciones 10 y 11 de la guía.
 
 ## 10. Orden de implementación

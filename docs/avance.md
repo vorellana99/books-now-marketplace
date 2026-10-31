@@ -1,8 +1,6 @@
 # Avance: lo transversal
 
-> El trabajo se planifica y se registra **por historia de usuario**. Cada historia nueva tiene **su propio archivo** en [`historias/`](historias/README.md), con su texto, sus tareas por capa, sus decisiones y su bitácora, y la **matriz** de todas las historias (las 20 anteriores, como histórico, y las nuevas) con su estado, fecha de cierre y tiempo está en [`historias/README.md`](historias/README.md). Las reglas de cómo se trabaja una historia están ahí y en la [guía de desarrollo §4](guia-de-desarrollo.md#4-del-requisito-a-la-tarea-el-ciclo).
->
-> **Este archivo guarda solo lo que no es de una historia concreta:** habilitadores técnicos, problemas abiertos, decisiones generales y la bitácora general. Los tableros por capa anteriores, [backend](backend/00-avance.md) (cortes 0–10) y [frontend](frontend/00-avance.md) (cortes F0–F6), son **historial congelado**.
+> **❄️ Historial congelado desde el 2026-10-31. Este archivo no se actualizará más.** Se conserva como registro de lo que se hizo. Hoy cada tipo de información está en otro sitio: lo que se hizo, en `git log` y en la bitácora de cada historia o habilitador; lo pendiente, en la [matriz de historias](historias/README.md) (incluidas las ideas); cómo es el sistema, en los documentos vivos (`product/`, `api-contrato.md`, `backend/`, `frontend/`, la guía de desarrollo); y por qué se decidió algo, junto a su regla.
 
 **Leyenda:** ⬜ pendiente · 🔄 en curso · ✅ hecho · ⛔ bloqueado · 📝 propuesta (pendiente de aprobación)
 

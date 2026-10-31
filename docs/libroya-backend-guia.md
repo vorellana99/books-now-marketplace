@@ -1,5 +1,7 @@
 # LibroYa API: guía de implementación en NestJS
 
+> **❄️ Historial congelado desde el 2026-10-31. Este archivo no se actualizará más.** Se conserva como registro de lo que se hizo. Hoy cada tipo de información está en otro sitio: lo que se hizo, en `git log` y en la bitácora de cada historia o habilitador; lo pendiente, en la [matriz de historias](historias/README.md) (incluidas las ideas); cómo es el sistema, en los documentos vivos (`product/`, `api-contrato.md`, `backend/`, `frontend/`, la guía de desarrollo); y por qué se decidió algo, junto a su regla.
+
 API REST de LibroYa construida con DDD, CQRS y arquitectura hexagonal. Los conceptos y el código del dominio son los de la guía DDD v5. Esta guía solo cubre lo necesario para construir el backend. Este archivo es el índice: el contenido está repartido en los documentos de abajo. El producto se explica en [la carpeta de producto](product/README.md), para cualquier lector; el resto de la guía es técnica.
 
 > [!caution] Estado de esta guía

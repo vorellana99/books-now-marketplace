@@ -21,7 +21,7 @@
 | [HU-51](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) | [Fase 1](fase-1/README.md) | Editar o desactivar un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 22 min |
 | [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | [Fase 1](fase-1/README.md) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
 | [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | [Fase 1](fase-1/README.md) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
-| [EN-03](fase-2/EN-03.md) | [Fase 2](fase-2/README.md) | Congelar los archivos de avance y no duplicar la información | Documentación | 🔄 en curso | — no aplica | — no aplica | — | 3 / 5 | 2026-10-31 → en curso · 11 min |
+| [EN-03](fase-2/EN-03.md) | [Fase 2](fase-2/README.md) | Congelar los archivos de avance y no duplicar la información | Documentación | 🔄 en curso | — no aplica | — no aplica | — | 4 / 5 | 2026-10-31 → en curso · 12 min |
 | [EN-04](fase-2/EN-04.md) | [Fase 2](fase-2/README.md) | Ordenar los nombres de archivo que rompen la convención de sufijos | Arquitectura | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 | [EN-05](fase-2/EN-05.md) | [Fase 2](fase-2/README.md) | Que los operationId de Swagger sean legibles para un generador de código | API | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 | [EN-06](fase-2/EN-06.md) | [Fase 2](fase-2/README.md) | Cerrar o proteger /docs, /docs-json y /health/outbox en producción | Seguridad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
@@ -102,4 +102,4 @@ Lo construido en los cortes sigue siendo la base; esta tabla dice a qué histori
 | Tienda F1 a F5 | Catálogo, cuenta y sesión, carrito, compra, pedidos | HU-10/11, HU-01 a HU-04, HU-20 a HU-22, HU-30 a HU-34, HU-40/41 (Web) |
 | Tienda F6 | Accesibilidad, e2e, rendimiento, despliegue y seguridad | Habilitadores (requisitos de `product/08`) |
 
-Los tableros por capa, [backend](../backend/00-avance.md) y [frontend](../frontend/00-avance.md), [`avance.md`](../avance.md) y la lista de historias de [`product/04`](../product/04-historias-de-usuario.md) quedan como **historial congelado**.
+Los tableros por capa, [backend](../backend/00-avance.md) y [frontend](../frontend/00-avance.md), [`avance.md`](../avance.md), los dos `07-fases-y-roadmap.md` (planificaban por cortes), la guía original [`libroya-backend-guia.md`](../libroya-backend-guia.md) y la lista de historias de [`product/04`](../product/04-historias-de-usuario.md) quedan como **historial congelado**.

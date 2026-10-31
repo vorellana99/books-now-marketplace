@@ -1261,6 +1261,28 @@ class DocumentosReales(unittest.TestCase):
         inicio, fin = registro.index(h.CAMBIOS_INICIO), registro.index(h.CAMBIOS_FIN)
         self.assertEqual(registro[inicio + len(h.CAMBIOS_INICIO):fin].strip(), h.render_changes(ROOT).strip())
 
+    # Los archivos congelados (historial): empiezan, justo después del título, con la advertencia de que no se actualizan más
+    CONGELADOS = {
+        "docs/avance.md": "2026-10-31",
+        "docs/backend/00-avance.md": "2026-10-30",
+        "docs/frontend/00-avance.md": "2026-10-30",
+        "docs/backend/07-fases-y-roadmap.md": "2026-10-31",
+        "docs/frontend/07-fases-y-roadmap.md": "2026-10-31",
+        "docs/libroya-backend-guia.md": "2026-10-31",
+    }
+
+    def test_los_archivos_congelados_empiezan_con_la_advertencia_de_que_no_se_actualizan_mas(self):
+        for ruta, fecha in self.CONGELADOS.items():
+            cabecera = "\n".join((ROOT / ruta).read_text(encoding="utf-8").splitlines()[:6])
+            self.assertIn(f"❄️ Historial congelado desde el {fecha}", cabecera, ruta)
+            self.assertIn("no se actualizará más", cabecera, ruta)
+
+    def test_la_advertencia_dice_donde_esta_hoy_cada_tipo_de_informacion(self):
+        for ruta in self.CONGELADOS:
+            cabecera = "\n".join((ROOT / ruta).read_text(encoding="utf-8").splitlines()[:6])
+            for palabra in ("git log", "matriz de historias", "documentos vivos"):
+                self.assertIn(palabra, cabecera, f"{ruta}: {palabra}")
+
     def test_la_plantilla_de_una_idea_existe_y_es_una_idea(self):
         texto = (ROOT / "docs" / "historias" / "_idea.md").read_text(encoding="utf-8")
         meta = h.parse_front_matter(texto)
