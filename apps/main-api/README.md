@@ -373,6 +373,16 @@ docker run -d --env-file produccion.env -p 3000:3000 libroya-api
 
 La imagen trae `NODE_ENV=production`, así que la validación de producción se aplica: sin `JWT_SECRET`, con `PAYMENT_PROVIDER=fake` o con `CORS_ORIGINS` que no sean https, **no arranca**. Su `HEALTHCHECK` consulta `/health/live`; el balanceador debe usar `/health/ready`. Las migraciones crean la extensión `pg_trgm`: el rol de la base debe poder (ver «Problemas frecuentes»). La imagen de la API pesa unos 560 MB. No hay un trabajo de CI que la construya: se construye a mano.
 
+### Con más de una instancia: lo que no se comparte
+
+Hoy se despliega **una sola instancia** de la API. Antes de añadir más, hay que saber que **los límites de intentos de `/auth/*` viven en la memoria de cada proceso** (`@nestjs/throttler` sin almacén compartido):
+
+- Con **N instancias** y un balanceador que reparte sin afinidad, el tope real es **N veces el configurado**: con 3 instancias, el login contra un mismo correo admite 15 intentos por ventana en vez de 5, y 60 por dirección en vez de 20. Es un tope multiplicado, no un límite saltado.
+- Los contadores **se pierden al reiniciar o desplegar**, y el `Retry-After` que recibe una persona es el de la instancia que le tocó.
+- **No dividas los `RATE_LIMIT_*` entre N** para compensarlo: el límite por cuenta (5) quedaría en menos de 1 por instancia y bloquearía a las personas legítimas.
+- **Afinidad por dirección** (`ip_hash` o equivalente) en el balanceador mantiene casi intacto el límite por dirección, pero no el de cuenta, porque el correo va en el cuerpo y el balanceador no lo ve.
+- La solución definitiva es un **almacén compartido**; la opción que no suma infraestructura es guardar los contadores en PostgreSQL. Está pendiente como habilitador (ver «Problemas abiertos» en [`docs/avance.md`](../../docs/avance.md)) y se hace **antes de pasar a más de una instancia en producción**.
+
 ## Levantar la API
 
 ```bash
