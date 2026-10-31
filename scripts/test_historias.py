@@ -351,7 +351,8 @@ class Matriz(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        (self.root / "docs" / "historias" / "HU-12-ver-si-hay-stock-de-un-libro.md").write_text(HU_OK, encoding="utf-8")
+        (self.root / "docs" / "historias" / "fase-2").mkdir()
+        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").write_text(HU_OK, encoding="utf-8")
         self.commits = [("a", at(9), "HU-12.1 [DOC]: x"), ("b", at(9, 30), "HU-12.2 [API]: y")]
 
     def tearDown(self):
@@ -381,7 +382,7 @@ class Matriz(unittest.TestCase):
         self.assertEqual(row["inicio"], "2026-10-30")
         self.assertEqual(row["cierre"], "—")  # solo tiene cierre una HU cerrada
         self.assertEqual(row["tiempo"], "30 min")
-        self.assertEqual(row["detalle"], "[HU-12](HU-12-ver-si-hay-stock-de-un-libro.md)")
+        self.assertEqual(row["detalle"], "[HU-12](fase-2/HU-12.md)")
 
     def test_la_plantilla_y_los_archivos_con_guion_bajo_se_ignoran(self):
         (self.root / "docs" / "historias" / "_plantilla.md").write_text("---\nid: HU-nn\n---\n", encoding="utf-8")
@@ -394,14 +395,14 @@ class Matriz(unittest.TestCase):
         text = readme.read_text(encoding="utf-8")
         self.assertTrue(text.startswith("antes\n"))
         self.assertTrue(text.endswith("después\n"))
-        self.assertIn("[HU-12](HU-12-ver-si-hay-stock-de-un-libro.md)", text)
+        self.assertIn("[HU-12](fase-2/HU-12.md)", text)
         self.assertNotIn("viejo", text)
 
     # --- diseño de la matriz: dos tablas, ID con enlace, «icono texto», fechas y tiempo en una columna ---
     def tablas(self, producto_hu=None):
         """(texto de «Abiertas», texto de «Cerradas e histórico») de la matriz que se escribiría."""
         if producto_hu:
-            (self.root / "docs" / "historias" / "HU-12-ver-si-hay-stock-de-un-libro.md").write_text(producto_hu, encoding="utf-8")
+            (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").write_text(producto_hu, encoding="utf-8")
         texto = h.render_matrix(h.build_rows(self.root, self.commits))
         abiertas, cerradas = texto.split("### Cerradas e histórico")
         return abiertas, cerradas
@@ -418,7 +419,7 @@ class Matriz(unittest.TestCase):
 
     def test_el_id_es_el_enlace_y_no_hay_columna_detalle(self):
         abiertas, cerradas = self.tablas()
-        self.assertIn("| [HU-12](HU-12-ver-si-hay-stock-de-un-libro.md) |", abiertas)
+        self.assertIn("| [HU-12](fase-2/HU-12.md) |", abiertas)
         self.assertIn("| [HU-01](../product/04-historias-de-usuario.md#hu-01-registrarme) |", cerradas)
         self.assertNotIn("Detalle", abiertas + cerradas)
 
@@ -447,13 +448,13 @@ class Matriz(unittest.TestCase):
 
     def test_las_cerradas_llevan_solo_id_historia_epica_estado_y_cierre(self):
         _, cerradas = self.tablas()
-        self.assertIn("| ID | Historia | Épica | Estado | Cierre y tiempo |", cerradas)
+        self.assertIn("| ID | Fase | Historia | Épica | Estado | Cierre y tiempo |", cerradas)
 
     def test_la_columna_de_cambios_de_producto_cuenta_hechos_sobre_total(self):
         impacto_ = impacto([("RN-13", "x", "modifica", "hecho"), ("PA-02", "y", "modifica", "pendiente")])
         row = next(r for r in h.build_rows(self.root, self.commits) if r["id"] == "HU-12")
         self.assertEqual(row["producto"], "—")  # sin filas de impacto
-        (self.root / "docs" / "historias" / "HU-12-ver-si-hay-stock-de-un-libro.md").write_text(hu(impacto_=impacto_), encoding="utf-8")
+        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").write_text(hu(impacto_=impacto_), encoding="utf-8")
         row = next(r for r in h.build_rows(self.root, self.commits) if r["id"] == "HU-12")
         self.assertEqual(row["producto"], "1 / 2")
         abiertas, cerradas = self.tablas()
@@ -464,7 +465,7 @@ class Matriz(unittest.TestCase):
         (self.root / "docs" / "historias" / "legado.json").write_text(
             json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-01", "titulo": "Registrarme", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-30", "minutos": 116, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
             encoding="utf-8")
-        (self.root / "docs" / "historias" / "HU-12-ver-si-hay-stock-de-un-libro.md").unlink()
+        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").unlink()
         abiertas, _ = self.tablas()
         self.assertIn("No hay historias abiertas", abiertas)
 
@@ -484,6 +485,21 @@ class Matriz(unittest.TestCase):
         self.assertNotIn("HU-12", abiertas)
         self.assertIn("HU-12", cerradas)
 
+    # --- columna Fase ---
+    def test_la_fase_sale_de_la_carpeta_y_las_anteriores_son_de_la_fase_1(self):
+        abiertas, cerradas = self.tablas()
+        self.assertIn("| [Fase 2](fase-2/README.md) |", next(l for l in abiertas.splitlines() if "HU-12" in l))
+        self.assertIn("| [Fase 1](fase-1/README.md) |", next(l for l in abiertas.splitlines() if "HU-50" in l))
+        self.assertIn("| [Fase 1](fase-1/README.md) |", next(l for l in cerradas.splitlines() if "HU-01" in l))
+
+    def test_una_historia_en_otra_carpeta_de_fase_muestra_esa_fase(self):
+        (self.root / "docs" / "historias" / "fase-3").mkdir()
+        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").rename(self.root / "docs" / "historias" / "fase-3" / "HU-12.md")
+        abiertas, _ = self.tablas()
+        fila = next(l for l in abiertas.splitlines() if "HU-12" in l)
+        self.assertIn("[HU-12](fase-3/HU-12.md)", fila)
+        self.assertIn("[Fase 3](fase-3/README.md)", fila)
+
     def test_sin_marcas_es_un_error(self):
         (self.root / "docs" / "historias" / "README.md").write_text("sin marcas", encoding="utf-8")
         with self.assertRaises(h.HistoriaError):
@@ -495,9 +511,11 @@ class Entorno(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.dir = self.root / "docs" / "historias"
-        self.dir.mkdir(parents=True)
+        self.fase = self.dir / "fase-2"
+        self.fase.mkdir(parents=True)
+        (self.fase / "README.md").write_text("# Fase 2\n", encoding="utf-8")
         (self.dir / "legado.json").write_text(json.dumps({"tope_minutos": 60, "historias": []}), encoding="utf-8")
-        self.file = self.dir / "HU-12-ver-si-hay-stock-de-un-libro.md"
+        self.file = self.fase / "HU-12.md"
         self.file.write_text(HU_OK, encoding="utf-8")
         (self.dir / "README.md").write_text(f"{h.START}\n{h.END}\n", encoding="utf-8")
         h.write_matrix(self.root, [])
@@ -525,7 +543,7 @@ class Comprobacion(Entorno):
         self.assertEqual(self.errors(), [])
 
     def test_el_nombre_del_archivo_empieza_por_el_id(self):
-        self.file.rename(self.dir / "HU-13-otro-nombre.md")
+        self.file.rename(self.fase / "HU-13.md")
         self.assertTrue(self.hay("nombre"))
 
     def test_estado_invalido(self):
@@ -563,6 +581,51 @@ class Comprobacion(Entorno):
     def test_una_historia_propuesta_no_puede_tener_tareas_hechas(self):
         self.escribe(HU_OK.replace("estado: aprobada", "estado: propuesta"))
         self.assertTrue(self.hay("propuesta"))
+
+    # --- carpetas de fase ---
+    def test_el_archivo_lleva_solo_el_correlativo_no_el_titulo(self):
+        self.file.rename(self.fase / "HU-12-ver-si-hay-stock.md")
+        self.assertTrue(self.hay("nombre", "HU-12.md"))
+
+    def test_una_historia_suelta_fuera_de_una_carpeta_de_fase(self):
+        (self.dir / "HU-14.md").write_text(HU_OK.replace("HU-12", "HU-14"), encoding="utf-8")
+        self.assertTrue(self.hay("HU-14.md", "fase-"))
+
+    def test_una_historia_en_una_carpeta_que_no_es_una_fase(self):
+        (self.dir / "mvp").mkdir()
+        (self.dir / "mvp" / "HU-14.md").write_text(HU_OK.replace("HU-12", "HU-14"), encoding="utf-8")
+        self.assertTrue(self.hay("HU-14.md", "fase-"))
+
+    def test_cada_fase_necesita_su_readme_inicial(self):
+        (self.fase / "README.md").unlink()
+        self.assertTrue(self.hay("fase-2", "README.md"))
+
+    def test_una_fase_sin_historias_tambien_necesita_su_readme(self):
+        (self.dir / "fase-3").mkdir()
+        self.assertTrue(self.hay("fase-3", "README.md"))
+
+    def test_si_hay_historico_existe_la_fase_1_con_su_readme(self):
+        (self.dir / "legado.json").write_text(
+            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-05", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            encoding="utf-8",
+        )
+        h.write_matrix(self.root, [])
+        self.assertTrue(self.hay("fase-1", "README.md"))
+        (self.dir / "fase-1").mkdir()
+        (self.dir / "fase-1" / "README.md").write_text("# Fase 1 (MVP)\n", encoding="utf-8")
+        self.assertEqual(self.errors(), [])
+
+    def test_las_historias_se_listan_por_fase_y_luego_por_nombre(self):
+        (self.dir / "fase-1").mkdir()
+        (self.dir / "fase-1" / "HU-30.md").write_text(HU_OK.replace("HU-12", "HU-30"), encoding="utf-8")
+        (self.dir / "fase-10").mkdir()
+        (self.dir / "fase-10" / "HU-01.md").write_text(HU_OK.replace("HU-12", "HU-01"), encoding="utf-8")
+        self.assertEqual([f"{p.parent.name}/{p.name}" for p in h.story_files(self.root)], ["fase-1/HU-30.md", "fase-2/HU-12.md", "fase-10/HU-01.md"])
+
+    def test_el_enlace_de_impacto_se_resuelve_desde_la_carpeta_de_la_fase(self):
+        # desde fase-2/ el producto está en ../../product
+        self.assertEqual(h.parse_impact(hu(impacto_=impacto([("[c](../../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente")])), "historias/fase-2")["filas"][0][0],
+                         "product/07-contenido-y-mensajes.md")
 
     # --- contrato y pantalla ---
     def test_una_historia_con_tareas_api_necesita_su_seccion_contrato(self):
@@ -842,13 +905,13 @@ class Impacto(Entorno):
         self.assertTrue(self.hay("la guía"))
 
     def test_el_documento_puede_ir_con_comillas_o_enlace(self):
-        self.con_impacto([("`RN-13`", "x", "modifica", "pendiente"), ("[PA-02](../product/06-pantallas-y-navegacion.md)", "x", "modifica", "pendiente")])
+        self.con_impacto([("`RN-13`", "x", "modifica", "pendiente"), ("[PA-02](../../product/06-pantallas-y-navegacion.md)", "x", "modifica", "pendiente")])
         self.assertEqual(self.errors(), [])
 
     def test_un_enlace_con_nombre_legible_se_resuelve_por_su_destino(self):
-        self.con_impacto([("[contenido](../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente"), ("[el contrato](../api-contrato.md)", "x", "modifica", "pendiente")])
+        self.con_impacto([("[contenido](../../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente"), ("[el contrato](../../api-contrato.md)", "x", "modifica", "pendiente")])
         self.assertEqual(self.errors(), [])
-        self.con_impacto([("[contenido](../product/no-existe.md)", "x", "modifica", "pendiente")])
+        self.con_impacto([("[contenido](../../product/no-existe.md)", "x", "modifica", "pendiente")])
         self.assertTrue(self.hay("product/no-existe.md"))
 
     # --- la marca «Cambios» en el documento vivo ---
@@ -904,9 +967,9 @@ class Impacto(Entorno):
 
     # --- choques entre historias abiertas ---
     def otra(self, sid, estado, estado_fila="pendiente", doc="RN-13"):
-        nombre = f"{sid}-otra.md"
+        nombre = f"{sid}.md"
         tareas = [(f"{sid}.1", "DOC", "producto", "normal", "pendiente")]
-        (self.dir / nombre).write_text(hu(tareas, estado=estado, sid=sid, impacto_=impacto([(doc, "x", "modifica", estado_fila)])), encoding="utf-8")
+        (self.fase / nombre).write_text(hu(tareas, estado=estado, sid=sid, impacto_=impacto([(doc, "x", "modifica", estado_fila)])), encoding="utf-8")
         h.write_matrix(self.root, [])
         h.write_changes(self.root)
 
@@ -941,7 +1004,7 @@ class Impacto(Entorno):
         self.escribe(hu(reemplaza="HU-12"))
         self.assertTrue(self.hay("reemplaza", "HU-12"))  # no puede reemplazarse a sí misma
         self.escribe(HU_OK)
-        (self.dir / "HU-30-nueva.md").write_text(hu([("HU-30.1", "DOC", "producto", "normal", "pendiente")], sid="HU-30", reemplaza="HU-12"), encoding="utf-8")
+        (self.fase / "HU-30.md").write_text(hu([("HU-30.1", "DOC", "producto", "normal", "pendiente")], sid="HU-30", reemplaza="HU-12"), encoding="utf-8")
         h.write_matrix(self.root, [])
         h.write_changes(self.root)
         self.assertEqual(self.errors(), [])
@@ -956,6 +1019,8 @@ class Impacto(Entorno):
             json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-05", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
             encoding="utf-8",
         )
+        (self.dir / "fase-1").mkdir()
+        (self.dir / "fase-1" / "README.md").write_text("# Fase 1 (MVP)\n", encoding="utf-8")
         self.escribe(hu(reemplaza="HU-05"))
         h.write_matrix(self.root, [])
         h.write_changes(self.root)
@@ -985,6 +1050,11 @@ class RegistroDeCambios(Entorno):
         h.write_changes(self.root)
         self.assertIn("Todavía no hay cambios", self.log.read_text(encoding="utf-8"))
 
+    def test_el_registro_enlaza_a_la_historia_dentro_de_su_fase(self):
+        self.escribe(hu(impacto_=impacto([("RN-13", "x", "modifica", "pendiente")])))
+        h.write_changes(self.root)
+        self.assertIn("[HU-12](../historias/fase-2/HU-12.md)", self.log.read_text(encoding="utf-8"))
+
     def test_lista_cada_fila_con_su_historia_documento_y_estado(self):
         self.escribe(hu(impacto_=impacto([("RN-13", "Disponibilidad orientativa", "modifica", "pendiente")])))
         h.write_changes(self.root)
@@ -997,7 +1067,7 @@ class RegistroDeCambios(Entorno):
 
     def test_las_hechas_van_primero_ordenadas_por_fecha_y_las_pendientes_al_final(self):
         hecho = [("HU-30.1", "DOC", "producto", "normal", "hecho")]
-        (self.dir / "HU-30-hecha.md").write_text(
+        (self.fase / "HU-30.md").write_text(
             hu(hecho, sid="HU-30", impacto_=impacto([("RN-13", "Cambio ya aplicado", "modifica", "hecho")])), encoding="utf-8")
         self.escribe(hu(impacto_=impacto([("RN-13", "Cambio por aplicar", "modifica", "pendiente")])))
         h.write_changes(self.root)

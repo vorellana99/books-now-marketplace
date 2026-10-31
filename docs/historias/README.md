@@ -1,6 +1,6 @@
 # Historias de usuario: matriz y archivos
 
-> Aquí están **todas** las historias de LibroYa en dos tablas, **Abiertas** (lo que todavía se trabaja) y **Cerradas e histórico**: las 20 que se hicieron antes del 2026-10-30 y las nuevas. **Cada historia nueva vive en su propio archivo de esta carpeta** (`HU-12-ver-si-hay-stock-de-un-libro.md`): su texto, sus criterios, su «Listo cuando…», sus tareas por capa, sus decisiones y su bitácora. Lo transversal (problemas abiertos, decisiones generales) está en [`../avance.md`](../avance.md).
+> Aquí están **todas** las historias de LibroYa en dos tablas, **Abiertas** (lo que todavía se trabaja) y **Cerradas e histórico**: las 20 que se hicieron antes del 2026-10-30 y las nuevas. **Cada historia nueva vive en su propio archivo dentro de la carpeta de su fase** ([`fase-1/`](fase-1/README.md) es el MVP, [`fase-2/`](fase-2/README.md); por ejemplo `fase-2/HU-12.md`): su texto, sus criterios, su «Listo cuando…», sus tareas por capa, sus decisiones y su bitácora. Lo transversal (problemas abiertos, decisiones generales) está en [`../avance.md`](../avance.md).
 
 **Leyenda:** estado de la historia: 📝 propuesta (sin aprobar) · ⬜ aprobada · 🔄 en curso · ✅ cerrada. Columnas API y Web: ✅ hecha · 🔄 en curso · ⬜ pendiente · — no aplica. La matriz se regenera con `python3 scripts/historias.py`; no se edita a mano.
 
@@ -9,36 +9,36 @@
 <!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->
 ### Abiertas (7)
 
-| ID | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |
-|---|---|---|---|---|---|---|---|---|
-| [HU-12](HU-12-ver-si-hay-stock-de-un-libro.md) | Ver si hay stock de un libro | Catálogo | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 10 | 0 / 5 | — |
-| [HU-23](HU-23-el-carrito-marca-los-libros-sin-stock-suficiente.md) | El carrito marca los libros sin stock suficiente | Carrito | 📝 propuesta | — no aplica | ⬜ pendiente | 0 / 3 | 0 / 2 | — |
-| [HU-35](HU-35-el-error-de-pago-nombra-el-libro.md) | El error de pago nombra el libro sin stock | Compra | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 3 | 0 / 3 | — |
-| [HU-50](../product/04-historias-de-usuario.md#hu-50-crear-un-libro) | Crear un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 4 (histórico) | 2026-10-28 → en curso · ≈ 1 h 11 min |
-| [HU-51](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) | Editar o desactivar un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 22 min |
-| [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
-| [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
+| ID | Fase | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |
+|---|---|---|---|---|---|---|---|---|---|
+| [HU-12](fase-2/HU-12.md) | [Fase 2](fase-2/README.md) | Ver si hay stock de un libro | Catálogo | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 10 | 0 / 5 | — |
+| [HU-23](fase-2/HU-23.md) | [Fase 2](fase-2/README.md) | El carrito marca los libros sin stock suficiente | Carrito | 📝 propuesta | — no aplica | ⬜ pendiente | 0 / 3 | 0 / 2 | — |
+| [HU-35](fase-2/HU-35.md) | [Fase 2](fase-2/README.md) | El error de pago nombra el libro sin stock | Compra | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 3 | 0 / 3 | — |
+| [HU-50](../product/04-historias-de-usuario.md#hu-50-crear-un-libro) | [Fase 1](fase-1/README.md) | Crear un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 4 (histórico) | 2026-10-28 → en curso · ≈ 1 h 11 min |
+| [HU-51](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) | [Fase 1](fase-1/README.md) | Editar o desactivar un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 22 min |
+| [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | [Fase 1](fase-1/README.md) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
+| [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | [Fase 1](fase-1/README.md) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
 
 ### Cerradas e histórico (16)
 
-| ID | Historia | Épica | Estado | Cierre y tiempo |
-|---|---|---|---|---|
-| [HU-01](../product/04-historias-de-usuario.md#hu-01-registrarme) | Registrarme | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 1 h 56 min |
-| [HU-02](../product/04-historias-de-usuario.md#hu-02-iniciar-sesión) | Iniciar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 49 min |
-| [HU-03](../product/04-historias-de-usuario.md#hu-03-mantener-la-sesión) | Mantener la sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 38 min |
-| [HU-04](../product/04-historias-de-usuario.md#hu-04-cerrar-sesión) | Cerrar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 35 min |
-| [HU-10](../product/04-historias-de-usuario.md#hu-10-buscar-libros) | Buscar libros | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 35 min |
-| [HU-11](../product/04-historias-de-usuario.md#hu-11-ver-un-libro) | Ver un libro | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 16 min |
-| [HU-20](../product/04-historias-de-usuario.md#hu-20-agregar-un-libro-al-carrito) | Agregar un libro al carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 12 min |
-| [HU-21](../product/04-historias-de-usuario.md#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | Cambiar la cantidad o quitar un libro | Carrito | ✅ cerrada | 2026-10-30 · ≈ 4 min |
-| [HU-22](../product/04-historias-de-usuario.md#hu-22-ver-el-carrito) | Ver el carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 1 h 9 min |
-| [HU-30](../product/04-historias-de-usuario.md#hu-30-indicar-la-dirección-de-envío) | Indicar la dirección de envío | Compra | ✅ cerrada | 2026-10-30 · ≈ 30 min |
-| [HU-31](../product/04-historias-de-usuario.md#hu-31-pagar-y-crear-el-pedido) | Pagar y crear el pedido | Compra | ✅ cerrada | 2026-10-30 · ≈ 2 h 3 min |
-| [HU-32](../product/04-historias-de-usuario.md#hu-32-reintentar-sin-cobrar-dos-veces) | Reintentar sin cobrar dos veces | Compra | ✅ cerrada | 2026-10-30 · ≈ 17 min |
-| [HU-33](../product/04-historias-de-usuario.md#hu-33-entender-por-qué-falló-la-compra) | Entender por qué falló la compra | Compra | ✅ cerrada | 2026-10-30 · ≈ 22 min |
-| [HU-34](../product/04-historias-de-usuario.md#hu-34-ver-la-confirmación) | Ver la confirmación | Compra | ✅ cerrada | 2026-10-30 · ≈ 33 min |
-| [HU-40](../product/04-historias-de-usuario.md#hu-40-ver-mis-pedidos) | Ver mis pedidos | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 1 h 37 min |
-| [HU-41](../product/04-historias-de-usuario.md#hu-41-ver-el-detalle-de-un-pedido) | Ver el detalle de un pedido | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 42 min |
+| ID | Fase | Historia | Épica | Estado | Cierre y tiempo |
+|---|---|---|---|---|---|
+| [HU-01](../product/04-historias-de-usuario.md#hu-01-registrarme) | [Fase 1](fase-1/README.md) | Registrarme | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 1 h 56 min |
+| [HU-02](../product/04-historias-de-usuario.md#hu-02-iniciar-sesión) | [Fase 1](fase-1/README.md) | Iniciar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 49 min |
+| [HU-03](../product/04-historias-de-usuario.md#hu-03-mantener-la-sesión) | [Fase 1](fase-1/README.md) | Mantener la sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 38 min |
+| [HU-04](../product/04-historias-de-usuario.md#hu-04-cerrar-sesión) | [Fase 1](fase-1/README.md) | Cerrar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 35 min |
+| [HU-10](../product/04-historias-de-usuario.md#hu-10-buscar-libros) | [Fase 1](fase-1/README.md) | Buscar libros | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 35 min |
+| [HU-11](../product/04-historias-de-usuario.md#hu-11-ver-un-libro) | [Fase 1](fase-1/README.md) | Ver un libro | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 16 min |
+| [HU-20](../product/04-historias-de-usuario.md#hu-20-agregar-un-libro-al-carrito) | [Fase 1](fase-1/README.md) | Agregar un libro al carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 12 min |
+| [HU-21](../product/04-historias-de-usuario.md#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | [Fase 1](fase-1/README.md) | Cambiar la cantidad o quitar un libro | Carrito | ✅ cerrada | 2026-10-30 · ≈ 4 min |
+| [HU-22](../product/04-historias-de-usuario.md#hu-22-ver-el-carrito) | [Fase 1](fase-1/README.md) | Ver el carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 1 h 9 min |
+| [HU-30](../product/04-historias-de-usuario.md#hu-30-indicar-la-dirección-de-envío) | [Fase 1](fase-1/README.md) | Indicar la dirección de envío | Compra | ✅ cerrada | 2026-10-30 · ≈ 30 min |
+| [HU-31](../product/04-historias-de-usuario.md#hu-31-pagar-y-crear-el-pedido) | [Fase 1](fase-1/README.md) | Pagar y crear el pedido | Compra | ✅ cerrada | 2026-10-30 · ≈ 2 h 3 min |
+| [HU-32](../product/04-historias-de-usuario.md#hu-32-reintentar-sin-cobrar-dos-veces) | [Fase 1](fase-1/README.md) | Reintentar sin cobrar dos veces | Compra | ✅ cerrada | 2026-10-30 · ≈ 17 min |
+| [HU-33](../product/04-historias-de-usuario.md#hu-33-entender-por-qué-falló-la-compra) | [Fase 1](fase-1/README.md) | Entender por qué falló la compra | Compra | ✅ cerrada | 2026-10-30 · ≈ 22 min |
+| [HU-34](../product/04-historias-de-usuario.md#hu-34-ver-la-confirmación) | [Fase 1](fase-1/README.md) | Ver la confirmación | Compra | ✅ cerrada | 2026-10-30 · ≈ 33 min |
+| [HU-40](../product/04-historias-de-usuario.md#hu-40-ver-mis-pedidos) | [Fase 1](fase-1/README.md) | Ver mis pedidos | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 1 h 37 min |
+| [HU-41](../product/04-historias-de-usuario.md#hu-41-ver-el-detalle-de-un-pedido) | [Fase 1](fase-1/README.md) | Ver el detalle de un pedido | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 42 min |
 <!-- MATRIZ:FIN -->
 
 **Cómo se lee**
@@ -56,7 +56,8 @@ El proceso paso a paso está en la [guía de desarrollo §4](../guia-de-desarrol
 |---|---|
 | **La unidad es la HU** | Todo cambio de producto parte de una historia. Una historia nueva se **redacta y se aprueba antes de desglosarla**. Lo que no es una historia (arquitectura, rendimiento, seguridad, accesibilidad, despliegue) es un **habilitador `EN-nn`** y se liga a la regla `RN` o al requisito de [`product/08`](../product/08-requisitos-de-experiencia.md) que lo justifica |
 | **Una ampliación es una HU nueva** | Las historias anteriores a 2026-10-30 no se editan: lo que las amplía o cambia es una HU nueva con su propio número que dice en el encabezado `amplia: HU-22` |
-| **Un archivo por historia** | `HU-nn-titulo-en-minusculas.md` (o `EN-nn-…`), con el encabezado y las secciones de la [plantilla](_plantilla.md). El nombre empieza por el `id` |
+| **Un archivo por historia, dentro de la carpeta de su fase** | `fase-n/HU-nn.md` (o `fase-n/EN-nn.md`), con el encabezado y las secciones de la [plantilla](_plantilla.md). **El nombre es solo el correlativo** (el título está en el encabezado y en la matriz) y debe ser igual al `id`. Una historia suelta en `docs/historias/` o en una carpeta que no sea `fase-n` es un error del comprobador |
+| **Las fases son carpetas** | `fase-1/` (el MVP), `fase-2/`… El nombre de la carpeta es solo `fase-n`; **lo que es la fase** (qué entra, qué queda fuera, de qué fue) se describe en el `README.md` inicial de cada carpeta, que el comprobador exige. **La fase de una historia es su carpeta**: pasarla de fase es mover su archivo (y arreglar sus enlaces `../../`). Una fase nueva se crea con su carpeta y su README. Los habilitadores `EN-nn` van en la carpeta de la fase en que se trabajan. Las 20 historias anteriores son de la [fase 1](fase-1/README.md) y no tienen archivo |
 | **Las tareas salen de los criterios** | Cada criterio «Dado/Cuando/Entonces» se reparte en tareas **verticales**, cada una de **una sola capa**: `[API]` (backend), `[WEB]` (tienda), `[E2E]` (recorrido contra el backend real) o `[DOC]` (producto y guías, sin código). **La tabla de tareas es un índice** (`# | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado`; el **Objetivo** es el resultado que se busca en una frase) y **el detalle de cada tarea vive en su bloque** de «Detalle de las tareas»: «Se comprueba» como **lista de casillas** y, si el rigor es `critico`, «Reglas e invariantes». **Capa, Tipo, Rigor y Estado se escriben «icono texto»** (`⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente`) en todas las filas; `python3 scripts/historias.py --formato` completa los iconos |
 | **Numeración** | `HU-nn.k` es la tarea k de la historia nn. Es el prefijo del commit con su capa: `HU-12.3 [API]: Add availability to GET /books`. Los números no se reutilizan |
 | **Pantalla por adelantado** | Si la historia tiene tareas `[WEB]`, su archivo lleva la sección **«Pantalla»**: **dónde** va lo que cambia, un croquis en texto si una frase no basta, los **estados**, los **textos exactos** (`product/07`), qué cambia entre móvil y escritorio y la accesibilidad; reutiliza los tokens y componentes de [`product/diseno/`](../product/diseno/README.md) (una pantalla nueva o un componente grande va antes en una tarea `[DOC]` que actualiza el wireframe y el mockup). El comprobador la exige («Sin cambios visuales» si no cambia nada) y la tarea `[WEB]` se **revisa en un navegador real a 360 y 1280 px**; no hay pruebas de captura píxel a píxel |

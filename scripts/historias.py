@@ -2,7 +2,8 @@
 """La matriz de historias de usuario (docs/historias/README.md).
 
 Reúne TODAS las historias en una tabla: las 20 hechas antes de 2026-10-30 (datos en docs/historias/legado.json, calculados una
-vez desde git) y las nuevas, cada una en su archivo docs/historias/HU-nn-titulo.md (o EN-nn-… para un habilitador). De cada
+vez desde git) y las nuevas, cada una en su archivo docs/historias/fase-n/HU-nn.md (o EN-nn.md para un habilitador): la carpeta es la
+fase (con su README.md inicial que la describe) y el nombre es solo el correlativo. De cada
 archivo nuevo lee el encabezado y la tabla de tareas; la fecha y el tiempo salen de `git log` (commits `HU-nn.k [CAPA]: …`).
 También lee la sección «Impacto en el producto» de cada historia: comprueba que lo que cita existe y que, al hacerse, deja su marca
 «Cambios: HU-nn» en la regla, decisión o pantalla; y con ella genera docs/product/cambios.md (qué cambió, cuándo y por qué historia).
@@ -26,6 +27,11 @@ LIMA = timezone(timedelta(hours=-5))
 TOPE_MINUTOS = 60  # un hueco largo entre commits (noche, pausa) no se cuenta entero
 START = "<!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->"
 END = "<!-- MATRIZ:FIN -->"
+# Las historias nuevas viven en carpetas `fase-n/` (docs/historias/fase-1/, fase-2/…); cada carpeta tiene un README.md inicial que describe la
+# fase (qué entra y qué queda fuera). La fase de una historia ES su carpeta, y el archivo se llama solo por su correlativo (HU-12.md).
+# Las 20 historias anteriores (legado.json) son de la fase 1
+FASE = re.compile(r"^fase-(\d+)$")
+FASE_LEGADO = 1
 ESTADOS = {"propuesta": "📝 propuesta", "aprobada": "⬜ aprobada", "en-curso": "🔄 en curso", "cerrada": "✅ cerrada"}
 CAPAS = ("DOC", "API", "WEB", "E2E")
 REQUERIDOS = ("id", "titulo", "tipo", "epica", "estado")
@@ -443,8 +449,20 @@ def slug(text):
 
 
 def story_files(root):
+    """Los archivos de historia: docs/historias/fase-n/HU-nn.md (o EN-nn.md), por fase y luego por nombre."""
     folder = Path(root) / "docs" / "historias"
-    return sorted(p for p in folder.glob("*.md") if re.match(r"^(HU|EN)-", p.name))
+    return sorted((p for p in folder.glob("fase-*/*.md") if FASE.match(p.parent.name) and re.match(r"^(HU|EN)-", p.name)),
+                  key=lambda p: (fase_de(p), p.name))
+
+
+def fase_de(path):
+    """El número de fase de un archivo de historia: el de su carpeta (fase-2/HU-12.md → 2)."""
+    return int(FASE.match(path.parent.name).group(1))
+
+
+def base_de(path):
+    """La carpeta de la historia relativa a docs/ («historias/fase-2»), desde donde se resuelven sus enlaces."""
+    return f"historias/{path.parent.name}"
 
 
 def sort_key(story_id):
@@ -458,7 +476,7 @@ def legacy_rows(root):
     for x in data["historias"]:
         closed = x["cierre"] is not None
         rows.append({
-            "id": x["id"], "titulo": x["titulo"], "epica": x["epica"],
+            "id": x["id"], "fase": FASE_LEGADO, "titulo": x["titulo"], "epica": x["epica"],
             "estado": ESTADOS["cerrada"] if closed else ESTADOS["en-curso"],  # qué falta lo dicen las columnas API y Web
             "api": x["api"], "web": x["web"],
             "inicio": x["inicio"], "cierre": x["cierre"] or "—",
@@ -478,9 +496,9 @@ def new_rows(root, commits):
         stats = story_stats(meta["id"], commits)
         done = sum(1 for _, _, s in tasks if s == "hecho")
         closed = meta["estado"] == "cerrada"
-        filas = (parse_impact(text) or {"filas": []})["filas"]
+        filas = (parse_impact(text, base_de(path)) or {"filas": []})["filas"]
         rows.append({
-            "id": meta["id"], "titulo": meta["titulo"], "epica": meta["epica"],
+            "id": meta["id"], "fase": fase_de(path), "titulo": meta["titulo"], "epica": meta["epica"],
             "estado": ESTADOS.get(meta["estado"], meta["estado"]),
             "api": layer_status(tasks, "API"), "web": layer_status(tasks, "WEB"),
             "inicio": stats["inicio"].date().isoformat() if stats else "—",
@@ -488,7 +506,7 @@ def new_rows(root, commits):
             "tiempo": fmt_minutes(stats["minutos"]) if stats else "—",
             "tareas": f"{done} / {len(tasks)}",
             "producto": f"{sum(1 for f in filas if f[3] == 'hecho')} / {len(filas)}" if filas else "—",
-            "detalle": f"[{meta['id']}]({path.name})",
+            "detalle": f"[{meta['id']}]({path.parent.name}/{path.name})",
         })
     return rows
 
@@ -506,8 +524,8 @@ def build_rows(root, commits):
 # van en una sola columna
 ABIERTAS = "Abiertas"
 CERRADAS = "Cerradas e histórico"
-COLS_ABIERTAS = ("ID", "Historia", "Épica", "Estado", "API", "Web", "Cambios de producto", "Tareas", "Fechas y tiempo")
-COLS_CERRADAS = ("ID", "Historia", "Épica", "Estado", "Cierre y tiempo")
+COLS_ABIERTAS = ("ID", "Fase", "Historia", "Épica", "Estado", "API", "Web", "Cambios de producto", "Tareas", "Fechas y tiempo")
+COLS_CERRADAS = ("ID", "Fase", "Historia", "Épica", "Estado", "Cierre y tiempo")
 CAPA_TEXTO = {"✅": "✅ hecha", "🔄": "🔄 en curso", "⬜": "⬜ pendiente", "—": "— no aplica"}
 ID_FILA = re.compile(r"\b((?:HU|EN)-\d+)\b")
 
@@ -519,6 +537,8 @@ def is_closed(row):
 def _celda_matriz(row, columna):
     if columna == "ID":
         return f"[{row['id']}]({re.search(r'\]\(([^)]*)\)', row['detalle']).group(1)})"
+    if columna == "Fase":
+        return f"[Fase {row['fase']}](fase-{row['fase']}/README.md)"
     if columna == "Fechas y tiempo":
         if row["inicio"] == "—":
             return "—"
@@ -559,19 +579,19 @@ def write_matrix(root, commits):
 
 # ---------- impacto en el producto: lo vivo se mantiene al día y la historia deja el rastro ----------
 
-def _limpia_doc(raw):
+def _limpia_doc(raw, base="historias"):
     """El documento de una fila de impacto: sin comillas de código; de un enlace, su id si el texto es RN-nn/DP-nn/PA-nn y, si no,
     la ruta de su destino relativa a docs/ («[contenido](../product/07-contenido-y-mensajes.md)» → «product/07-contenido-y-mensajes.md»;
-    los enlaces se escriben desde docs/historias/)."""
+    los enlaces se resuelven desde la carpeta de la historia, `base`: docs/historias/fase-2 → «historias/fase-2»)."""
     raw = raw.strip()
     enlace = re.match(r"^\[([^\]]*)\]\(([^)]*)\)$", raw)
     if enlace:
         texto = enlace.group(1).strip("` ").strip()
-        return texto if ITEM.match(texto) else posixpath.normpath(posixpath.join("historias", enlace.group(2).split("#")[0]))
+        return texto if ITEM.match(texto) else posixpath.normpath(posixpath.join(base, enlace.group(2).split("#")[0]))
     return raw.strip("` ").strip()
 
 
-def parse_impact(text):
+def parse_impact(text, base="historias"):
     """None si no hay sección; si no, {"sin": declara «Sin impacto», "filas": [(documento, qué, acción, estado)], "malas": [filas mal formadas]}."""
     cuerpo = section(text, IMPACTO)
     if cuerpo is None:
@@ -587,7 +607,7 @@ def parse_impact(text):
         if len(partes) != 4:
             malas.append(line)
             continue
-        filas.append((_limpia_doc(partes[0]), partes[1], partes[2], partes[3]))
+        filas.append((_limpia_doc(partes[0], base), partes[1], partes[2], partes[3]))
     return {"sin": SIN_IMPACTO in cuerpo, "filas": filas, "malas": malas}
 
 
@@ -628,8 +648,8 @@ def _errores_documento(root, nombre, sid, doc, accion, estado):
     return errores
 
 
-def _errores_impacto(root, nombre, sid, estado_hu, text):
-    impacto = parse_impact(text)
+def _errores_impacto(root, nombre, sid, estado_hu, text, base="historias"):
+    impacto = parse_impact(text, base)
     if impacto is None:
         return [f"{nombre}: le falta la sección «## {IMPACTO}» (una tabla `Documento | Qué cambia | Acción | Estado` con las reglas, decisiones, pantallas y guías que toca, o «{SIN_IMPACTO}»)"]
     errores = [f"{nombre}: una fila de «## {IMPACTO}» no tiene 4 columnas (Documento | Qué cambia | Acción | Estado; una celda no puede llevar «|»): {linea}" for linea in impacto["malas"]]
@@ -653,7 +673,7 @@ def conflicts(root):
     for path in story_files(root):
         text = path.read_text(encoding="utf-8")
         meta = parse_front_matter(text)
-        impacto = parse_impact(text)
+        impacto = parse_impact(text, base_de(path))
         if meta.get("estado") == "cerrada" or not impacto:
             continue
         for doc, _, _, estado in impacto["filas"]:
@@ -696,14 +716,14 @@ def render_changes(root):
     filas = []
     for path in story_files(root):
         text = path.read_text(encoding="utf-8")
-        meta, impacto = parse_front_matter(text), parse_impact(text)
+        meta, impacto = parse_front_matter(text), parse_impact(text, base_de(path))
         if not impacto:
             continue
         fecha = _fecha_del_cambio(text, parse_tasks(text))
         for doc, que, accion, estado in impacto["filas"]:
             hecho = estado == "hecho"
             clave = (0 if hecho else 1, (fecha if fecha != "—" else "9999") if hecho else "", sort_key(meta["id"]), len(filas))
-            filas.append((clave, f"| {fecha if hecho else '—'} | [{meta['id']}](../historias/{path.name}) | {_enlace_documento(doc)} | {accion} | {que} | {estado} |"))
+            filas.append((clave, f"| {fecha if hecho else '—'} | [{meta['id']}](../historias/{path.parent.name}/{path.name}) | {_enlace_documento(doc)} | {accion} | {que} | {estado} |"))
     if not filas:
         return "_Todavía no hay cambios registrados._"
     cabecera = ["| Fecha | Historia | Documento | Acción | Qué cambia | Estado |", "|---|---|---|---|---|---|"]
@@ -786,11 +806,28 @@ def _comprobar_fila(nombre, tid, cells):
     return errores
 
 
+def _errores_fases(root, hay_historico):
+    """Las carpetas de fase: toda historia vive en `fase-n/`, y cada fase tiene su README.md inicial que la describe."""
+    carpeta, errores = Path(root) / "docs" / "historias", []
+    for p in sorted(carpeta.iterdir()):
+        if p.is_file() and re.match(r"^(HU|EN)-", p.name):
+            errores.append(f"{p.name}: una historia va dentro de una carpeta de fase (docs/historias/fase-n/{p.name}), no suelta en docs/historias")
+        elif p.is_dir() and FASE.match(p.name):
+            if not (p / "README.md").exists():
+                errores.append(f"{p.name}: la carpeta de la fase necesita su README.md inicial (qué entra y qué queda fuera de la fase)")
+        elif p.is_dir():
+            errores += [f"{p.name}/{q.name}: una historia va dentro de una carpeta `fase-n` (fase-1, fase-2…), no en «{p.name}»" for q in sorted(p.glob("*.md")) if re.match(r"^(HU|EN)-", q.name)]
+    if hay_historico and not (carpeta / f"fase-{FASE_LEGADO}").is_dir():
+        errores.append(f"fase-{FASE_LEGADO}: las 20 historias anteriores son de la fase {FASE_LEGADO} y falta su carpeta con el README.md que la describe")
+    return errores
+
+
 def check(root):
     errors = []
     legacy = {x["id"] for x in json.loads((Path(root) / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))["historias"]}
     seen = set(legacy)
     expected, reemplazos = {}, {}
+    errors += _errores_fases(root, bool(legacy))
     for path in story_files(root):
         try:
             text = path.read_text(encoding="utf-8")
@@ -803,8 +840,8 @@ def check(root):
             errors.append(f"{path.name}: faltan en el encabezado {', '.join(missing)}")
             continue
         sid = meta["id"]
-        if not path.name.startswith(f"{sid}-") or not re.match(r"^(HU|EN)-\d+$", sid):
-            errors.append(f"{path.name}: el nombre del archivo debe empezar por «{sid}-» (id del encabezado)")
+        if path.stem != sid or not re.match(r"^(HU|EN)-\d+$", sid):
+            errors.append(f"{path.name}: el nombre del archivo debe ser solo su correlativo: «{sid}.md» (sin el título), dentro de su carpeta fase-n/")
         if sid in seen:
             errors.append(f"{path.name}: id repetido ({sid})")
         seen.add(sid)
@@ -844,7 +881,7 @@ def check(root):
             errors.append(f"{path.name}: tiene tareas [API] y le falta la sección «## Contrato» (rutas, cuerpos, ejemplo, errores y compatibilidad; o «Sin cambios en el contrato»)")
         if any(c == "WEB" for _, c, _ in tasks) and not section(text, "Pantalla"):
             errors.append(f"{path.name}: tiene tareas [WEB] y le falta la sección «## Pantalla» (dónde va lo que cambia, estados, textos exactos, móvil y escritorio, accesibilidad; o «Sin cambios visuales»)")
-        errors += _errores_impacto(root, path.name, sid, meta["estado"], text)
+        errors += _errores_impacto(root, path.name, sid, meta["estado"], text, base_de(path))
         if meta["estado"] == "cerrada":
             if any(s != "hecho" for _, _, s in tasks) or not tasks:
                 errors.append(f"{path.name}: está cerrada pero tiene tareas sin hacer")

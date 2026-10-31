@@ -10,6 +10,8 @@ reemplaza:
 
 # HU-nn Título corto de la historia
 
+> **Dónde va:** cópiala a `docs/historias/fase-n/HU-nn.md` (la carpeta de la fase en que se trabajará; el nombre es **solo el correlativo**, sin título) y escribe los enlaces relativos con `../../` (por ejemplo `../../product/03-reglas-de-negocio.md`). Borra esta nota.
+>
 > **Estado:** 📝 propuesta (cámbialo en el encabezado: `propuesta` → `aprobada` → `en-curso` → `cerrada`). Si amplía una historia anterior, escribe su id en `amplia:` del encabezado y dilo aquí; si la deja sin efecto (la sustituye por completo), escribe su id en `reemplaza:` y la matriz la marcará «superada por».
 
 **Como** …, **quiero** …, **para** ….
@@ -47,7 +49,7 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 > 1. Se escribe **antes del código**, en la primera tarea `[DOC]` de la historia: se **reescribe** la regla, decisión o pantalla para que diga lo vigente (no se le añade «ahora además…»), y su línea termina con la marca **`Cambios: HU-nn (AAAA-MM-DD)`**, que acumula historias (`Cambios: HU-30 (2026-10-30), HU-12 (2026-10-31)`). Si el texto anterior importa, `· antes: «…»` en esa misma línea.
 > 2. Una decisión que otra reemplaza **no se borra**: se marca «reemplazada por DP-nn» (y la nueva `agrega`). Una regla o pantalla que se `retira` lo dice en su línea («Retirada»).
 > 3. La fila pasa a `hecho` cuando la marca está en el documento; el comprobador lo verifica (existe lo citado, la marca está, la historia no se cierra con filas `pendiente`) y avisa si **dos historias abiertas** cambian a la vez lo mismo.
-> 4. `python3 scripts/historias.py` genera con estas tablas el [registro de cambios](../product/cambios.md): qué cambió, cuándo y por qué historia. No se edita a mano.
+> 4. `python3 scripts/historias.py` genera con estas tablas el registro de cambios (`docs/product/cambios.md`): qué cambió, cuándo y por qué historia. No se edita a mano.
 
 ## Tareas
 

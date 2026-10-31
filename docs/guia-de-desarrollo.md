@@ -77,7 +77,7 @@ Cada pregunta tiene **una** fuente de verdad. Si un documento contradice al cód
 
 | Pregunta | Fuente |
 |---|---|
-| ¿Qué tarea toca y qué se comprueba? | La fila de la tarea (índice: capa, tipo, rigor, objetivo, «Depende de») y su bloque de detalle («Se comprueba» con casillas) en el archivo de su HU, `historias/HU-nn-….md`; la matriz de todas, en [`historias/README.md`](historias/README.md) |
+| ¿Qué tarea toca y qué se comprueba? | La fila de la tarea (índice: capa, tipo, rigor, objetivo, «Depende de») y su bloque de detalle («Se comprueba» con casillas) en el archivo de su HU, `historias/fase-n/HU-nn.md`; la matriz de todas, en [`historias/README.md`](historias/README.md) |
 | ¿Qué debe hacer el producto? | [`product/`](product/README.md): reglas `RN-nn` (03), historias `HU-nn` (04), decisiones `DP-nn` (09), pantallas `PA-nn` (06) |
 | ¿Cuál es el contrato HTTP? | [`api-contrato.md`](api-contrato.md) y, ejecutándose, `/docs-json` |
 | ¿Cómo está construido y por qué? | [`CLAUDE.md`](../CLAUDE.md), [`backend/05-piezas-clave.md`](backend/05-piezas-clave.md) y la tabla «Decisiones y desvíos» de [`avance.md`](avance.md) (lo que se apartó del plan; lo anterior, en los `00-avance.md` congelados) |
@@ -101,7 +101,7 @@ Dos fases: primero la **historia** se convierte en tareas (una vez, con tu aprob
 
 **Tipo y rigor de cada tarea.** La tabla de tareas tiene dos columnas justo después de la capa: **Tipo**, que **se elige por lo que cambia** (no por cómo se programa) y se escribe exacto, en **kebab-case**. `[API]`: `contrato` (lo que la API le ofrece a la tienda: un endpoint, **un campo más en una respuesta**, un error), `regla` (cómo decide el negocio), `evento`, `base-de-datos`, `configuracion`; `[WEB]`: `pantalla` (lo que se ve), `comportamiento` (lo que la tienda hace sin cambiar lo que se ve); `[DOC]`: `producto`, `guia`; `[E2E]`: `recorrido`. **La tabla completa, con ejemplos y la receta de cada tipo, está en la [plantilla de historias](historias/_plantilla.md)** (también: `python3 scripts/historias.py --tipos`). **Rigor**, que se escribe **en todas las filas**: `critico` marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar) y `normal` es el resto. Solo `[API]` puede ser `critico`, y `base-de-datos` y `evento` siempre lo son. Un endpoint nuevo con lógica nueva son **dos tareas** (la `regla` y el `contrato`). `scripts/historias.py` valida el vocabulario y el rigor y lo compara con esa tabla.
 
-**Cada historia nueva es un archivo** (`historias/HU-nn-titulo.md`, a partir de la [plantilla](historias/_plantilla.md)) y **una ampliación de una historia anterior es una historia nueva** que dice en su encabezado `amplia: HU-22`: el histórico no se edita. **El contrato y la pantalla van por adelantado; el plan de implementación, no.** La historia no lista archivos ni clases porque se desactualizan: eso se decide justo antes de cada tarea (4.2). Una tarea está **lista para ejecutarse** cuando alguien puede escribir su primera prueba roja leyendo solo su fila; el detalle que necesita depende de ella:
+**Cada historia nueva es un archivo** (`historias/fase-n/HU-nn.md`, dentro de la carpeta de su fase y con solo el correlativo por nombre, a partir de la [plantilla](historias/_plantilla.md); cada fase se describe en el `README.md` de su carpeta) y **una ampliación de una historia anterior es una historia nueva** que dice en su encabezado `amplia: HU-22`: el histórico no se edita. **El contrato y la pantalla van por adelantado; el plan de implementación, no.** La historia no lista archivos ni clases porque se desactualizan: eso se decide justo antes de cada tarea (4.2). Una tarea está **lista para ejecutarse** cuando alguien puede escribir su primera prueba roja leyendo solo su fila; el detalle que necesita depende de ella:
 
 | Tarea | Detalle antes de ejecutarla |
 |---|---|
@@ -223,8 +223,8 @@ La lista completa, con más detalle, está en el comando `/tarea`.
 
 | Sigla | Significa | Dónde |
 |---|---|---|
-| **HU-nn.k** | Tarea k de la historia HU-nn (`HU-12.3`); su commit lleva también la capa | `historias/HU-nn-….md` |
-| **EN-nn** | Habilitador: trabajo técnico sin historia propia (arquitectura, rendimiento, seguridad…), ligado a una `RN` o a un requisito de `08` | `historias/EN-nn-….md` |
+| **HU-nn.k** | Tarea k de la historia HU-nn (`HU-12.3`); su commit lleva también la capa | `historias/fase-n/HU-nn.md` |
+| **EN-nn** | Habilitador: trabajo técnico sin historia propia (arquitectura, rendimiento, seguridad…), ligado a una `RN` o a un requisito de `08` | `historias/fase-n/EN-nn.md` |
 | **[API] [WEB] [E2E] [DOC]** | La capa de una tarea: backend, tienda, recorrido de punta a punta contra el backend real, o producto y guías sin código | `historias/` |
 | **N.M / FN.M** | Tareas de los cortes anteriores a 2026-10-30 (`7.6`, `F4.6`); historial, no se reutilizan | `backend/00-avance.md`, `frontend/00-avance.md` |
 | **RN-nn** | Regla de negocio | `product/03-reglas-de-negocio.md` |

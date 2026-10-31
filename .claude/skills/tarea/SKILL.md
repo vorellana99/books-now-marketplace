@@ -9,7 +9,7 @@ Guía completa para personas: `docs/guia-de-desarrollo.md` (§4.2). Las herramie
 
 ## 0. ¿Es una tarea aprobada?
 
-- Una tarea es una fila del archivo de su historia (`docs/historias/HU-nn-….md`) con estado ⬜ (aprobada), no 📝 (propuesta). Si el usuario pide algo que **no está** como tarea aprobada («quiero que…»), **no empieces a programar**: usa `/hu` para redactar la historia y desglosarla, y espera su aprobación.
+- Una tarea es una fila del archivo de su historia (`docs/historias/fase-n/HU-nn.md`) con estado ⬜ (aprobada), no 📝 (propuesta). Si el usuario pide algo que **no está** como tarea aprobada («quiero que…»), **no empieces a programar**: usa `/hu` para redactar la historia y desglosarla, y espera su aprobación.
 - «Continúa con la siguiente tarea» = la primera tarea ⬜ cuyas dependencias estén todas ✅. «Haz toda la HU-nn» = encadenar sus tareas en orden, sin informar entre una y otra; el informe va una vez, al final.
 - **Al empezar la tarea:** pasa su Estado a `⏩ en-curso` y ejecuta `python3 scripts/historias.py`: sella el **inicio** en la tabla «## Ejecución» de la HU (hora de Lima). Hazlo antes de escribir nada.
 - Comprueba las **dependencias**: no empieces una tarea cuya dependencia no esté ✅.
