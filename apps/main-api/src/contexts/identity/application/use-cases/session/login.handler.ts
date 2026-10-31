@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { CommandHandler, type ICommandHandler } from '@nestjs/cqrs';
 import { AuthenticationError } from '../../../../../shared-kernel/domain.errors.js';
 import { LoginCommand } from './login.command.js';
-import type { Session } from '../../services/session.js';
+import type { Session } from '../../support/session.js';
 import { Email } from '../../../domain/model/user/email.vo.js';
 import { PasswordHasher } from '../../../domain/ports/password-hasher.port.js';
 import { UserRepository } from '../../../domain/ports/user.repository.js';

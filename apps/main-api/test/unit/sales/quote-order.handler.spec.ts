@@ -1,5 +1,5 @@
 import { PlaceOrderCommand } from '../../../src/contexts/sales/application/use-cases/order/place-order.command.js';
-import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.js';
+import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.service.js';
 import { PlaceOrderHandler } from '../../../src/contexts/sales/application/use-cases/order/place-order.handler.js';
 import { QuoteOrderHandler } from '../../../src/contexts/sales/application/use-cases/order/quote-order.handler.js';
 import { QuoteOrderQuery } from '../../../src/contexts/sales/application/use-cases/order/quote-order.query.js';

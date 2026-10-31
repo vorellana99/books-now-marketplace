@@ -8,7 +8,7 @@ import {
   isWellFormedRefreshToken,
 } from '../../../domain/model/session/refresh-token.js';
 import { RefreshSessionCommand } from './refresh-session.command.js';
-import type { Session } from '../../services/session.js';
+import type { Session } from '../../support/session.js';
 import { SessionService } from '../../services/session.service.js';
 
 type Outcome =

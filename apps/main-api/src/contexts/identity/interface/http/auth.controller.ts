@@ -15,7 +15,7 @@ import { Public } from '../../../../platform/auth/public.decorator.js';
 import { LoginCommand } from '../../application/use-cases/session/login.command.js';
 import { LogoutCommand } from '../../application/use-cases/session/logout.command.js';
 import { RefreshSessionCommand } from '../../application/use-cases/session/refresh-session.command.js';
-import type { Session } from '../../application/services/session.js';
+import type { Session } from '../../application/support/session.js';
 import {
   RegisterUserCommand,
   type RegisteredUser,

@@ -135,7 +135,7 @@ describe('los consumidores del Outbox viven en interface/consumers/', () => {
   const consumer = `import { Injectable } from '@nestjs/common';\n@OutboxHandler()\n@Injectable()\nexport class C {}`;
 
   it.each([
-    ['application/', `${D}/application/services/c.consumer.ts`],
+    ['application/', `${D}/application/use-cases/thing/c.consumer.ts`],
     ['domain/', `${D}/domain/model/thing/c.consumer.ts`],
     ['infrastructure/persistence/', `${D}/infrastructure/persistence/c.ts`],
     ['infrastructure/adapters/', `${D}/infrastructure/adapters/c.ts`],
@@ -181,7 +181,7 @@ describe('cada tipo de pieza en su carpeta', () => {
       violations({ [`${D}/infrastructure/adapters/p.ts`]: source }),
     ).toHaveLength(1);
     expect(
-      violations({ [`${D}/application/services/p.ts`]: source }),
+      violations({ [`${D}/application/use-cases/thing/p.ts`]: source }),
     ).toHaveLength(1);
     expect(
       violations({ [`${D}/infrastructure/persistence/p.ts`]: source }),
@@ -277,7 +277,7 @@ describe('application/ se ordena en use-cases/, services/, jobs/ y support/ (tar
     it('la palabra abstract en un comentario no cuenta', () => {
       expect(
         message({
-          [`${APP}/services/g.ts`]:
+          [`${APP}/services/g.service.ts`]:
             "import { Injectable } from '@nestjs/common';\n// abstract class Gateway\n@Injectable()\nexport class Service {}",
         }),
       ).toEqual([]);
@@ -287,7 +287,7 @@ describe('application/ se ordena en use-cases/, services/, jobs/ y support/ (tar
   describe('un archivo de application/ que es dominio puro va a domain/', () => {
     const pure = `import { Isbn } from '../../../shared-kernel/isbn.vo.js';\nexport function normalize(x: string) { return Isbn.create(x).value; }`;
 
-    it.each(['services', 'jobs', 'use-cases/thing'])(
+    it.each(['jobs', 'use-cases/thing'])(
       'una función pura en %s/ es una violación (sin Nest, sin platform/ y sin puertos)',
       (dir) => {
         const found = message({ [`${APP}/${dir}/normalize.ts`]: pure });
@@ -310,7 +310,7 @@ describe('application/ se ordena en use-cases/, services/, jobs/ y support/ (tar
         ['puerto', withPort],
       ]) {
         expect(
-          message({ [`${APP}/services/${name}.ts`]: source }),
+          message({ [`${APP}/use-cases/thing/${name}.ts`]: source }),
           name,
         ).toEqual([]);
       }
@@ -319,7 +319,7 @@ describe('application/ se ordena en use-cases/, services/, jobs/ y support/ (tar
     it('un archivo de solo tipos (un DTO o un alias) no es dominio', () => {
       expect(
         message({
-          [`${APP}/services/session.ts`]: `import type { Role } from '../../../shared-kernel/role.js';\nexport interface Session { role: Role }`,
+          [`${APP}/use-cases/session/session.ts`]: `import type { Role } from '../../../shared-kernel/role.js';\nexport interface Session { role: Role }`,
         }),
       ).toEqual([]);
       expect(
@@ -472,5 +472,89 @@ describe('el código real de src/contexts/ cumple las reglas de estructura', () 
 
   it('no tiene violaciones', () => {
     expect(checkStructure(files)).toEqual([]);
+  });
+});
+
+describe('application/services/ solo tiene services: clases @Injectable en archivos .service.ts', () => {
+  const APP = `${D}/application`;
+  const injectable = `import { Injectable } from '@nestjs/common';\n@Injectable()\nexport class Pricer {}`;
+  const fn = `import type { UserRepository } from '../../domain/ports/user.repository.js';\nexport async function createAdmin(users: UserRepository) { return users; }`;
+  const type = `export interface Session { accessToken: string }`;
+
+  it('una clase @Injectable en un archivo .service.ts está permitida', () => {
+    expect(
+      violations({ [`${APP}/services/pricer.service.ts`]: injectable }),
+    ).toEqual([]);
+  });
+
+  it('una clase @Injectable sin el sufijo .service es una violación', () => {
+    const found = violations({ [`${APP}/services/pricer.ts`]: injectable });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(/\.service\.ts/);
+  });
+
+  it('un archivo .service.ts sin clase @Injectable es una violación', () => {
+    const found = violations({
+      [`${APP}/services/pricer.service.ts`]: 'class Helper {}',
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(
+      /archivo \.service\.ts declara una clase @Injectable/,
+    );
+  });
+
+  it('el sufijo es .service.ts, con el punto', () => {
+    const found = violations({
+      [`${APP}/services/pricerservice.ts`]: injectable,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(/se llama <nombre>\.service\.ts/);
+  });
+
+  it.each([
+    ['una función', 'create-admin.ts', fn],
+    ['un tipo', 'session.ts', type],
+  ])(
+    '%s en services/ no es un service: va a use-cases/<agregado>/ o a support/',
+    (_que, file, source) => {
+      const found = violations({ [`${APP}/services/${file}`]: source });
+      expect(found).toHaveLength(1);
+      expect(found[0]).toMatch(
+        /use-cases\/<agregado>\/ o application\/support\//,
+      );
+    },
+  );
+
+  it.each([
+    'use-cases/user/create-admin.ts',
+    'use-cases/session/session.ts',
+    'support/create-admin.ts',
+  ])('la misma función o tipo en %s está permitida', (path) => {
+    expect(
+      violations({ [`${APP}/${path}`]: path.includes('session') ? type : fn }),
+    ).toEqual([]);
+  });
+
+  it('el texto @Injectable en un comentario no convierte una función en service', () => {
+    const found = violations({
+      [`${APP}/services/create-admin.ts`]: `// @Injectable()\n${fn}`,
+    });
+    expect(found).toHaveLength(1);
+    expect(found[0]).toMatch(
+      /use-cases\/<agregado>\/ o application\/support\//,
+    );
+  });
+
+  it('un .service.ts fuera de application/services/ no se ve afectado (el de dominio, el de infraestructura)', () => {
+    expect(
+      violations({
+        [`${D}/infrastructure/adapters/jwt-token.service.ts`]: injectable,
+      }),
+    ).toEqual([]);
+    expect(
+      violations({
+        [`${D}/domain/model/pricing/pricing.service.ts`]: `export class PricingService {}`,
+      }),
+    ).toEqual([]);
   });
 });

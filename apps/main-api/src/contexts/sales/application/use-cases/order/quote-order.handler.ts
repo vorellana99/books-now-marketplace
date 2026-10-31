@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { QueryHandler, type IQueryHandler } from '@nestjs/cqrs';
 import { normalizeCart } from '../../../domain/model/order/normalize-cart.js';
-import { OrderPricer } from '../../services/order-pricer.js';
+import { OrderPricer } from '../../services/order-pricer.service.js';
 import { QuoteOrderQuery, type OrderQuote } from './quote-order.query.js';
 
 // Lado de lectura: arma el pedido en memoria igual que la compra y le pide el desglose al mismo PricingService. No recibe

@@ -20,7 +20,7 @@ import {
   type PlaceOrderResult,
 } from './place-order.command.js';
 import { normalizeCart } from '../../../domain/model/order/normalize-cart.js';
-import { OrderPricer } from '../../services/order-pricer.js';
+import { OrderPricer } from '../../services/order-pricer.service.js';
 import { hashRequest } from '../../../domain/model/order/request-hash.js';
 
 @CommandHandler(PlaceOrderCommand)

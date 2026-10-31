@@ -96,7 +96,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │       │   │   │   ├── purge-checkouts.job.ts
 │       │   │   │   └── recover-checkouts.job.ts
 │       │   │   ├── services/
-│       │   │   │   └── order-pricer.ts
+│       │   │   │   └── order-pricer.service.ts
 │       │   │   ├── support/
 │       │   │   │   └── order-cursor.ts
 │       │   │   └── use-cases/
@@ -250,8 +250,8 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │           │   ├── jobs/
 │           │   │   └── purge-refresh-tokens.job.ts
 │           │   ├── services/
-│           │   │   ├── create-admin.ts
-│           │   │   ├── session.service.ts
+│           │   │   └── session.service.ts
+│           │   ├── support/
 │           │   │   └── session.ts
 │           │   └── use-cases/
 │           │       ├── session/
@@ -262,6 +262,7 @@ apps/main-api/                        ← "libroya-api" en el resto de la guía
 │           │       │   ├── refresh-session.command.ts
 │           │       │   └── refresh-session.handler.ts
 │           │       └── user/
+│           │           ├── create-admin.ts
 │           │           ├── register-user.command.ts
 │           │           └── register-user.handler.ts
 │           ├── domain/

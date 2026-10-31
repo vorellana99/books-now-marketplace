@@ -33,10 +33,12 @@ Ni la raíz de `domain/` ni `model/` admiten archivos sueltos: un archivo suelto
 
 | Carpeta | Qué va |
 |---|---|
-| `use-cases/<agregado>/` | `*.command.ts`, `*.query.ts` y `*.handler.ts` |
-| `services/` | Servicios de aplicación que usan varios casos de uso o puertos (`OrderPricer`, `SessionService`, `create-admin.ts`) y el tipo que devuelven |
+| `use-cases/<agregado>/` | `*.command.ts`, `*.query.ts` y `*.handler.ts`; y, si la operación no la pide ni HTTP ni un evento sino un script (`pnpm run admin:create`), la función que la hace (`create-admin.ts`) |
+| `services/` | **Solo clases `@Injectable`, en archivos `*.service.ts`** (`order-pricer.service.ts`, `session.service.ts`), que **comparten varios casos de uso** y que nadie pide desde fuera. Una función o un tipo no es un service: va en `use-cases/<agregado>/` o en `support/` (lo comprueba `structure-rules.spec.ts`) |
 | `jobs/` | Los `*.job.ts` que disparan casos de uso por tiempo |
-| `support/` | Lo que es formato de la API y no una regla de negocio (el cursor de paginación del historial) |
+| `support/` | Lo que es formato de la API y no una regla de negocio (el cursor de paginación del historial, el tipo `Session` que devuelven el login y la renovación) |
+
+**Servicio o caso de uso: ¿lo pide alguien de afuera?** Si un controlador o un consumidor lo llama, es un caso de uso (un mensaje y su handler). Si solo lo llaman otros handlers o jobs, es un service. Por ejemplo, `OrderPricer` arma el pedido con los precios del catálogo y calcula el desglose; lo usan la compra y la cotización, de modo que el total cotizado y el cobrado no pueden divergir (RN-08), pero nadie le pide «arma un pedido» desde la API. Un handler no llama a otro handler: lo compartido sale a un service. Si lo compartido es lógica pura (sin repositorios ni puertos) es un servicio de **dominio** (`PricingService`) y vive en `domain/`.
 
 Un ejemplo por contexto:
 

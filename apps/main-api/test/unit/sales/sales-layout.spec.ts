@@ -174,7 +174,7 @@ describe('estructura de sales/application', () => {
       [
         'jobs/purge-checkouts.job.ts',
         'jobs/recover-checkouts.job.ts',
-        'services/order-pricer.ts',
+        'services/order-pricer.service.ts',
         'support/order-cursor.ts',
         'use-cases/customer/create-customer.command.ts',
         'use-cases/customer/create-customer.handler.ts',

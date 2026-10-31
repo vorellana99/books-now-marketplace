@@ -164,6 +164,7 @@ const APPLICATION_FOLDERS = ['use-cases', 'services', 'jobs', 'support'];
 const DOMAIN_FOLDERS = ['model', 'ports', 'shared'];
 const RUNTIME_EXPORT =
   /^\s*export\s+(?:async\s+)?(?:function|const|let|enum|class)\b/m;
+const TYPE_EXPORT = /^\s*export\s+(?:interface|type)\b/m;
 
 /** Violaciones de la estructura de carpetas de los contextos (ruta → código). Vacío si todo está bien. */
 export function checkStructure(files: Record<string, string>): string[] {
@@ -235,6 +236,26 @@ export function checkStructure(files: Record<string, string>): string[] {
           violations.push(
             `${path}: application/ solo se divide en ${APPLICATION_FOLDERS.join(', ')} (no ${inside.split('/')[0]}/)`,
           );
+        }
+        if (/^application\/services\/[^/]+$/.test(rel)) {
+          const injectable = /@Injectable\s*\(/.test(code);
+          const named = path.endsWith('.service.ts');
+          if (injectable && !named) {
+            violations.push(
+              `${path}: un service de application/services/ se llama <nombre>.service.ts`,
+            );
+          } else if (named && !injectable) {
+            violations.push(
+              `${path}: un archivo .service.ts declara una clase @Injectable`,
+            );
+          } else if (
+            !injectable &&
+            (RUNTIME_EXPORT.test(code) || TYPE_EXPORT.test(code))
+          ) {
+            violations.push(
+              `${path}: application/services/ solo tiene clases @Injectable (en archivos .service.ts); una función o un tipo va en application/use-cases/<agregado>/ o application/support/`,
+            );
+          }
         }
         if (isPureDomain(path, rel, code, files[path])) {
           violations.push(

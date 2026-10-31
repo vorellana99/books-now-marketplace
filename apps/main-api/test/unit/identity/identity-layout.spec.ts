@@ -67,12 +67,10 @@ describe('estructura de contexts/identity', () => {
     );
   });
 
-  it('los servicios y la purga viven en application/services y application/jobs; el puerto del token en el dominio', () => {
-    expect(files('application/services')).toEqual([
-      'create-admin.ts',
-      'session.service.ts',
-      'session.ts',
-    ]);
+  it('el servicio, la purga y lo que no es un servicio viven cada uno en su carpeta; el puerto del token en el dominio', () => {
+    expect(files('application/services')).toEqual(['session.service.ts']);
+    expect(files('application/support')).toEqual(['session.ts']);
+    expect(files('application/use-cases/user')).toContain('create-admin.ts');
     expect(files('application/jobs')).toEqual(['purge-refresh-tokens.job.ts']);
     expect(files('domain/ports')).toContain('access-token-issuer.port.ts');
     expect(files('application')).toEqual([]);

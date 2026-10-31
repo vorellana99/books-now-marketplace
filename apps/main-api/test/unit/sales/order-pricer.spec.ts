@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { normalizeCart } from '../../../src/contexts/sales/domain/model/order/normalize-cart.js';
-import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.js';
+import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.service.js';
 import { Customer } from '../../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
 import { ShippingAddress } from '../../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
 import { PricingService } from '../../../src/contexts/sales/domain/model/pricing/pricing.service.js';
@@ -203,7 +203,7 @@ describe('un solo armado del pedido', () => {
     '%s usa OrderPricer y no arma el pedido por su cuenta',
     (file) => {
       const text = read(file);
-      expect(text).toContain("from '../../services/order-pricer.js'");
+      expect(text).toContain("from '../../services/order-pricer.service.js'");
       for (const forbidden of [
         'catalog-pricing.port',
         'customer.repository',

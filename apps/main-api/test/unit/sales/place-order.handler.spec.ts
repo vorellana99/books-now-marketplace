@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Logger } from '@nestjs/common';
 import { PlaceOrderCommand } from '../../../src/contexts/sales/application/use-cases/order/place-order.command.js';
-import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.js';
+import { OrderPricer } from '../../../src/contexts/sales/application/services/order-pricer.service.js';
 import { PlaceOrderHandler } from '../../../src/contexts/sales/application/use-cases/order/place-order.handler.js';
 import { hashRequest } from '../../../src/contexts/sales/domain/model/order/request-hash.js';
 import type { CatalogPricing } from '../../../src/contexts/sales/domain/ports/catalog-pricing.port.js';

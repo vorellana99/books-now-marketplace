@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OutboxModule } from '../../platform/outbox/outbox.module.js';
-import { OrderPricer } from './application/services/order-pricer.js';
+import { OrderPricer } from './application/services/order-pricer.service.js';
 import { PlaceOrderHandler } from './application/use-cases/order/place-order.handler.js';
 import { QuoteOrderHandler } from './application/use-cases/order/quote-order.handler.js';
 import { PurgeCheckoutsJob } from './application/jobs/purge-checkouts.job.js';

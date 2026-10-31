@@ -19,7 +19,7 @@
 | [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | [Fase 1](fase-1/README.md) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
 | [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | [Fase 1](fase-1/README.md) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
 
-### Cerradas e histórico (16)
+### Cerradas e histórico (17)
 
 | ID | Fase | Historia | Épica | Estado | Cierre y tiempo |
 |---|---|---|---|---|---|
@@ -39,6 +39,7 @@
 | [HU-34](../product/04-historias-de-usuario.md#hu-34-ver-la-confirmación) | [Fase 1](fase-1/README.md) | Ver la confirmación | Compra | ✅ cerrada | 2026-10-30 · ≈ 33 min |
 | [HU-40](../product/04-historias-de-usuario.md#hu-40-ver-mis-pedidos) | [Fase 1](fase-1/README.md) | Ver mis pedidos | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 1 h 37 min |
 | [HU-41](../product/04-historias-de-usuario.md#hu-41-ver-el-detalle-de-un-pedido) | [Fase 1](fase-1/README.md) | Ver el detalle de un pedido | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 42 min |
+| [EN-01](fase-2/EN-01.md) | [Fase 2](fase-2/README.md) | Ordenar application/services/ de Ventas e Identidad | Arquitectura | ✅ cerrada | 2026-10-31 · 0 min |
 <!-- MATRIZ:FIN -->
 
 **Cómo se lee**
