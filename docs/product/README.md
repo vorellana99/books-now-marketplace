@@ -1,6 +1,6 @@
 # LibroYa: carpeta de producto
 
-> Fuente de información del producto. Aquí se define **qué** hace LibroYa y **para quién**; cómo se construye está en [`../backend`](../backend/00-avance.md) y [`../frontend`](../frontend/README.md). Backend y frontend deben apoyarse en esta carpeta.
+> Fuente de información del producto. Aquí se define **qué** hace LibroYa y **para quién**; cómo se construye está en [`../backend`](../backend/01-decisiones-y-stack.md) y [`../frontend`](../frontend/README.md). Backend y frontend deben apoyarse en esta carpeta.
 
 ## Cómo leerla
 

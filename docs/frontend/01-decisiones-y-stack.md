@@ -126,4 +126,4 @@ Los dos enfoques pueden **convivir** durante la migración, de a un endpoint, po
 
 ### Pendiente del backend
 
-Para que un generador produzca nombres legibles (`getBook`, `placeOrder`, `login` y no `BookController_get`), el backend debe configurar **`operationIdFactory`** al crear el documento de Swagger. No hace falta para el MVP, pero conviene hacerlo antes de migrar. Está anotado en los [problemas abiertos del backend](../backend/00-avance.md#problemas-abiertos).
+Para que un generador produzca nombres legibles (`getBook`, `placeOrder`, `login` y no `BookController_get`), el backend debe configurar **`operationIdFactory`** al crear el documento de Swagger. No hace falta para el MVP, pero conviene hacerlo antes de migrar. Está anotado como la idea [`EN-05`](../historias/fase-2/EN-05.md).

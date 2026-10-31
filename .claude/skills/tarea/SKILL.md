@@ -5,7 +5,7 @@ description: Ejecutar una tarea de una historia de usuario (HU-nn.k, EN-nn.k) de
 
 # Ejecutar una tarea
 
-Guía completa para personas: `docs/guia-de-desarrollo.md` (§4.2). Las herramientas, con ejemplos: `docs/herramientas-de-trabajo.md`. El trabajo se organiza **por historia de usuario**: cada historia nueva es un archivo en `docs/historias/` (con sus tareas y su bitácora) y la matriz de todas está en `docs/historias/README.md`. Lo transversal (problemas abiertos, decisiones generales) está en `docs/avance.md`. Los tableros `docs/backend/00-avance.md` y `docs/frontend/00-avance.md` son **historial congelado**: no se les añade nada.
+Guía completa para personas: `docs/guia-de-desarrollo.md` (§4.2). Las herramientas, con ejemplos: `docs/herramientas-de-trabajo.md`. El trabajo se organiza **por historia de usuario**: cada historia nueva es un archivo en `docs/historias/` (con sus tareas y su bitácora) y la matriz de todas está en `docs/historias/README.md`. Lo pendiente sin desglosar son ideas de esa misma matriz (`estado: idea`). `docs/avance.md` y los tableros `docs/backend/00-avance.md` y `docs/frontend/00-avance.md` son **historial congelado**: no se les añade nada.
 
 ## 0. ¿Es una tarea aprobada?
 
@@ -22,8 +22,8 @@ Guía completa para personas: `docs/guia-de-desarrollo.md` (§4.2). Las herramie
 | ¿Qué tarea toca, de qué capa y qué se comprueba? | La fila de la tarea (capa, tipo, rigor, **objetivo**, «Depende de») y su **bloque de detalle** (`### HU-nn.k …`: «Se comprueba» con sus casillas y, si es crítica, «Reglas e invariantes») en `docs/historias/HU-nn-….md` |
 | ¿Qué debe hacer el producto? | `docs/product/`: reglas `RN-nn` (03), historias `HU-nn` (04), decisiones `DP-nn` (09), mensajes (07) |
 | ¿Cuál es el contrato HTTP? | `docs/api-contrato.md` y `/docs-json`. **Si discrepan, gana el código** y se corrige el documento en el mismo commit |
-| ¿Cómo está construido y por qué? | `CLAUDE.md`, `docs/backend/05-piezas-clave.md`, y «Decisiones y desvíos» de `docs/avance.md` (lo anterior, en los `00-avance.md` congelados) |
-| ¿Hay algo abierto o por decidir? | «Problemas abiertos» de `docs/avance.md`, la «Decisiones y desvíos» del archivo de la historia y `docs/product/09-decisiones-y-preguntas.md` |
+| ¿Cómo está construido y por qué? | `CLAUDE.md`, `docs/backend/05-piezas-clave.md`, «Decisiones y desvíos» del archivo de la historia y el porqué de cada regla en `docs/historias/README.md` (lo anterior, en `docs/avance.md` y los `00-avance.md` congelados) |
+| ¿Hay algo abierto o por decidir? | las ideas de la matriz de `docs/historias/README.md` (`estado: idea`), la «Decisiones y desvíos» del archivo de la historia y `docs/product/09-decisiones-y-preguntas.md` |
 | ¿Cómo se prueba? | `docs/backend/06-tests.md` (técnicas y trampas aprendidas) y `docs/frontend/06-tests.md` |
 
 Lee la fila de la tarea, **su bloque de detalle** y las reglas que cita antes de escribir nada. Si algo no está decidido, **pregunta** (ver «Cuándo preguntar»).

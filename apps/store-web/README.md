@@ -100,7 +100,7 @@ La tienda envía a `POST /orders` un `cardToken`. Hoy es **una tarjeta de prueba
 2. Un componente de pago de ese proveedor que produzca el `cardToken` (el número de tarjeta nunca debe pasar por LibroYa, RN-24).
 3. Retirar el envío de `tok_visa` por defecto.
 
-Está anotado como problema abierto 11 en el [control de avance](../../docs/frontend/00-avance.md#problemas-abiertos).
+Está anotado como la idea [HU-36](../../docs/historias/fase-2/HU-36.md).
 
 ### Lista de comprobación antes de publicar
 

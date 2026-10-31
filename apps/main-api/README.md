@@ -70,7 +70,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `RETENTION_RESERVATION_DAYS` | `90` | Días que se guarda una reserva `CONFIRMED` |
 | `RETENTION_REFRESH_TOKEN_DAYS` | `7` | Días que se guarda un token de refresco después de vencer, usarse o revocarse |
 
-`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md).
+`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance por cortes (historial congelado) está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md); el trabajo vigente, en la matriz de [historias](../../docs/historias/README.md).
 
 ### Retención de datos
 
@@ -381,7 +381,7 @@ Hoy se despliega **una sola instancia** de la API. Antes de añadir más, hay qu
 - Los contadores **se pierden al reiniciar o desplegar**, y el `Retry-After` que recibe una persona es el de la instancia que le tocó.
 - **No dividas los `RATE_LIMIT_*` entre N** para compensarlo: el límite por cuenta (5) quedaría en menos de 1 por instancia y bloquearía a las personas legítimas.
 - **Afinidad por dirección** (`ip_hash` o equivalente) en el balanceador mantiene casi intacto el límite por dirección, pero no el de cuenta, porque el correo va en el cuerpo y el balanceador no lo ve.
-- La solución definitiva es un **almacén compartido**; la opción que no suma infraestructura es guardar los contadores en PostgreSQL. Está pendiente como habilitador (ver «Problemas abiertos» en [`docs/avance.md`](../../docs/avance.md)) y se hace **antes de pasar a más de una instancia en producción**.
+- La solución definitiva es un **almacén compartido**; la opción que no suma infraestructura es guardar los contadores en PostgreSQL. Está pendiente como la idea [`EN-07`](../../docs/historias/fase-2/EN-07.md) y se hace **antes de pasar a más de una instancia en producción**.
 
 ## Levantar la API
 

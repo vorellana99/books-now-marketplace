@@ -65,7 +65,7 @@ Cómo se reparten las cosas:
 
 ### Límites conocidos
 
-Lo que hoy no escala o no está resuelto, para que nadie lo descubra en producción. Lo que sigue abierto está además en «Problemas abiertos» de [`00-avance.md`](00-avance.md).
+Lo que hoy no escala o no está resuelto, para que nadie lo descubra en producción. Lo que sigue abierto está además en la matriz de [historias](../historias/README.md), como ideas (estado `idea`).
 
 | Límite | Qué pasa | Qué hay que saber |
 |---|---|---|

@@ -16,4 +16,4 @@ Estado, fechas y tiempo de cada una: [matriz](../README.md#matriz).
 
 ## Qué sigue fuera
 
-Todo lo demás que el MVP dejó fuera (cupones, devoluciones, pago real, panel de administración en la tienda…) hasta que una historia lo traiga aquí. La pasarela de pago real es el problema abierto 11 de [`docs/avance.md`](../../avance.md).
+Todo lo demás que el MVP dejó fuera (cupones, devoluciones, pago real, panel de administración en la tienda…) hasta que una historia lo traiga aquí. La pasarela de pago real es la idea [HU-36](HU-36.md).

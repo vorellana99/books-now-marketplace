@@ -8,7 +8,7 @@
 apps/main-api     API (NestJS 12 + Prisma 7 + PostgreSQL 18). Aquí está casi todo el trabajo
 apps/store-web    Tienda web (React 19 + TanStack + Tailwind 4, sobre Vite+; comando `vp`)
 docs/historias/   LAS HISTORIAS: la matriz de todas (README.md) y un archivo por historia nueva, con sus tareas por capa y su bitácora
-docs/avance.md    Lo transversal: habilitadores, problemas abiertos, decisiones generales y bitácora general
+docs/avance.md    Historial congelado (lo transversal hasta el 2026-10-31); hoy lo pendiente son ideas en historias/
 docs/backend      Guía del backend; su 00-avance.md (cortes 0–10) es historial congelado
 docs/frontend     Guía de la tienda; su 00-avance.md (cortes F0–F6) es historial congelado
 docs/product      El producto: reglas RN, historias HU, decisiones DP, pantallas PA, diseño
@@ -80,9 +80,9 @@ Cada pregunta tiene **una** fuente de verdad. Si un documento contradice al cód
 | ¿Qué tarea toca y qué se comprueba? | La fila de la tarea (índice: capa, tipo, rigor, objetivo, «Depende de») y su bloque de detalle («Se comprueba» con casillas) en el archivo de su HU, `historias/fase-n/HU-nn.md`; la matriz de todas, en [`historias/README.md`](historias/README.md) |
 | ¿Qué debe hacer el producto? | [`product/`](product/README.md): reglas `RN-nn` (03), historias `HU-nn` (04), decisiones `DP-nn` (09), pantallas `PA-nn` (06) |
 | ¿Cuál es el contrato HTTP? | [`api-contrato.md`](api-contrato.md) y, ejecutándose, `/docs-json` |
-| ¿Cómo está construido y por qué? | [`CLAUDE.md`](../CLAUDE.md), [`backend/05-piezas-clave.md`](backend/05-piezas-clave.md) y la tabla «Decisiones y desvíos» de [`avance.md`](avance.md) (lo que se apartó del plan; lo anterior, en los `00-avance.md` congelados) |
+| ¿Cómo está construido y por qué? | [`CLAUDE.md`](../CLAUDE.md), [`backend/05-piezas-clave.md`](backend/05-piezas-clave.md) y «Decisiones y desvíos» del archivo de la historia (lo que se apartó del plan) y el porqué de cada regla en [`historias/README.md`](historias/README.md) (lo anterior, en `avance.md` y los `00-avance.md` congelados) |
 | ¿Cómo se prueba? | [`backend/06-tests.md`](backend/06-tests.md) y [`frontend/06-tests.md`](frontend/06-tests.md) |
-| ¿Qué está abierto o por decidir? | «Problemas abiertos» de [`avance.md`](avance.md) y [`product/09-decisiones-y-preguntas.md`](product/09-decisiones-y-preguntas.md) (el historial anterior, en los `00-avance.md` congelados) |
+| ¿Qué está abierto o por decidir? | las ideas de la matriz de [`historias/README.md`](historias/README.md) (`estado: idea`) y [`product/09-decisiones-y-preguntas.md`](product/09-decisiones-y-preguntas.md) (el historial anterior, en `avance.md` y los `00-avance.md` congelados) |
 | ¿Qué datos hay para probar a mano? | «Datos de ejemplo» del README del backend (seed) |
 
 ## 4. Del requisito a la tarea: el ciclo
@@ -217,7 +217,7 @@ La lista completa, con más detalle, está en el comando `/tarea`.
 | Una tarea concreta | «`/tarea HU-12.3`» |
 | Solo un plan, sin implementar | «solo la planificación por ahora» |
 | Decidir yo antes de que se aplique | «dame opciones con una recomendada» |
-| Revisar lo hecho | «¿qué queda pendiente?» (Claude lee la matriz de `historias/README.md` y los «Problemas abiertos» de `avance.md`) |
+| Revisar lo hecho | «¿qué queda pendiente?» (Claude lee la matriz de `historias/README.md`, con sus ideas) |
 | Propagar un cambio a la tienda | «`/cambio-de-contrato`» |
 
 ## 11. Glosario de siglas
