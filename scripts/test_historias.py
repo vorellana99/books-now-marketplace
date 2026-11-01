@@ -1894,6 +1894,12 @@ class FormatoDeDocumentos(unittest.TestCase):
         (".claude/skills/tarea/SKILL.md", "## 5. Trampas aprendidas", ("Trampa", "Qué hacer")),
         (".claude/skills/hu/SKILL.md", "## 2. Repartir en tareas", ("Regla", "Qué significa")),
         (".claude/skills/hu/SKILL.md", "## 3. Dejarlo en el tablero", ("Qué dejar", "Dónde y cómo")),
+        ("docs/guia-de-desarrollo.md", "## 4. Del requisito a la tarea", ("Regla", "Qué significa")),
+        ("docs/guia-de-desarrollo.md", "## 7. Backend y tienda", ("Situación", "Qué haces")),
+        ("docs/guia-de-desarrollo.md", "## 9. Cuándo preguntar", ("Situación", "Qué haces")),
+        ("docs/herramientas-de-trabajo.md", "## 3. Pruebas de mutación", ("Regla", "Qué significa")),
+        ("docs/herramientas-de-trabajo.md", "## 5. Cómo cambiar o añadir un comando", ("Regla", "Qué significa")),
+        ("docs/herramientas-de-trabajo.md", "## 6. Estado y límites", ("Tema", "Qué significa")),
     ]
     # las skills de comprobación enteras (sin secciones `## `): una tabla de pasos numerados en orden, sin viñetas ni listas numeradas
     SKILLS_DE_PASOS = [".claude/skills/nueva-ruta/SKILL.md", ".claude/skills/nueva-variable-entorno/SKILL.md", ".claude/skills/nuevo-evento/SKILL.md"]

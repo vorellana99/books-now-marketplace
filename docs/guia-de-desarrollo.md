@@ -136,17 +136,19 @@ Diez pasos (del 0 al 9), en este orden. El ejemplo es una tarea real del corte 7
 
 Reglas del ciclo:
 
-- **Se detiene en el primer fallo.** Nunca se hace el commit con la compuerta en rojo, y la compuerta, el cierre de los documentos y el commit van **en una sola cadena**.
-- **Lo vigente se escribe antes del código.** La primera tarea `[DOC]` de una historia **reescribe** las reglas, decisiones y pantallas de su sección «Impacto en el producto» (no les añade «ahora además…»), deja en cada línea la marca `Cambios: HU-nn (AAAA-MM-DD)` y pasa su fila a `hecho`. `scripts/historias.py` lo comprueba (lo citado existe, la marca está, una historia no se cierra con filas `pendiente`), avisa si dos historias abiertas cambian lo mismo y genera [`product/cambios.md`](product/cambios.md). Una decisión reemplazada no se borra: queda «reemplazada por DP-nn».
-- **El commit de una tarea.** Su asunto es `HU-nn.k [CAPA]: Mensaje` (`EN-nn.k [CAPA]: …` en un habilitador), por ejemplo `HU-12.3 [API]: Add availability to GET /books`: el id de **la** tarea (un commit es de una sola tarea), la capa **de esa tarea** (`API`, `WEB`, `E2E` o `DOC`, en mayúsculas) y un mensaje **en inglés y en imperativo** («Add…», no «Added…»), con el asunto completo de **72 caracteres como máximo**; el cuerpo y la línea `Co-Authored-By:` van debajo. El hook `.githooks/commit-msg` (`scripts/commit_msg.py`) lo comprueba **solo en los commits que empiezan por `HU-` o `EN-`**: que el formato sea ese, que la tarea exista en alguna historia y que la capa sea la suya; los demás commits (`Process: …`, un arreglo, una fusión) pasan sin validar. Se activa **una sola vez por clon** con `git config core.hooksPath .githooks`. El **correlativo 0** no es una tarea: es el commit que **registra** la historia o el habilitador (su archivo ya aprobado, antes de ejecutar nada), por ejemplo `EN-03.0 [DOC]: Register the enabler…`; vale si el archivo existe y su capa es `DOC`.
-- **Los archivos de historial congelado no se tocan.** Un archivo que empieza con «❄️ Historial congelado desde AAAA-MM-DD. Este archivo no se actualizará más» (los `avance.md`, los `07-fases-y-roadmap.md`, la guía original y `product/04`) se conserva como registro. El hook `.githooks/pre-commit` (`scripts/pre_commit.py`) rechaza un commit que lo modifique, borre o renombre, mirando su última versión commiteada; poner la advertencia a un archivo por primera vez sí se permite. Un cambio legítimo (un enlace roto, por ejemplo) se hace a propósito con `ALLOW_FROZEN_EDIT=1 git commit …`. Se activa con el mismo `git config core.hooksPath .githooks`.
-- **El contrato y la pantalla aprobados mandan.** Una tarea `[API]` cumple la sección «Contrato» de su HU tal cual, y una `[WEB]` que cambia lo que se ve cumple su «Pantalla» (ubicación, textos, estados, tonos); si al implementar hay que apartarse, se detiene y se vuelve a pedir aprobación: no se decide al programar.
-- **Una tarea, una capa.** Si al implementarla aparece trabajo en la otra capa, no se mezcla: se añade como tarea nueva de la HU (con su dependencia) y se te avisa.
-- **Los números de la documentación salen de la última ejecución**, copiados de la salida. Nunca de memoria.
-- **Los documentos se marcan en los tres sitios** del archivo de la HU: las **casillas** del bloque de la tarea (todas `- [x]`), el **Estado** de su fila (`⏩ en-curso` → `✅ hecho`) y **su** bitácora. Después se regeneran las matrices con `python3 scripts/historias.py` (también comprueba que el archivo está bien formado).
-- **Si se pide una HU entera** («haz la HU-12»), se encadenan sus tareas en orden sin detenerse a informar entre una y otra; el informe va una vez, al final.
-- **Cerrar la HU**: cuando todas sus tareas están ✅ **y** su «Listo cuando…» se ejecutó de verdad (la tarea `[E2E]`), el archivo pasa a `estado: cerrada` y la matriz de su fase muestra su fecha de cierre y su tiempo (salen de `git log`); el script no deja cerrar una HU sin `[E2E]` ni con tareas pendientes. Una HU con tareas hechas pero sin su `[E2E]` no está cerrada.
-- **Ramas:** una sola rama de trabajo para varias historias (hoy `feature/mvp`). **No se abren pull requests ni se sube nada** sin que lo pida quien manda el proyecto.
+| Regla | Qué significa |
+|---|---|
+| Se detiene en el primer fallo | Nunca se hace el commit con la compuerta en rojo, y la compuerta, el cierre de los documentos y el commit van **en una sola cadena**. |
+| Lo vigente se escribe antes del código | La primera tarea `[DOC]` de una historia **reescribe** las reglas, decisiones y pantallas de su sección «Impacto en el producto» (no les añade «ahora además…»), deja en cada línea la marca `Cambios: HU-nn (AAAA-MM-DD)` y pasa su fila a `hecho`. `scripts/historias.py` lo comprueba (lo citado existe, la marca está, una historia no se cierra con filas `pendiente`), avisa si dos historias abiertas cambian lo mismo y genera [`product/cambios.md`](product/cambios.md). Una decisión reemplazada no se borra: queda «reemplazada por DP-nn». |
+| El commit de una tarea | Su asunto es `HU-nn.k [CAPA]: Mensaje` (`EN-nn.k [CAPA]: …` en un habilitador), por ejemplo `HU-12.3 [API]: Add availability to GET /books`: el id de **la** tarea (un commit es de una sola tarea), la capa **de esa tarea** (`API`, `WEB`, `E2E` o `DOC`, en mayúsculas) y un mensaje **en inglés y en imperativo** («Add…», no «Added…»), con el asunto completo de **72 caracteres como máximo**; el cuerpo y la línea `Co-Authored-By:` van debajo. El hook `.githooks/commit-msg` (`scripts/commit_msg.py`) lo comprueba **solo en los commits que empiezan por `HU-` o `EN-`**: que el formato sea ese, que la tarea exista en alguna historia y que la capa sea la suya; los demás commits (`Process: …`, un arreglo, una fusión) pasan sin validar. Se activa **una sola vez por clon** con `git config core.hooksPath .githooks`. El **correlativo 0** no es una tarea: es el commit que **registra** la historia o el habilitador (su archivo ya aprobado, antes de ejecutar nada), por ejemplo `EN-03.0 [DOC]: Register the enabler…`; vale si el archivo existe y su capa es `DOC`. |
+| Los archivos de historial congelado no se tocan | Un archivo que empieza con «❄️ Historial congelado desde AAAA-MM-DD. Este archivo no se actualizará más» (los `avance.md`, los `07-fases-y-roadmap.md`, la guía original y `product/04`) se conserva como registro. El hook `.githooks/pre-commit` (`scripts/pre_commit.py`) rechaza un commit que lo modifique, borre o renombre, mirando su última versión commiteada; poner la advertencia a un archivo por primera vez sí se permite. Un cambio legítimo (un enlace roto, por ejemplo) se hace a propósito con `ALLOW_FROZEN_EDIT=1 git commit …`. Se activa con el mismo `git config core.hooksPath .githooks`. |
+| El contrato y la pantalla aprobados mandan | Una tarea `[API]` cumple la sección «Contrato» de su HU tal cual, y una `[WEB]` que cambia lo que se ve cumple su «Pantalla» (ubicación, textos, estados, tonos); si al implementar hay que apartarse, se detiene y se vuelve a pedir aprobación: no se decide al programar. |
+| Una tarea, una capa | Si al implementarla aparece trabajo en la otra capa, no se mezcla: se añade como tarea nueva de la HU (con su dependencia) y se te avisa. |
+| Los números de la documentación salen de la última ejecución | Copiados de la salida. Nunca de memoria |
+| Los documentos se marcan en los tres sitios | Del archivo de la HU: las **casillas** del bloque de la tarea (todas `- [x]`), el **Estado** de su fila (`⏩ en-curso` → `✅ hecho`) y **su** bitácora. Después se regeneran las matrices con `python3 scripts/historias.py` (también comprueba que el archivo está bien formado) |
+| Si se pide una HU entera («haz la HU-12») | Se encadenan sus tareas en orden sin detenerse a informar entre una y otra; el informe va una vez, al final |
+| Cerrar la HU | Cuando todas sus tareas están ✅ **y** su «Listo cuando…» se ejecutó de verdad (la tarea `[E2E]`), el archivo pasa a `estado: cerrada` y la matriz de su fase muestra su fecha de cierre y su tiempo (salen de `git log`); el script no deja cerrar una HU sin `[E2E]` ni con tareas pendientes. Una HU con tareas hechas pero sin su `[E2E]` no está cerrada. |
+| Ramas | Una sola rama de trabajo para varias historias (hoy `feature/mvp`). **No se abren pull requests ni se sube nada** sin que lo pida quien manda el proyecto. |
 
 ## 5. Cuánto rigor
 
@@ -178,9 +180,11 @@ Una prueba que no puede fallar no protege nada. Por eso, para el código crític
 
 El contrato es el OpenAPI que publica el backend (`/docs-json`). La tienda lo convierte en tipos (`apps/store-web/src/shared/api/schema.d.ts`, que **se sube a git**) y **solo** importa de `shared/api/types.ts`, nunca del archivo generado.
 
-- **Un cambio de la API** se hace primero en una tarea `[API]` (código, pruebas, compuerta y `api-contrato.md`) y después se propaga a la tienda con `/cambio-de-contrato`, **dentro de la primera tarea `[WEB]`** de la HU (depende de la `[API]`): regenerar `schema.d.ts` con el backend real levantado, ajustar los alias, `vp check` y `vp test`, y actualizar los documentos.
-- **Una decisión de producto que el cambio contradice** (`DP-nn`) no se resuelve en silencio: se pregunta. Un cambio que **quita o renombra** algo que la tienda ya usa se hace en dos tareas (primero se añade lo nuevo y la tienda pasa a usarlo; después se quita lo viejo) para que la compuerta no se rompa entre una y otra. Ejemplo real: `DP-15` esperaba la dirección en `GET /orders/:id` y el backend cerró el corte 7 sin ella; se preguntó, se eligió añadirla y se documentó en producto, contrato y frontend.
-- **La tienda nunca calcula montos**: muestra los textos que devuelve la API (RN-08).
+| Situación | Qué haces |
+|---|---|
+| Un cambio de la API | Se hace primero en una tarea `[API]` (código, pruebas, compuerta y `api-contrato.md`) y después se propaga a la tienda con `/cambio-de-contrato`, **dentro de la primera tarea `[WEB]`** de la HU (depende de la `[API]`): regenerar `schema.d.ts` con el backend real levantado, ajustar los alias, `vp check` y `vp test`, y actualizar los documentos |
+| Una decisión de producto que el cambio contradice (`DP-nn`) | No se resuelve en silencio: se pregunta. Un cambio que **quita o renombra** algo que la tienda ya usa se hace en dos tareas (primero se añade lo nuevo y la tienda pasa a usarlo; después se quita lo viejo) para que la compuerta no se rompa entre una y otra. Ejemplo real: `DP-15` esperaba la dirección en `GET /orders/:id` y el backend cerró el corte 7 sin ella; se preguntó, se eligió añadirla y se documentó en producto, contrato y frontend |
+| Los montos en la tienda | **La tienda nunca los calcula**: muestra los textos que devuelve la API (RN-08) |
 
 ## 8. Trampas que ya costaron tiempo
 
@@ -204,10 +208,12 @@ El contrato es el OpenAPI que publica el backend (`/docs-json`). La tienda lo co
 
 ## 9. Cuándo preguntar y qué no hacer
 
-- **Se pregunta** cuando hay una decisión que cambia lo que se construye y no está en los documentos (incluido el texto de una HU nueva y su desglose en tareas, que se aprueban antes de escribir código): se plantean **opciones con una recomendada (la primera)** y se espera la respuesta antes de aplicar. Una vez decidido, no se reabre.
-- **No se pregunta** lo que tiene un valor por defecto convencional ni lo que se puede comprobar en el código.
-- **No se hace sin pedirlo:** abrir pull requests, subir ramas, cambiar el CI, tocar la base de desarrollo de quien trabaja, ni borrar archivos que no se han mirado.
-- **Se informa con honestidad:** los conteos reales, los errores propios y lo que quedó abierto. «Verificado» solo se dice de lo que se ejecutó, no de lo que se leyó.
+| Situación | Qué haces |
+|---|---|
+| Hay una decisión que cambia lo que se construye y no está en los documentos (incluido el texto de una HU nueva y su desglose en tareas, que se aprueban antes de escribir código) | **Se pregunta**: se plantean **opciones con una recomendada (la primera)** y se espera la respuesta antes de aplicar. Una vez decidido, no se reabre |
+| Hay un valor por defecto convencional, o algo que se puede comprobar en el código | **No se pregunta** |
+| Abrir pull requests, subir ramas, cambiar el CI, tocar la base de desarrollo de quien trabaja, o borrar archivos que no se han mirado | **No se hace sin pedirlo** |
+| Se informa | **Con honestidad:** los conteos reales, los errores propios y lo que quedó abierto. «Verificado» solo se dice de lo que se ejecutó, no de lo que se leyó |
 
 ## 10. Trabajar con Claude: frases que funcionan
 

@@ -120,10 +120,13 @@ report()
 **Qué mutaciones inventar.** Piensa qué error sería grave: quitar una comprobación, invertir una condición (`!` de más o de menos), cambiar un límite en uno (`>` por `>=`, `20` por `21`), devolver un valor fijo, quitar un `WHERE` o un filtro por dueño, cambiar un código de error, quitar una restricción de la base. Si el único cambio posible no altera el comportamiento, es un equivalente.
 
 **Reglas:**
-- La herramienta elige sola la configuración de Vitest (unitarias con la de siempre; integración y e2e con la de e2e) y **rechaza mezclar las dos** en una misma mutación. Es lo que evita el error de que una mutación «sobreviva» solo porque no incluía sus pruebas.
-- No la corras a la vez que la compuerta.
-- Anota en la bitácora cuántas mutaciones hiciste, cuántas se detectaron a la primera y qué se hizo con cada superviviente. Si lanzaste algo mal, dilo.
-- La propia herramienta tiene pruebas: `cd scripts && python3 -m unittest test_mutate` (restaura el archivo siempre, clasifica los veredictos, rechaza anclas repetidas y la mezcla de configuraciones).
+
+| Regla | Qué significa |
+|---|---|
+| Qué configuración de Vitest se usa | La herramienta la elige sola (unitarias con la de siempre; integración y e2e con la de e2e) y **rechaza mezclar las dos** en una misma mutación. Es lo que evita el error de que una mutación «sobreviva» solo porque no incluía sus pruebas |
+| Junto a la compuerta | No la corras a la vez que la compuerta |
+| Qué se anota | En la bitácora: cuántas mutaciones hiciste, cuántas se detectaron a la primera y qué se hizo con cada superviviente. Si lanzaste algo mal, dilo |
+| Sus propias pruebas | `cd scripts && python3 -m unittest test_mutate` (restaura el archivo siempre, clasifica los veredictos, rechaza anclas repetidas y la mezcla de configuraciones) |
 
 ## 4. Los comandos de Claude
 
@@ -259,14 +262,18 @@ description: Una frase que dice QUÉ hace y CUÁNDO usarlo. Claude la lee para d
 2. Paso dos…
 ```
 
-- **El nombre de la carpeta es el nombre del comando** (`.claude/skills/nueva-cosa/` → `/nueva-cosa`).
-- **La descripción importa:** es lo que hace que Claude lo elija. Que diga cuándo usarlo con palabras que tú dirías.
-- **Mantenlos cortos y precisos:** rutas y nombres reales del repositorio. Si una carpeta o un archivo se mueve, hay que actualizar los comandos que lo nombran.
-- **Un comando nuevo se prueba en una tarea real** y se ajusta con lo que falte.
+| Regla | Qué significa |
+|---|---|
+| El nombre de la carpeta es el nombre del comando | `.claude/skills/nueva-cosa/` → `/nueva-cosa` |
+| La descripción importa | Es lo que hace que Claude lo elija. Que diga cuándo usarlo con palabras que tú dirías |
+| Mantenlos cortos y precisos | Rutas y nombres reales del repositorio. Si una carpeta o un archivo se mueve, hay que actualizar los comandos que lo nombran |
+| Un comando nuevo se prueba en una tarea real | Y se ajusta con lo que falte |
 
 ## 6. Estado y límites
 
-- Los scripts están probados: la compuerta se ejecutó en sus tres modos y mutate.py tiene sus propias pruebas.
-- **Los ocho comandos todavía no se han usado en una tarea real con el proceso por historia** (`/hu`, `/tarea` y `scripts/historias.py` se estrenan con el piloto de [`historias/`](historias/README.md)). Sus rutas y nombres se verificaron contra el repositorio, pero la primera tarea que se haga con `/tarea` mostrará qué les falta.
-- Las mutaciones automáticas son solo del backend; la tienda usa la compuerta.
-- La compuerta no sustituye al CI: el CI corre en GitHub solo al subir a `main`/`develop` o en un pull request.
+| Tema | Qué significa |
+|---|---|
+| Los scripts están probados | La compuerta se ejecutó en sus tres modos y `mutate.py` tiene sus propias pruebas |
+| Los ocho comandos todavía no se han usado en una tarea real con el proceso por historia | `/hu`, `/tarea` y `scripts/historias.py` se estrenan con el piloto de [`historias/`](historias/README.md). Sus rutas y nombres se verificaron contra el repositorio, pero la primera tarea que se haga con `/tarea` mostrará qué les falta |
+| Las mutaciones automáticas | Son solo del backend; la tienda usa la compuerta |
+| La compuerta no sustituye al CI | El CI corre en GitHub solo al subir a `main`/`develop` o en un pull request |
