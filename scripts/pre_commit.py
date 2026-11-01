@@ -3,8 +3,8 @@
 
     git config core.hooksPath .githooks     # se activa una sola vez por clon (.githooks/pre-commit llama a este script)
 
-Un archivo está congelado cuando, EN LA ÚLTIMA VERSIÓN COMMITEADA, tiene en sus primeras líneas la advertencia «❄️ Historial congelado
-desde …» (o «❄️ Histórico congelado …», como product/04). Rechaza un commit que modifique, borre o renombre uno. Poner la advertencia
+Un archivo está congelado cuando, EN LA ÚLTIMA VERSIÓN COMMITEADA, una de sus primeras líneas EMPIEZA con la advertencia «❄️ Historial
+congelado desde …» (o «❄️ Histórico congelado …», como product/04); mencionarla en medio de un texto no cuenta. Rechaza un commit que modifique, borre o renombre uno. Poner la advertencia
 a un archivo no lo rechaza (se mira la versión de HEAD, no la preparada), y así se congela por primera vez. Un cambio legítimo (por
 ejemplo, arreglar un enlace roto) se hace a propósito: `ALLOW_FROZEN_EDIT=1 git commit …`.
 
@@ -16,14 +16,16 @@ import subprocess
 import sys
 from pathlib import Path
 
-MARCA = re.compile(r"❄️? (?:Historial|Histórico) congelado")
+# La advertencia ABRE una línea (como cita `> **❄️ …`, en negrita `**❄️ …` o suelta): un texto que solo la menciona (una celda de tabla, una frase
+# entre comillas, como hace la guía de herramientas al describir este hook) no congela el archivo
+MARCA = re.compile(r"^\s*(?:>\s*)?\**\s*\u2744\ufe0f? (?:Historial|Hist\u00f3rico) congelado")
 VENTANA = 40  # líneas del principio donde se busca la advertencia (product/04 la tiene en la 30)
 EXCEPCION = "ALLOW_FROZEN_EDIT"
 
 
 def is_frozen_text(text):
     """¿Las primeras VENTANA líneas llevan la advertencia de congelado?"""
-    return any(MARCA.search(line) for line in text.splitlines()[:VENTANA])
+    return any(MARCA.match(line) for line in text.splitlines()[:VENTANA])
 
 
 def _git(repo, *args):

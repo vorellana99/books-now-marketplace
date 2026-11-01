@@ -106,6 +106,29 @@ class LoQueNoEsta(Repositorio):
         self.prepara("docs/doc_md", texto + "más\n")
         self.assertEqual(self.violaciones(), [])
 
+    def test_mencionar_el_aviso_en_una_celda_de_tabla_no_congela(self):
+        # la guía de herramientas describe el hook y cita el aviso en una celda: no es un aviso
+        texto = "# Herramientas\n\n| Hook | Qué hace |\n|---|---|\n| pre-commit | Rechaza un archivo que empieza con «❄️ Historial congelado desde …» |\n"
+        self.confirma(docs__doc_md=texto)
+        self.prepara("docs/doc_md", texto + "más\n")
+        self.assertEqual(self.violaciones(), [])
+
+    def test_mencionar_el_aviso_dentro_de_una_frase_no_congela(self):
+        texto = "# Doc\n\nLos archivos con «❄️ Historial congelado desde …» no se tocan, y **❄️ Histórico congelado** tampoco, dice el texto.\n"
+        self.confirma(docs__doc_md=texto)
+        self.prepara("docs/doc_md", texto + "más\n")
+        self.assertEqual(self.violaciones(), [])
+
+    def test_el_aviso_abre_una_linea_como_cita_o_en_negrita_o_solo(self):
+        for linea in ("> **❄️ Historial congelado desde el 2026-10-31.**", "**❄️ Histórico congelado (desde 2026-10-30).**", "❄️ Historial congelado", "  > ❄\ufe0f Historial congelado"):
+            self.assertTrue(p.is_frozen_text(f"# T\n\n{linea} resto\n"), linea)
+
+    def test_el_icono_vale_con_o_sin_selector_de_emoji(self):
+        con, sin = "\u2744\ufe0f", "\u2744"  # ❄️ y ❄
+        self.assertNotEqual(con, sin)
+        for icono in (con, sin):
+            self.assertTrue(p.is_frozen_text(f"# T\n\n> **{icono} Historial congelado desde el 2026-10-31.**\n"), repr(icono))
+
     def test_sin_commits_previos_no_hay_nada_congelado(self):
         self.prepara("docs/avance_md", CONGELADO)
         self.assertEqual(self.violaciones(), [])
@@ -163,8 +186,13 @@ class ElRepositorio(unittest.TestCase):
             self.assertTrue(p.is_frozen_text((ROOT / ruta).read_text(encoding="utf-8")), ruta)
 
     def test_los_documentos_vivos_no_se_reconocen_como_congelados(self):
-        for ruta in ("CLAUDE.md", "docs/guia-de-desarrollo.md", "docs/historias/README.md", "docs/product/03-reglas-de-negocio.md", "docs/api-contrato.md"):
+        for ruta in ("CLAUDE.md", "docs/guia-de-desarrollo.md", "docs/herramientas-de-trabajo.md", "docs/historias/README.md", "docs/product/03-reglas-de-negocio.md", "docs/api-contrato.md"):
             self.assertFalse(p.is_frozen_text((ROOT / ruta).read_text(encoding="utf-8")), ruta)
+
+    def test_los_unicos_archivos_congelados_del_repositorio_son_los_siete(self):
+        versionados = subprocess.run(["git", "-C", str(ROOT), "ls-files", "*.md"], capture_output=True, text=True, check=True).stdout.split()
+        detectados = {f for f in versionados if "node_modules" not in f and p.is_frozen_text((ROOT / f).read_text(encoding="utf-8"))}
+        self.assertEqual(detectados, set(self.CONGELADOS))
 
     def test_el_hook_existe_es_ejecutable_y_llama_al_script(self):
         hook = ROOT / ".githooks" / "pre-commit"
