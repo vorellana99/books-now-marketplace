@@ -1,6 +1,6 @@
 # Fase 2
 
-> **Qué es:** lo que el MVP dejó fuera y se trabaja ahora con el proceso por historia. Cada historia nueva es un archivo `HU-nn.md` (o `EN-nn.md`) de esta carpeta, se aprueba antes de desglosarse y se cierra con su recorrido de punta a punta. El alcance de la fase se va fijando al **aprobar** sus historias; lo que no esté aquí sigue «fuera de alcance» en [`00-vision-y-alcance`](../../product/00-vision-y-alcance.md#fuera-de-alcance-por-ahora).
+> **Qué es:** lo que el MVP dejó fuera y se trabaja ahora con el proceso por historia. Cada historia nueva es un archivo `HU-nn.md` de la carpeta `HU/` (y cada habilitador, un `EN-nn.md` de `EN/`), se aprueba antes de desglosarse y se cierra con su recorrido de punta a punta. El alcance de la fase se va fijando al **aprobar** sus historias; lo que no esté aquí sigue «fuera de alcance» en [`00-vision-y-alcance`](../../product/00-vision-y-alcance.md#fuera-de-alcance-por-ahora).
 
 ## Qué entra hoy
 

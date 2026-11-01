@@ -1,5 +1,6 @@
 """Pruebas de scripts/historias.py (la matriz de historias). Se ejecutan con: cd scripts && python3 -m unittest test_historias"""
 import json
+import re
 import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -1782,6 +1783,36 @@ class DocumentosReales(unittest.TestCase):
             texto = (ROOT / ruta).read_text(encoding="utf-8")
             for frase in self.FRASES_DE_LA_MATRIZ_UNICA:
                 self.assertNotIn(frase, texto, f"{ruta}: «{frase}»")
+
+    RUTAS_Y_NOMBRES_ANTIGUOS = ["_plantilla.md", "_idea.md", "fase-n/HU-nn", "fase-n/EN-nn", "HU-nn-titulo", "historias/HU-nn", "fase-n/HU-", "fase-n/EN-"]
+
+    def test_ningun_documento_vivo_usa_las_rutas_ni_los_nombres_antiguos(self):
+        vivos = self.DOCUMENTOS_VIVOS + ["docs/historias/fase-1/README.md", "docs/historias/fase-2/README.md"]
+        for ruta in vivos:
+            texto = (ROOT / ruta).read_text(encoding="utf-8")
+            for antiguo in self.RUTAS_Y_NOMBRES_ANTIGUOS:
+                self.assertNotIn(antiguo, texto, f"{ruta}: «{antiguo}»")
+
+    def test_los_comandos_mandan_a_la_plantilla_de_su_tipo(self):
+        for ruta in (".claude/skills/hu/SKILL.md", ".claude/skills/tarea/SKILL.md"):
+            texto = (ROOT / ruta).read_text(encoding="utf-8")
+            self.assertIn("plantillas/", texto, ruta)
+        hu_ = (ROOT / ".claude/skills/hu/SKILL.md").read_text(encoding="utf-8")
+        for plantilla in ("plantillas/HU.md", "plantillas/EN.md", "plantillas/idea.md"):
+            self.assertIn(plantilla, hu_, plantilla)
+
+    def test_el_readme_de_historias_explica_la_estructura_de_la_carpeta(self):
+        texto = (ROOT / "docs" / "historias" / "README.md").read_text(encoding="utf-8")
+        for pieza in ("fase-n/HU/", "fase-n/EN/", "plantillas/", "matriz.md", "plantillas/README.md"):
+            self.assertIn(pieza, texto, pieza)
+
+    def test_las_rutas_que_se_citan_existen_o_son_un_patron(self):
+        # `docs/historias/fase-n/HU/HU-nn.md` es un patrón; las rutas concretas con número de fase sí deben existir
+        concretas = set()
+        for ruta in self.DOCUMENTOS_VIVOS:
+            concretas |= set(re.findall(r"docs/historias/fase-\d/(?:HU|EN)/(?:HU|EN)-\d+\.md", (ROOT / ruta).read_text(encoding="utf-8")))
+        for ruta in concretas:
+            self.assertTrue((ROOT / ruta).exists(), ruta)
 
     def test_los_documentos_que_mandan_a_leer_el_estado_nombran_la_matriz_de_la_fase(self):
         for ruta in ("CLAUDE.md", ".claude/skills/hu/SKILL.md", ".claude/skills/tarea/SKILL.md", "docs/guia-de-desarrollo.md", "docs/herramientas-de-trabajo.md"):

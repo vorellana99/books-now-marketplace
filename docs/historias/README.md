@@ -1,6 +1,24 @@
 # Historias y habilitadores
 
-> Aquí se organiza el trabajo de LibroYa. Está agrupado en **fases**: cada fase es una carpeta `fase-n/` con su `README.md` (el **objetivo** de la fase, escrito a mano), su `matriz.md` (el **estado** de todas sus historias y habilitadores, generado) y un archivo por cada historia (`HU-nn.md`) o habilitador (`EN-nn.md`) con su texto, sus criterios, su «Listo cuando…», sus tareas por capa, sus decisiones y su bitácora. **Este archivo es el índice de las fases y las reglas de cómo se trabaja.** Lo pendiente sin desglosar está en cada matriz como ideas (estado `idea`); [`../avance.md`](../avance.md) y los tableros por capa son historial congelado.
+> Aquí se organiza el trabajo de LibroYa. Está agrupado en **fases**: cada fase es una carpeta `fase-n/` con su `README.md` (el **objetivo** de la fase, escrito a mano), su `matriz.md` (el **estado** de todas sus historias y habilitadores, generado) y dos carpetas, `HU/` y `EN/`, con un archivo por cada historia (`HU-nn.md`) o habilitador (`EN-nn.md`) con su texto, sus criterios, su «Listo cuando…», sus tareas por capa, sus decisiones y su bitácora. **Este archivo es el índice de las fases y las reglas de cómo se trabaja.** Lo pendiente sin desglosar está en cada matriz como ideas (estado `idea`); [`../avance.md`](../avance.md) y los tableros por capa son historial congelado.
+
+## Estructura de la carpeta
+
+```
+docs/historias/
+├── README.md        este archivo: el índice de fases y las reglas
+├── legado.json      los datos de las 20 historias de la fase 1 (histórico)
+├── plantillas/      una plantilla por tipo y el diccionario de valores
+│   ├── README.md    el diccionario: qué admite cada campo y cada columna
+│   └── HU.md · EN.md · idea.md
+└── fase-n/          una carpeta por fase (fase-1 es el MVP)
+    ├── README.md    el objetivo de la fase (a mano)
+    ├── matriz.md    el estado de sus historias y habilitadores (generado)
+    ├── HU/          una historia por archivo: HU-nn.md
+    └── EN/          un habilitador por archivo: EN-nn.md
+```
+
+Las carpetas `HU/` y `EN/` se crean al haber un primer archivo de ese tipo. Qué plantilla usar y qué valor admite cada campo: el [diccionario](plantillas/README.md).
 
 ## Fases
 
@@ -10,7 +28,7 @@ Cada fila enlaza el objetivo de la fase y su matriz (la leyenda de estados e ico
 | Fase | Historias | Habilitadores | Matriz |
 |---|---|---|---|
 | [Fase 1](fase-1/README.md) | 4 abiertas · 16 cerradas | — | [matriz](fase-1/matriz.md) |
-| [Fase 2](fase-2/README.md) | 6 abiertas · 0 cerradas | 9 abiertas · 4 cerradas | [matriz](fase-2/matriz.md) |
+| [Fase 2](fase-2/README.md) | 6 abiertas · 0 cerradas | 8 abiertas · 5 cerradas | [matriz](fase-2/matriz.md) |
 <!-- FASES:FIN -->
 
 ## Cómo se lee una matriz
@@ -29,8 +47,8 @@ El proceso paso a paso está en la [guía de desarrollo §4](../guia-de-desarrol
 |---|---|
 | **La unidad es la HU** | Todo cambio de producto parte de una historia. Una historia nueva se **redacta y se aprueba antes de desglosarla**. Lo que no es una historia (arquitectura, rendimiento, seguridad, accesibilidad, despliegue) es un **habilitador `EN-nn`** y se liga a la regla `RN`, la decisión `DP` o el requisito de [`product/08`](../product/08-requisitos-de-experiencia.md) que lo justifica, o la decisión de arquitectura de `docs/backend/` que lo respalda; se escribe en el campo `ligado:` del encabezado y el comprobador lo exige y verifica que exista. Una reorganización del código sin cambio de comportamiento (renombrar, mover, extraer) es una tarea de tipo `refactor`, en `[API]` o `[WEB]`: sus pruebas existentes pasan sin cambiar lo que esperan. **Por qué:** una HU como «ver el stock» necesita backend y tienda en un orden concreto y se comprueba de punta a punta; con dos tableros por capa ese orden y ese cierre no tenían dueño |
 | **Una ampliación es una HU nueva** | Las historias anteriores a 2026-10-30 no se editan: lo que las amplía o cambia es una HU nueva con su propio número que dice en el encabezado `amplia: HU-22`. **Por qué:** el histórico no se edita (decisión del usuario) |
-| **Una idea es un pendiente sin desglosar** | Lo que se quiere recordar pero todavía no se desglosa (un problema abierto, un hallazgo) se registra como una historia o un habilitador en estado `idea`, desde [`_idea.md`](plantillas/idea.md): basta el encabezado y unas frases (qué, origen, por qué importa, qué ya está decidido). El comprobador **no** le pide tareas, contrato, pantalla, impacto ni `ligado:`, y no admite tareas hechas ni en curso. Aparece en «Abiertas» de la matriz de su fase. Se **promueve** a `propuesta` completando la [plantilla](plantillas/HU.md) y se aprueba como cualquier historia |
-| **Un archivo por historia, dentro de la carpeta de su fase** | `fase-n/HU-nn.md` (o `fase-n/EN-nn.md`), con el encabezado y las secciones de la [plantilla](plantillas/HU.md). **El nombre es solo el correlativo** (el título está en el encabezado y en la matriz de su fase) y debe ser igual al `id`. Una historia suelta en `docs/historias/` o en una carpeta que no sea `fase-n` es un error del comprobador. **Por qué:** con todo en un solo tablero estaba muy mezclado |
+| **Una idea es un pendiente sin desglosar** | Lo que se quiere recordar pero todavía no se desglosa (un problema abierto, un hallazgo) se registra como una historia o un habilitador en estado `idea`, desde [`idea.md`](plantillas/idea.md): basta el encabezado y unas frases (qué, origen, por qué importa, qué ya está decidido). El comprobador **no** le pide tareas, contrato, pantalla, impacto ni `ligado:`, y no admite tareas hechas ni en curso. Aparece en «Abiertas» de la matriz de su fase. Se **promueve** a `propuesta` completando la [plantilla](plantillas/HU.md) y se aprueba como cualquier historia |
+| **Un archivo por historia, en la carpeta de su fase y de su tipo** | `fase-n/HU/HU-nn.md` (una historia) o `fase-n/EN/EN-nn.md` (un habilitador), con el encabezado y las secciones de la plantilla de su tipo ([`HU.md`](plantillas/HU.md), [`EN.md`](plantillas/EN.md)); qué admite cada campo y cada columna está en el [diccionario](plantillas/README.md). **El nombre es solo el correlativo** (el título está en el encabezado y en la matriz de su fase) y debe ser igual al `id`. Un archivo suelto en `docs/historias/`, suelto en la fase, en una carpeta que no sea `HU/` ni `EN/` (o un `EN-` en `HU/`, o al revés) es un error del comprobador. **Por qué:** con todo en un solo tablero estaba muy mezclado |
 | **Las fases son carpetas** | `fase-1/` (el MVP), `fase-2/`… El nombre de la carpeta es solo `fase-n`; **lo que es la fase** (qué entra, qué queda fuera, de qué fue) se describe en el `README.md` inicial de cada carpeta, que el comprobador exige. **La fase de una historia es su carpeta**: pasarla de fase es mover su archivo (y arreglar sus enlaces `../../`). Una fase nueva se crea con su carpeta y su README. Los habilitadores `EN-nn` van en la carpeta de la fase en que se trabajan. Las 20 historias anteriores son de la [fase 1](fase-1/README.md) y no tienen archivo |
 | **Las tareas salen de los criterios** | Cada criterio «Dado/Cuando/Entonces» se reparte en tareas **verticales**, cada una de **una sola capa**: `[API]` (backend), `[WEB]` (tienda), `[E2E]` (recorrido contra el backend real) o `[DOC]` (producto y guías, sin código). **La tabla de tareas es un índice** (`# | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado`; el **Objetivo** es el resultado que se busca en una frase) y **el detalle de cada tarea vive en su bloque** de «Detalle de las tareas»: «Se comprueba» como **lista de casillas** y, si el rigor es `critico`, «Reglas e invariantes». **Capa, Tipo, Rigor y Estado se escriben «icono texto»** (`⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente`) en todas las filas; `python3 scripts/historias.py --formato` completa los iconos |
 | **Numeración** | `HU-nn.k` es la tarea k de la historia nn. Es el prefijo del commit con su capa: `HU-12.3 [API]: Add availability to GET /books`. Los números no se reutilizan |
