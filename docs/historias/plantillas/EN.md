@@ -53,8 +53,11 @@ ligado: backend/05-piezas-clave.md#convención-por-contexto
 > | `Decisiones y desvíos` | Siempre | Lo que se decidió o se apartó del plan, y por qué |
 > | `Bitácora` | Siempre | Una fila por tarea hecha, con los conteos reales de la compuerta |
 
-**Para** …, **porque** ….
-**Ligado a:** el documento o la regla de `ligado:`, con su enlace escrito con `../../../` (una `RN`/`DP`, o una decisión de arquitectura de `docs/backend/`).
+| Campo | Contenido |
+|---|---|
+| Para | … (el resultado técnico que se busca) |
+| Porque | … (el motivo; qué pasa si no se hace) |
+| Ligado a | El documento o la regla de `ligado:`, con su enlace escrito con `../../../` (una `RN`/`DP`, o una decisión de arquitectura de `docs/backend/`) |
 
 ## Lo que hay hoy (con su fuente)
 

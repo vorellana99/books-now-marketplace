@@ -24,10 +24,12 @@ reemplaza:
 > | `en-curso` | 🔄 | Alguna de sus tareas ya empezó | Al pasar su primera tarea a `en-curso` |
 > | `cerrada` | ✅ | Todas sus tareas están hechas y su «Listo cuando…» se ejecutó | Al terminar la última tarea (en una historia, tras su `[E2E]`) |
 
-**Qué:** una o dos frases de lo que haría falta.
-**Origen:** de dónde sale (un problema abierto, un hallazgo, algo que pidió el usuario) y, si lo hay, el enlace.
-**Por qué importa:** qué pasa si no se hace.
-**Estado de la decisión:** si ya hay algo decidido o aceptado, dilo aquí (por ejemplo «aceptado mientras haya una sola instancia»).
+| Campo | Contenido |
+|---|---|
+| Qué | Una o dos frases de lo que haría falta |
+| Origen | De dónde sale (un problema abierto, un hallazgo, algo que pidió el usuario) y, si lo hay, el enlace |
+| Por qué importa | Qué pasa si no se hace |
+| Estado de la decisión | Si ya hay algo decidido o aceptado, dilo aquí (por ejemplo «aceptado mientras haya una sola instancia») |
 
 ## Para promoverla a `propuesta`
 

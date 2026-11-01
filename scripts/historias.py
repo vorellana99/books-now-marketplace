@@ -136,6 +136,12 @@ TABLAS_EN_PLANTILLAS = {
     "idea": (_ESTADOS,),
 }
 TABLAS_DEL_ARCHIVO = ("Campos del encabezado", "Secciones de la plantilla")  # en HU.md y EN.md
+# La tabla del resumen con que abre el cuerpo de cada plantilla (la primera tabla fuera de una cita, tras el título): sus campos
+RESUMEN_EN_PLANTILLAS = {
+    "HU": ("Como", "Quiero", "Para", "Reglas", "Pantallas", "Rutas"),
+    "EN": ("Para", "Porque", "Ligado a"),
+    "idea": ("Qué", "Origen", "Por qué importa", "Estado de la decisión"),
+}
 
 
 class HistoriaError(Exception):
@@ -309,7 +315,7 @@ def render_types(text):
 
 def parse_value_table(text, heading):
     """[(valor, icono)] de la tabla que sigue a «### <heading>» o a una línea en negrita «**<heading>**», sola o dentro de una cita (None si
-    ese título no está): la primera columna, sin comillas, y la segunda. Termina en el siguiente título o en el primer texto que no es tabla."""
+    ese título no está): la primera columna, sin comillas, y la segunda. Termina en el siguiente título o en la primera línea que no es de tabla."""
     lines = [re.sub(r"^\s*>\s?", "", l) for l in text.splitlines()]
     inicio = next((k for k, l in enumerate(lines) if l.strip() in (f"### {heading}", f"**{heading}**")), None)
     if inicio is None:
@@ -319,8 +325,8 @@ def parse_value_table(text, heading):
         if line.startswith("#"):
             break
         if not line.startswith("|"):
-            if tabla and line.strip():
-                break  # un texto después de la tabla: la tabla terminó
+            if tabla:
+                break  # una línea que no es de tabla (también una en blanco): la tabla terminó
             continue
         if set(line) <= set("|-: "):
             continue
@@ -330,6 +336,28 @@ def parse_value_table(text, heading):
         celdas = [c.strip() for c in line.strip().strip("|").split("|")]
         filas.append((celdas[0].strip("`"), celdas[1] if len(celdas) > 1 else ""))
     return filas
+
+
+def parse_body_table(text):
+    """[(primera celda, segunda celda)] de la primera tabla del cuerpo (la que no va dentro de una cita) tras el título `# `; None si no hay."""
+    lines = text.splitlines()
+    cierre = next((k for k, l in enumerate(lines[1:], 1) if l.strip() == "---"), 0) if lines and lines[0].strip() == "---" else -1
+    inicio = next((k for k, l in enumerate(lines) if k > cierre and l.startswith("# ")), None)
+    if inicio is None:
+        return None
+    filas, tabla = [], 0
+    for line in lines[inicio + 1:]:
+        if not line.startswith("|"):
+            if tabla:
+                break
+            continue
+        if set(line) <= set("|-: "):
+            continue
+        tabla += 1
+        if tabla > 1:
+            celdas = [c.strip() for c in line.strip().strip("|").split("|")]
+            filas.append((celdas[0].strip("`"), celdas[1] if len(celdas) > 1 else ""))
+    return filas if tabla else None
 
 
 def _errores_de_tabla(archivo, titulo, filas, valores, iconos):
@@ -363,6 +391,12 @@ def plantilla_errors(nombre, text):
     for titulo in TABLAS_EN_PLANTILLAS[nombre]:
         _, valores, iconos = next(d for d in DICCIONARIO if d[0] == titulo)
         errores += _errores_de_tabla(archivo, titulo, parse_value_table(text, titulo), valores, iconos)
+    resumen = parse_body_table(text)
+    if resumen is None:
+        errores.append(f"{archivo}: falta la tabla del resumen que abre el cuerpo (campos: {', '.join(RESUMEN_EN_PLANTILLAS[nombre])})")
+    else:
+        errores += [e.replace("la tabla «Resumen»", "la tabla del resumen") for e in
+                    _errores_de_tabla(archivo, "Resumen", resumen, RESUMEN_EN_PLANTILLAS[nombre], None)]
     if nombre == "idea":
         return errores
     try:

@@ -136,6 +136,12 @@ TABLAS_DE_PLANTILLA = {"HU": (ESTADOS_HIST,) + _DE_TAREAS + ("Épicas de las his
 CAMPOS_DE_PLANTILLA = {"HU": ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza"), "EN": ("id", "titulo", "tipo", "estado", "amplia", "reemplaza", "ligado"), "idea": ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza")}
 SECCIONES_DE_PLANTILLA = {"HU": ("Criterios", "Listo cuando", "Tareas"), "EN": ("Lo que hay hoy", "Listo cuando", "Tareas"), "idea": ()}
 ESPECIALES = ("Campos del encabezado", "Secciones de la plantilla")
+# la tabla del resumen que abre el cuerpo de cada plantilla (la primera tabla fuera de una cita, tras el título)
+RESUMEN_DE_PLANTILLA = {"HU": ("Como", "Quiero", "Para", "Reglas", "Pantallas", "Rutas"), "EN": ("Para", "Porque", "Ligado a"), "idea": ("Qué", "Origen", "Por qué importa", "Estado de la decisión")}
+
+
+def resumen_de(nombre, filas=None):
+    return "| Campo | Contenido |\n|---|---|\n" + "".join(f"| {c} | … |\n" for c in (filas or RESUMEN_DE_PLANTILLA[nombre]))
 
 
 def tabla_en_plantilla(titulo, filas):
@@ -147,7 +153,7 @@ def tabla_en_plantilla(titulo, filas):
 def plantilla_de(nombre):
     """Una plantilla mínima y válida: su encabezado, sus secciones y las tablas que el script comprueba."""
     campos, secciones = CAMPOS_DE_PLANTILLA[nombre], SECCIONES_DE_PLANTILLA[nombre]
-    texto = "---\n" + "".join(f"{c}: x\n" for c in campos) + "---\n\n" + "".join(f"## {s}\n\ntexto\n\n" for s in secciones) + "\n"
+    texto = "---\n" + "".join(f"{c}: x\n" for c in campos) + "---\n\n# x Título\n\n" + resumen_de(nombre) + "\n" + "".join(f"## {s}\n\ntexto\n\n" for s in secciones) + "\n"
     texto += "\n".join(tabla_en_plantilla(titulo, TABLAS_DE_VALORES[titulo]) for titulo in TABLAS_DE_PLANTILLA[nombre])
     if nombre != "idea":
         texto += "\n" + tabla_en_plantilla(ESPECIALES[0], [(c, "") for c in campos]) + "\n" + tabla_en_plantilla(ESPECIALES[1], [(s, "") for s in secciones])
@@ -1163,6 +1169,33 @@ class Diccionario(Entorno):
                 self.assertNotEqual(mal, plantilla_de(nombre))
                 self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: mal})
                 self.assertTrue(self.hay(f"plantillas/{nombre}.md", "Secciones de la plantilla", cambio), (nombre, cambio))
+
+    def test_el_cuerpo_de_cada_plantilla_abre_con_su_tabla_de_resumen(self):
+        for nombre, campos in RESUMEN_DE_PLANTILLA.items():
+            self.assertEqual({n: tuple(c) for n, c in h.RESUMEN_EN_PLANTILLAS.items()}[nombre], campos)
+            sin = plantilla_de(nombre).replace(resumen_de(nombre), "texto corrido\n")
+            falta = plantilla_de(nombre).replace(resumen_de(nombre), resumen_de(nombre, campos[:-1]))
+            sobra = plantilla_de(nombre).replace(resumen_de(nombre), resumen_de(nombre, campos + ("Inventado",)))
+            for cambio, mal in (("falta", sin), ("faltan", falta), ("sobran", sobra)):
+                self.assertNotEqual(mal, plantilla_de(nombre))
+                self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: mal})
+                self.assertTrue(self.hay(f"plantillas/{nombre}.md", "resumen", cambio), (nombre, cambio))
+
+    def test_un_comentario_del_encabezado_no_es_el_titulo_del_cuerpo(self):
+        texto = "---\nid: x\n# un comentario\n---\n\n| Campo | Contenido |\n|---|---|\n| Qué | … |\n"
+        self.assertIsNone(h.parse_body_table(texto))
+        self.assertEqual(h.parse_body_table(texto.replace("---\n\n|", "---\n\n# Título\n\n|")), [("Qué", "…")])
+
+    def test_la_tabla_de_resumen_no_se_confunde_con_las_de_una_cita(self):
+        # la nota de la plantilla va dentro de una cita y trae otras tablas: no cuentan como el resumen
+        mal = plantilla_de("HU").replace(resumen_de("HU"), "texto corrido\n")
+        self.assertIsNone(h.parse_body_table(mal))
+        self.assertEqual([c for c, _ in h.parse_body_table(plantilla_de("HU"))], list(RESUMEN_DE_PLANTILLA["HU"]))
+
+    def test_una_tabla_termina_en_la_linea_en_blanco_y_no_se_une_a_la_siguiente(self):
+        # la última tabla de la nota (en una cita) y la del cuerpo, justo después, son dos tablas distintas
+        texto = "# x\n\n" + tabla_en_plantilla(ESTADOS_TAR, TABLAS_DE_VALORES[ESTADOS_TAR]) + "\n" + resumen_de("HU")
+        self.assertEqual(h.parse_value_table(texto, ESTADOS_TAR), TABLAS_DE_VALORES[ESTADOS_TAR])
 
     def test_las_tablas_de_una_plantilla_se_leen_aunque_vayan_dentro_de_una_cita(self):
         filas = h.parse_value_table(plantilla_de("HU"), ESTADOS_TAR)

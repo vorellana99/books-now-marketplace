@@ -63,8 +63,14 @@ reemplaza:
 > | `Decisiones y desvíos` | Siempre | Lo que se decidió o se apartó del plan, y por qué |
 > | `Bitácora` | Siempre | Una fila por tarea hecha, con los conteos reales de la compuerta |
 
-**Como** …, **quiero** …, **para** ….
-**Reglas:** RN-… · **Pantallas:** PA-… · **Rutas:** …
+| Campo | Contenido |
+|---|---|
+| Como | … (quién: comprador, administrador) |
+| Quiero | … (qué hace o ve) |
+| Para | … (el beneficio) |
+| Reglas | `RN-…` que la rigen |
+| Pantallas | `PA-…` que toca |
+| Rutas | Las rutas de la API que usa, o `—` |
 
 ## Criterios
 

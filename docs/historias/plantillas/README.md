@@ -12,7 +12,7 @@
 
 El número (`nn`) es el siguiente libre de ese tipo: se mira en la matriz de la fase o en la carpeta. El nombre del archivo es **solo el correlativo** (`HU-12.md`, sin título) y es igual al `id` del encabezado. Los enlaces dentro del archivo se escriben con `../../../` para salir de `fase-n/HU/` o `fase-n/EN/` (por ejemplo, `../../../product/03-reglas-de-negocio.md`).
 
-Cada plantilla lleva, en su nota inicial, las **tablas** que le tocan en vez de texto corrido: los campos del encabezado, las épicas, los estados, las secciones, las columnas, capas y rigor de la tabla de tareas, las acciones y estados del impacto, y lo que lleva cada sección. `idea.md` lleva solo la de los estados de la historia; `HU.md` y `EN.md`, todas. `scripts/historias.py` compara con el script las que dependen de valores (y los campos y las secciones, con el propio archivo), igual que las tablas de este diccionario.
+Cada plantilla lleva, en su nota inicial, las **tablas** que le tocan en vez de texto corrido: los campos del encabezado, las épicas, los estados, las secciones, las columnas, capas y rigor de la tabla de tareas, las acciones y estados del impacto, y lo que lleva cada sección. `idea.md` lleva solo la de los estados de la historia; `HU.md` y `EN.md`, todas. Las tres abren su cuerpo con una **tabla de resumen** (`Campo | Contenido`): `Como · Quiero · Para · Reglas · Pantallas · Rutas` en una historia, `Para · Porque · Ligado a` en un habilitador y `Qué · Origen · Por qué importa · Estado de la decisión` en una idea. `scripts/historias.py` compara con el script las que dependen de valores (y los campos y las secciones, con el propio archivo), igual que las tablas de este diccionario.
 
 ## Ciclo de vida de una historia o un habilitador
 
