@@ -9,11 +9,13 @@ Guía completa para personas: `docs/guia-de-desarrollo.md` (§4.2). Las herramie
 
 ## 0. ¿Es una tarea aprobada?
 
-- Una tarea es una fila del archivo de su historia (`docs/historias/fase-n/HU/HU-nn.md`, o `fase-n/EN/EN-nn.md` si es de un habilitador) con estado ⬜ (aprobada), no 📝 (propuesta). Si el usuario pide algo que **no está** como tarea aprobada («quiero que…»), **no empieces a programar**: usa `/hu` para redactar la historia y desglosarla, y espera su aprobación.
-- «Continúa con la siguiente tarea» = la primera tarea ⬜ cuyas dependencias estén todas ✅. «Haz toda la HU-nn» = encadenar sus tareas en orden, sin informar entre una y otra; el informe va una vez, al final.
-- **Al empezar la tarea:** pasa su Estado a `⏩ en-curso` y ejecuta `python3 scripts/historias.py`: sella el **inicio** en la tabla «## Ejecución» de la HU (hora de Lima). Hazlo antes de escribir nada.
-- Comprueba las **dependencias**: no empieces una tarea cuya dependencia no esté ✅.
-- Comprueba que está **lista para ejecutarse** (ver `/hu`): si puedes escribir su primera prueba roja con su primera comprobación (y, en una `[API]` que cambia la API, la sección «Contrato» de la HU; en una `[WEB]` que cambia lo que se ve, la sección «Pantalla»). Si no, no empieces: completa el detalle con el usuario.
+| Comprobación | Qué se hace |
+|---|---|
+| ¿Es una tarea aprobada? | Una tarea es una fila del archivo de su historia (`docs/historias/fase-n/HU/HU-nn.md`, o `fase-n/EN/EN-nn.md` si es de un habilitador) con estado ⬜ (aprobada), no 📝 (propuesta). Si el usuario pide algo que **no está** como tarea aprobada («quiero que…»), **no empieces a programar**: usa `/hu` para redactar la historia y desglosarla, y espera su aprobación |
+| Qué tarea toca | «Continúa con la siguiente tarea» = la primera tarea ⬜ cuyas dependencias estén todas ✅. «Haz toda la HU-nn» = encadenar sus tareas en orden, sin informar entre una y otra; el informe va una vez, al final |
+| Al empezar | Pasa su Estado a `⏩ en-curso` y ejecuta `python3 scripts/historias.py`: sella el **inicio** en la tabla «## Ejecución» de la HU (hora de Lima). Hazlo antes de escribir nada |
+| Dependencias | No empieces una tarea cuya dependencia no esté ✅ |
+| Lista para ejecutarse | Comprueba (ver `/hu`) que puedes escribir su primera prueba roja con su primera comprobación (y, en una `[API]` que cambia la API, la sección «Contrato» de la HU; en una `[WEB]` que cambia lo que se ve, la sección «Pantalla»). Si no, no empieces: completa el detalle con el usuario |
 
 ## 1. Entender qué se pide y de dónde sale cada dato
 
@@ -44,10 +46,12 @@ Lee la fila de la tarea, **su bloque de detalle** y las reglas que cita antes de
 
 ## 3. Cuánto rigor: pruebas siempre; mutaciones en lo crítico
 
-- **Pruebas primero: siempre.**
-- **Mutaciones obligatorias** en las tareas con rigor **`critico`** (el desglose lo marca cuando tocan): dominio (`src/contexts/*/domain`), seguridad (tokens, contraseñas, guards, roles, CORS, límite de intentos), dinero y precios, concurrencia y transacciones (outbox, reservas, idempotencia) y restricciones de la base.
-- **Opcionales** en: DTO de solo forma, documentación de Swagger, texto, cableado trivial.
-- `[WEB]`: compuerta (`vp check`, `vp test`, build). Las mutaciones automáticas son solo del backend.
+| Qué | Qué se exige |
+|---|---|
+| Pruebas primero | Siempre, en toda tarea |
+| Mutaciones obligatorias | En las tareas con rigor `critico` (el desglose lo marca cuando tocan): dominio (`src/contexts/*/domain`), seguridad (tokens, contraseñas, guards, roles, CORS, límite de intentos), dinero y precios, concurrencia y transacciones (outbox, reservas, idempotencia) y restricciones de la base |
+| Mutaciones opcionales | DTO de solo forma, documentación de Swagger, texto, cableado trivial |
+| `[WEB]` | Compuerta (`vp check`, `vp test`, build). Las mutaciones automáticas son solo del backend |
 
 ## 4. Cuándo preguntar al usuario
 
@@ -55,18 +59,23 @@ Una decisión que cambia lo que se construye y no está en los documentos: **pla
 
 ## 5. Trampas aprendidas (cada una costó tiempo)
 
-- **Prettier reformula el código:** las anclas de mutación se copian del archivo ya formateado.
-- **Lanzar una mutación con la configuración equivocada** hace que no incluya sus pruebas y «sobreviva»: `scripts/mutate.py` la elige solo.
-- **Un cambio transversal rompe pruebas lejanas** (el guard global rompió los e2e de pedidos): tras tocarlo, corre toda la suite, no solo el archivo.
-- **Una prueba de concurrencia que pasa sin el bloqueo no prueba nada:** ensancha la ventana (`slowDown…Updates` en `test/support/database.ts`).
-- **Un helper con parámetro por defecto convierte `undefined` en un valor válido.**
-- **Fechas:** `node-pg` serializa un `Date` en hora local; en los tests, texto ISO. No afirmes umbrales de tiempo; congela solo `Date` (`vi.useFakeTimers({ toFake: ['Date'] })`).
-- **No sobrescribas un archivo de pruebas que ya existe:** comprueba con `ls`/`git status` antes de crear (el total de pruebas que baja es la señal).
-- **Procesos:** mátalos por PID. `pkill -f`/`pgrep -f` se coinciden a sí mismos y matan tu propia shell. En zsh una variable con varias palabras no se divide.
-- **Una prueba e2e o de rendimiento que pasa no prueba nada hasta que se ve fallar:** rompe el código a propósito (una clave de idempotencia nueva, quitar la precarga de rutas) y comprueba que la prueba lo nota. Un servidor de vista previa que sobrevivió a una ejecución anterior puede servir un build viejo y hacer pasar la mutación: mata por PID y no reutilices el servidor (`reuseExistingServer: false`).
-- **El límite de intentos de la API (`/auth/*`) también corre en las e2e:** cada prueba crea su comprador y planta su token de refresco una sola vez (se rota al usarse); los ayudantes esperan el `Retry-After` de un `429`.
-- **Un fallo «suelto» de una prueba se investiga, no se descarta:** la compuerta guarda el detalle en `.verify-last-failure.txt`; la causa de los de la tienda era un tiempo de espera de 1 s que no alcanzaba con la máquina cargada.
-- **Archivos temporales** en `$CLAUDE_JOB_DIR/tmp`, no en `/tmp`. No lances la compuerta mientras corre otra cosa pesada (comparten Docker y CPU).
+| Trampa | Qué hacer |
+|---|---|
+| Prettier reformula el código y las anclas de mutación dejan de coincidir | Copiar el ancla del archivo ya formateado |
+| Una mutación lanzada con la configuración equivocada «sobrevive» (no incluye sus pruebas) | Dejar que `scripts/mutate.py` la elija |
+| Un cambio transversal rompe pruebas lejanas (el guard global rompió los e2e de pedidos) | Tras tocarlo, correr toda la suite, no solo el archivo |
+| Una prueba de concurrencia que pasa sin el bloqueo no prueba nada | Ensanchar la ventana (`slowDown…Updates` en `test/support/database.ts`) |
+| Un token «forjado» sin un campo se rechaza por esa razón y no por la que se prueba | Forjar con todo válido salvo lo que se quiere probar |
+| Un helper con parámetro por defecto convierte `undefined` en un valor válido | No dar valor por defecto a lo que se prueba como ausente |
+| `Date` de `node-pg` sale en hora local | Escribir fechas como texto ISO en los tests; no afirmar umbrales de tiempo; congelar solo `Date` (`vi.useFakeTimers({ toFake: ['Date'] })`) |
+| Se sobrescribió un archivo de pruebas que ya existía | Comprobar con `ls` o `git status` antes de crear; un total de pruebas que baja es la señal |
+| `pkill -f` y `pgrep -f` se coinciden a sí mismos y matan la propia shell (y en zsh una variable con varias palabras no se divide) | Matar por PID |
+| «Skipped» o un resumen ausente de Vitest parecen un verde | Leer los conteos: un arranque roto omite las pruebas |
+| Una prueba e2e o de rendimiento que pasa no prueba nada hasta que se ve fallar; un servidor de vista previa que sobrevivió puede servir un build viejo | Romper el código a propósito (una clave de idempotencia nueva, quitar la precarga de rutas) y comprobar que la prueba lo nota; matar el servidor por PID y no reutilizarlo (`reuseExistingServer: false`) |
+| El límite de intentos de la API (`/auth/*`) también corre en las e2e | Cada prueba crea su comprador y planta su token de refresco una sola vez (se rota al usarse); los ayudantes esperan el `Retry-After` de un `429` |
+| Un fallo «suelto» de una prueba | Investigarlo, no descartarlo: la compuerta guarda el detalle en `.verify-last-failure.txt`; la causa de los de la tienda era un tiempo de espera de 1 s que no alcanzaba con la máquina cargada |
+| Archivos temporales en `/tmp` chocan con otras sesiones | Usar `$CLAUDE_JOB_DIR/tmp` |
+| La compuerta y otra cosa pesada a la vez comparten Docker y CPU | No lanzar la compuerta mientras corre otra cosa pesada |
 
 ## 6. Al terminar
 

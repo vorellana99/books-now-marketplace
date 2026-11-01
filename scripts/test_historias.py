@@ -1884,6 +1884,83 @@ class RegistroDeCambios(Entorno):
         self.assertTrue(self.hay("cambios.md"))
 
 
+class FormatoDeDocumentos(unittest.TestCase):
+    """Las enumeraciones de las skills y de las guías son tablas, no viñetas (EN-15); esta lista crece con cada tarea de ese habilitador."""
+
+    # (documento, comienzo del título de la sección, columnas de la tabla que debe llevar)
+    SECCIONES_EN_TABLA = [
+        (".claude/skills/tarea/SKILL.md", "## 0. ¿Es una tarea aprobada?", ("Comprobación", "Qué se hace")),
+        (".claude/skills/tarea/SKILL.md", "## 3. Cuánto rigor", ("Qué", "Qué se exige")),
+        (".claude/skills/tarea/SKILL.md", "## 5. Trampas aprendidas", ("Trampa", "Qué hacer")),
+        (".claude/skills/hu/SKILL.md", "## 2. Repartir en tareas", ("Regla", "Qué significa")),
+        (".claude/skills/hu/SKILL.md", "## 3. Dejarlo en el tablero", ("Qué dejar", "Dónde y cómo")),
+    ]
+    VINETA = re.compile(r"^\s*(?:[-*] |\d+\. )", re.M)
+
+    @staticmethod
+    def seccion(texto, comienzo):
+        """El texto de la sección que empieza por `comienzo` (una línea `## …`), sin sus bloques de código, hasta la siguiente `## `."""
+        lineas, dentro, salida, codigo = texto.splitlines(), False, [], False
+        for l in lineas:
+            if l.startswith("## "):
+                if dentro:
+                    break
+                dentro = l.startswith(comienzo)
+                continue
+            if dentro:
+                if l.startswith("```"):
+                    codigo = not codigo
+                elif not codigo:
+                    salida.append(l)
+        return "\n".join(salida) if dentro else None
+
+    @staticmethod
+    def tablas(texto):
+        """Las tablas del texto: cada una es la lista de sus filas, cada fila la lista de sus celdas (sin la fila de guiones)."""
+        resultado, actual = [], None
+        for l in texto.splitlines():
+            if l.strip().startswith("|"):
+                if actual is None:
+                    actual = []
+                    resultado.append(actual)
+                if not set(l.strip()) <= set("|-: "):
+                    actual.append([c.strip() for c in l.strip().strip("|").split("|")])
+            else:
+                actual = None
+        return resultado
+
+    def test_las_secciones_enumeradas_son_tablas_sin_vinetas(self):
+        for ruta, comienzo, columnas in self.SECCIONES_EN_TABLA:
+            cuerpo = self.seccion((ROOT / ruta).read_text(encoding="utf-8"), comienzo)
+            self.assertIsNotNone(cuerpo, f"{ruta}: no tiene la sección «{comienzo}»")
+            encabezados = [tabla[0] for tabla in self.tablas(cuerpo) if tabla]
+            self.assertIn(list(columnas), encabezados, f"{ruta}, «{comienzo}»: falta la tabla {' | '.join(columnas)}")
+            vineta = self.VINETA.search(cuerpo)
+            self.assertIsNone(vineta, f"{ruta}, «{comienzo}»: tiene una viñeta: «{vineta and cuerpo[vineta.start():vineta.start() + 60].strip()}»")
+
+    def test_las_tablas_de_esas_secciones_tienen_las_mismas_celdas_en_cada_fila(self):
+        for ruta, comienzo, _ in self.SECCIONES_EN_TABLA:
+            cuerpo = self.seccion((ROOT / ruta).read_text(encoding="utf-8"), comienzo)
+            for tabla in self.tablas(cuerpo):
+                for fila in tabla:
+                    self.assertEqual(len(fila), len(tabla[0]), f"{ruta}, «{comienzo}»: una fila tiene {len(fila)} celdas y no {len(tabla[0])}: {fila[0][:40]}")
+
+    def test_las_trampas_de_la_skill_y_de_la_guia_son_la_misma_tabla(self):
+        skill = self.tablas(self.seccion((ROOT / ".claude/skills/tarea/SKILL.md").read_text(encoding="utf-8"), "## 5. Trampas aprendidas"))[0]
+        guia = self.tablas(self.seccion((ROOT / "docs/guia-de-desarrollo.md").read_text(encoding="utf-8"), "## 8. Trampas"))[0]
+        self.assertEqual(skill, guia)
+        self.assertGreater(len(skill), 10)
+
+    def test_el_lector_de_secciones_y_de_tablas_hace_lo_que_dice(self):
+        texto = "# T\n\n## 1. Uno\n\n- a\n\n```\n- no cuenta\n```\n\n## 2. Dos\n\n| X | Y |\n|---|---|\n| a | b |\n\n| P | Q |\n|---|---|\n| c | d |\n"
+        uno, dos = self.seccion(texto, "## 1."), self.seccion(texto, "## 2.")
+        self.assertTrue(self.VINETA.search(uno))
+        self.assertNotIn("no cuenta", uno)
+        self.assertEqual(self.tablas(dos), [[["X", "Y"], ["a", "b"]], [["P", "Q"], ["c", "d"]]])
+        self.assertIsNone(self.seccion(texto, "## 9."))
+        self.assertIsNone(self.VINETA.search(dos))
+
+
 class DocumentosReales(unittest.TestCase):
     """Lo que de verdad hay en docs/historias: debe cumplir las mismas reglas."""
 

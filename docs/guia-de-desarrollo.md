@@ -187,18 +187,20 @@ El contrato es el OpenAPI que publica el backend (`/docs-json`). La tienda lo co
 | Trampa | Qué hacer |
 |---|---|
 | Prettier reformula el código y las anclas de mutación dejan de coincidir | Copiar el ancla del archivo ya formateado |
+| Una mutación lanzada con la configuración equivocada «sobrevive» (no incluye sus pruebas) | Dejar que `scripts/mutate.py` la elija |
 | Un cambio transversal rompe pruebas lejanas (el guard global rompió los e2e de pedidos) | Tras tocarlo, correr toda la suite, no solo el archivo |
 | Una prueba de concurrencia que pasa sin el bloqueo no prueba nada | Ensanchar la ventana (`slowDown…Updates` en `test/support/database.ts`) |
 | Un token «forjado» sin un campo se rechaza por esa razón y no por la que se prueba | Forjar con todo válido salvo lo que se quiere probar |
 | Un helper con parámetro por defecto convierte `undefined` en un valor válido | No dar valor por defecto a lo que se prueba como ausente |
-| `Date` de `node-pg` sale en hora local | Escribir fechas como texto ISO; no afirmar umbrales de tiempo; congelar solo `Date` |
+| `Date` de `node-pg` sale en hora local | Escribir fechas como texto ISO en los tests; no afirmar umbrales de tiempo; congelar solo `Date` (`vi.useFakeTimers({ toFake: ['Date'] })`) |
 | Se sobrescribió un archivo de pruebas que ya existía | Comprobar con `ls` o `git status` antes de crear; un total de pruebas que baja es la señal |
-| `pkill -f` y `pgrep -f` se coinciden a sí mismos y matan la propia shell | Matar por PID |
-| Una mutación lanzada con la configuración equivocada «sobrevive» | Dejar que `scripts/mutate.py` la elija |
+| `pkill -f` y `pgrep -f` se coinciden a sí mismos y matan la propia shell (y en zsh una variable con varias palabras no se divide) | Matar por PID |
 | «Skipped» o un resumen ausente de Vitest parecen un verde | Leer los conteos: un arranque roto omite las pruebas |
+| Una prueba e2e o de rendimiento que pasa no prueba nada hasta que se ve fallar; un servidor de vista previa que sobrevivió puede servir un build viejo | Romper el código a propósito (una clave de idempotencia nueva, quitar la precarga de rutas) y comprobar que la prueba lo nota; matar el servidor por PID y no reutilizarlo (`reuseExistingServer: false`) |
+| El límite de intentos de la API (`/auth/*`) también corre en las e2e | Cada prueba crea su comprador y planta su token de refresco una sola vez (se rota al usarse); los ayudantes esperan el `Retry-After` de un `429` |
+| Un fallo «suelto» de una prueba | Investigarlo, no descartarlo: la compuerta guarda el detalle en `.verify-last-failure.txt`; la causa de los de la tienda era un tiempo de espera de 1 s que no alcanzaba con la máquina cargada |
 | Archivos temporales en `/tmp` chocan con otras sesiones | Usar `$CLAUDE_JOB_DIR/tmp` |
-
-La lista completa, con más detalle, está en el comando `/tarea`.
+| La compuerta y otra cosa pesada a la vez comparten Docker y CPU | No lanzar la compuerta mientras corre otra cosa pesada |
 
 ## 9. Cuándo preguntar y qué no hacer
 
