@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""La matriz de historias de usuario (docs/historias/README.md).
+"""Las matrices de historias y habilitadores (docs/historias/fase-n/matriz.md) y el índice de fases (docs/historias/README.md).
 
-Reúne TODAS las historias en una tabla: las 20 hechas antes de 2026-10-30 (datos en docs/historias/legado.json, calculados una
-vez desde git) y las nuevas, cada una en su archivo docs/historias/fase-n/HU-nn.md (o EN-nn.md para un habilitador): la carpeta es la
-fase (con su README.md inicial que la describe) y el nombre es solo el correlativo. De cada
+Genera la matriz de CADA fase, con las historias y los habilitadores en tablas propias. La fase 1 incluye las 20 historias hechas antes
+de 2026-10-30 (datos en docs/historias/legado.json, calculados una vez desde git); las nuevas, cada una en su archivo
+docs/historias/fase-n/HU-nn.md (o EN-nn.md para un habilitador): la carpeta es la fase (con su README.md inicial que la describe) y el
+nombre es solo el correlativo. De cada
 archivo nuevo lee el encabezado y la tabla de tareas; la fecha y el tiempo salen de `git log` (commits `HU-nn.k [CAPA]: …`).
 También lee la sección «Impacto en el producto» de cada historia: comprueba que lo que cita existe y que, al hacerse, deja su marca
 «Cambios: HU-nn» en la regla, decisión o pantalla; y con ella genera docs/product/cambios.md (qué cambió, cuándo y por qué historia).
@@ -25,8 +26,9 @@ from pathlib import Path
 
 LIMA = timezone(timedelta(hours=-5))
 TOPE_MINUTOS = 60  # un hueco largo entre commits (noche, pausa) no se cuenta entero
-START = "<!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->"
-END = "<!-- MATRIZ:FIN -->"
+START = "<!-- FASES:INICIO (la genera scripts/historias.py: no editar a mano) -->"  # el índice de fases de docs/historias/README.md
+END = "<!-- FASES:FIN -->"
+MATRIZ_ARCHIVO = "matriz.md"  # la matriz de cada fase: docs/historias/fase-n/matriz.md, generada entera
 # Las historias nuevas viven en carpetas `fase-n/` (docs/historias/fase-1/, fase-2/…); cada carpeta tiene un README.md inicial que describe la
 # fase (qué entra y qué queda fuera). La fase de una historia ES su carpeta, y el archivo se llama solo por su correlativo (HU-12.md).
 # Las 20 historias anteriores (legado.json) son de la fase 1
@@ -479,13 +481,13 @@ def legacy_rows(root):
     for x in data["historias"]:
         closed = x["cierre"] is not None
         rows.append({
-            "id": x["id"], "fase": FASE_LEGADO, "titulo": x["titulo"], "epica": x["epica"],
+            "id": x["id"], "fase": FASE_LEGADO, "tipo": "HU", "ligado": "", "titulo": x["titulo"], "epica": x["epica"],
             "estado": ESTADOS["cerrada"] if closed else ESTADOS["en-curso"],  # qué falta lo dicen las columnas API y Web
             "api": x["api"], "web": x["web"],
             "inicio": x["inicio"], "cierre": x["cierre"] or "—",
             "tiempo": "≈ " + fmt_minutes(x["minutos"]),
             "tareas": f"{len(x['tareas_api']) + len(x['tareas_web'])} (histórico)", "producto": "—",
-            "detalle": f"[texto](../product/04-historias-de-usuario.md#{slug(x['id'] + ' ' + x['titulo'])})",
+            "detalle": f"[texto](../../product/04-historias-de-usuario.md#{slug(x['id'] + ' ' + x['titulo'])})",
         })
     return rows
 
@@ -494,14 +496,20 @@ def new_rows(root, commits):
     rows = []
     for path in story_files(root):
         text = path.read_text(encoding="utf-8")
-        meta = parse_front_matter(text)
+        try:
+            meta = parse_front_matter(text)
+        except HistoriaError:
+            continue  # sin encabezado: lo informa check(), no rompe la matriz
+        if any(not meta.get(k) for k in REQUERIDOS):
+            continue  # encabezado incompleto: lo informa check()
         tasks = parse_tasks(text)
         stats = story_stats(meta["id"], commits)
         done = sum(1 for _, _, s in tasks if s == "hecho")
         closed = meta["estado"] == "cerrada"
         filas = (parse_impact(text, base_de(path)) or {"filas": []})["filas"]
         rows.append({
-            "id": meta["id"], "fase": fase_de(path), "titulo": meta["titulo"], "epica": meta["epica"],
+            "id": meta["id"], "fase": fase_de(path), "tipo": meta["id"].split("-")[0], "ligado": meta.get("ligado", ""),
+            "titulo": meta["titulo"], "epica": meta["epica"],
             "estado": ESTADOS.get(meta["estado"], meta["estado"]),
             "api": layer_status(tasks, "API"), "web": layer_status(tasks, "WEB"),
             "inicio": stats["inicio"].date().isoformat() if stats else "—",
@@ -509,7 +517,7 @@ def new_rows(root, commits):
             "tiempo": fmt_minutes(stats["minutos"]) if stats else "—",
             "tareas": f"{done} / {len(tasks)}",
             "producto": f"{sum(1 for f in filas if f[3] == 'hecho')} / {len(filas)}" if filas else "—",
-            "detalle": f"[{meta['id']}]({path.parent.name}/{path.name})",
+            "detalle": f"[{meta['id']}]({path.name})",
         })
     return rows
 
@@ -522,35 +530,51 @@ def build_rows(root, commits):
     return sorted(rows, key=lambda r: sort_key(r["id"]))
 
 
-# La matriz son dos tablas dentro de las marcas: «Abiertas» (lo que todavía se trabaja, con todas las columnas) y «Cerradas e
-# histórico» (lo terminado, con lo mínimo). El ID es el enlace a la historia; API y Web se escriben «icono texto»; las fechas y el tiempo
-# van en una sola columna
-ABIERTAS = "Abiertas"
-CERRADAS = "Cerradas e histórico"
-COLS_ABIERTAS = ("ID", "Fase", "Historia", "Épica", "Estado", "API", "Web", "Cambios de producto", "Tareas", "Fechas y tiempo")
-COLS_CERRADAS = ("ID", "Fase", "Historia", "Épica", "Estado", "Cierre y tiempo")
+# Cada fase tiene su matriz (docs/historias/fase-n/matriz.md), generada entera: «Historias» y «Habilitadores» en secciones propias, con las
+# columnas de cada tipo, y en cada una «Abiertas» (lo que todavía se trabaja, con todas las columnas) y «Cerradas» (lo terminado, con lo
+# mínimo). El ID es el enlace a la historia; API y Web se escriben «icono texto»; las fechas y el tiempo van en una sola columna. El README de
+# historias solo lleva un índice generado de las fases
 CAPA_TEXTO = {"✅": "✅ hecha", "🔄": "🔄 en curso", "⬜": "⬜ pendiente", "—": "— no aplica"}
 ID_FILA = re.compile(r"\b((?:HU|EN)-\d+)\b")
+COLUMNAS = {  # (tipo, abiertas)
+    ("HU", True): ("ID", "Historia", "Épica", "Estado", "API", "Web", "Cambios de producto", "Tareas", "Fechas y tiempo"),
+    ("HU", False): ("ID", "Historia", "Épica", "Estado", "Cierre y tiempo"),
+    ("EN", True): ("ID", "Habilitador", "Ligado a", "Estado", "Tareas", "Fechas y tiempo"),
+    ("EN", False): ("ID", "Habilitador", "Ligado a", "Estado", "Cierre y tiempo"),
+}
+TIPOS_MATRIZ = (("HU", "Historias", "historias"), ("EN", "Habilitadores", "habilitadores"))
+LEYENDA = ("**Leyenda:** estado: 💡 idea (anotada, sin desglosar) · 📝 propuesta (sin aprobar) · ⬜ aprobada · 🔄 en curso · ✅ cerrada. "
+           "Columnas API y Web: ✅ hecha · 🔄 en curso · ⬜ pendiente · — no aplica. «Cambios de producto» son las filas hechas / el total de su "
+           "«Impacto en el producto». Las fechas y el tiempo salen de `git log` (hora de Lima, tope de 60 min entre commits); los de la fase 1 "
+           "son aproximados (≈).")
 
 
 def is_closed(row):
     return row["estado"].startswith(ESTADOS["cerrada"])
 
 
+def _celda_ligado(ligado):
+    if not ligado:
+        return "—"
+    if ITEM.match(ligado):
+        return ligado
+    return f"[{ligado}](../../{ligado})"
+
+
 def _celda_matriz(row, columna):
     if columna == "ID":
         return f"[{row['id']}]({re.search(r'\]\(([^)]*)\)', row['detalle']).group(1)})"
-    if columna == "Fase":
-        return f"[Fase {row['fase']}](fase-{row['fase']}/README.md)"
     if columna == "Fechas y tiempo":
         if row["inicio"] == "—":
             return "—"
         return f"{row['inicio']} → {row['cierre'] if row['cierre'] != '—' else 'en curso'} · {row['tiempo']}"
     if columna == "Cierre y tiempo":
         return f"{row['cierre']} · {row['tiempo']}"
-    clave = {"Historia": "titulo", "Épica": "epica", "Estado": "estado", "Tareas": "tareas", "Cambios de producto": "producto"}.get(columna)
+    if columna == "Ligado a":
+        return _celda_ligado(row.get("ligado", ""))
     if columna in ("API", "Web"):
         return CAPA_TEXTO[row[columna.lower()]]
+    clave = {"Historia": "titulo", "Habilitador": "titulo", "Épica": "epica", "Estado": "estado", "Tareas": "tareas", "Cambios de producto": "producto"}[columna]
     return str(row[clave])
 
 
@@ -563,21 +587,54 @@ def _tabla_matriz(rows, columnas, vacio):
     return "\n".join(lineas)
 
 
-def render_matrix(rows):
-    abiertas = [r for r in rows if not is_closed(r)]
-    cerradas = [r for r in rows if is_closed(r)]
-    return (f"### {ABIERTAS} ({len(abiertas)})\n\n{_tabla_matriz(abiertas, COLS_ABIERTAS, '_No hay historias abiertas._')}\n\n"
-            f"### {CERRADAS} ({len(cerradas)})\n\n{_tabla_matriz(cerradas, COLS_CERRADAS, '_Todavía no hay historias cerradas._')}")
+def render_phase(fase, rows):
+    """El archivo `fase-n/matriz.md` entero: historias y habilitadores de esa fase, cada uno con «Abiertas» y «Cerradas»."""
+    mias = [r for r in rows if r["fase"] == fase]
+    partes = [f"# Matriz de la fase {fase}", "",
+              "> La genera `python3 scripts/historias.py`: no se edita a mano. El objetivo de la fase está en su [README](README.md); las reglas del "
+              "proceso y el índice de todas las fases, en el [README de historias](../README.md).", "", LEYENDA, ""]
+    for tipo, titulo, plural in TIPOS_MATRIZ:
+        filas = [r for r in mias if r["tipo"] == tipo]
+        abiertas, cerradas = [r for r in filas if not is_closed(r)], [r for r in filas if is_closed(r)]
+        partes += [f"## {titulo}", "",
+                   f"### Abiertas ({len(abiertas)})", "", _tabla_matriz(abiertas, COLUMNAS[(tipo, True)], f"_No hay {plural} abiertas._"), "",
+                   f"### Cerradas ({len(cerradas)})", "", _tabla_matriz(cerradas, COLUMNAS[(tipo, False)], f"_Todavía no hay {plural} cerradas._"), ""]
+    return "\n".join(partes)
+
+
+def fase_numbers(root, rows=()):
+    """Los números de fase que hay: carpetas `fase-n/` y fases de las filas (la 1 del histórico), de menor a mayor."""
+    carpeta = Path(root) / "docs" / "historias"
+    numeros = {int(m.group(1)) for p in carpeta.iterdir() if p.is_dir() and (m := FASE.match(p.name))} if carpeta.exists() else set()
+    return sorted(numeros | {r["fase"] for r in rows})
+
+
+def render_index(root, rows):
+    """El índice de fases del README de historias: cuántas historias y habilitadores abiertos y cerrados tiene cada una."""
+    def cuenta(fase, tipo):
+        filas = [r for r in rows if r["fase"] == fase and r["tipo"] == tipo]
+        cerradas = sum(1 for r in filas if is_closed(r))
+        return f"{len(filas) - cerradas} abiertas · {cerradas} cerradas" if filas else "—"
+    lineas = ["| Fase | Historias | Habilitadores | Matriz |", "|---|---|---|---|"]
+    for n in fase_numbers(root, rows):
+        lineas.append(f"| [Fase {n}](fase-{n}/README.md) | {cuenta(n, 'HU')} | {cuenta(n, 'EN')} | [matriz](fase-{n}/{MATRIZ_ARCHIVO}) |")
+    return "\n".join(lineas)
 
 
 def write_matrix(root, commits):
-    readme = Path(root) / "docs" / "historias" / "README.md"
+    """Escribe la matriz de cada fase (entera) y el índice de fases entre las marcas del README de historias."""
+    carpeta = Path(root) / "docs" / "historias"
+    readme = carpeta / "README.md"
     text = readme.read_text(encoding="utf-8")
     if START not in text or END not in text:
         raise HistoriaError(f"faltan las marcas {START!r} y {END!r} en {readme}")
+    rows = build_rows(root, commits)
+    for n in fase_numbers(root, rows):
+        (carpeta / f"fase-{n}").mkdir(parents=True, exist_ok=True)
+        (carpeta / f"fase-{n}" / MATRIZ_ARCHIVO).write_text(render_phase(n, rows), encoding="utf-8")
     head, rest = text.split(START, 1)
     _, tail = rest.split(END, 1)
-    readme.write_text(f"{head}{START}\n{render_matrix(build_rows(root, commits))}\n{END}{tail}", encoding="utf-8")
+    readme.write_text(f"{head}{START}\n{render_index(root, rows)}\n{END}{tail}", encoding="utf-8")
 
 
 # ---------- impacto en el producto: lo vivo se mantiene al día y la historia deja el rastro ----------
@@ -780,20 +837,36 @@ def _errores_registro(root):
 # ---------- comprobación (solo estructura: no depende de git) ----------
 
 def matrix_cells(root):
-    """{id: {columna: texto}} de las dos tablas que hay ahora en el README (cada una con su propio encabezado)."""
-    text = (Path(root) / "docs" / "historias" / "README.md").read_text(encoding="utf-8")
-    if START not in text or END not in text:
-        return {}
-    cells, nombres = {}, []
-    for line in text.split(START, 1)[1].split(END, 1)[0].strip().splitlines():
-        if not line.startswith("|") or set(line) <= set("|-: "):
+    """{id: {columna: texto, "_fase": n}} de las matrices de todas las fases (`fase-n/matriz.md`, cada tabla con su propio encabezado)."""
+    cells, carpeta = {}, Path(root) / "docs" / "historias"
+    for p in sorted(carpeta.iterdir()) if carpeta.exists() else []:
+        m, archivo = FASE.match(p.name), p / MATRIZ_ARCHIVO
+        if not (p.is_dir() and m and archivo.exists()):
             continue
-        parts = [p.strip() for p in line.strip().strip("|").split("|")]
-        if parts[0] == "ID":
-            nombres = parts
-        elif nombres and len(parts) == len(nombres) and ID_FILA.search(parts[0]):
-            cells[ID_FILA.search(parts[0]).group(1)] = dict(zip(nombres, parts))
+        nombres = []
+        for line in archivo.read_text(encoding="utf-8").splitlines():
+            if not line.startswith("|") or set(line) <= set("|-: "):
+                continue
+            parts = [x.strip() for x in line.strip().strip("|").split("|")]
+            if parts[0] == "ID":
+                nombres = parts
+            elif nombres and len(parts) == len(nombres) and ID_FILA.search(parts[0]):
+                cells[ID_FILA.search(parts[0]).group(1)] = {**dict(zip(nombres, parts)), "_fase": int(m.group(1))}
     return cells
+
+
+def _errores_indice(root):
+    """El índice de fases del README de historias debe ser el que se generaría hoy (no depende de git: solo cuenta estados)."""
+    readme = Path(root) / "docs" / "historias" / "README.md"
+    if not readme.exists():
+        return []
+    text = readme.read_text(encoding="utf-8")
+    if START not in text or END not in text:
+        return [f"docs/historias/README.md: faltan las marcas del índice de fases ({START}): ejecuta `python3 scripts/historias.py`"]
+    actual = text.split(START, 1)[1].split(END, 1)[0].strip()
+    if actual != render_index(root, build_rows(root, [])).strip():
+        return ["el índice de fases de docs/historias/README.md está desactualizado: ejecuta `python3 scripts/historias.py`"]
+    return []
 
 
 def _comprobar_fila(nombre, tid, cells):
@@ -846,7 +919,7 @@ def check(root):
     errors = []
     legacy = {x["id"] for x in json.loads((Path(root) / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))["historias"]}
     seen = set(legacy)
-    expected, reemplazos = {}, {}
+    expected, reemplazos, fases_de = {}, {}, {}
     errors += _errores_fases(root, bool(legacy))
     for path in story_files(root):
         try:
@@ -872,6 +945,7 @@ def check(root):
             if any(s in ("hecho", "en-curso") for _, _, s in parse_tasks(text)):
                 errors.append(f"{path.name}: es una idea pero tiene tareas hechas o en curso (promuévela a propuesta completando la plantilla)")
             expected[sid] = ESTADOS["idea"]
+            fases_de[sid] = fase_de(path)
             if meta.get("reemplaza"):
                 reemplazos[sid] = meta["reemplaza"]
             continue
@@ -918,6 +992,7 @@ def check(root):
         if meta["estado"] == "propuesta" and any(s in ("hecho", "en-curso") for _, _, s in tasks):
             errors.append(f"{path.name}: es una propuesta pero tiene tareas hechas o en curso")
         expected[sid] = ESTADOS[meta["estado"]]
+        fases_de[sid] = fase_de(path)
         if meta.get("reemplaza"):
             reemplazos[sid] = meta["reemplaza"]
     for sid, viejo in reemplazos.items():
@@ -936,14 +1011,21 @@ def check(root):
         if parse_always_critical(texto) != set(SIEMPRE_CRITICOS):
             errors.append(f"{PLANTILLA}: los tipos «siempre {CRITICO}» de la tabla ({', '.join(sorted(parse_always_critical(texto)))}) no coinciden con los de scripts/historias.py ({', '.join(SIEMPRE_CRITICOS)})")
     cells = matrix_cells(root)
+    for n in fase_numbers(root):
+        if not (Path(root) / "docs" / "historias" / f"fase-{n}" / MATRIZ_ARCHIVO).exists():
+            errors.append(f"fase-{n}: falta {MATRIZ_ARCHIVO}: ejecuta `python3 scripts/historias.py`")
     for sid, estado in expected.items():
+        fase = fases_de[sid]
         if sid not in cells:
-            errors.append(f"la matriz no tiene fila para {sid}: ejecuta `python3 scripts/historias.py`")
+            errors.append(f"la matriz de la fase {fase} no tiene fila para {sid}: ejecuta `python3 scripts/historias.py`")
+        elif cells[sid]["_fase"] != fase:
+            errors.append(f"{sid} figura en la matriz de la fase {cells[sid]['_fase']} y su archivo está en la fase {fase}: ejecuta `python3 scripts/historias.py`")
         elif cells[sid]["Estado"] != estado:
             errors.append(f"la matriz dice «{cells[sid]['Estado']}» para {sid} y su archivo «{estado}»: ejecuta `python3 scripts/historias.py`")
     for sid in legacy:
         if sid not in cells:
-            errors.append(f"la matriz no tiene fila para {sid} (histórica): ejecuta `python3 scripts/historias.py`")
+            errors.append(f"la matriz de la fase {FASE_LEGADO} no tiene fila para {sid} (histórica): ejecuta `python3 scripts/historias.py`")
+    errors += _errores_indice(root)
     return errors + _errores_registro(root)
 
 
@@ -970,7 +1052,7 @@ def main(argv):
         for aviso in avisos:
             print("⚠", aviso)
         write_matrix(root, git_commits(root))
-        print("matriz actualizada: docs/historias/README.md")
+        print("matrices actualizadas: docs/historias/fase-n/matriz.md y el índice de docs/historias/README.md")
         write_changes(root)
         print(f"registro de cambios actualizado: {CAMBIOS}")
     for aviso in conflicts(root):

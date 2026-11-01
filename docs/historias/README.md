@@ -4,57 +4,14 @@
 
 **Leyenda:** estado de la historia: 💡 idea (anotada, sin desglosar) · 📝 propuesta (sin aprobar) · ⬜ aprobada · 🔄 en curso · ✅ cerrada. Columnas API y Web: ✅ hecha · 🔄 en curso · ⬜ pendiente · — no aplica. La matriz se regenera con `python3 scripts/historias.py`; no se edita a mano.
 
-## Matriz
+## Fases
 
-<!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->
-### Abiertas (19)
-
-| ID | Fase | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |
-|---|---|---|---|---|---|---|---|---|---|
-| [HU-05](fase-2/HU-05.md) | [Fase 2](fase-2/README.md) | Verificar el correo, recuperar y cambiar la contraseña, y cerrar todas las sesiones | Cuenta | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [HU-12](fase-2/HU-12.md) | [Fase 2](fase-2/README.md) | Ver si hay stock de un libro | Catálogo | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 10 | 0 / 5 | — |
-| [HU-13](fase-2/HU-13.md) | [Fase 2](fase-2/README.md) | Buscar libros ignorando los acentos | Catálogo | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [HU-23](fase-2/HU-23.md) | [Fase 2](fase-2/README.md) | El carrito marca los libros sin stock suficiente | Carrito | 📝 propuesta | — no aplica | ⬜ pendiente | 0 / 3 | 0 / 2 | — |
-| [HU-35](fase-2/HU-35.md) | [Fase 2](fase-2/README.md) | El error de pago nombra el libro sin stock | Compra | 📝 propuesta | ⬜ pendiente | ⬜ pendiente | 0 / 3 | 0 / 3 | — |
-| [HU-36](fase-2/HU-36.md) | [Fase 2](fase-2/README.md) | Cobrar de verdad con una pasarela de pago real | Compra | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [HU-50](../product/04-historias-de-usuario.md#hu-50-crear-un-libro) | [Fase 1](fase-1/README.md) | Crear un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 4 (histórico) | 2026-10-28 → en curso · ≈ 1 h 11 min |
-| [HU-51](../product/04-historias-de-usuario.md#hu-51-editar-o-desactivar-un-libro) | [Fase 1](fase-1/README.md) | Editar o desactivar un libro | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 22 min |
-| [HU-52](../product/04-historias-de-usuario.md#hu-52-cargar-stock) | [Fase 1](fase-1/README.md) | Cargar stock | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 1 (histórico) | 2026-10-28 → en curso · ≈ 17 min |
-| [HU-53](../product/04-historias-de-usuario.md#hu-53-ver-los-pedidos-de-un-cliente) | [Fase 1](fase-1/README.md) | Ver los pedidos de un cliente | Administración | 🔄 en curso | ✅ hecha | ⬜ pendiente | — | 2 (histórico) | 2026-10-28 → en curso · ≈ 1 h 20 min |
-| [EN-04](fase-2/EN-04.md) | [Fase 2](fase-2/README.md) | Ordenar los nombres de archivo que rompen la convención de sufijos | Arquitectura | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-05](fase-2/EN-05.md) | [Fase 2](fase-2/README.md) | Que los operationId de Swagger sean legibles para un generador de código | API | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-06](fase-2/EN-06.md) | [Fase 2](fase-2/README.md) | Cerrar o proteger /docs, /docs-json y /health/outbox en producción | Seguridad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-07](fase-2/EN-07.md) | [Fase 2](fase-2/README.md) | Compartir los contadores del límite de intentos entre instancias | Seguridad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-08](fase-2/EN-08.md) | [Fase 2](fase-2/README.md) | Poner un límite de intentos propio a POST /orders/quote | Seguridad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-09](fase-2/EN-09.md) | [Fase 2](fase-2/README.md) | Aclarar si la compuerta verify.sh incluye la auditoría de dependencias | Calidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-10](fase-2/EN-10.md) | [Fase 2](fase-2/README.md) | Poner un tiempo máximo a cada entrega del relay del Outbox | Confiabilidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-11](fase-2/EN-11.md) | [Fase 2](fase-2/README.md) | Vigilar los fallos intermitentes de las pruebas | Calidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
-| [EN-12](fase-2/EN-12.md) | [Fase 2](fase-2/README.md) | Una matriz por fase, con historias y habilitadores separados | Documentación | ⬜ aprobada | — no aplica | — no aplica | — | 0 / 3 | 2026-10-31 → en curso · 37 min |
-
-### Cerradas e histórico (19)
-
-| ID | Fase | Historia | Épica | Estado | Cierre y tiempo |
-|---|---|---|---|---|---|
-| [HU-01](../product/04-historias-de-usuario.md#hu-01-registrarme) | [Fase 1](fase-1/README.md) | Registrarme | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 1 h 56 min |
-| [HU-02](../product/04-historias-de-usuario.md#hu-02-iniciar-sesión) | [Fase 1](fase-1/README.md) | Iniciar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 49 min |
-| [HU-03](../product/04-historias-de-usuario.md#hu-03-mantener-la-sesión) | [Fase 1](fase-1/README.md) | Mantener la sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 38 min |
-| [HU-04](../product/04-historias-de-usuario.md#hu-04-cerrar-sesión) | [Fase 1](fase-1/README.md) | Cerrar sesión | Cuenta | ✅ cerrada | 2026-10-30 · ≈ 35 min |
-| [HU-10](../product/04-historias-de-usuario.md#hu-10-buscar-libros) | [Fase 1](fase-1/README.md) | Buscar libros | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 35 min |
-| [HU-11](../product/04-historias-de-usuario.md#hu-11-ver-un-libro) | [Fase 1](fase-1/README.md) | Ver un libro | Catálogo | ✅ cerrada | 2026-10-30 · ≈ 16 min |
-| [HU-20](../product/04-historias-de-usuario.md#hu-20-agregar-un-libro-al-carrito) | [Fase 1](fase-1/README.md) | Agregar un libro al carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 12 min |
-| [HU-21](../product/04-historias-de-usuario.md#hu-21-cambiar-la-cantidad-o-quitar-un-libro) | [Fase 1](fase-1/README.md) | Cambiar la cantidad o quitar un libro | Carrito | ✅ cerrada | 2026-10-30 · ≈ 4 min |
-| [HU-22](../product/04-historias-de-usuario.md#hu-22-ver-el-carrito) | [Fase 1](fase-1/README.md) | Ver el carrito | Carrito | ✅ cerrada | 2026-10-30 · ≈ 1 h 9 min |
-| [HU-30](../product/04-historias-de-usuario.md#hu-30-indicar-la-dirección-de-envío) | [Fase 1](fase-1/README.md) | Indicar la dirección de envío | Compra | ✅ cerrada | 2026-10-30 · ≈ 30 min |
-| [HU-31](../product/04-historias-de-usuario.md#hu-31-pagar-y-crear-el-pedido) | [Fase 1](fase-1/README.md) | Pagar y crear el pedido | Compra | ✅ cerrada | 2026-10-30 · ≈ 2 h 3 min |
-| [HU-32](../product/04-historias-de-usuario.md#hu-32-reintentar-sin-cobrar-dos-veces) | [Fase 1](fase-1/README.md) | Reintentar sin cobrar dos veces | Compra | ✅ cerrada | 2026-10-30 · ≈ 17 min |
-| [HU-33](../product/04-historias-de-usuario.md#hu-33-entender-por-qué-falló-la-compra) | [Fase 1](fase-1/README.md) | Entender por qué falló la compra | Compra | ✅ cerrada | 2026-10-30 · ≈ 22 min |
-| [HU-34](../product/04-historias-de-usuario.md#hu-34-ver-la-confirmación) | [Fase 1](fase-1/README.md) | Ver la confirmación | Compra | ✅ cerrada | 2026-10-30 · ≈ 33 min |
-| [HU-40](../product/04-historias-de-usuario.md#hu-40-ver-mis-pedidos) | [Fase 1](fase-1/README.md) | Ver mis pedidos | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 1 h 37 min |
-| [HU-41](../product/04-historias-de-usuario.md#hu-41-ver-el-detalle-de-un-pedido) | [Fase 1](fase-1/README.md) | Ver el detalle de un pedido | Pedidos | ✅ cerrada | 2026-10-30 · ≈ 42 min |
-| [EN-01](fase-2/EN-01.md) | [Fase 2](fase-2/README.md) | Ordenar application/services/ de Ventas e Identidad | Arquitectura | ✅ cerrada | 2026-10-31 · 0 min |
-| [EN-02](fase-2/EN-02.md) | [Fase 2](fase-2/README.md) | Comprobación final de toda la solución | Calidad | ✅ cerrada | 2026-10-31 · 37 min |
-| [EN-03](fase-2/EN-03.md) | [Fase 2](fase-2/README.md) | Congelar los archivos de avance y no duplicar la información | Documentación | ✅ cerrada | 2026-10-31 · 25 min |
-<!-- MATRIZ:FIN -->
+<!-- FASES:INICIO (la genera scripts/historias.py: no editar a mano) -->
+| Fase | Historias | Habilitadores | Matriz |
+|---|---|---|---|
+| [Fase 1](fase-1/README.md) | 4 abiertas · 16 cerradas | — | [matriz](fase-1/matriz.md) |
+| [Fase 2](fase-2/README.md) | 6 abiertas · 0 cerradas | 9 abiertas · 3 cerradas | [matriz](fase-2/matriz.md) |
+<!-- FASES:FIN -->
 
 **Cómo se lee**
 

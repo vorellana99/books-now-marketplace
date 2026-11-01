@@ -337,11 +337,14 @@ class Tiempo(unittest.TestCase):
 
 
 class Matriz(unittest.TestCase):
+    """Una matriz por fase (fase-n/matriz.md), con historias y habilitadores en tablas propias, y un índice de fases en el README."""
+
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
-        (self.root / "docs" / "historias").mkdir(parents=True)
-        (self.root / "docs" / "historias" / "legado.json").write_text(
+        self.dir = self.root / "docs" / "historias"
+        (self.dir / "fase-2").mkdir(parents=True)
+        (self.dir / "legado.json").write_text(
             json.dumps(
                 {
                     "tope_minutos": 60,
@@ -353,159 +356,233 @@ class Matriz(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        (self.root / "docs" / "historias" / "fase-2").mkdir()
-        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").write_text(HU_OK, encoding="utf-8")
+        self.fase = self.dir / "fase-2"
+        (self.fase / "HU-12.md").write_text(HU_OK, encoding="utf-8")
+        (self.fase / "EN-01.md").write_text(
+            hu([("EN-01.1", "API", "refactor", "normal", "pendiente")], sid="EN-01", tipo="EN", ligado="backend/05-piezas-clave.md#convención-por-contexto"),
+            encoding="utf-8",
+        )
+        (self.dir / "README.md").write_text(f"antes\n{h.START}\nviejo\n{h.END}\ndespués\n", encoding="utf-8")
         self.commits = [("a", at(9), "HU-12.1 [DOC]: x"), ("b", at(9, 30), "HU-12.2 [API]: y")]
 
     def tearDown(self):
         self.tmp.cleanup()
 
-    def test_filas_antiguas_y_nuevas_ordenadas_por_numero(self):
-        rows = h.build_rows(self.root, self.commits)
-        self.assertEqual([r["id"] for r in rows], ["HU-01", "HU-12", "HU-50"])
+    def filas(self):
+        return h.build_rows(self.root, self.commits)
+
+    def matriz(self, fase):
+        return h.render_phase(fase, self.filas())
+
+    @staticmethod
+    def parte(texto, titulo):
+        """El texto de «## <titulo>» hasta la siguiente sección de ese nivel."""
+        i = texto.index(f"## {titulo}")
+        j = texto.find("\n## ", i + 3)
+        return texto[i:] if j == -1 else texto[i:j]
+
+    def fila(self, texto, clave):
+        return next(l for l in texto.splitlines() if clave in l)
+
+    # --- las filas ---
+    def test_filas_antiguas_y_nuevas_ordenadas_por_numero_primero_las_historias(self):
+        self.assertEqual([r["id"] for r in self.filas()], ["HU-01", "HU-12", "HU-50", "EN-01"])
+
+    def test_cada_fila_conoce_su_fase_y_su_tipo(self):
+        datos = {r["id"]: (r["fase"], r["tipo"]) for r in self.filas()}
+        self.assertEqual(datos, {"HU-01": (1, "HU"), "HU-12": (2, "HU"), "HU-50": (1, "HU"), "EN-01": (2, "EN")})
+
+    def test_un_habilitador_lleva_su_ligadura_y_una_historia_no(self):
+        por_id = {r["id"]: r for r in self.filas()}
+        self.assertEqual(por_id["EN-01"]["ligado"], "backend/05-piezas-clave.md#convención-por-contexto")
+        self.assertEqual(por_id["HU-12"]["ligado"], "")
 
     def test_una_historia_antigua_marca_la_aproximacion_y_enlaza_a_producto(self):
-        row = h.build_rows(self.root, self.commits)[0]
+        row = self.filas()[0]
         self.assertTrue(row["tiempo"].startswith("≈ "))
-        self.assertIn("../product/04-historias-de-usuario.md#hu-01-registrarme", row["detalle"])
+        self.assertIn("../../product/04-historias-de-usuario.md#hu-01-registrarme", row["detalle"])
         self.assertEqual(row["estado"], "✅ cerrada")
         self.assertEqual(row["producto"], "—")  # las anteriores no tienen sección de impacto
 
     def test_una_historia_antigua_con_la_web_pendiente_no_tiene_cierre(self):
-        row = h.build_rows(self.root, self.commits)[2]
+        row = next(r for r in self.filas() if r["id"] == "HU-50")
         self.assertEqual((row["api"], row["web"], row["cierre"]), ("✅", "⬜", "—"))
         self.assertEqual(row["estado"], "🔄 en curso")  # el detalle (API hecha, Web pendiente) lo dan las columnas API y Web
 
     def test_una_historia_nueva_toma_capas_tareas_y_tiempo_de_su_archivo_y_de_git(self):
-        row = h.build_rows(self.root, self.commits)[1]
+        row = next(r for r in self.filas() if r["id"] == "HU-12")
         self.assertEqual(row["estado"], "⬜ aprobada")
         self.assertEqual((row["api"], row["web"]), ("🔄", "⬜"))
         self.assertEqual(row["tareas"], "2 / 4")
         self.assertEqual(row["inicio"], "2026-10-30")
         self.assertEqual(row["cierre"], "—")  # solo tiene cierre una HU cerrada
         self.assertEqual(row["tiempo"], "30 min")
-        self.assertEqual(row["detalle"], "[HU-12](fase-2/HU-12.md)")
+        self.assertEqual(row["detalle"], "[HU-12](HU-12.md)")  # el enlace es relativo a la matriz, que vive en la misma carpeta
 
     def test_la_plantilla_y_los_archivos_con_guion_bajo_se_ignoran(self):
-        (self.root / "docs" / "historias" / "_plantilla.md").write_text("---\nid: HU-nn\n---\n", encoding="utf-8")
-        self.assertEqual(len(h.build_rows(self.root, self.commits)), 3)
+        (self.dir / "_plantilla.md").write_text("---\nid: HU-nn\n---\n", encoding="utf-8")
+        self.assertEqual(len(self.filas()), 4)
 
-    def test_se_reescribe_solo_lo_que_hay_entre_las_marcas(self):
-        readme = self.root / "docs" / "historias" / "README.md"
-        readme.write_text(f"antes\n{h.START}\nviejo\n{h.END}\ndespués\n", encoding="utf-8")
-        h.write_matrix(self.root, self.commits)
-        text = readme.read_text(encoding="utf-8")
-        self.assertTrue(text.startswith("antes\n"))
-        self.assertTrue(text.endswith("después\n"))
-        self.assertIn("[HU-12](fase-2/HU-12.md)", text)
-        self.assertNotIn("viejo", text)
+    # --- el diseño de cada matriz ---
+    def test_la_matriz_se_titula_por_su_fase_y_dice_que_se_genera(self):
+        texto = self.matriz(2)
+        self.assertTrue(texto.startswith("# Matriz de la fase 2\n"))
+        self.assertIn("python3 scripts/historias.py", texto)
+        self.assertNotIn("archivos", texto.splitlines()[0])
 
-    # --- diseño de la matriz: dos tablas, ID con enlace, «icono texto», fechas y tiempo en una columna ---
-    def tablas(self, producto_hu=None):
-        """(texto de «Abiertas», texto de «Cerradas e histórico») de la matriz que se escribiría."""
-        if producto_hu:
-            (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").write_text(producto_hu, encoding="utf-8")
-        texto = h.render_matrix(h.build_rows(self.root, self.commits))
-        abiertas, cerradas = texto.split("### Cerradas e histórico")
-        return abiertas, cerradas
+    def test_cada_matriz_solo_tiene_las_filas_de_su_fase(self):
+        f1, f2 = self.matriz(1), self.matriz(2)
+        for sid in ("HU-01", "HU-50"):
+            self.assertIn(sid, f1)
+            self.assertNotIn(sid, f2)
+        for sid in ("HU-12", "EN-01"):
+            self.assertIn(sid, f2)
+            self.assertNotIn(sid, f1)
 
-    def test_dos_tablas_lo_abierto_arriba_y_lo_cerrado_debajo(self):
-        abiertas, cerradas = self.tablas()
-        self.assertTrue(abiertas.lstrip().startswith("### Abiertas"))
-        self.assertIn("HU-12", abiertas)
-        self.assertIn("HU-50", abiertas)  # histórica con la web pendiente: sigue abierta
-        self.assertNotIn("HU-01", abiertas)
-        self.assertIn("HU-01", cerradas)
-        self.assertNotIn("HU-12", cerradas)
-        self.assertNotIn("HU-50", cerradas)
+    def test_historias_y_habilitadores_van_en_secciones_separadas(self):
+        texto = self.matriz(2)
+        self.assertLess(texto.index("## Historias"), texto.index("## Habilitadores"))
+        self.assertIn("HU-12", self.parte(texto, "Historias"))
+        self.assertNotIn("EN-01", self.parte(texto, "Historias"))
+        self.assertIn("EN-01", self.parte(texto, "Habilitadores"))
+        self.assertNotIn("HU-12", self.parte(texto, "Habilitadores"))
 
-    def test_el_id_es_el_enlace_y_no_hay_columna_detalle(self):
-        abiertas, cerradas = self.tablas()
-        self.assertIn("| [HU-12](fase-2/HU-12.md) |", abiertas)
-        self.assertIn("| [HU-01](../product/04-historias-de-usuario.md#hu-01-registrarme) |", cerradas)
-        self.assertNotIn("Detalle", abiertas + cerradas)
+    def test_las_columnas_de_las_historias(self):
+        self.assertIn("| ID | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |", self.parte(self.matriz(2), "Historias"))
+        self.assertIn("| ID | Historia | Épica | Estado | Cierre y tiempo |", self.parte(self.matriz(1), "Historias"))  # la fase 1 tiene una cerrada
+
+    def test_las_columnas_de_los_habilitadores_no_tienen_epica_ni_capas(self):
+        cerrado = hu([("EN-09.1", "API", "refactor", "normal", "hecho")], sid="EN-09", tipo="EN", estado="cerrada", ligado="backend/05-piezas-clave.md")
+        (self.fase / "EN-09.md").write_text(cerrado, encoding="utf-8")
+        hab = self.parte(self.matriz(2), "Habilitadores")
+        self.assertIn("| ID | Habilitador | Ligado a | Estado | Tareas | Fechas y tiempo |", hab)
+        self.assertIn("| ID | Habilitador | Ligado a | Estado | Cierre y tiempo |", hab)
+        for columna in ("Épica", "API", "Web", "Cambios de producto"):
+            self.assertNotIn(columna, hab)
+
+    def test_ninguna_matriz_lleva_columna_fase_ni_detalle(self):
+        for fase in (1, 2):
+            self.assertNotIn("| Fase |", self.matriz(fase))
+            self.assertNotIn("Detalle", self.matriz(fase))
+
+    def test_el_id_es_el_enlace(self):
+        self.assertIn("| [HU-12](HU-12.md) |", self.matriz(2))
+        self.assertIn("| [HU-01](../../product/04-historias-de-usuario.md#hu-01-registrarme) |", self.matriz(1))
+
+    def test_un_habilitador_muestra_a_que_esta_ligado_con_enlace(self):
+        fila = self.fila(self.matriz(2), "EN-01")
+        self.assertIn("[backend/05-piezas-clave.md#convención-por-contexto](../../backend/05-piezas-clave.md#convención-por-contexto)", fila)
+
+    def test_una_regla_como_ligadura_se_muestra_sin_enlace_y_sin_ligadura_es_un_guion(self):
+        (self.fase / "EN-02.md").write_text(IDEA.format(sid="EN-02", tipo="EN"), encoding="utf-8")
+        (self.fase / "EN-03.md").write_text(IDEA.format(sid="EN-03", tipo="EN").replace("reemplaza:", "ligado: RN-13\nreemplaza:"), encoding="utf-8")
+        texto = self.matriz(2)
+        self.assertIn("| — |", self.fila(texto, "[EN-02]"))  # una idea sin ligadura
+        self.assertIn("| RN-13 |", self.fila(texto, "[EN-03]"))  # una regla, sin enlace
+        self.assertNotIn("](../../RN-13)", texto)
+
+    def test_las_ideas_estan_en_abiertas_de_su_tipo(self):
+        (self.fase / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU"), encoding="utf-8")
+        (self.fase / "EN-04.md").write_text(IDEA.format(sid="EN-04", tipo="EN"), encoding="utf-8")
+        texto = self.matriz(2)
+        hist_abiertas = self.parte(texto, "Historias").split("### Cerradas")[0]
+        hab_abiertas = self.parte(texto, "Habilitadores").split("### Cerradas")[0]
+        self.assertIn("HU-30", hist_abiertas)
+        self.assertIn("💡 idea", self.fila(hist_abiertas, "HU-30"))
+        self.assertIn("EN-04", hab_abiertas)
+        self.assertNotIn("EN-04", hist_abiertas)
 
     def test_api_y_web_se_escriben_icono_y_texto(self):
-        abiertas, _ = self.tablas()
-        fila_12 = next(l for l in abiertas.splitlines() if "HU-12" in l)
-        self.assertIn("| 🔄 en curso | ⬜ pendiente |", fila_12)  # API en curso, Web pendiente
-        fila_50 = next(l for l in abiertas.splitlines() if "HU-50" in l)
-        self.assertIn("| ✅ hecha | ⬜ pendiente |", fila_50)
+        texto = self.matriz(2)
+        self.assertIn("| 🔄 en curso | ⬜ pendiente |", self.fila(texto, "[HU-12]"))
+        self.assertIn("| ✅ hecha | ⬜ pendiente |", self.fila(self.matriz(1), "[HU-50]"))
 
     def test_una_capa_sin_tareas_dice_no_aplica(self):
         solo_doc = [("HU-12.1", "DOC", "producto", "normal", "pendiente")]
-        abiertas, _ = self.tablas(hu(solo_doc, contrato=False, pantalla=False))
-        self.assertIn("| — no aplica | — no aplica |", next(l for l in abiertas.splitlines() if "HU-12" in l))
+        (self.fase / "HU-12.md").write_text(hu(solo_doc, contrato=False, pantalla=False), encoding="utf-8")
+        self.assertIn("| — no aplica | — no aplica |", self.fila(self.matriz(2), "[HU-12]"))
 
     def test_fechas_y_tiempo_van_en_una_sola_columna(self):
-        abiertas, cerradas = self.tablas()
-        self.assertIn("| 2026-10-28 → en curso · ≈ 1 h 11 min |", abiertas)
-        self.assertIn("| 2026-10-30 → en curso · 30 min |", abiertas)
-        self.assertIn("| 2026-10-30 · ≈ 1 h 56 min |", cerradas)  # cerradas: «cierre · tiempo»
+        self.assertIn("| 2026-10-28 → en curso · ≈ 1 h 11 min |", self.matriz(1))
+        self.assertIn("| 2026-10-30 → en curso · 30 min |", self.matriz(2))
+        self.assertIn("| 2026-10-30 · ≈ 1 h 56 min |", self.matriz(1))  # cerradas: «cierre · tiempo»
 
     def test_una_historia_sin_commits_no_tiene_fechas(self):
         self.commits = []
-        abiertas, _ = self.tablas()
-        self.assertTrue(next(l for l in abiertas.splitlines() if "HU-12" in l).rstrip().endswith("| — |"))
-
-    def test_las_cerradas_llevan_solo_id_historia_epica_estado_y_cierre(self):
-        _, cerradas = self.tablas()
-        self.assertIn("| ID | Fase | Historia | Épica | Estado | Cierre y tiempo |", cerradas)
+        self.assertTrue(self.fila(self.matriz(2), "[HU-12]").rstrip().endswith("| — |"))
 
     def test_la_columna_de_cambios_de_producto_cuenta_hechos_sobre_total(self):
-        impacto_ = impacto([("RN-13", "x", "modifica", "hecho"), ("PA-02", "y", "modifica", "pendiente")])
-        row = next(r for r in h.build_rows(self.root, self.commits) if r["id"] == "HU-12")
-        self.assertEqual(row["producto"], "—")  # sin filas de impacto
-        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").write_text(hu(impacto_=impacto_), encoding="utf-8")
-        row = next(r for r in h.build_rows(self.root, self.commits) if r["id"] == "HU-12")
-        self.assertEqual(row["producto"], "1 / 2")
-        abiertas, cerradas = self.tablas()
-        self.assertIn("Cambios de producto", abiertas)
-        self.assertNotIn("Cambios de producto", cerradas)
+        (self.fase / "HU-12.md").write_text(hu(impacto_=impacto([("RN-13", "x", "modifica", "hecho"), ("PA-02", "y", "modifica", "pendiente")])), encoding="utf-8")
+        self.assertIn("| 1 / 2 |", self.fila(self.matriz(2), "[HU-12]"))
 
-    def test_sin_historias_abiertas_lo_dice(self):
-        (self.root / "docs" / "historias" / "legado.json").write_text(
-            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-01", "titulo": "Registrarme", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-30", "minutos": 116, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
-            encoding="utf-8")
-        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").unlink()
-        abiertas, _ = self.tablas()
-        self.assertIn("No hay historias abiertas", abiertas)
+    def test_una_tabla_sin_filas_lo_dice(self):
+        (self.fase / "EN-01.md").unlink()
+        texto = self.matriz(2)
+        self.assertIn("_No hay habilitadores abiertas._", texto)
+        self.assertIn("_Todavía no hay habilitadores cerradas._", texto)
 
-    def test_matrix_cells_lee_las_dos_tablas_por_id(self):
-        readme = self.root / "docs" / "historias" / "README.md"
-        readme.write_text(f"{h.START}\n{h.END}\n", encoding="utf-8")
-        h.write_matrix(self.root, self.commits)
-        celdas = h.matrix_cells(self.root)
-        self.assertEqual(set(celdas), {"HU-01", "HU-12", "HU-50"})
-        self.assertEqual(celdas["HU-01"]["Estado"], "✅ cerrada")
-        self.assertEqual(celdas["HU-12"]["Estado"], "⬜ aprobada")
-        self.assertEqual(celdas["HU-50"]["Estado"], "🔄 en curso")
-
-    def test_una_historia_cerrada_pasa_de_una_tabla_a_la_otra(self):
+    def test_una_historia_cerrada_pasa_de_abiertas_a_cerradas(self):
         todas = [(t[0], t[1], t[2], t[3], "hecho") for t in TAREAS] + [("HU-12.5", "E2E", "recorrido", "normal", "hecho")]
-        abiertas, cerradas = self.tablas(hu(todas, estado="cerrada"))
+        (self.fase / "HU-12.md").write_text(hu(todas, estado="cerrada"), encoding="utf-8")
+        historias = self.parte(self.matriz(2), "Historias")
+        abiertas, cerradas = historias.split("### Cerradas")
         self.assertNotIn("HU-12", abiertas)
         self.assertIn("HU-12", cerradas)
 
-    # --- columna Fase ---
-    def test_la_fase_sale_de_la_carpeta_y_las_anteriores_son_de_la_fase_1(self):
-        abiertas, cerradas = self.tablas()
-        self.assertIn("| [Fase 2](fase-2/README.md) |", next(l for l in abiertas.splitlines() if "HU-12" in l))
-        self.assertIn("| [Fase 1](fase-1/README.md) |", next(l for l in abiertas.splitlines() if "HU-50" in l))
-        self.assertIn("| [Fase 1](fase-1/README.md) |", next(l for l in cerradas.splitlines() if "HU-01" in l))
+    def test_la_leyenda_explica_los_estados_y_las_capas(self):
+        texto = self.matriz(2)
+        for palabra in ("💡 idea", "📝 propuesta", "⬜ aprobada", "🔄 en curso", "✅ cerrada", "— no aplica", "git log"):
+            self.assertIn(palabra, texto)
 
-    def test_una_historia_en_otra_carpeta_de_fase_muestra_esa_fase(self):
-        (self.root / "docs" / "historias" / "fase-3").mkdir()
-        (self.root / "docs" / "historias" / "fase-2" / "HU-12.md").rename(self.root / "docs" / "historias" / "fase-3" / "HU-12.md")
-        abiertas, _ = self.tablas()
-        fila = next(l for l in abiertas.splitlines() if "HU-12" in l)
-        self.assertIn("[HU-12](fase-3/HU-12.md)", fila)
-        self.assertIn("[Fase 3](fase-3/README.md)", fila)
+    # --- escribirlas ---
+    def test_se_escribe_una_matriz_por_fase_aunque_la_carpeta_aun_no_exista(self):
+        h.write_matrix(self.root, self.commits)
+        self.assertTrue((self.dir / "fase-2" / "matriz.md").exists())
+        self.assertTrue((self.dir / "fase-1" / "matriz.md").exists())  # la fase 1 sale de legado.json
+        self.assertIn("HU-12", (self.dir / "fase-2" / "matriz.md").read_text(encoding="utf-8"))
+        self.assertIn("HU-50", (self.dir / "fase-1" / "matriz.md").read_text(encoding="utf-8"))
+
+    def test_la_matriz_se_reescribe_entera(self):
+        h.write_matrix(self.root, self.commits)
+        (self.dir / "fase-2" / "matriz.md").write_text("editado a mano", encoding="utf-8")
+        h.write_matrix(self.root, self.commits)
+        self.assertTrue((self.dir / "fase-2" / "matriz.md").read_text(encoding="utf-8").startswith("# Matriz de la fase 2"))
+
+    def test_el_readme_solo_lleva_el_indice_entre_las_marcas(self):
+        h.write_matrix(self.root, self.commits)
+        texto = (self.dir / "README.md").read_text(encoding="utf-8")
+        self.assertTrue(texto.startswith("antes\n"))
+        self.assertTrue(texto.endswith("después\n"))
+        self.assertNotIn("viejo", texto)
+        self.assertNotIn("HU-12", texto)  # ninguna fila de historias: eso vive en la matriz de cada fase
+        self.assertIn("| Fase | Historias | Habilitadores | Matriz |", texto)
+
+    def test_el_indice_cuenta_abiertas_y_cerradas_por_fase_y_tipo(self):
+        h.write_matrix(self.root, self.commits)
+        texto = (self.dir / "README.md").read_text(encoding="utf-8")
+        self.assertIn("| [Fase 1](fase-1/README.md) | 1 abiertas · 1 cerradas | — | [matriz](fase-1/matriz.md) |", texto)
+        self.assertIn("| [Fase 2](fase-2/README.md) | 1 abiertas · 0 cerradas | 1 abiertas · 0 cerradas | [matriz](fase-2/matriz.md) |", texto)
+
+    def test_el_indice_ordena_las_fases_por_numero(self):
+        (self.dir / "fase-10").mkdir()
+        h.write_matrix(self.root, self.commits)
+        texto = (self.dir / "README.md").read_text(encoding="utf-8")
+        self.assertLess(texto.index("Fase 1]"), texto.index("Fase 2]"))
+        self.assertLess(texto.index("Fase 2]"), texto.index("Fase 10]"))
 
     def test_sin_marcas_es_un_error(self):
-        (self.root / "docs" / "historias" / "README.md").write_text("sin marcas", encoding="utf-8")
+        (self.dir / "README.md").write_text("sin marcas", encoding="utf-8")
         with self.assertRaises(h.HistoriaError):
             h.write_matrix(self.root, self.commits)
+
+    def test_matrix_cells_lee_una_matriz_por_fase_y_dice_de_cual(self):
+        h.write_matrix(self.root, self.commits)
+        celdas = h.matrix_cells(self.root)
+        self.assertEqual(set(celdas), {"HU-01", "HU-12", "HU-50", "EN-01"})
+        self.assertEqual(celdas["HU-01"]["Estado"], "✅ cerrada")
+        self.assertEqual(celdas["HU-12"]["Estado"], "⬜ aprobada")
+        self.assertEqual(celdas["HU-50"]["Estado"], "🔄 en curso")
+        self.assertEqual((celdas["HU-01"]["_fase"], celdas["HU-12"]["_fase"], celdas["EN-01"]["_fase"]), (1, 2, 2))
 
 
 class Entorno(unittest.TestCase):
@@ -564,8 +641,8 @@ class Comprobacion(Entorno):
         self.assertTrue(self.hay("repetido"))
 
     def test_una_historia_sin_fila_en_la_matriz(self):
-        (self.dir / "README.md").write_text(f"{h.START}\n| ID |\n{h.END}\n", encoding="utf-8")
-        self.assertTrue(self.hay("matriz"))
+        (self.fase / "matriz.md").write_text("# Matriz de la fase 2\n", encoding="utf-8")
+        self.assertTrue(self.hay("matriz", "HU-12"))
 
     # --- cierre ---
     def test_una_historia_cerrada_con_tareas_pendientes(self):
@@ -613,7 +690,7 @@ class Comprobacion(Entorno):
         )
         h.write_matrix(self.root, [])
         self.assertTrue(self.hay("fase-1", "README.md"))
-        (self.dir / "fase-1").mkdir()
+        (self.dir / "fase-1").mkdir(exist_ok=True)
         (self.dir / "fase-1" / "README.md").write_text("# Fase 1 (MVP)\n", encoding="utf-8")
         self.assertEqual(self.errors(), [])
 
@@ -829,6 +906,59 @@ DP_05 = "| DP-05 | Datos del libro | El MVP usa solo lo que entrega la API |"
 IDEA = "---\nid: {sid}\ntitulo: Una idea por madurar\ntipo: {tipo}\nepica: Compra\nestado: idea\namplia:\nreemplaza:\n---\n\n# {sid} Una idea por madurar\n\n**Origen:** un hallazgo. **Por qué importa:** porque sí.\n"
 
 
+class MatricesPorFase(Entorno):
+    """El comprobador mira la matriz de CADA fase y el índice del README."""
+
+    def test_con_todo_al_dia_no_hay_errores(self):
+        self.assertEqual(self.errors(), [])
+
+    def test_falta_la_matriz_de_una_fase(self):
+        (self.fase / "matriz.md").unlink()
+        self.assertTrue(self.hay("fase-2", "matriz.md"))
+
+    def test_una_historia_que_no_esta_en_la_matriz_de_su_fase(self):
+        (self.fase / "matriz.md").write_text("# Matriz de la fase 2\n", encoding="utf-8")
+        self.assertTrue(self.hay("fase 2", "HU-12"))
+
+    def test_una_historia_que_figura_en_la_matriz_de_otra_fase(self):
+        (self.dir / "fase-3").mkdir()
+        (self.dir / "fase-3" / "README.md").write_text("# Fase 3\n", encoding="utf-8")
+        (self.dir / "fase-3" / "matriz.md").write_text("# Matriz de la fase 3\n", encoding="utf-8")
+        self.file.rename(self.dir / "fase-3" / "HU-12.md")  # se movió de fase y las matrices quedaron como estaban
+        self.assertTrue(self.hay("HU-12", "fase 2", "fase 3"))
+
+    def test_el_estado_de_la_matriz_debe_ser_el_del_archivo(self):
+        texto = (self.fase / "matriz.md").read_text(encoding="utf-8")
+        (self.fase / "matriz.md").write_text(texto.replace("⬜ aprobada", "✅ cerrada"), encoding="utf-8")
+        self.assertTrue(self.hay("HU-12", "matriz dice"))
+
+    def test_un_indice_desactualizado(self):
+        texto = (self.dir / "README.md").read_text(encoding="utf-8")
+        (self.dir / "README.md").write_text(texto.replace("1 abiertas", "7 abiertas"), encoding="utf-8")
+        self.assertTrue(self.hay("índice", "README.md"))
+
+    def test_un_readme_sin_las_marcas_del_indice(self):
+        (self.dir / "README.md").write_text("sin marcas\n", encoding="utf-8")
+        self.assertTrue(self.hay("índice", "marcas"))
+
+    def test_una_fase_nueva_sin_matriz_se_avisa(self):
+        (self.dir / "fase-3").mkdir()
+        (self.dir / "fase-3" / "README.md").write_text("# Fase 3\n", encoding="utf-8")
+        self.assertTrue(self.hay("fase-3", "matriz.md"))
+
+    def test_las_historias_del_historico_deben_estar_en_la_matriz_de_la_fase_1(self):
+        (self.dir / "legado.json").write_text(
+            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-05", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            encoding="utf-8",
+        )
+        (self.dir / "fase-1").mkdir()
+        (self.dir / "fase-1" / "README.md").write_text("# Fase 1\n", encoding="utf-8")
+        h.write_matrix(self.root, [])
+        self.assertEqual(self.errors(), [])
+        (self.dir / "fase-1" / "matriz.md").write_text("# Matriz de la fase 1\n", encoding="utf-8")
+        self.assertTrue(self.hay("HU-05", "fase 1"))
+
+
 class Ideas(Entorno):
     """El estado `idea`: un pendiente que se registra en la matriz con solo un encabezado y una frase."""
 
@@ -875,8 +1005,8 @@ class Ideas(Entorno):
         self.idea()
         celdas = h.matrix_cells(self.root)
         self.assertEqual(celdas["HU-30"]["Estado"], "💡 idea")
-        texto = h.render_matrix(h.build_rows(self.root, []))
-        abiertas, cerradas = texto.split("### Cerradas e histórico")
+        historias = h.render_phase(2, h.build_rows(self.root, [])).split("## Habilitadores")[0]
+        abiertas, cerradas = historias.split("### Cerradas")
         self.assertIn("HU-30", abiertas)
         self.assertNotIn("HU-30", cerradas)
 
