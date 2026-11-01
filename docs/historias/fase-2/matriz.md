@@ -32,4 +32,4 @@
 | [EN-11](EN/EN-11.md) | Vigilar los fallos intermitentes de las pruebas | — | 💡 idea | 0 / 0 | — |
 | [EN-12](EN/EN-12.md) | Una matriz por fase, con historias y habilitadores separados | [guia-de-desarrollo.md](../../guia-de-desarrollo.md) | ✅ cerrada | 3 / 3 | 2026-10-31 → 2026-10-31 · 53 min |
 | [EN-13](EN/EN-13.md) | Carpetas HU y EN por fase, plantillas con su diccionario y legado.json ordenado | [guia-de-desarrollo.md](../../guia-de-desarrollo.md) | ✅ cerrada | 4 / 4 | 2026-10-31 → 2026-10-31 · 1 h 11 min |
-| [EN-14](EN/EN-14.md) | La matriz de cada fase, con una sola tabla de historias y una de habilitadores | [guia-de-desarrollo.md](../../guia-de-desarrollo.md) | 🔄 en curso | 1 / 2 | 2026-10-31 → en curso · 14 min |
+| [EN-14](EN/EN-14.md) | La matriz de cada fase, con una sola tabla de historias y una de habilitadores | [guia-de-desarrollo.md](../../guia-de-desarrollo.md) | ✅ cerrada | 2 / 2 | 2026-10-31 → 2026-10-31 · 20 min |

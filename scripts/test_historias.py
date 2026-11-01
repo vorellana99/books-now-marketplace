@@ -1917,6 +1917,21 @@ class DocumentosReales(unittest.TestCase):
             self.assertNotIn("../README.md#matriz", texto, ruta)
             self.assertNotIn("en una sola tabla", texto, ruta)
 
+    # La matriz de cada fase tiene una sola tabla por tipo: ningún documento vivo habla de las subsecciones «Abiertas» y «Cerradas» ni de «Cierre y tiempo»
+    SUBSECCIONES_DE_LA_MATRIZ = re.compile(r"«(?:Abiertas|Cerradas)»|Abiertas y Cerradas|### (?:Abiertas|Cerradas)|Cierre y tiempo|\ben (?:Abiertas|Cerradas)\b")
+
+    def test_ningun_documento_vivo_habla_de_las_subsecciones_abiertas_y_cerradas(self):
+        for ruta in self.DOCUMENTOS_VIVOS + [f"docs/historias/fase-{n}/README.md" for n in h.fase_numbers(ROOT)] + [f"docs/historias/fase-{n}/matriz.md" for n in h.fase_numbers(ROOT)]:
+            texto = (ROOT / ruta).read_text(encoding="utf-8")
+            encontrado = self.SUBSECCIONES_DE_LA_MATRIZ.search(texto)
+            self.assertIsNone(encontrado, f"{ruta}: habla de «{encontrado and encontrado.group(0)}»")
+
+    def test_el_detector_de_subsecciones_reconoce_lo_que_debe_y_deja_pasar_el_resto(self):
+        for malo in ("con «Abiertas» y «Cerradas»", "### Abiertas (4)", "| Cierre y tiempo |", "Abiertas y Cerradas", "Aparece en «Abiertas» de la matriz", "(… en Cerradas)"):
+            self.assertTrue(self.SUBSECCIONES_DE_LA_MATRIZ.search(malo), malo)
+        for bueno in ("4 abiertas · 16 cerradas", "dos historias abiertas cambian lo mismo", "Mientras está abierta, el cierre dice «en curso»", "una historia cerrada"):
+            self.assertIsNone(self.SUBSECCIONES_DE_LA_MATRIZ.search(bueno), bueno)
+
     def test_cada_readme_de_fase_enlaza_a_su_matriz_y_no_repite_su_tabla(self):
         for fase in h.fase_numbers(ROOT):
             texto = (ROOT / "docs" / "historias" / f"fase-{fase}" / "README.md").read_text(encoding="utf-8")
