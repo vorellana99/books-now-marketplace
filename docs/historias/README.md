@@ -7,7 +7,7 @@
 ## Matriz
 
 <!-- MATRIZ:INICIO (la genera scripts/historias.py: no editar a mano) -->
-### Abiertas (18)
+### Abiertas (19)
 
 | ID | Fase | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |
 |---|---|---|---|---|---|---|---|---|---|
@@ -29,6 +29,7 @@
 | [EN-09](fase-2/EN-09.md) | [Fase 2](fase-2/README.md) | Aclarar si la compuerta verify.sh incluye la auditoría de dependencias | Calidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 | [EN-10](fase-2/EN-10.md) | [Fase 2](fase-2/README.md) | Poner un tiempo máximo a cada entrega del relay del Outbox | Confiabilidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
 | [EN-11](fase-2/EN-11.md) | [Fase 2](fase-2/README.md) | Vigilar los fallos intermitentes de las pruebas | Calidad | 💡 idea | — no aplica | — no aplica | — | 0 / 0 | — |
+| [EN-12](fase-2/EN-12.md) | [Fase 2](fase-2/README.md) | Una matriz por fase, con historias y habilitadores separados | Documentación | ⬜ aprobada | — no aplica | — no aplica | — | 0 / 3 | 2026-10-31 → en curso · 37 min |
 
 ### Cerradas e histórico (19)
 
