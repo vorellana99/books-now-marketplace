@@ -2043,6 +2043,34 @@ class DocumentosReales(unittest.TestCase):
         for bueno in ("4 abiertas · 16 cerradas", "dos historias abiertas cambian lo mismo", "Mientras está abierta, el cierre dice «en curso»", "una historia cerrada"):
             self.assertIsNone(self.SUBSECCIONES_DE_LA_MATRIZ.search(bueno), bueno)
 
+    # Frases que fueron ciertas y ya no: el estado de una tarea aprobada es `⏳ pendiente` (⬜ es el de una historia), la receta por tipo está en el
+    # diccionario y no en la plantilla, y `/hu` y `/tarea` ya se usaron en tareas reales
+    FRASES_DESACTUALIZADAS = [
+        "estado ⬜ (aprobada)", "tarea ⬜", "pasan de 📝 a ⬜", "(pasan a ⬜ al aprobar)",
+        "plantilla de historias](historias/plantillas/HU.md)", "Los ocho comandos todavía no se han usado",
+    ]
+
+    def test_ningun_documento_vivo_repite_frases_que_ya_no_son_ciertas(self):
+        for ruta in self.DOCUMENTOS_VIVOS:
+            texto = (ROOT / ruta).read_text(encoding="utf-8")
+            for frase in self.FRASES_DESACTUALIZADAS:
+                self.assertNotIn(frase, texto, f"{ruta}: «{frase}»")
+
+    def test_las_skills_y_las_guias_dicen_los_estados_de_una_tarea_aprobada(self):
+        tarea = (ROOT / ".claude/skills/tarea/SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("`⏳ pendiente`", tarea)
+        self.assertIn("`✏️ propuesta`", tarea)
+        self.assertIn("✏️", (ROOT / ".claude/skills/hu/SKILL.md").read_text(encoding="utf-8"))
+        guia = (ROOT / "docs/guia-de-desarrollo.md").read_text(encoding="utf-8")
+        self.assertIn("⏳ pendiente", guia)
+        self.assertEqual(guia.count("historias/plantillas/README.md#tipos-de-tarea"), 2)  # la tabla de tipos y su receta, en el diccionario
+
+    def test_la_guia_de_herramientas_dice_que_comandos_se_usaron_y_cuales_no(self):
+        texto = (ROOT / "docs/herramientas-de-trabajo.md").read_text(encoding="utf-8")
+        fila = next(l for l in texto.splitlines() if l.startswith("| Los comandos de Claude"))
+        for comando in ("/hu", "/tarea", "scripts/historias.py", "/mutar", "/nueva-ruta", "/nueva-migracion", "/nuevo-evento", "/nueva-variable-entorno", "/cambio-de-contrato"):
+            self.assertIn(comando, fila, comando)
+
     def test_cada_readme_de_fase_enlaza_a_su_matriz_y_no_repite_su_tabla(self):
         for fase in h.fase_numbers(ROOT):
             texto = (ROOT / "docs" / "historias" / f"fase-{fase}" / "README.md").read_text(encoding="utf-8")

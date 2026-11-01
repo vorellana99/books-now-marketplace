@@ -274,6 +274,6 @@ description: Una frase que dice QUÉ hace y CUÁNDO usarlo. Claude la lee para d
 | Tema | Qué significa |
 |---|---|
 | Los scripts están probados | La compuerta se ejecutó en sus tres modos y `mutate.py` tiene sus propias pruebas |
-| Los ocho comandos todavía no se han usado en una tarea real con el proceso por historia | `/hu`, `/tarea` y `scripts/historias.py` se estrenan con el piloto de [`historias/`](historias/README.md). Sus rutas y nombres se verificaron contra el repositorio, pero la primera tarea que se haga con `/tarea` mostrará qué les falta |
+| Los comandos de Claude y su uso real | `/hu`, `/tarea` y `scripts/historias.py` ya se usaron en tareas reales con el proceso por historia (EN-01 a EN-15 de [`historias/`](historias/README.md)). Los otros seis (`/mutar`, `/nueva-ruta`, `/nueva-migracion`, `/nuevo-evento`, `/nueva-variable-entorno` y `/cambio-de-contrato`) todavía no figuran en ninguna tarea ejecutada: sus rutas y nombres se verificaron contra el repositorio, pero la primera tarea que los use mostrará qué les falta |
 | Las mutaciones automáticas | Son solo del backend; la tienda usa la compuerta |
 | La compuerta no sustituye al CI | El CI corre en GitHub solo al subir a `main`/`develop` o en un pull request |

@@ -11,8 +11,8 @@ Guía completa para personas: `docs/guia-de-desarrollo.md` (§4.2). Las herramie
 
 | Comprobación | Qué se hace |
 |---|---|
-| ¿Es una tarea aprobada? | Una tarea es una fila del archivo de su historia (`docs/historias/fase-n/HU/HU-nn.md`, o `fase-n/EN/EN-nn.md` si es de un habilitador) con estado ⬜ (aprobada), no 📝 (propuesta). Si el usuario pide algo que **no está** como tarea aprobada («quiero que…»), **no empieces a programar**: usa `/hu` para redactar la historia y desglosarla, y espera su aprobación |
-| Qué tarea toca | «Continúa con la siguiente tarea» = la primera tarea ⬜ cuyas dependencias estén todas ✅. «Haz toda la HU-nn» = encadenar sus tareas en orden, sin informar entre una y otra; el informe va una vez, al final |
+| ¿Es una tarea aprobada? | Una tarea es una fila del archivo de su historia (`docs/historias/fase-n/HU/HU-nn.md`, o `fase-n/EN/EN-nn.md` si es de un habilitador) con estado `⏳ pendiente` (aprobada), no `✏️ propuesta`. Si el usuario pide algo que **no está** como tarea aprobada («quiero que…»), **no empieces a programar**: usa `/hu` para redactar la historia y desglosarla, y espera su aprobación |
+| Qué tarea toca | «Continúa con la siguiente tarea» = la primera tarea `⏳ pendiente` cuyas dependencias estén todas `✅ hecho`. «Haz toda la HU-nn» = encadenar sus tareas en orden, sin informar entre una y otra; el informe va una vez, al final |
 | Al empezar | Pasa su Estado a `⏩ en-curso` y ejecuta `python3 scripts/historias.py`: sella el **inicio** en la tabla «## Ejecución» de la HU (hora de Lima). Hazlo antes de escribir nada |
 | Dependencias | No empieces una tarea cuya dependencia no esté ✅ |
 | Lista para ejecutarse | Comprueba (ver `/hu`) que puedes escribir su primera prueba roja con su primera comprobación (y, en una `[API]` que cambia la API, la sección «Contrato» de la HU; en una `[WEB]` que cambia lo que se ve, la sección «Pantalla»). Si no, no empieces: completa el detalle con el usuario |

@@ -75,4 +75,4 @@ Si el usuario solo quiere **anotar** un pendiente sin desglosarlo, regístralo c
 
 ## 4. Pedir la aprobación
 
-Termina mostrando el desglose resumido (tabla de tareas con capa y dependencia) y **espera la aprobación del usuario** (si hay decisiones abiertas, con opciones y una recomendada). Al aprobar, `estado: aprobada` en el encabezado, las tareas pasan de 📝 a ⬜ y se ejecutan con `/tarea`.
+Termina mostrando el desglose resumido (tabla de tareas con capa y dependencia) y **espera la aprobación del usuario** (si hay decisiones abiertas, con opciones y una recomendada). Al aprobar, `estado: aprobada` en el encabezado, las tareas pasan de `✏️ propuesta` a `⏳ pendiente` y se ejecutan con `/tarea`.
