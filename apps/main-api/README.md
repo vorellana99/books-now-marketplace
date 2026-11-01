@@ -70,7 +70,7 @@ La app valida las variables al arrancar y, si alguna es inválida, no inicia y d
 | `RETENTION_RESERVATION_DAYS` | `90` | Días que se guarda una reserva `CONFIRMED` |
 | `RETENTION_REFRESH_TOKEN_DAYS` | `7` | Días que se guarda un token de refresco después de vencer, usarse o revocarse |
 
-`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance por cortes (historial congelado) está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md); el trabajo vigente, en la matriz de [historias](../../docs/historias/README.md).
+`OUTBOX_MAX_ATTEMPTS` (corte 4), `PAYMENT_PROVIDER`, `PAYMENT_API_URL`, `CHECKOUT_RECOVERY_MINUTES` y `DB_STATEMENT_TIMEOUT_MS` (corte 5) ya se usan. La variable `ADMIN_API_ENABLED` (corte 6) ya no existe: las rutas `/admin` las protege el rol `ADMIN` (corte 7). El avance por cortes (historial congelado) está en [docs/backend/00-avance.md](../../docs/backend/00-avance.md); el trabajo vigente, en el índice de fases y sus matrices ([historias](../../docs/historias/README.md)).
 
 ### Retención de datos
 

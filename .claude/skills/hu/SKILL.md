@@ -5,7 +5,7 @@ description: Convertir una necesidad, una historia de usuario nueva, una ampliac
 
 # De la historia a las tareas
 
-Todo cambio de producto parte de una historia de usuario (`HU-nn`). Una HU puede pedir cambios en el backend, en la tienda o en los dos: se desglosa en **tareas verticales de una sola capa** y se aprueba **antes** de escribir código. Cada historia nueva es **un archivo** en `docs/historias/` (plantilla: `docs/historias/_plantilla.md`) y la matriz de todas está en `docs/historias/README.md`; el proceso completo, en `docs/guia-de-desarrollo.md` §4.1.
+Todo cambio de producto parte de una historia de usuario (`HU-nn`). Una HU puede pedir cambios en el backend, en la tienda o en los dos: se desglosa en **tareas verticales de una sola capa** y se aprueba **antes** de escribir código. Cada historia nueva es **un archivo** en `docs/historias/` (plantilla: `docs/historias/_plantilla.md`) y su estado está en la matriz de cada fase (`docs/historias/fase-n/matriz.md`; el índice de fases, en `docs/historias/README.md`); el proceso completo, en `docs/guia-de-desarrollo.md` §4.1.
 
 **Este comando NO implementa.** Termina con el archivo de la historia en `docs/historias/` marcado 📝 y la pregunta de aprobación al usuario.
 
@@ -59,7 +59,7 @@ Si el usuario solo quiere **anotar** un pendiente sin desglosarlo, regístralo c
 - La sección **«## Impacto en el producto»** (obligatoria): la tabla `Documento | Qué cambia | Acción | Estado` con las reglas `RN`, decisiones `DP`, pantallas `PA`, textos, visión y `api-contrato.md` que la historia toca (cita el id, o la ruta relativa a `docs/`; acción `agrega`, `modifica` o `retira`; estado `pendiente`), o «Sin impacto en el producto». Los documentos vivos dicen siempre lo vigente y la historia es el rastro: la **primera tarea `[DOC]`** los reescribe antes del código. Si `python3 scripts/historias.py` avisa de que otra historia abierta cambia lo mismo, **pregunta** al usuario el orden (o si se fusionan); si la historia deja sin efecto a otra, pon su id en `reemplaza:`.
 - Su bitácora con una fila («desglosada, pendiente de aprobación»).
 - La sección **«## Ejecución»** (inicio, fin y tiempo de cada tarea) la crea `python3 scripts/historias.py` con una fila por tarea y todo en «—»; nadie la escribe a mano.
-- Ejecuta `python3 scripts/historias.py`: agrega la fila a la matriz y comprueba que el archivo está bien formado.
+- Ejecuta `python3 scripts/historias.py`: agrega la fila a la matriz de la fase y comprueba que el archivo está bien formado.
 - **No toques** `product/04` (histórico), `RN`, `DP` ni el código todavía: eso lo hace la tarea `[DOC]` cuando el usuario apruebe.
 
 ## 4. Pedir la aprobación

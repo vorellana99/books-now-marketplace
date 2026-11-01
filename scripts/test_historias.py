@@ -1415,6 +1415,31 @@ class DocumentosReales(unittest.TestCase):
             self.assertNotIn("| Historia |", texto, f"fase-{fase}: la tabla de historias es de la matriz")
             self.assertNotIn("| ID |", texto, f"fase-{fase}")
 
+    # Los documentos vivos ya no hablan de una matriz única ni mandan a una que dejó de existir en el README de historias
+    DOCUMENTOS_VIVOS = [
+        "CLAUDE.md", ".claude/skills/hu/SKILL.md", ".claude/skills/tarea/SKILL.md", "docs/guia-de-desarrollo.md",
+        "docs/herramientas-de-trabajo.md", "docs/historias/_plantilla.md", "docs/historias/_idea.md", "docs/product/README.md",
+        "docs/frontend/README.md", "apps/main-api/README.md", "apps/store-web/README.md", "docs/historias/README.md",
+    ]
+    FRASES_DE_LA_MATRIZ_UNICA = [
+        "la matriz de todas", "matriz de todas las historias", "la **matriz** de todas", "matriz de `historias/README.md`",
+        "matriz de `docs/historias/README.md`", "matriz de [`historias/README.md`]", "matriz de [`../historias/README.md`]",
+        "esa misma matriz", "la agrega a la matriz.", "agrega la fila a la matriz y comprueba", "Regenerar la matriz", "regenera la matriz",
+        "actualiza la matriz", "comprobador de la matriz", "(incluida la matriz",
+    ]
+
+    def test_ningun_documento_vivo_habla_de_una_matriz_unica(self):
+        for ruta in self.DOCUMENTOS_VIVOS:
+            texto = (ROOT / ruta).read_text(encoding="utf-8")
+            for frase in self.FRASES_DE_LA_MATRIZ_UNICA:
+                self.assertNotIn(frase, texto, f"{ruta}: «{frase}»")
+
+    def test_los_documentos_que_mandan_a_leer_el_estado_nombran_la_matriz_de_la_fase(self):
+        for ruta in ("CLAUDE.md", ".claude/skills/hu/SKILL.md", ".claude/skills/tarea/SKILL.md", "docs/guia-de-desarrollo.md", "docs/herramientas-de-trabajo.md"):
+            texto = (ROOT / ruta).read_text(encoding="utf-8")
+            self.assertIn("matriz", texto)
+            self.assertTrue("fase-n/matriz.md" in texto or "matriz de su fase" in texto or "matrices" in texto, ruta)
+
     # Los archivos congelados (historial): empiezan, justo después del título, con la advertencia de que no se actualizan más
     CONGELADOS = {
         "docs/avance.md": "2026-10-31",

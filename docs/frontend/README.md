@@ -3,13 +3,13 @@
 Guía de implementación de la tienda web (`apps/store-web`): React 19 + TypeScript sobre **Vite+** (`vp`). Este archivo es el índice. **Qué** hace la tienda lo define [`../product/`](../product/README.md) (historias `HU-nn`, reglas `RN-nn`, pantallas `PA-nn`, decisiones `DP-nn`); esta carpeta dice **cómo** se construye y cita esos identificadores en lugar de repetirlos. Lo que la API ofrece está en [`../api-contrato.md`](../api-contrato.md).
 
 > [!caution] Estado
-> **El corte `F0` está implementado** (React 19 + TanStack + Tailwind sobre Vite+, con cliente de API, cabecera, PA-10 y 55 pruebas), a falta de verlo en un navegador real. Los cortes `F1` a `F6` no. El historial por cortes (congelado), con lo que se hizo distinto a esta guía, está en [00-avance](00-avance.md); el trabajo vigente, en la [matriz de historias](../historias/README.md). Los bocetos de [05-piezas-clave](05-piezas-clave.md) se validan al implementar cada pieza; donde difieren, manda el código.
+> **El corte `F0` está implementado** (React 19 + TanStack + Tailwind sobre Vite+, con cliente de API, cabecera, PA-10 y 55 pruebas), a falta de verlo en un navegador real. Los cortes `F1` a `F6` no. El historial por cortes (congelado), con lo que se hizo distinto a esta guía, está en [00-avance](00-avance.md); el trabajo vigente, en el [índice de fases y sus matrices](../historias/README.md). Los bocetos de [05-piezas-clave](05-piezas-clave.md) se validan al implementar cada pieza; donde difieren, manda el código.
 
 Los comandos se ejecutan desde `apps/store-web`. Las herramientas son las de Vite+ (`vp dev`, `vp check`, `vp test`, `vp build`); no se agregan ESLint, Prettier ni Jest.
 
 | Documento | Contenido |
 |---|---|
-| [../historias/](../historias/README.md) | **Historias de usuario** (desde 2026-10-30): la matriz de todas y un archivo por historia nueva; las tareas `[WEB]` viven con las `[API]` de su HU |
+| [../historias/](../historias/README.md) | **Historias de usuario** (desde 2026-10-30): el índice de fases y, por fase, su matriz y un archivo por historia nueva; las tareas `[WEB]` viven con las `[API]` de su HU |
 | [00-avance](00-avance.md) | Historial **congelado** por cortes (`F0`…`F6`): tareas, desvíos de la guía y bitácora |
 | [01-decisiones-y-stack](01-decisiones-y-stack.md) | Decisiones, stack, capas y reglas de dependencia |
 | [02-estructura-y-puesta-en-marcha](02-estructura-y-puesta-en-marcha.md) | Carpetas, instalación, scripts, proxy y variables de entorno |

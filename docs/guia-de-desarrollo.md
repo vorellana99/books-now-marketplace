@@ -7,7 +7,7 @@
 ```
 apps/main-api     API (NestJS 12 + Prisma 7 + PostgreSQL 18). Aquí está casi todo el trabajo
 apps/store-web    Tienda web (React 19 + TanStack + Tailwind 4, sobre Vite+; comando `vp`)
-docs/historias/   LAS HISTORIAS: la matriz de todas (README.md) y un archivo por historia nueva, con sus tareas por capa y su bitácora
+docs/historias/   LAS HISTORIAS: el índice de fases y las reglas (README.md) y, por fase, su objetivo, su matriz y un archivo por historia o habilitador nuevo, con sus tareas por capa y su bitácora
 docs/avance.md    Historial congelado (lo transversal hasta el 2026-10-31); hoy lo pendiente son ideas en historias/
 docs/backend      Guía del backend; su 00-avance.md (cortes 0–10) es historial congelado
 docs/frontend     Guía de la tienda; su 00-avance.md (cortes F0–F6) es historial congelado
@@ -18,7 +18,7 @@ scripts/          La compuerta (verify.sh) y las pruebas de mutación (mutate.py
 CLAUDE.md         Resumen para Claude: arquitectura, comandos y reglas
 ```
 
-El trabajo se organiza **por historia de usuario (`HU-nn`)**. Una historia puede pedir cambios en el backend, en la tienda o en los dos; se desglosa en **tareas verticales**, cada una de **una sola capa** (`[API]`, `[WEB]`, `[E2E]` o `[DOC]`), y viven en el archivo de esa historia, dentro de [`historias/`](historias/README.md), donde también está la matriz de todas (las 20 anteriores, como histórico, y las nuevas). Una ampliación de una historia anterior es una historia nueva. La tarea `HU-12.3` es la tercera de la HU-12; cada tarea es **un commit** con ese prefijo y su capa (`HU-12.3 [API]: Add availability to GET /books`). Lo que no es una historia (arquitectura, rendimiento, seguridad, accesibilidad) es un **habilitador** `EN-nn`. Los cortes `N.M` y `FN.M` anteriores a 2026-10-30 son el historial y no se reutilizan.
+El trabajo se organiza **por historia de usuario (`HU-nn`)**. Una historia puede pedir cambios en el backend, en la tienda o en los dos; se desglosa en **tareas verticales**, cada una de **una sola capa** (`[API]`, `[WEB]`, `[E2E]` o `[DOC]`), y viven en el archivo de esa historia, dentro de [`historias/`](historias/README.md), donde está el índice de fases y, en cada fase, su matriz (la fase 1 reúne las 20 anteriores, como histórico). Una ampliación de una historia anterior es una historia nueva. La tarea `HU-12.3` es la tercera de la HU-12; cada tarea es **un commit** con ese prefijo y su capa (`HU-12.3 [API]: Add availability to GET /books`). Lo que no es una historia (arquitectura, rendimiento, seguridad, accesibilidad) es un **habilitador** `EN-nn`. Los cortes `N.M` y `FN.M` anteriores a 2026-10-30 son el historial y no se reutilizan.
 
 ## 2. Primer arranque
 
@@ -77,12 +77,12 @@ Cada pregunta tiene **una** fuente de verdad. Si un documento contradice al cód
 
 | Pregunta | Fuente |
 |---|---|
-| ¿Qué tarea toca y qué se comprueba? | La fila de la tarea (índice: capa, tipo, rigor, objetivo, «Depende de») y su bloque de detalle («Se comprueba» con casillas) en el archivo de su HU, `historias/fase-n/HU-nn.md`; la matriz de todas, en [`historias/README.md`](historias/README.md) |
+| ¿Qué tarea toca y qué se comprueba? | La fila de la tarea (índice: capa, tipo, rigor, objetivo, «Depende de») y su bloque de detalle («Se comprueba» con casillas) en el archivo de su HU, `historias/fase-n/HU-nn.md`; su estado, en la matriz de su fase (`historias/fase-n/matriz.md`; el índice, en [`historias/README.md`](historias/README.md)) |
 | ¿Qué debe hacer el producto? | [`product/`](product/README.md): reglas `RN-nn` (03), historias `HU-nn` (04), decisiones `DP-nn` (09), pantallas `PA-nn` (06) |
 | ¿Cuál es el contrato HTTP? | [`api-contrato.md`](api-contrato.md) y, ejecutándose, `/docs-json` |
 | ¿Cómo está construido y por qué? | [`CLAUDE.md`](../CLAUDE.md), [`backend/05-piezas-clave.md`](backend/05-piezas-clave.md) y «Decisiones y desvíos» del archivo de la historia (lo que se apartó del plan) y el porqué de cada regla en [`historias/README.md`](historias/README.md) (lo anterior, en `avance.md` y los `00-avance.md` congelados) |
 | ¿Cómo se prueba? | [`backend/06-tests.md`](backend/06-tests.md) y [`frontend/06-tests.md`](frontend/06-tests.md) |
-| ¿Qué está abierto o por decidir? | las ideas de la matriz de [`historias/README.md`](historias/README.md) (`estado: idea`) y [`product/09-decisiones-y-preguntas.md`](product/09-decisiones-y-preguntas.md) (el historial anterior, en `avance.md` y los `00-avance.md` congelados) |
+| ¿Qué está abierto o por decidir? | las ideas de las matrices de cada fase (el índice, en [`historias/README.md`](historias/README.md); `estado: idea`) y [`product/09-decisiones-y-preguntas.md`](product/09-decisiones-y-preguntas.md) (el historial anterior, en `avance.md` y los `00-avance.md` congelados) |
 | ¿Qué datos hay para probar a mano? | «Datos de ejemplo» del README del backend (seed) |
 
 ## 4. Del requisito a la tarea: el ciclo
@@ -95,7 +95,7 @@ Dos fases: primero la **historia** se convierte en tareas (una vez, con tu aprob
 |---|---|---|
 | 1 | **Redactar o ampliar la HU** en lenguaje de producto: «Como…, quiero…, para…», reglas `RN`, pantallas `PA`, criterios **Dado/Cuando/Entonces** y un **«Listo cuando…»** (el escenario de punta a punta que la da por terminada) | El texto, **aprobado por ti**. Una decisión que contradice una `RN`/`DP` se pregunta ahora, con opciones y una recomendada |
 | 2 | **Repartir cada criterio en capas**: qué exige del backend (`[API]`), qué de la tienda (`[WEB]`) y qué solo se ve de punta a punta (`[E2E]`); lo de producto y guías va en `[DOC]` | La lista de tareas, cada una de **una capa**, con lo que se comprueba |
-| 3 | **Fijar el contrato y la pantalla.** Si alguna tarea es `[WEB]`, la HU lleva una sección **«Pantalla»**: **dónde** va lo que cambia (respecto a qué elemento), un croquis en texto si una frase no basta, los **estados**, los **textos exactos** de [`product/07`](product/07-contenido-y-mensajes.md), qué cambia entre móvil (360 px) y escritorio (1280 px) y la accesibilidad; reutiliza los [tokens y componentes](product/diseno/README.md) existentes (una pantalla nueva o un componente grande va antes en una tarea `[DOC]` que actualiza el wireframe y el mockup), o «Sin cambios visuales». Si alguna es `[API]`, lleva una sección **«Contrato»** con las rutas y métodos, el cuerpo, un **ejemplo JSON de la respuesta**, los errores nuevos, la compatibilidad (¿es aditivo?) y lo que no cambia; o «Sin cambios en el contrato». Y la sección **«Impacto en el producto»**: qué reglas (`RN`), decisiones (`DP`), pantallas (`PA`), textos y guías vivas toca (con acción y estado), o «Sin impacto en el producto»: esos documentos dicen siempre lo que es verdad hoy y la historia es el registro del cambio. Es lo que une backend y tienda, y lo que tú apruebas sin leer código | Las secciones «Pantalla» y «Contrato» (el comprobador de la matriz las exige) |
+| 3 | **Fijar el contrato y la pantalla.** Si alguna tarea es `[WEB]`, la HU lleva una sección **«Pantalla»**: **dónde** va lo que cambia (respecto a qué elemento), un croquis en texto si una frase no basta, los **estados**, los **textos exactos** de [`product/07`](product/07-contenido-y-mensajes.md), qué cambia entre móvil (360 px) y escritorio (1280 px) y la accesibilidad; reutiliza los [tokens y componentes](product/diseno/README.md) existentes (una pantalla nueva o un componente grande va antes en una tarea `[DOC]` que actualiza el wireframe y el mockup), o «Sin cambios visuales». Si alguna es `[API]`, lleva una sección **«Contrato»** con las rutas y métodos, el cuerpo, un **ejemplo JSON de la respuesta**, los errores nuevos, la compatibilidad (¿es aditivo?) y lo que no cambia; o «Sin cambios en el contrato». Y la sección **«Impacto en el producto»**: qué reglas (`RN`), decisiones (`DP`), pantallas (`PA`), textos y guías vivas toca (con acción y estado), o «Sin impacto en el producto»: esos documentos dicen siempre lo que es verdad hoy y la historia es el registro del cambio. Es lo que une backend y tienda, y lo que tú apruebas sin leer código | Las secciones «Pantalla» y «Contrato» (el comprobador de `scripts/historias.py` las exige) |
 | 4 | **Ordenar**: `[DOC]` → `[API]` → `[WEB]` (la primera lleva `/cambio-de-contrato`) → `[E2E]`; anotar de qué depende cada una. Un cambio de contrato se hace primero **aditivo**: la compuerta no se rompe en ninguna tarea | El archivo de la HU en [`historias/`](historias/README.md), con 📝 en todo (pasan a ⬜ al aprobar) |
 | 5 | **Aprobar el desglose.** Hasta que lo apruebas no se escribe código | Las tareas listas para ejecutarse |
 
@@ -131,7 +131,7 @@ Diez pasos (del 0 al 9), en este orden. El ejemplo es una tarea real del corte 7
 | 5 | **Revisión visual** (solo `[WEB]` que cambia lo que se ve): la tienda en un navegador real (Playwright, con la API y el seed) a 360 y 1280 px, comparada con la **Pantalla** de la HU; se anota en la bitácora qué se revisó y qué se ajustó. No hay pruebas de captura píxel a píxel (se rompen con cualquier cambio de contenido); el contraste y los objetivos táctiles los cubre axe en la `[E2E]` | (en el corte 7 no había pantallas) |
 | 6 | **Compuerta**: `scripts/verify.sh` (detecta sola si tocaste backend, tienda o ambos) | tipos, lint, formato, build, 1120 unitarias y 902 de integración y e2e |
 | 7 | **Mutaciones** si la tarea tiene rigor `critico` (solo `[API]`) | 15 cambios deliberados, todos detectados |
-| 8 | **Documentos** en el mismo commit | casillas del bloque, Estado de la fila (`hecho`), «Decisiones y desvíos», bitácora con los conteos reales y `api-contrato.md`; `python3 scripts/historias.py` **sella el fin y el tiempo** de la tarea y actualiza la matriz |
+| 8 | **Documentos** en el mismo commit | casillas del bloque, Estado de la fila (`hecho`), «Decisiones y desvíos», bitácora con los conteos reales y `api-contrato.md`; `python3 scripts/historias.py` **sella el fin y el tiempo** de la tarea y actualiza las matrices |
 | 9 | **Un commit** con el prefijo de la tarea y su capa (formato y hook: «Reglas del ciclo», abajo) | hoy: `HU-40.2 [API]: Add GET /me/orders…` (entonces: `7.8: …`) |
 
 Reglas del ciclo:
@@ -143,9 +143,9 @@ Reglas del ciclo:
 - **El contrato y la pantalla aprobados mandan.** Una tarea `[API]` cumple la sección «Contrato» de su HU tal cual, y una `[WEB]` que cambia lo que se ve cumple su «Pantalla» (ubicación, textos, estados, tonos); si al implementar hay que apartarse, se detiene y se vuelve a pedir aprobación: no se decide al programar.
 - **Una tarea, una capa.** Si al implementarla aparece trabajo en la otra capa, no se mezcla: se añade como tarea nueva de la HU (con su dependencia) y se te avisa.
 - **Los números de la documentación salen de la última ejecución**, copiados de la salida. Nunca de memoria.
-- **Los documentos se marcan en los tres sitios** del archivo de la HU: las **casillas** del bloque de la tarea (todas `- [x]`), el **Estado** de su fila (`⏩ en-curso` → `✅ hecho`) y **su** bitácora. Después se regenera la matriz con `python3 scripts/historias.py` (también comprueba que el archivo está bien formado).
+- **Los documentos se marcan en los tres sitios** del archivo de la HU: las **casillas** del bloque de la tarea (todas `- [x]`), el **Estado** de su fila (`⏩ en-curso` → `✅ hecho`) y **su** bitácora. Después se regeneran las matrices con `python3 scripts/historias.py` (también comprueba que el archivo está bien formado).
 - **Si se pide una HU entera** («haz la HU-12»), se encadenan sus tareas en orden sin detenerse a informar entre una y otra; el informe va una vez, al final.
-- **Cerrar la HU**: cuando todas sus tareas están ✅ **y** su «Listo cuando…» se ejecutó de verdad (la tarea `[E2E]`), el archivo pasa a `estado: cerrada` y la matriz muestra su fecha de cierre y su tiempo (salen de `git log`); el script no deja cerrar una HU sin `[E2E]` ni con tareas pendientes. Una HU con tareas hechas pero sin su `[E2E]` no está cerrada.
+- **Cerrar la HU**: cuando todas sus tareas están ✅ **y** su «Listo cuando…» se ejecutó de verdad (la tarea `[E2E]`), el archivo pasa a `estado: cerrada` y la matriz de su fase muestra su fecha de cierre y su tiempo (salen de `git log`); el script no deja cerrar una HU sin `[E2E]` ni con tareas pendientes. Una HU con tareas hechas pero sin su `[E2E]` no está cerrada.
 - **Ramas:** una sola rama de trabajo para varias historias (hoy `feature/mvp`). **No se abren pull requests ni se sube nada** sin que lo pida quien manda el proyecto.
 
 ## 5. Cuánto rigor
@@ -218,7 +218,7 @@ La lista completa, con más detalle, está en el comando `/tarea`.
 | Una tarea concreta | «`/tarea HU-12.3`» |
 | Solo un plan, sin implementar | «solo la planificación por ahora» |
 | Decidir yo antes de que se aplique | «dame opciones con una recomendada» |
-| Revisar lo hecho | «¿qué queda pendiente?» (Claude lee la matriz de `historias/README.md`, con sus ideas) |
+| Revisar lo hecho | «¿qué queda pendiente?» (Claude lee el índice de `historias/README.md` y la matriz de la fase en curso, con sus ideas) |
 | Propagar un cambio a la tienda | «`/cambio-de-contrato`» |
 
 ## 11. Glosario de siglas

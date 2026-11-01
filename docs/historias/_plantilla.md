@@ -12,7 +12,7 @@ reemplaza:
 
 > **Dónde va:** cópiala a `docs/historias/fase-n/HU-nn.md` (la carpeta de la fase en que se trabajará; el nombre es **solo el correlativo**, sin título) y escribe los enlaces relativos con `../../` (por ejemplo `../../product/03-reglas-de-negocio.md`). Borra esta nota.
 >
-> **Estado:** 📝 propuesta (cámbialo en el encabezado: `propuesta` → `aprobada` → `en-curso` → `cerrada`; un pendiente que aún no se desglosa es una `idea`, con la versión corta [`_idea.md`](_idea.md), y se promueve a `propuesta` con esta plantilla). Si amplía una historia anterior, escribe su id en `amplia:` del encabezado y dilo aquí; si la deja sin efecto (la sustituye por completo), escribe su id en `reemplaza:` y la matriz la marcará «superada por».
+> **Estado:** 📝 propuesta (cámbialo en el encabezado: `propuesta` → `aprobada` → `en-curso` → `cerrada`; un pendiente que aún no se desglosa es una `idea`, con la versión corta [`_idea.md`](_idea.md), y se promueve a `propuesta` con esta plantilla). Si amplía una historia anterior, escribe su id en `amplia:` del encabezado y dilo aquí; si la deja sin efecto (la sustituye por completo), escribe su id en `reemplaza:` y la matriz de su fase la marcará «superada por».
 
 **Como** …, **quiero** …, **para** ….
 **Reglas:** RN-… · **Pantallas:** PA-… · **Rutas:** …
