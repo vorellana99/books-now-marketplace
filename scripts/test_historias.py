@@ -619,7 +619,7 @@ class Entorno(unittest.TestCase):
         self.hu.mkdir(parents=True)
         self.en.mkdir()
         (self.fase / "README.md").write_text("# Fase 2\n", encoding="utf-8")
-        (self.dir / "legado.json").write_text(json.dumps({"tope_minutos": 60, "historias": []}), encoding="utf-8")
+        (self.dir / "legado.json").write_text(json.dumps({"historias": []}), encoding="utf-8")
         self.file = self.hu / "HU-12.md"
         self.file.write_text(HU_OK, encoding="utf-8")
         (self.dir / "README.md").write_text(f"{h.START}\n{h.END}\n", encoding="utf-8")
@@ -668,7 +668,7 @@ class Comprobacion(Entorno):
 
     def test_id_repetido_entre_el_legado_y_un_archivo(self):
         (self.dir / "legado.json").write_text(
-            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-12", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            json.dumps({"historias": [{"id": "HU-12", "titulo": "x", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
             encoding="utf-8",
         )
         self.assertTrue(self.hay("repetido"))
@@ -718,7 +718,7 @@ class Comprobacion(Entorno):
 
     def test_si_hay_historico_existe_la_fase_1_con_su_readme(self):
         (self.dir / "legado.json").write_text(
-            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-05", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            json.dumps({"historias": [{"id": "HU-05", "titulo": "x", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
             encoding="utf-8",
         )
         h.write_matrix(self.root, [])
@@ -981,7 +981,7 @@ class MatricesPorFase(Entorno):
 
     def test_las_historias_del_historico_deben_estar_en_la_matriz_de_la_fase_1(self):
         (self.dir / "legado.json").write_text(
-            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-05", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            json.dumps({"historias": [{"id": "HU-05", "titulo": "x", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
             encoding="utf-8",
         )
         (self.dir / "fase-1").mkdir()
@@ -1188,6 +1188,123 @@ class Encabezado(Entorno):
     def test_un_tipo_que_no_es_hu_ni_en(self):
         self.archivo(IDEA.format(sid="HU-30", tipo="XX"))
         self.assertTrue(self.hay("HU-30.md", "tipo", "XX"))
+
+
+def historia_legada(**cambios):
+    """Una entrada válida de legado.json (la misma forma que las 20 reales), con los cambios que pida la prueba."""
+    base = {"id": "HU-05", "titulo": "Una historia", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-29",
+            "minutos": 30, "tareas_api": ["7.1"], "tareas_web": ["F2.1"], "compartidas": []}
+    base.update(cambios)
+    return base
+
+
+class Legado(Entorno):
+    """legado.json (las 20 historias anteriores): solo datos que se usan o se verifican, con sus valores comprobados."""
+
+    def legado(self, *historias, **extra):
+        (self.dir / "legado.json").write_text(json.dumps({"historias": list(historias), **extra}), encoding="utf-8")
+        (self.dir / "fase-1").mkdir(exist_ok=True)
+        (self.dir / "fase-1" / "README.md").write_text("# Fase 1\n", encoding="utf-8")
+        h.write_matrix(self.root, [])
+
+    def producto04(self, texto):
+        (self.root / "docs" / "product").mkdir(parents=True, exist_ok=True)
+        (self.root / "docs" / "product" / "04-historias-de-usuario.md").write_text(texto, encoding="utf-8")
+
+    def test_una_entrada_valida_no_da_error(self):
+        self.legado(historia_legada())
+        self.assertEqual(self.errors(), [])
+
+    def test_una_historia_abierta_valida(self):
+        self.legado(historia_legada(web="⬜", cierre=None))
+        self.assertEqual(self.errors(), [])
+
+    def test_una_historia_solo_de_la_tienda_con_api_no_aplica(self):
+        self.legado(historia_legada(api="—"))
+        self.assertEqual(self.errors(), [])
+
+    def test_el_archivo_solo_tiene_datos_no_notas_ni_constantes(self):
+        for clave in ("nota", "tope_minutos"):
+            self.legado(historia_legada(), **{clave: "x"})
+            self.assertTrue(self.hay("legado.json", clave, "no es de la forma"), clave)
+
+    def test_un_campo_que_nadie_usa_es_un_error(self):
+        self.legado(historia_legada(api_hasta="2026-10-28"))
+        self.assertTrue(self.hay("HU-05", "api_hasta"))
+
+    def test_falta_un_campo(self):
+        entrada = historia_legada()
+        del entrada["minutos"]
+        self.legado(entrada)
+        self.assertTrue(self.hay("HU-05", "minutos"))
+
+    def test_api_y_web_solo_admiten_tres_valores(self):
+        for campo in ("api", "web"):
+            self.legado(historia_legada(**{campo: "ok"}))
+            self.assertTrue(self.hay("HU-05", campo, "ok"), campo)
+
+    def test_la_epica_debe_estar_en_la_lista(self):
+        self.legado(historia_legada(epica="Calidad"))
+        self.assertTrue(self.hay("HU-05", "epica", "Calidad"))
+
+    def test_las_fechas_tienen_formato_y_existen(self):
+        for malo in ("28/10/2026", "2026-13-45", "ayer", ""):
+            self.legado(historia_legada(inicio=malo))
+            self.assertTrue(self.hay("HU-05", "inicio"), malo)
+            self.legado(historia_legada(cierre=malo))
+            self.assertTrue(self.hay("HU-05", "cierre"), malo)
+
+    def test_el_cierre_no_es_anterior_al_inicio(self):
+        self.legado(historia_legada(inicio="2026-10-29", cierre="2026-10-28"))
+        self.assertTrue(self.hay("HU-05", "cierre", "anterior"))
+
+    def test_sin_cierre_alguna_capa_sigue_pendiente_y_con_cierre_ninguna(self):
+        self.legado(historia_legada(cierre=None))  # api y web hechas, pero sin cierre
+        self.assertTrue(self.hay("HU-05", "cierre"))
+        self.legado(historia_legada(web="⬜"))  # con cierre pero la web pendiente
+        self.assertTrue(self.hay("HU-05", "cierre"))
+
+    def test_los_minutos_son_un_entero_no_negativo(self):
+        for malo in (-1, 1.5, "30", None, True):
+            self.legado(historia_legada(minutos=malo))
+            self.assertTrue(self.hay("HU-05", "minutos"), repr(malo))
+
+    def test_las_tareas_son_listas_de_texto(self):
+        self.legado(historia_legada(tareas_api="7.1"))
+        self.assertTrue(self.hay("HU-05", "tareas_api"))
+        self.legado(historia_legada(tareas_web=[7]))
+        self.assertTrue(self.hay("HU-05", "tareas_web"))
+
+    def test_las_compartidas_son_tareas_de_la_propia_historia(self):
+        self.legado(historia_legada(compartidas=["9.9"]))
+        self.assertTrue(self.hay("HU-05", "compartidas", "9.9"))
+        self.legado(historia_legada(compartidas=["7.1"]))
+        self.assertEqual(self.errors(), [])
+
+    def test_el_id_tiene_la_forma_de_una_historia(self):
+        self.legado(historia_legada(id="X-5"))
+        self.assertTrue(self.hay("X-5", "id"))
+
+    def test_un_json_roto_se_informa_sin_romper_el_comprobador(self):
+        (self.dir / "legado.json").write_text("{ no es json", encoding="utf-8")
+        self.assertTrue(self.hay("legado.json", "JSON"))
+
+    def test_un_archivo_que_no_es_un_objeto_con_historias(self):
+        (self.dir / "legado.json").write_text("[]", encoding="utf-8")
+        self.assertTrue(self.hay("legado.json", "historias"))
+
+    def test_los_ids_y_los_titulos_coinciden_con_product_04(self):
+        self.legado(historia_legada())
+        self.producto04("| [HU-05](#hu-05-una-historia) | Una historia |\n")
+        self.assertEqual(self.errors(), [])
+        self.producto04("| [HU-06](#x) | Otra |\n")
+        self.assertTrue(self.hay("HU-05", "product/04"))
+        self.producto04("| [HU-05](#x) | Un título distinto |\n")
+        self.assertTrue(self.hay("HU-05", "título", "product/04"))
+
+    def test_sin_product_04_no_se_comprueba_nada_de_el(self):
+        self.legado(historia_legada())
+        self.assertEqual(self.errors(), [])
 
 
 class Ideas(Entorno):
@@ -1526,7 +1643,7 @@ class Impacto(Entorno):
 
     def test_reemplazar_una_historia_del_historico(self):
         (self.dir / "legado.json").write_text(
-            json.dumps({"tope_minutos": 60, "historias": [{"id": "HU-05", "titulo": "x", "epica": "x", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
+            json.dumps({"historias": [{"id": "HU-05", "titulo": "x", "epica": "Cuenta", "api": "✅", "web": "✅", "inicio": "2026-10-28", "cierre": "2026-10-28", "minutos": 1, "tareas_api": [], "tareas_web": [], "compartidas": []}]}),
             encoding="utf-8",
         )
         (self.dir / "fase-1").mkdir()
@@ -1697,6 +1814,20 @@ class DocumentosReales(unittest.TestCase):
     def test_las_epicas_de_las_veinte_historias_anteriores_estan_en_la_lista(self):
         legado = json.loads((ROOT / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))
         self.assertEqual({x["epica"] for x in legado["historias"]} - set(h.EPICAS), set())
+
+    def test_el_readme_de_la_fase_1_explica_de_donde_salen_los_datos_de_legado_json(self):
+        texto = (ROOT / "docs" / "historias" / "fase-1" / "README.md").read_text(encoding="utf-8")
+        self.assertIn("## De dónde salen los datos de `legado.json`", texto)
+        for palabra in ("git log", "aproximación", "hora de Lima", "tope de 60"):
+            self.assertIn(palabra, texto, palabra)
+        for campo in h.CAMPOS_LEGADO:
+            self.assertIn(f"`{campo}`", texto, f"el campo {campo} no está documentado")
+
+    def test_legado_json_solo_lleva_datos(self):
+        datos = json.loads((ROOT / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))
+        self.assertEqual(list(datos), ["historias"])
+        for x in datos["historias"]:
+            self.assertEqual(set(x), set(h.CAMPOS_LEGADO))
 
     def test_cada_plantilla_tiene_el_encabezado_de_su_tipo(self):
         carpeta = ROOT / "docs" / "historias" / "plantillas"

@@ -1,6 +1,4 @@
 {
- "nota": "Datos históricos de las historias hechas antes de 2026-10-30 (cortes 0-10 del backend y F0-F6 de la tienda). Salen de `git log` (hora de Lima): inicio y cierre son las fechas del primer y el último commit de las tareas de la HU; minutos = suma, por cada commit de esas tareas, del hueco con el commit anterior con un tope de 60. Es una APROXIMACIÓN: las tareas compartidas entre varias HU (columna compartidas) se cuentan completas en cada una, y los cortes mezclaban historias. El mapeo HU → tareas lo hizo Claude a partir de lo que cada tarea construye; es auditable aquí.",
- "tope_minutos": 60,
  "historias": [
   {
    "id": "HU-01",
@@ -10,7 +8,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 116,
    "tareas_api": [
     "7.1",
@@ -32,7 +29,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 49,
    "tareas_api": [
     "7.2",
@@ -53,7 +49,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 38,
    "tareas_api": [
     "7.4"
@@ -73,7 +68,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 35,
    "tareas_api": [
     "7.4"
@@ -93,7 +87,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 35,
    "tareas_api": [
     "6.1"
@@ -115,7 +108,6 @@
    "web": "✅",
    "inicio": "2026-10-27",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-27",
    "minutos": 16,
    "tareas_api": [
     "3.4",
@@ -137,7 +129,6 @@
    "web": "✅",
    "inicio": "2026-10-30",
    "cierre": "2026-10-30",
-   "api_hasta": null,
    "minutos": 12,
    "tareas_api": [],
    "tareas_web": [
@@ -154,7 +145,6 @@
    "web": "✅",
    "inicio": "2026-10-30",
    "cierre": "2026-10-30",
-   "api_hasta": null,
    "minutos": 4,
    "tareas_api": [],
    "tareas_web": [
@@ -170,7 +160,6 @@
    "web": "✅",
    "inicio": "2026-10-29",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-29",
    "minutos": 69,
    "tareas_api": [
     "8.1",
@@ -192,7 +181,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 30,
    "tareas_api": [
     "6.2",
@@ -211,7 +199,6 @@
    "web": "✅",
    "inicio": "2026-10-27",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 123,
    "tareas_api": [
     "5.1",
@@ -241,7 +228,6 @@
    "web": "✅",
    "inicio": "2026-10-27",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-27",
    "minutos": 17,
    "tareas_api": [
     "5.6"
@@ -261,7 +247,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-29",
    "minutos": 22,
    "tareas_api": [
     "5.8",
@@ -282,7 +267,6 @@
    "web": "✅",
    "inicio": "2026-10-27",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 33,
    "tareas_api": [
     "5.7",
@@ -303,7 +287,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 97,
    "tareas_api": [
     "6.9",
@@ -325,7 +308,6 @@
    "web": "✅",
    "inicio": "2026-10-28",
    "cierre": "2026-10-30",
-   "api_hasta": "2026-10-28",
    "minutos": 42,
    "tareas_api": [
     "5.8",
@@ -347,7 +329,6 @@
    "web": "⬜",
    "inicio": "2026-10-28",
    "cierre": null,
-   "api_hasta": "2026-10-28",
    "minutos": 71,
    "tareas_api": [
     "6.4",
@@ -366,7 +347,6 @@
    "web": "⬜",
    "inicio": "2026-10-28",
    "cierre": null,
-   "api_hasta": "2026-10-28",
    "minutos": 22,
    "tareas_api": [
     "6.7"
@@ -382,7 +362,6 @@
    "web": "⬜",
    "inicio": "2026-10-28",
    "cierre": null,
-   "api_hasta": "2026-10-28",
    "minutos": 17,
    "tareas_api": [
     "6.8"
@@ -398,7 +377,6 @@
    "web": "⬜",
    "inicio": "2026-10-28",
    "cierre": null,
-   "api_hasta": "2026-10-28",
    "minutos": 80,
    "tareas_api": [
     "6.9",

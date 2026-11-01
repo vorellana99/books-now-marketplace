@@ -536,10 +536,88 @@ def sort_key(story_id):
     return (0 if kind == "HU" else 1, int(number))
 
 
+LEGADO = "docs/historias/legado.json"  # las 20 historias anteriores a 2026-10-30; de dónde salen sus datos: README de la fase 1
+CAMPOS_LEGADO = ("id", "titulo", "epica", "api", "web", "inicio", "cierre", "minutos", "tareas_api", "tareas_web", "compartidas")
+CAPAS_LEGADO = ("✅", "⬜", "—")  # hecha, pendiente, no aplica
+
+
+def _fecha_valida(valor):
+    if not (isinstance(valor, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", valor)):
+        return False
+    try:
+        datetime.strptime(valor, "%Y-%m-%d")
+    except ValueError:
+        return False
+    return True
+
+
+def _errores_entrada_legado(x):
+    """Los errores de UNA entrada de legado.json: sus campos, el vocabulario de sus valores, sus fechas y la coherencia entre cierre y capas."""
+    if not isinstance(x, dict):
+        return [f"{LEGADO}: una entrada de «historias» no es un objeto"]
+    sid = x.get("id", "(sin id)")
+    pre, errores = f"{LEGADO}: {sid}", []
+    errores += [f"{pre}: campo desconocido «{k}» (el script no lo usa: no se guarda)" for k in x if k not in CAMPOS_LEGADO]
+    errores += [f"{pre}: falta el campo «{k}»" for k in CAMPOS_LEGADO if k not in x]
+    if errores:
+        return errores
+    if not (isinstance(x["id"], str) and re.fullmatch(r"HU-\d+", x["id"])):
+        errores.append(f"{pre}: el id «{x['id']}» no tiene la forma HU-nn")
+    for capa in ("api", "web"):
+        if x[capa] not in CAPAS_LEGADO:
+            errores.append(f"{pre}: {capa} «{x[capa]}» no es válido (usa {', '.join(CAPAS_LEGADO)})")
+    if x["epica"] not in EPICAS:
+        errores.append(f"{pre}: la epica «{x['epica']}» no está en la lista (usa {', '.join(EPICAS)})")
+    if not _fecha_valida(x["inicio"]):
+        errores.append(f"{pre}: el inicio «{x['inicio']}» no es una fecha AAAA-MM-DD")
+    if x["cierre"] is not None and not _fecha_valida(x["cierre"]):
+        errores.append(f"{pre}: el cierre «{x['cierre']}» no es una fecha AAAA-MM-DD (o null si sigue abierta)")
+    if _fecha_valida(x["inicio"]) and x["cierre"] is not None and _fecha_valida(x["cierre"]) and x["cierre"] < x["inicio"]:
+        errores.append(f"{pre}: el cierre {x['cierre']} es anterior al inicio {x['inicio']}")
+    if (x["cierre"] is None) != ("⬜" in (x["api"], x["web"])):
+        errores.append(f"{pre}: el cierre y las capas no cuadran (sin cierre, api o web sigue en ⬜; con cierre, ninguna)")
+    if not (isinstance(x["minutos"], int) and not isinstance(x["minutos"], bool) and x["minutos"] >= 0):
+        errores.append(f"{pre}: los minutos «{x['minutos']}» no son un entero mayor o igual que 0")
+    for campo in ("tareas_api", "tareas_web", "compartidas"):
+        if not (isinstance(x[campo], list) and all(isinstance(t, str) for t in x[campo])):
+            errores.append(f"{pre}: {campo} debe ser una lista de textos")
+    if all(isinstance(x[c], list) for c in ("tareas_api", "tareas_web", "compartidas")):
+        propias = {t for t in x["tareas_api"] + x["tareas_web"] if isinstance(t, str)}
+        errores += [f"{pre}: compartidas: «{t}» no está entre sus tareas (tareas_api y tareas_web)" for t in x["compartidas"] if t not in propias]
+    return errores
+
+
+def load_legacy(root):
+    """(entradas, errores) de legado.json: nunca lanza; un archivo ausente, roto o de otra forma da sus errores y ninguna entrada."""
+    ruta = Path(root) / LEGADO
+    try:
+        datos = json.loads(ruta.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return [], [f"{LEGADO}: no existe"]
+    except json.JSONDecodeError as e:
+        return [], [f"{LEGADO}: no es JSON válido ({e})"]
+    if not isinstance(datos, dict) or not isinstance(datos.get("historias"), list):
+        return [], [f"{LEGADO}: debe ser un objeto con la lista «historias»"]
+    errores = [f"{LEGADO}: la clave «{k}» no es de la forma del archivo (solo lleva «historias»; de dónde salen los datos está en el README de la fase {FASE_LEGADO})" for k in datos if k != "historias"]
+    for x in datos["historias"]:
+        errores += _errores_entrada_legado(x)
+    producto = Path(root) / "docs" / "product" / "04-historias-de-usuario.md"
+    if producto.exists():
+        texto = producto.read_text(encoding="utf-8")
+        for x in datos["historias"]:
+            if isinstance(x, dict) and isinstance(x.get("id"), str) and isinstance(x.get("titulo"), str):
+                if f"[{x['id']}]" not in texto:
+                    errores.append(f"{LEGADO}: {x['id']} no está en product/04 (docs/product/04-historias-de-usuario.md)")
+                elif x["titulo"] not in texto:
+                    errores.append(f"{LEGADO}: el título de {x['id']} («{x['titulo']}») no coincide con product/04")
+    return [x for x in datos["historias"] if isinstance(x, dict)], errores
+
+
 def legacy_rows(root):
-    data = json.loads((Path(root) / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))
     rows = []
-    for x in data["historias"]:
+    for x in load_legacy(root)[0]:
+        if _errores_entrada_legado(x):
+            continue  # una entrada mal formada no entra en la matriz: la informa check()
         closed = x["cierre"] is not None
         rows.append({
             "id": x["id"], "fase": FASE_LEGADO, "tipo": "HU", "ligado": "", "titulo": x["titulo"], "epica": x["epica"],
@@ -993,7 +1071,9 @@ def _errores_fases(root, hay_historico):
 
 def check(root):
     errors = []
-    legacy = {x["id"] for x in json.loads((Path(root) / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))["historias"]}
+    entradas, errores_legado = load_legacy(root)
+    errors += errores_legado
+    legacy = {x["id"] for x in entradas if isinstance(x.get("id"), str)}
     seen = set(legacy)
     expected, reemplazos, fases_de = {}, {}, {}
     errors += _errores_fases(root, bool(legacy))
