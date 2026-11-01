@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
-import { AccessTokenIssuer } from '../../src/contexts/identity/application/access-token-issuer.js';
+import { AccessTokenIssuer } from '../../src/contexts/identity/domain/ports/access-token-issuer.port.js';
 import type { Role } from '../../src/shared-kernel/role.js';
 
 // Un token de acceso válido para un usuario (existente o no: el token no consulta la base), emitido por el mismo

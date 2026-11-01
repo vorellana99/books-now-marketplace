@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { ScryptPasswordHasher } from '../src/contexts/identity/infrastructure/scrypt-password-hasher.js';
+import { ScryptPasswordHasher } from '../src/contexts/identity/infrastructure/adapters/scrypt-password-hasher.js';
 import { buildDatabaseUrl } from '../src/platform/config/database-url.js';
 import { PrismaClient } from '../src/platform/prisma/generated/client.js';
 import { BOOKS, CUSTOMERS, DEV_PASSWORD, STOCK, USERS } from './seed-data.js';

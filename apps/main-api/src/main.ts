@@ -2,9 +2,7 @@ import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module.js';
-import { configureApp } from './platform/http/configure-app.js';
-import { configureSecurity } from './platform/http/configure-security.js';
-import { configureSwagger } from './platform/http/configure-swagger.js';
+import { configureHttpApp } from './platform/http/configure-http-app.js';
 import { formatStartupBanner } from './platform/observability/startup-banner.js';
 import { RequestAwareLogger } from './platform/observability/request-aware.logger.js';
 
@@ -15,10 +13,7 @@ async function bootstrap() {
       json: process.env.NODE_ENV === 'production',
     }),
   });
-  configureApp(app);
-  configureSecurity(app);
-
-  configureSwagger(app);
+  configureHttpApp(app);
 
   const config = app.get(ConfigService);
   const port = config.getOrThrow<number>('PORT');

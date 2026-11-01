@@ -7,10 +7,11 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
-import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
+import { PaymentGateway } from '../../src/contexts/sales/domain/ports/payment-gateway.port.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
-import type { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/payment/simulated-payment-gateway.adapter.js';
+import type { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 import { envSchema } from '../../src/platform/config/env.schema.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import { RequestAwareLogger } from '../../src/platform/observability/request-aware.logger.js';
@@ -60,6 +61,7 @@ describe('Compra con proveedores lentos, sin compuertas (e2e, aplicación comple
             InventoryModule,
             SalesModule,
             IdentityModule,
+            AUTH_MODULE,
           ],
         }).compile(),
     );

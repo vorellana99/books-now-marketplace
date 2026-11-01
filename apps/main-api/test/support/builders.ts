@@ -183,14 +183,38 @@ export async function insertOrder(
     charged?: string;
     currency?: 'PEN' | 'USD';
     lines?: Partial<OrderLineRow>[];
+    // La dirección de envío; sin ella, el pedido es como los anteriores a que existiera (las siete columnas en NULL)
+    shipping?: {
+      recipient: string;
+      phone: string;
+      line1: string;
+      district: string;
+      province: string;
+      department: string;
+      reference: string | null;
+    };
   } = {},
 ): Promise<{ id: string; lines: OrderLineRow[] }> {
   const id = options.id ?? randomUUID();
   const currency = options.currency ?? 'PEN';
+  const ship = options.shipping;
   await query(
-    `INSERT INTO sales.orders (id, customer_id, status, charged_amount, currency)
-     VALUES ($1, $2, 'PLACED', $3, $4)`,
-    [id, customerId, options.charged ?? '90.00', currency],
+    `INSERT INTO sales.orders (id, customer_id, status, charged_amount, currency,
+       ship_recipient, ship_phone, ship_line1, ship_district, ship_province, ship_department, ship_reference)
+     VALUES ($1, $2, 'PLACED', $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      id,
+      customerId,
+      options.charged ?? '90.00',
+      currency,
+      ship?.recipient ?? null,
+      ship?.phone ?? null,
+      ship?.line1 ?? null,
+      ship?.district ?? null,
+      ship?.province ?? null,
+      ship?.department ?? null,
+      ship?.reference ?? null,
+    ],
   );
   const lines: OrderLineRow[] = (
     options.lines ?? [{ quantity: 2, unit_price: '45.000000' }]

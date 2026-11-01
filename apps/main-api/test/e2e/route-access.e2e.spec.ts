@@ -23,6 +23,7 @@ const EXPECTED: Record<string, Access> = {
   'POST /auth/refresh': 'public',
   'POST /auth/logout': 'public',
   'POST /orders': 'BUYER',
+  'POST /orders/quote': 'BUYER',
   'GET /me/orders': 'BUYER',
   'GET /admin/orders': 'ADMIN',
   'GET /orders/:id': 'authenticated',

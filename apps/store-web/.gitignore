@@ -25,3 +25,11 @@ dist-ssr
 !.vscode/
 !.vscode/settings.json
 !.vscode/extensions.json
+
+# Variables de entorno locales
+.env
+
+# Resultados de las pruebas e2e (Playwright)
+test-results
+playwright-report
+.verify-last-failure.txt

@@ -3,11 +3,11 @@ import { Logger, Module, type INestApplication } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { CommandBus } from '@nestjs/cqrs';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
-import { RecoverCheckoutsJob } from '../../src/contexts/sales/application/order/recover-checkouts.job.js';
+import { RecoverCheckoutsJob } from '../../src/contexts/sales/application/jobs/recover-checkouts.job.js';
 import { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
-import { InventoryInProcessAdapter } from '../../src/contexts/sales/infrastructure/order/inventory-in-process.adapter.js';
-import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/order/prisma-checkout-log.adapter.js';
-import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/payment/simulated-payment-gateway.adapter.js';
+import { InventoryInProcessAdapter } from '../../src/contexts/sales/infrastructure/adapters/inventory-in-process.adapter.js';
+import { PrismaCheckoutLog } from '../../src/contexts/sales/infrastructure/persistence/prisma-checkout-log.adapter.js';
+import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
 import { PrismaService } from '../../src/platform/prisma/prisma.service.js';
 import {

@@ -5,21 +5,25 @@ import { OutboxModule } from '../../platform/outbox/outbox.module.js';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { AccessTokenVerifier } from '../../platform/auth/access-token-verifier.js';
-import { AuthGuard } from '../../platform/auth/auth.guard.js';
-import { AccessTokenIssuer } from './application/access-token-issuer.js';
-import { PasswordHasher } from './domain/password-hasher.port.js';
-import { AuthController } from './infrastructure/auth.controller.js';
+import { AccessTokenIssuer } from './domain/ports/access-token-issuer.port.js';
+import { PasswordHasher } from './domain/ports/password-hasher.port.js';
+import { SessionRepository } from './domain/ports/session.repository.js';
+import { UserRepository } from './domain/ports/user.repository.js';
+import { PrismaSessionRepository } from './infrastructure/persistence/prisma-session.repository.js';
+import { PrismaUserRepository } from './infrastructure/persistence/prisma-user.repository.js';
+import { AuthController } from './interface/http/auth.controller.js';
 import {
   AuthThrottlerGuard,
   authThrottlers,
-} from './infrastructure/auth-throttler.js';
-import { JwtTokenService } from './infrastructure/jwt-token.service.js';
-import { LoginHandler } from './infrastructure/login.handler.js';
-import { LogoutHandler } from './infrastructure/logout.handler.js';
-import { RefreshSessionHandler } from './infrastructure/refresh-session.handler.js';
-import { RegisterUserHandler } from './infrastructure/register-user.handler.js';
-import { ScryptPasswordHasher } from './infrastructure/scrypt-password-hasher.js';
-import { SessionService } from './infrastructure/session.service.js';
+} from './interface/http/auth-throttler.js';
+import { JwtTokenService } from './infrastructure/adapters/jwt-token.service.js';
+import { LoginHandler } from './application/use-cases/session/login.handler.js';
+import { LogoutHandler } from './application/use-cases/session/logout.handler.js';
+import { PurgeRefreshTokensJob } from './application/jobs/purge-refresh-tokens.job.js';
+import { RefreshSessionHandler } from './application/use-cases/session/refresh-session.handler.js';
+import { RegisterUserHandler } from './application/use-cases/user/register-user.handler.js';
+import { ScryptPasswordHasher } from './infrastructure/adapters/scrypt-password-hasher.js';
+import { SessionService } from './application/services/session.service.js';
 
 @Module({
   imports: [
@@ -36,14 +40,14 @@ import { SessionService } from './infrastructure/session.service.js';
   providers: [
     // El límite de intentos va antes que el resto de los guards: un intento cortado no gasta ni la verificación del token
     { provide: APP_GUARD, useClass: AuthThrottlerGuard },
-    // Toda aplicación que incluye Identidad queda con denegado por defecto: el guard es global, de la plataforma, y
-    // verifica con el puerto que este módulo implementa
-    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: SessionRepository, useClass: PrismaSessionRepository },
+    { provide: UserRepository, useClass: PrismaUserRepository },
     SessionService,
     RegisterUserHandler,
     LoginHandler,
     RefreshSessionHandler,
     LogoutHandler,
+    PurgeRefreshTokensJob,
     {
       provide: PasswordHasher,
       inject: [ConfigService],

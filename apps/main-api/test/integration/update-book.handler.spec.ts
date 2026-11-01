@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
-import { SearchBooksQuery } from '../../src/contexts/catalog/application/book/search-books.query.js';
-import { UpdateBookCommand } from '../../src/contexts/catalog/application/book/update-book.command.js';
+import { SearchBooksQuery } from '../../src/contexts/catalog/application/use-cases/book/search-books.query.js';
+import { UpdateBookCommand } from '../../src/contexts/catalog/application/use-cases/book/update-book.command.js';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { GetBookPriceQuery } from '../../src/contracts/catalog/get-book-price.query.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';

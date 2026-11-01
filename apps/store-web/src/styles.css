@@ -1,0 +1,165 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+/* La variante `opsz` incluye el eje de tamaño óptico: a 22-36 px la serif se ve más estrecha y fina, como en los mockups */
+@import "@fontsource-variable/source-serif-4/opsz.css";
+
+/*
+ * Tokens de diseño: docs/product/diseno/01-tokens.md. Los nombres son los de shadcn/ui.
+ * Solo modo claro (DP-22): para añadir el oscuro basta un bloque `.dark { … }` con estas mismas variables.
+ */
+:root {
+  --background: #fbf8f3;
+  --foreground: #1f1a17;
+  --card: #ffffff;
+  --card-foreground: #1f1a17;
+  --popover: #ffffff;
+  --popover-foreground: #1f1a17;
+  --primary: #7a2e3a;
+  --primary-foreground: #ffffff;
+  --primary-hover: #64232e;
+  --secondary: #f3ede4;
+  --secondary-foreground: #1f1a17;
+  --muted: #f3ede4;
+  --muted-foreground: #5e554d;
+  --accent: #f3ede4;
+  --accent-foreground: #1f1a17;
+  --destructive: #b3261e;
+  --destructive-foreground: #ffffff;
+  --border: #e6ded3;
+  --input: #8a7f74;
+  --ring: #1e5fa8;
+  --success: #1f5a33;
+  --success-border: #b7d6bf;
+  --success-bg: #e8f3ea;
+  --warning: #7a4b00;
+  --warning-border: #ebcb8b;
+  --warning-bg: #fff3dc;
+  --info: #1b4f8a;
+  --info-border: #b9cfea;
+  --info-bg: #e8f0fa;
+  --danger-text: #8c1d18;
+  --danger-bg: #fcebea;
+  --danger-border: #efb3af;
+  --gold: #c8963e;
+  /* Los seis tonos de la portada tipográfica (docs/product/diseno/01-tokens.md): granate, verde, azul, ocre, ciruela, pizarra */
+  --cover-1: #7a2e3a;
+  --cover-2: #2f5d50;
+  --cover-3: #2b4a6f;
+  --cover-4: #7a5a1e;
+  --cover-5: #5b3a66;
+  --cover-6: #3f4a52;
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-border: var(--success-border);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-border: var(--warning-border);
+  --color-info: var(--info);
+  --color-info-bg: var(--info-bg);
+  --color-info-border: var(--info-border);
+  --color-danger-text: var(--danger-text);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-border: var(--danger-border);
+  --color-gold: var(--gold);
+  --color-cover-1: var(--cover-1);
+  --color-cover-2: var(--cover-2);
+  --color-cover-3: var(--cover-3);
+  --color-cover-4: var(--cover-4);
+  --color-cover-5: var(--cover-5);
+  --color-cover-6: var(--cover-6);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-serif: "Source Serif 4 Variable", Georgia, serif;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    line-height: 1.5rem;
+  }
+
+  /* Escala tipográfica de 01-tokens.md: títulos con serif, el resto con sans */
+  h1,
+  h2 {
+    font-family: var(--font-serif);
+    font-weight: 600;
+    text-wrap: balance;
+  }
+  h1 {
+    font-size: 1.75rem;
+    line-height: 2.125rem;
+  }
+  h2 {
+    font-size: 1.375rem;
+    line-height: 1.75rem;
+  }
+  h3 {
+    font-size: 1.125rem;
+    line-height: 1.625rem;
+    font-weight: 600;
+  }
+  @media (min-width: 1024px) {
+    h1 {
+      font-size: 2.25rem;
+      line-height: 2.625rem;
+    }
+    h2 {
+      font-size: 1.5rem;
+      line-height: 1.875rem;
+    }
+  }
+
+  /* Foco siempre visible: anillo de 2 px separado 2 px, para que se vea también sobre el granate */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Las cifras de los montos alinean en columna */
+  .money {
+    font-variant-numeric: tabular-nums;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

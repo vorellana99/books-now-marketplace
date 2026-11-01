@@ -1,6 +1,8 @@
 # LibroYa API: guía de implementación en NestJS
 
-API REST de LibroYa construida con DDD, CQRS y arquitectura hexagonal. Los conceptos y el código del dominio son los de la guía DDD v5. Esta guía solo cubre lo necesario para construir el backend. Este archivo es el índice: el contenido está repartido en los documentos de abajo. El producto se explica en [producto.md](producto.md), para cualquier lector; el resto de la guía es técnica.
+> **❄️ Historial congelado desde el 2026-10-31. Este archivo no se actualizará más.** Se conserva como registro de lo que se hizo. Hoy cada tipo de información está en otro sitio: lo que se hizo, en `git log` y en la bitácora de cada historia o habilitador; lo pendiente, en la [matriz de historias](historias/README.md) (incluidas las ideas); cómo es el sistema, en los documentos vivos (`product/`, `api-contrato.md`, `backend/`, `frontend/`, la guía de desarrollo); y por qué se decidió algo, junto a su regla.
+
+API REST de LibroYa construida con DDD, CQRS y arquitectura hexagonal. Los conceptos y el código del dominio son los de la guía DDD v5. Esta guía solo cubre lo necesario para construir el backend. Este archivo es el índice: el contenido está repartido en los documentos de abajo. El producto se explica en [la carpeta de producto](product/README.md), para cualquier lector; el resto de la guía es técnica.
 
 > [!caution] Estado de esta guía
 > El diseño está revisado, pero **el código se está ejecutando por cortes** (ver el estado más abajo). Hasta ahora está validada la base: migración, configuración, observabilidad y health contra PostgreSQL 18 real. La validación pendiente son los tests de integración y e2e del resto (ver [backend/06-tests.md](backend/06-tests.md)). Hasta que pasen, considérala una base para implementar, no una implementación lista para producción.
@@ -28,9 +30,11 @@ La guía se divide por audiencia: lo que comparten backend y frontend vive en `d
 
 | Documento | Contenido | Quién lo lee |
 |---|---|---|
-| [producto.md](producto.md) | Qué es LibroYa, actores, recorrido de compra, reglas del negocio y glosario | Todos |
+| [product/](product/README.md) | **Fuente de información del producto**: visión y alcance, actores, glosario, reglas del negocio, historias de usuario, recorridos, pantallas, textos y decisiones abiertas | Todos |
 | [api-contrato.md](api-contrato.md) | Endpoints, respuestas, errores y formato de montos | Backend y frontend |
-| [backend/00-avance.md](backend/00-avance.md) | **Control de avance** de la implementación, por cortes, con tareas, desvíos de la guía y bitácora | Backend |
+| [historias/](historias/README.md) | **Historias de usuario** (desde 2026-10-30): la matriz de todas (con las 20 anteriores como histórico) y un archivo por historia nueva con sus tareas por capa (`[API]`, `[WEB]`, `[E2E]`, `[DOC]`) y su bitácora | Backend y tienda |
+| [avance.md](avance.md) | Lo transversal: habilitadores, problemas abiertos, decisiones generales y bitácora general | Backend y tienda |
+| [backend/00-avance.md](backend/00-avance.md) | Historial **congelado** del backend por cortes 0–10: tareas, desvíos de la guía y bitácora | Backend |
 | [backend/01-decisiones-y-stack.md](backend/01-decisiones-y-stack.md) | Decisiones, stack y versiones · arquitectura, módulos y reglas de dependencia | Backend |
 | [backend/02-estructura-y-puesta-en-marcha.md](backend/02-estructura-y-puesta-en-marcha.md) | Estructura de carpetas · instalación, scripts, Docker y `.env` | Backend |
 | [backend/03-base-de-datos.md](backend/03-base-de-datos.md) | Esquema con Prisma 7, montos, relaciones y transacciones | Backend |
@@ -38,7 +42,7 @@ La guía se divide por audiencia: lo que comparten backend y frontend vive en `d
 | [backend/05-piezas-clave.md](backend/05-piezas-clave.md) | `Money`, puertos y eventos, Inventario, Outbox, correlación, HTTP y arranque | Backend |
 | [backend/06-tests.md](backend/06-tests.md) | Estrategia de tests con Vitest y casos mínimos | Backend |
 | [backend/07-fases-y-roadmap.md](backend/07-fases-y-roadmap.md) | Orden de implementación (fases 0–9) y siguientes funcionalidades (10–15) | Backend |
-| [frontend/README.md](frontend/README.md) | Guía del frontend (`apps/store-web`), pendiente | Frontend |
+| [frontend/README.md](frontend/README.md) | Guía del frontend (`apps/store-web`): [historial](frontend/00-avance.md) por cortes `F0`–`F6` (congelado), stack, estructura, integración con la API, flujos de pantalla, piezas clave, tests y roadmap | Frontend |
 
 > [!note] Numeración
 > Los títulos conservan los números de sección de la guía original (0 a 11), por si algún comentario o conversación antigua los menciona.

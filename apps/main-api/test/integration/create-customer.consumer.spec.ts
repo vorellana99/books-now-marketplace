@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { CommandBus } from '@nestjs/cqrs';
-import { RegisterUserCommand } from '../../src/contexts/identity/application/register-user.command.js';
+import { RegisterUserCommand } from '../../src/contexts/identity/application/use-cases/user/register-user.command.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
-import { CreateCustomerConsumer } from '../../src/contexts/sales/infrastructure/customer/create-customer.consumer.js';
+import { CreateCustomerConsumer } from '../../src/contexts/sales/interface/consumers/create-customer.consumer.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { OutboxRegistry } from '../../src/platform/outbox/outbox.registry.js';

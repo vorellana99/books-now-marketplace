@@ -39,11 +39,64 @@ export async function query<T extends object = Record<string, unknown>>(
 
 const APP_SCHEMAS = ['sales', 'catalog', 'inventory', 'messaging', 'identity'];
 
+// Mantiene bloqueada una fila (`SELECT … FOR UPDATE` en una transacción abierta) hasta que se llama a la función que
+// devuelve. Sirve para probar que una operación con `SKIP LOCKED` pasa de largo por lo bloqueado en vez de esperar: sin
+// él, se quedaría esperando y la sentencia caería por `statement_timeout`
+export async function holdRowLock(
+  selectForUpdate: string,
+  params: unknown[] = [],
+): Promise<() => Promise<void>> {
+  assertIsolatedDatabase();
+  const client = new Client({
+    host: process.env.DB_HOST,
+    port: Number(process.env.DB_PORT),
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    options: '-c timezone=UTC',
+  });
+  await client.connect();
+  await client.query('BEGIN');
+  const result = await client.query(selectForUpdate, params);
+  if (result.rowCount === 0) {
+    await client.end();
+    throw new Error(
+      'holdRowLock: la consulta no encontró la fila que debía bloquear',
+    );
+  }
+  return async () => {
+    await client.query('ROLLBACK');
+    await client.end();
+  };
+}
+
+const DEADLOCK = '40P01';
+
+// El TRUNCATE de `resetDatabase` toma bloqueos exclusivos sobre todas las tablas; si justo entonces el relay del outbox
+// de la aplicación del test anterior sigue entregando un evento, PostgreSQL puede elegir al TRUNCATE como víctima de un
+// interbloqueo (`deadlock detected`, 40P01). Es una carrera entre el test y su propio fondo, no un fallo del código: se
+// reintenta unas veces. Cualquier otro error sale tal cual
+export async function retryOnDeadlock<T>(
+  operation: () => Promise<T>,
+  { attempts = 5, delayMs = 100 }: { attempts?: number; delayMs?: number } = {},
+): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code !== DEADLOCK || attempt >= attempts) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+}
+
 // Vacía los datos de los cuatro schemas y conserva las tablas y el historial de migraciones
 export async function resetDatabase(): Promise<void> {
   assertIsolatedDatabase();
   await removeSlowStockUpdates(); // por si un test falló antes de quitar el retardo
   await removeSlowRefreshTokenUpdates();
+  await removeFailRefreshTokenInserts();
   await resetDatabaseTimeZone(); // por si un test falló antes de restaurar la zona horaria
   const tables = await query<{ name: string }>(
     `SELECT quote_ident(schemaname) || '.' || quote_ident(tablename) AS name
@@ -51,8 +104,10 @@ export async function resetDatabase(): Promise<void> {
     [APP_SCHEMAS],
   );
   if (tables.length > 0) {
-    await query(
-      `TRUNCATE ${tables.map((t) => t.name).join(', ')} RESTART IDENTITY CASCADE`,
+    await retryOnDeadlock(() =>
+      query(
+        `TRUNCATE ${tables.map((t) => t.name).join(', ')} RESTART IDENTITY CASCADE`,
+      ),
     );
   }
 }
@@ -98,6 +153,27 @@ export async function slowDownRefreshTokenUpdates(
     CREATE OR REPLACE TRIGGER test_slow_update BEFORE UPDATE ON identity.refresh_tokens
     FOR EACH ROW EXECUTE FUNCTION identity.test_slow_update()`);
   return removeSlowRefreshTokenUpdates;
+}
+
+// Hace que insertar un token de refresco falle (un `INSERT` que la base rechaza), para comprobar que una operación que ya
+// marcó el token viejo como usado se deshace entera. Devuelve la función que lo quita
+export async function failRefreshTokenInserts(): Promise<() => Promise<void>> {
+  assertIsolatedDatabase();
+  await query(`
+    CREATE OR REPLACE FUNCTION identity.test_fail_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN RAISE EXCEPTION 'falló el guardado del token nuevo'; END $$`);
+  await query(`
+    CREATE OR REPLACE TRIGGER test_fail_insert BEFORE INSERT ON identity.refresh_tokens
+    FOR EACH ROW EXECUTE FUNCTION identity.test_fail_insert()`);
+  return removeFailRefreshTokenInserts;
+}
+
+export async function removeFailRefreshTokenInserts(): Promise<void> {
+  assertIsolatedDatabase();
+  await query(
+    'DROP TRIGGER IF EXISTS test_fail_insert ON identity.refresh_tokens',
+  );
+  await query('DROP FUNCTION IF EXISTS identity.test_fail_insert()');
 }
 
 export async function removeSlowRefreshTokenUpdates(): Promise<void> {

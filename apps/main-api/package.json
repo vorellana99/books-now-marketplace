@@ -1,8 +1,7 @@
 {
   "name": "main-api",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "API de LibroYa, una librería online: NestJS, Prisma y PostgreSQL",
   "private": true,
   "license": "UNLICENSED",
   "type": "module",
@@ -10,8 +9,8 @@
     "node": ">=24.15"
   },
   "scripts": {
+    "verify": "bash ../../scripts/verify.sh backend",
     "build": "nest build",
-    "deploy": "nest deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/**/*.ts\"",
     "format:check": "prettier --check \"src/**/*.ts\" \"test/**/*.ts\" \"prisma/**/*.ts\" prisma.config.ts",
     "start": "nest start",

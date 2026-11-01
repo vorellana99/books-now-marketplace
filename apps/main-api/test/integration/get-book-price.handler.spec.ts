@@ -5,6 +5,7 @@ import {
   GetBookPriceQuery,
   type BookPrice,
 } from '../../src/contracts/catalog/get-book-price.query.js';
+import { GetBooksPricesQuery } from '../../src/contracts/catalog/get-books-prices.query.js';
 import { NotFoundError } from '../../src/shared-kernel/domain.errors.js';
 import { insertBook, insertStock, uniqueIsbn } from '../support/builders.js';
 import { query, resetDatabase } from '../support/database.js';
@@ -96,5 +97,93 @@ describe('GetBookPriceHandler (PostgreSQL real, por el QueryBus)', () => {
       [book.isbn],
     );
     expect(row.price).toBe('45.00');
+  });
+});
+
+describe('GetBooksPricesHandler (PostgreSQL real, por el QueryBus)', () => {
+  let app: INestApplication;
+  let queryBus: QueryBus;
+
+  beforeAll(async () => {
+    app = await createTestApp(CatalogModule);
+    queryBus = app.get(QueryBus);
+  });
+  afterAll(async () => {
+    await app.close();
+  });
+  beforeEach(resetDatabase);
+
+  const pricesOf = (...isbns: string[]) =>
+    queryBus.execute(new GetBooksPricesQuery(isbns));
+
+  it('devuelve los precios de varios libros, como texto y con su moneda', async () => {
+    const a = await insertBook({ title: 'Uno', price: '45' });
+    const b = await insertBook({
+      title: 'Dos',
+      price: '15.5',
+      currency: 'USD',
+    });
+
+    expect(await pricesOf(b.isbn, a.isbn)).toEqual([
+      {
+        isbn: b.isbn,
+        title: 'Dos',
+        author: expect.any(String) as unknown,
+        price: { amount: '15.50', currency: 'USD' },
+      },
+      {
+        isbn: a.isbn,
+        title: 'Uno',
+        author: expect.any(String) as unknown,
+        price: { amount: '45.00', currency: 'PEN' },
+      },
+    ]);
+  });
+
+  it('da el mismo precio que la consulta de uno solo', async () => {
+    const book = await insertBook({ price: '12.34' });
+
+    const [batch] = await pricesOf(book.isbn);
+
+    expect(batch).toEqual(
+      await queryBus.execute(new GetBookPriceQuery(book.isbn)),
+    );
+  });
+
+  it('un libro repetido sale una vez', async () => {
+    const book = await insertBook();
+
+    expect(await pricesOf(book.isbn, book.isbn)).toHaveLength(1);
+  });
+
+  it('un libro inexistente o inactivo es NotFoundError, con el primero según el orden pedido', async () => {
+    const ok = await insertBook();
+    const inactive = await insertBook({ active: false });
+    const missing = uniqueIsbn();
+
+    await expect(pricesOf(ok.isbn, missing, inactive.isbn)).rejects.toThrow(
+      missing,
+    );
+    await expect(pricesOf(inactive.isbn, missing)).rejects.toThrow(
+      inactive.isbn,
+    );
+    await expect(pricesOf(ok.isbn, missing)).rejects.toBeInstanceOf(
+      NotFoundError,
+    );
+  });
+
+  it('un carrito de 100 libros distintos', async () => {
+    const isbns: string[] = [];
+    for (let i = 0; i < 100; i++) {
+      isbns.push((await insertBook({ price: '10.00' })).isbn);
+    }
+
+    const result = await pricesOf(...isbns);
+
+    expect(result.map((r) => r.isbn)).toEqual(isbns);
+  });
+
+  it('una lista vacía devuelve []', async () => {
+    expect(await pricesOf()).toEqual([]);
   });
 });

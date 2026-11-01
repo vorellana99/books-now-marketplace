@@ -3,9 +3,9 @@ import type { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module.js';
-import { PaymentGateway } from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
+import { PaymentGateway } from '../../src/contexts/sales/domain/ports/payment-gateway.port.js';
 import type { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
-import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/payment/simulated-payment-gateway.adapter.js';
+import { SimulatedPaymentGateway } from '../../src/contexts/sales/infrastructure/adapters/simulated-payment-gateway.adapter.js';
 import { configureApp } from '../../src/platform/http/configure-app.js';
 import { RequestAwareLogger } from '../../src/platform/observability/request-aware.logger.js';
 import { OutboxRelay } from '../../src/platform/outbox/outbox.relay.js';
@@ -298,6 +298,15 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
             quantity: 3,
           },
         ],
+        shippingAddress: {
+          recipient: ADDRESS_BODY.recipient,
+          phone: ADDRESS_BODY.phone,
+          line1: ADDRESS_BODY.line1,
+          district: ADDRESS_BODY.district,
+          province: ADDRESS_BODY.province,
+          department: ADDRESS_BODY.department,
+          reference: ADDRESS_BODY.reference,
+        },
       });
     });
 
@@ -740,54 +749,39 @@ describe('POST /orders y GET /orders/:id (e2e, aplicación completa y PostgreSQL
       expect(gateway.charges).toHaveLength(1);
     });
 
-    // Decisión D2: GET /orders/:id no tiene autenticación, así que no devuelve datos personales
-    it('GET /orders/:id no devuelve la dirección ni el teléfono', async () => {
-      const customer = await newCustomer();
+    // DP-15: el detalle lo ve solo su dueño (o un administrador), así que ya puede llevar la dirección y el teléfono
+    it('GET /orders/:id devuelve la dirección y el teléfono a su dueño, y a nadie más', async () => {
+      const [customer, other] = [await newCustomer(), await newCustomer()];
       const b = await book();
       const created = await post(
         cart(customer.id, [{ isbn: b.isbn, quantity: 1 }]),
       ).expect(201);
 
-      const res = await request(app.getHttpServer())
+      const own = await request(app.getHttpServer())
         .get(`/orders/${created.body.orderId}`)
         .set(tokens.get(customer.id)!)
         .expect(200);
+      const foreign = await request(app.getHttpServer())
+        .get(`/orders/${created.body.orderId}`)
+        .set(tokens.get(other.id)!)
+        .expect(404);
 
-      const text = JSON.stringify(res.body);
-      expect(res.body).not.toHaveProperty('shippingAddress');
+      expect(own.body.shippingAddress).toEqual({
+        recipient: 'María Quispe',
+        phone: '+51 987 654 321',
+        line1: 'Jr. Ucayali 150, Dpto 2',
+        district: 'Barranco',
+        province: 'Lima',
+        department: 'Lima',
+        reference: 'Casa de rejas verdes',
+      });
       for (const secret of [
         'María Quispe',
         '987 654 321',
         'Ucayali',
-        'rejas verdes',
+        'rejas',
       ]) {
-        expect(text).not.toContain(secret);
-      }
-    });
-
-    it('la dirección no aparece en los logs, ni de la compra ni de los consumidores', async () => {
-      const customer = await newCustomer();
-      const b = await book();
-      await post(cart(customer.id, [{ isbn: b.isbn, quantity: 1 }])).expect(
-        201,
-      );
-      await post(
-        withAddress(customer.id, b.isbn, {
-          ...ADDRESS_BODY,
-          phone: 'no es un teléfono',
-        }),
-      ).expect(422);
-      await deliverEvents(2);
-
-      const logs = logLines.join('\n');
-      for (const secret of [
-        'María Quispe',
-        '987 654 321',
-        'Ucayali',
-        'rejas verdes',
-        'no es un teléfono',
-      ]) {
-        expect(logs).not.toContain(secret);
+        expect(JSON.stringify(foreign.body)).not.toContain(secret);
       }
     });
   });

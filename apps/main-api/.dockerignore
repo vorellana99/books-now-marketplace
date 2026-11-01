@@ -1,0 +1,10 @@
+# Lo que no entra al contexto de la imagen: dependencias y compilados (se generan dentro), pruebas, secretos y basura local
+node_modules
+dist
+coverage
+.env
+test
+.git
+.verify-last-failure.txt
+tsconfig.build.tsbuildinfo
+*.log

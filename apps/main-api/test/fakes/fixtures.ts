@@ -1,5 +1,5 @@
-import { ShippingAddress } from '../../src/contexts/sales/domain/order/shipping-address.vo.js';
-import { Customer } from '../../src/contexts/sales/domain/customer/customer.aggregate.js';
+import { ShippingAddress } from '../../src/contexts/sales/domain/model/order/shipping-address.vo.js';
+import { Customer } from '../../src/contexts/sales/domain/model/customer/customer.aggregate.js';
 import { FixedCatalog } from './fixed-catalog.js';
 import { InMemoryCustomerRepository } from './in-memory-customer-repository.js';
 

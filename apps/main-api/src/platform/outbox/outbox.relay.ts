@@ -205,7 +205,7 @@ export class OutboxRelay implements BeforeApplicationShutdown {
   // La hora del próximo intento sale del reloj de la base de datos, el mismo que usa el bloqueo: las columnas son
   // TIMESTAMP sin zona horaria, y mezclar la hora de la aplicación con `now()` las desfasaría si difieren
   private async recordFailure(d: Claimed, err: unknown): Promise<void> {
-    const max = this.config.get<number>('OUTBOX_MAX_ATTEMPTS', 8);
+    const max = this.config.getOrThrow<number>('OUTBOX_MAX_ATTEMPTS');
     const failed = d.attempts >= max;
     const backoffSeconds = Math.min(2 ** d.attempts, 5 * 60); // 2 s, 4 s, 8 s… hasta 5 min
     const reason = String(err).slice(0, 1000);

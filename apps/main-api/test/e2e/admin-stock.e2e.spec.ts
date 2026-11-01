@@ -2,6 +2,7 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { bearer } from '../support/auth.js';
 import { insertBook, insertStock, stockOf } from '../support/builders.js';
 import { query, resetDatabase } from '../support/database.js';
@@ -14,7 +15,7 @@ describe('POST /admin/stock/:isbn/additions (e2e, aplicación y PostgreSQL reale
     let app: INestApplication;
     let admin: { Authorization: string };
     beforeAll(async () => {
-      app = await createHttpApp([InventoryModule, IdentityModule]);
+      app = await createHttpApp([InventoryModule, IdentityModule, AUTH_MODULE]);
       admin = await bearer(app, 'ADMIN');
     });
     afterAll(async () => {

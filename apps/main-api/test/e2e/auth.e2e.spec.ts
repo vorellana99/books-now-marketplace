@@ -1,6 +1,7 @@
 import { Module, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { AccessTokenVerifier } from '../../src/platform/auth/access-token-verifier.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
 import { outboxRows } from '../support/builders.js';
@@ -34,7 +35,12 @@ describe('/auth (e2e, aplicación y PostgreSQL reales)', () => {
       .send(body as object);
 
   beforeAll(async () => {
-    app = await createHttpApp([OutboxModule, IdentityModule, Probes]);
+    app = await createHttpApp([
+      OutboxModule,
+      IdentityModule,
+      AUTH_MODULE,
+      Probes,
+    ]);
   });
   afterAll(async () => {
     await app.close();

@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { requestIdMiddleware } from '../observability/request-id.middleware.js';
 import { RequestContextInterceptor } from '../observability/request-context.interceptor.js';
-import { DomainExceptionFilter } from './domain-exception.filter.js';
+import { ApiExceptionFilter } from './api-exception.filter.js';
 
 // Lo usan main.ts y los tests e2e
 export function configureApp(app: INestApplication): void {
@@ -14,6 +14,6 @@ export function configureApp(app: INestApplication): void {
       transform: true,
     }),
   );
-  app.useGlobalFilters(new DomainExceptionFilter());
+  app.useGlobalFilters(new ApiExceptionFilter()); // errores de dominio, de Nest, de Express e inesperados
   app.enableShutdownHooks();
 }

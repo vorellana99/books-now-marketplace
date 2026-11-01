@@ -2,7 +2,7 @@ import type { Money } from '../../src/contexts/sales/domain/shared/money.vo.js';
 import {
   PaymentGateway,
   type PaymentResult,
-} from '../../src/contexts/sales/domain/payment/payment-gateway.port.js';
+} from '../../src/contexts/sales/domain/ports/payment-gateway.port.js';
 
 interface Options {
   approved?: boolean; // por defecto, aprueba

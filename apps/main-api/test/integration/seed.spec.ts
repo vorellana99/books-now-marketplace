@@ -6,7 +6,7 @@ import {
   STOCK,
   USERS,
 } from '../../prisma/seed-data.js';
-import { ScryptPasswordHasher } from '../../src/contexts/identity/infrastructure/scrypt-password-hasher.js';
+import { ScryptPasswordHasher } from '../../src/contexts/identity/infrastructure/adapters/scrypt-password-hasher.js';
 import { query, resetDatabase } from '../support/database.js';
 
 // El mismo comando que usa quien desarrolla: pnpm run db:seed

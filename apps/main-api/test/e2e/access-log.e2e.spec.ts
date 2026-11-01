@@ -2,6 +2,7 @@ import { Logger, type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { HealthModule } from '../../src/platform/health/health.module.js';
 import { RequestContext } from '../../src/platform/observability/request-context.js';
@@ -20,6 +21,7 @@ describe('Registro de accesos (e2e)', () => {
       CatalogModule,
       SalesModule,
       IdentityModule,
+      AUTH_MODULE,
     ]);
   });
   afterAll(async () => {

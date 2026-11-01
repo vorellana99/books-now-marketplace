@@ -3,10 +3,10 @@ import type { INestApplication } from '@nestjs/common';
 import { CommandBus, QueryBus } from '@nestjs/cqrs';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
-import { CatalogPricing } from '../../src/contexts/sales/domain/order/catalog-pricing.port.js';
-import { StockReservation } from '../../src/contexts/sales/domain/order/stock-reservation.port.js';
-import { CatalogInProcessAdapter } from '../../src/contexts/sales/infrastructure/order/catalog-in-process.adapter.js';
-import { InventoryInProcessAdapter } from '../../src/contexts/sales/infrastructure/order/inventory-in-process.adapter.js';
+import { CatalogPricing } from '../../src/contexts/sales/domain/ports/catalog-pricing.port.js';
+import { StockReservation } from '../../src/contexts/sales/domain/ports/stock-reservation.port.js';
+import { CatalogInProcessAdapter } from '../../src/contexts/sales/infrastructure/adapters/catalog-in-process.adapter.js';
+import { InventoryInProcessAdapter } from '../../src/contexts/sales/infrastructure/adapters/inventory-in-process.adapter.js';
 import {
   OutOfStockError,
   StockItemNotFoundError,

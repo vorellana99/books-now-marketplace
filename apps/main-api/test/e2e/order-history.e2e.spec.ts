@@ -3,6 +3,7 @@ import { type INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { CatalogModule } from '../../src/contexts/catalog/catalog.module.js';
 import { IdentityModule } from '../../src/contexts/identity/identity.module.js';
+import { AUTH_MODULE } from '../support/auth-module.js';
 import { InventoryModule } from '../../src/contexts/inventory/inventory.module.js';
 import { SalesModule } from '../../src/contexts/sales/sales.module.js';
 import { OutboxModule } from '../../src/platform/outbox/outbox.module.js';
@@ -17,6 +18,7 @@ const MODULES = [
   InventoryModule,
   SalesModule,
   IdentityModule, // el guard global: las rutas exigen sesión
+  AUTH_MODULE,
 ];
 const BASE = Date.parse('2026-10-28T10:00:00.000Z');
 
@@ -160,7 +162,7 @@ describe('GET /admin/orders?customerId= (historial, e2e, aplicación y PostgreSQ
         .set(admin)
         .expect(200);
       expect(res.body.id).toBe(order.id);
-      expect(res.body).not.toHaveProperty('shippingAddress'); // decisión D2: solo el historial de administración la lleva
+      expect(res.body.shippingAddress).toBeNull(); // el pedido de prueba es anterior a la dirección (DP-15: el detalle también la trae)
     });
 
     it('lo documenta con las etiquetas orders y admin, sus parámetros y respuestas', async () => {
