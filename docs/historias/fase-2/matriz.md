@@ -35,7 +35,7 @@ _Todavía no hay historias cerradas._
 | [EN-09](EN-09.md) | Aclarar si la compuerta verify.sh incluye la auditoría de dependencias | — | 💡 idea | 0 / 0 | — |
 | [EN-10](EN-10.md) | Poner un tiempo máximo a cada entrega del relay del Outbox | — | 💡 idea | 0 / 0 | — |
 | [EN-11](EN-11.md) | Vigilar los fallos intermitentes de las pruebas | — | 💡 idea | 0 / 0 | — |
-| [EN-12](EN-12.md) | Una matriz por fase, con historias y habilitadores separados | [guia-de-desarrollo.md](../../guia-de-desarrollo.md) | 🔄 en curso | 1 / 3 | 2026-10-31 → en curso · 47 min |
+| [EN-12](EN-12.md) | Una matriz por fase, con historias y habilitadores separados | [guia-de-desarrollo.md](../../guia-de-desarrollo.md) | 🔄 en curso | 2 / 3 | 2026-10-31 → en curso · 53 min |
 
 ### Cerradas (3)
 

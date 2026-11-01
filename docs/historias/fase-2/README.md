@@ -4,15 +4,9 @@
 
 ## Qué entra hoy
 
-**Disponibilidad de stock** (hoy la tienda solo se entera de que falta stock al pagar, y el aviso no dice cuál libro). Tres historias que comparten un mismo cambio de contrato y una misma decisión de producto (`HU-12.1`):
+**Disponibilidad de stock** (hoy la tienda solo se entera de que falta stock al pagar, y el aviso no dice cuál libro): tres historias, [HU-12](HU-12.md), [HU-23](HU-23.md) y [HU-35](HU-35.md), que comparten un mismo cambio de contrato y una misma decisión de producto (`HU-12.1`).
 
-| Historia | Qué cambia |
-|---|---|
-| [HU-12](HU-12.md) | La lista y el detalle del libro muestran si hay stock |
-| [HU-23](HU-23.md) | El carrito marca los libros sin stock suficiente |
-| [HU-35](HU-35.md) | El error de pago nombra el libro sin stock |
-
-Estado, fechas y tiempo de cada una: [matriz](../README.md#matriz).
+**El estado de todo lo de esta fase** (historias, habilitadores e ideas) está en su [matriz](matriz.md).
 
 ## Qué sigue fuera
 

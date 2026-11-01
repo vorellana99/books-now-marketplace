@@ -1391,6 +1391,30 @@ class DocumentosReales(unittest.TestCase):
         inicio, fin = registro.index(h.CAMBIOS_INICIO), registro.index(h.CAMBIOS_FIN)
         self.assertEqual(registro[inicio + len(h.CAMBIOS_INICIO):fin].strip(), h.render_changes(ROOT).strip())
 
+    # Cada archivo dice lo que es: el README de historias, el índice y las reglas; el de cada fase, su objetivo; su matriz, el estado
+    def test_el_readme_de_historias_se_titula_por_lo_que_es(self):
+        titulo = (ROOT / "docs" / "historias" / "README.md").read_text(encoding="utf-8").splitlines()[0]
+        self.assertEqual(titulo, "# Historias y habilitadores")
+
+    def test_el_readme_de_historias_no_contiene_ninguna_matriz_solo_el_indice(self):
+        texto = (ROOT / "docs" / "historias" / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("| ID |", texto)
+        self.assertIn("| Fase | Historias | Habilitadores | Matriz |", texto)
+
+    def test_ningun_readme_dice_que_la_matriz_es_una_sola_ni_la_llama_de_archivos(self):
+        for ruta in ("docs/historias/README.md", "docs/historias/fase-1/README.md", "docs/historias/fase-2/README.md"):
+            texto = (ROOT / ruta).read_text(encoding="utf-8")
+            self.assertNotIn("matriz y archivos", texto, ruta)
+            self.assertNotIn("../README.md#matriz", texto, ruta)
+            self.assertNotIn("en una sola tabla", texto, ruta)
+
+    def test_cada_readme_de_fase_enlaza_a_su_matriz_y_no_repite_su_tabla(self):
+        for fase in h.fase_numbers(ROOT):
+            texto = (ROOT / "docs" / "historias" / f"fase-{fase}" / "README.md").read_text(encoding="utf-8")
+            self.assertIn("(matriz.md)", texto, f"fase-{fase}")
+            self.assertNotIn("| Historia |", texto, f"fase-{fase}: la tabla de historias es de la matriz")
+            self.assertNotIn("| ID |", texto, f"fase-{fase}")
+
     # Los archivos congelados (historial): empiezan, justo después del título, con la advertencia de que no se actualizan más
     CONGELADOS = {
         "docs/avance.md": "2026-10-31",

@@ -16,6 +16,6 @@ Vendedores externos, cancelaciones y devoluciones, cupones y promociones, envío
 
 ## Sus historias
 
-Son las **20 historias** que se hicieron antes del 2026-10-30. Su texto está **congelado** en [`product/04-historias-de-usuario.md`](../../product/04-historias-de-usuario.md) y sus datos (tareas, fechas, tiempos aproximados) en [`legado.json`](../legado.json); por eso esta carpeta **no tiene archivos de historia**. Aparecen en la [matriz](../README.md#matriz) con «Fase 1». Una ampliación de una de ellas es una historia nueva, en la fase en que se trabaje.
+Son las **20 historias** que se hicieron antes del 2026-10-30. Su texto está **congelado** en [`product/04-historias-de-usuario.md`](../../product/04-historias-de-usuario.md) y sus datos (tareas, fechas, tiempos aproximados) en [`legado.json`](../legado.json); por eso esta carpeta **no tiene archivos de historia**. Su estado está en la [matriz de la fase](matriz.md). Una ampliación de una de ellas es una historia nueva, en la fase en que se trabaje.
 
 El historial por cortes de esta fase está en [`docs/backend/00-avance.md`](../../backend/00-avance.md) y [`docs/frontend/00-avance.md`](../../frontend/00-avance.md) (congelados).
