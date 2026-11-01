@@ -124,9 +124,34 @@ TABLAS_DE_VALORES = {  # título de la tabla -> sus filas (valor, icono), constr
     "Estados del impacto en el producto": [(k, "") for k in h.ESTADOS_IMPACTO],
     "Épicas de las historias": [(k, "") for k in h.EPICAS],
     "Campos del encabezado": [(k, "") for k in ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza", "ligado")],
+    "Columnas de la tabla de tareas": [(k, "") for k in ("#",) + h.COLUMNAS_TAREA],
 }
 DICCIONARIO_OK = "# Plantillas y diccionario\n\n## Tipos de tarea\n\n" + PLANTILLA_OK + "\n" + "\n".join(tabla_de_valores(t, f) for t, f in TABLAS_DE_VALORES.items())
 
+
+ESTADOS_HIST, ESTADOS_TAR = "Estados de una historia o un habilitador", "Estados de una tarea"
+_DE_TAREAS = (ESTADOS_TAR, "Capas de una tarea", "Rigor de una tarea", "Columnas de la tabla de tareas", "Acciones del impacto en el producto", "Estados del impacto en el producto")
+# las tablas de cada plantilla que salen de los valores del script (las especiales, los campos del encabezado y las secciones, salen del propio archivo)
+TABLAS_DE_PLANTILLA = {"HU": (ESTADOS_HIST,) + _DE_TAREAS + ("Épicas de las historias",), "EN": (ESTADOS_HIST,) + _DE_TAREAS, "idea": (ESTADOS_HIST,)}
+CAMPOS_DE_PLANTILLA = {"HU": ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza"), "EN": ("id", "titulo", "tipo", "estado", "amplia", "reemplaza", "ligado"), "idea": ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza")}
+SECCIONES_DE_PLANTILLA = {"HU": ("Criterios", "Listo cuando", "Tareas"), "EN": ("Lo que hay hoy", "Listo cuando", "Tareas"), "idea": ()}
+ESPECIALES = ("Campos del encabezado", "Secciones de la plantilla")
+
+
+def tabla_en_plantilla(titulo, filas):
+    """Una tabla como la lleva una plantilla: dentro de una cita, bajo un título en negrita."""
+    texto = f"**{titulo}**\n\n| Valor | Icono | Qué significa |\n|---|---|---|\n" + "\n".join(f"| `{v}` | {i} | algo |" for v, i in filas)
+    return "\n".join(f"> {l}" if l else ">" for l in texto.splitlines()) + "\n"
+
+
+def plantilla_de(nombre):
+    """Una plantilla mínima y válida: su encabezado, sus secciones y las tablas que el script comprueba."""
+    campos, secciones = CAMPOS_DE_PLANTILLA[nombre], SECCIONES_DE_PLANTILLA[nombre]
+    texto = "---\n" + "".join(f"{c}: x\n" for c in campos) + "---\n\n" + "".join(f"## {s}\n\ntexto\n\n" for s in secciones) + "\n"
+    texto += "\n".join(tabla_en_plantilla(titulo, TABLAS_DE_VALORES[titulo]) for titulo in TABLAS_DE_PLANTILLA[nombre])
+    if nombre != "idea":
+        texto += "\n" + tabla_en_plantilla(ESPECIALES[0], [(c, "") for c in campos]) + "\n" + tabla_en_plantilla(ESPECIALES[1], [(s, "") for s in secciones])
+    return texto
 
 
 class Parseo(unittest.TestCase):
@@ -644,7 +669,7 @@ class Entorno(unittest.TestCase):
         (self.dir / "plantillas").mkdir(exist_ok=True)
         (self.dir / "plantillas" / "README.md").write_text(texto, encoding="utf-8")
         for nombre in ("HU", "EN", "idea"):
-            (self.dir / "plantillas" / f"{nombre}.md").write_text("---\nid: x\n---\n", encoding="utf-8")
+            (self.dir / "plantillas" / f"{nombre}.md").write_text(plantilla_de(nombre), encoding="utf-8")
 
     def hay(self, *palabras):
         return any(all(p in e for p in palabras) for e in self.errors())
@@ -1068,11 +1093,11 @@ class Carpetas(Entorno):
 class Diccionario(Entorno):
     """plantillas/README.md define cada valor que admite un campo o una columna; el script lo compara con sus constantes."""
 
-    def escribe_diccionario(self, texto, plantillas=("HU", "EN", "idea")):
+    def escribe_diccionario(self, texto, plantillas=("HU", "EN", "idea"), contenido=None):
         (self.dir / "plantillas").mkdir(exist_ok=True)
         (self.dir / "plantillas" / "README.md").write_text(texto, encoding="utf-8")
         for nombre in plantillas:
-            (self.dir / "plantillas" / f"{nombre}.md").write_text("---\nid: x\n---\n", encoding="utf-8")
+            (self.dir / "plantillas" / f"{nombre}.md").write_text((contenido or {}).get(nombre, plantilla_de(nombre)), encoding="utf-8")
 
     def test_el_script_y_la_prueba_conocen_las_mismas_tablas(self):
         self.assertEqual([titulo for titulo, *_ in h.DICCIONARIO], list(TABLAS_DE_VALORES))
@@ -1089,6 +1114,60 @@ class Diccionario(Entorno):
             self.escribe_diccionario(DICCIONARIO_OK, plantillas=[n for n in ("HU", "EN", "idea") if n != faltante])
             (self.dir / "plantillas" / f"{faltante}.md").unlink(missing_ok=True)
             self.assertTrue(self.hay(f"plantillas/{faltante}.md", "falta la plantilla"), faltante)
+
+    def test_el_script_y_la_prueba_conocen_las_tablas_de_cada_plantilla(self):
+        self.assertEqual({n: tuple(titulos) for n, titulos in h.TABLAS_EN_PLANTILLAS.items()}, TABLAS_DE_PLANTILLA)
+
+    def test_una_plantilla_sin_una_de_sus_tablas_da_error(self):
+        for nombre, titulos in TABLAS_DE_PLANTILLA.items():
+            for titulo in titulos + (ESPECIALES if nombre != "idea" else ()):
+                sin = plantilla_de(nombre).replace(f"**{titulo}**", f"**{titulo} (renombrada)**")
+                self.assertNotEqual(sin, plantilla_de(nombre))
+                self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: sin})
+                self.assertTrue(self.hay(f"plantillas/{nombre}.md", titulo, "falta"), (nombre, titulo))
+
+    def test_a_la_tabla_de_una_plantilla_le_falta_o_le_sobra_un_valor(self):
+        for nombre, titulos in TABLAS_DE_PLANTILLA.items():
+            for titulo in titulos:
+                filas = TABLAS_DE_VALORES[titulo]
+                for cambio, filas_mal, palabra in (("faltan", filas[:-1], filas[-1][0]), ("sobran", filas + [("archivada", "📦")], "archivada")):
+                    mal = plantilla_de(nombre).replace(tabla_en_plantilla(titulo, filas), tabla_en_plantilla(titulo, filas_mal))
+                    self.assertNotEqual(mal, plantilla_de(nombre))
+                    self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: mal})
+                    self.assertTrue(self.hay(f"plantillas/{nombre}.md", titulo, cambio, palabra), (nombre, titulo, cambio))
+
+    def test_un_icono_distinto_en_una_plantilla_da_error(self):
+        for nombre, titulos in TABLAS_DE_PLANTILLA.items():
+            for titulo in titulos:
+                con_icono = [(v, i) for v, i in TABLAS_DE_VALORES[titulo] if i]
+                if not con_icono:
+                    continue
+                valor, icono = con_icono[0]
+                mal = plantilla_de(nombre).replace(f"| `{valor}` | {icono} |", f"| `{valor}` | 🟦 |", 1)
+                self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: mal})
+                self.assertTrue(self.hay(f"plantillas/{nombre}.md", titulo, valor, "icono"), (nombre, titulo))
+
+    def test_la_tabla_de_campos_debe_ser_la_del_encabezado_de_la_plantilla(self):
+        for nombre in ("HU", "EN"):
+            for cambio, mal in (("faltan", plantilla_de(nombre).replace("> | `amplia` |  | algo |\n", "")),
+                                ("sobran", plantilla_de(nombre).replace("> | `amplia` |", "> | `inventado` | | algo |\n> | `amplia` |"))):
+                self.assertNotEqual(mal, plantilla_de(nombre))
+                self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: mal})
+                self.assertTrue(self.hay(f"plantillas/{nombre}.md", "Campos del encabezado", cambio), (nombre, cambio))
+
+    def test_la_tabla_de_secciones_debe_ser_la_de_los_titulos_de_la_plantilla(self):
+        for nombre in ("HU", "EN"):
+            sobra = plantilla_de(nombre).replace("> | `Tareas` |", "> | `Inventada` | | algo |\n> | `Tareas` |")
+            falta = plantilla_de(nombre).replace("> | `Tareas` |  | algo |\n", "")
+            for cambio, mal in (("sobran", sobra), ("faltan", falta)):
+                self.assertNotEqual(mal, plantilla_de(nombre))
+                self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: mal})
+                self.assertTrue(self.hay(f"plantillas/{nombre}.md", "Secciones de la plantilla", cambio), (nombre, cambio))
+
+    def test_las_tablas_de_una_plantilla_se_leen_aunque_vayan_dentro_de_una_cita(self):
+        filas = h.parse_value_table(plantilla_de("HU"), ESTADOS_TAR)
+        self.assertEqual(filas, [(k, h.ICONOS["estado"][k]) for k in h.ESTADOS_TAREA])
+        self.assertEqual(len(h.parse_value_table(plantilla_de("HU"), ESTADOS_HIST)), len(h.ESTADOS))
 
     def test_falta_una_tabla_de_valores(self):
         for titulo in TABLAS_DE_VALORES:

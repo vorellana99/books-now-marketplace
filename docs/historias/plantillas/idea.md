@@ -11,6 +11,18 @@ reemplaza:
 # HU-nn Título corto de la idea
 
 > **Idea (estado `idea`).** Un pendiente que se anota sin desglosarlo. Cópiala a `docs/historias/fase-n/HU/HU-nn.md` (una historia) o a `docs/historias/fase-n/EN/EN-nn.md` (un habilitador: pon `id: EN-nn` y `tipo: EN` y quita la línea `epica`); el nombre es solo el correlativo, el siguiente libre. Borra esta nota y rellena lo de abajo. Qué admite cada campo está en el [diccionario](README.md). El comprobador solo exige el encabezado: **no** pide criterios, tareas, contrato, pantalla, impacto en el producto ni `ligado:`.
+>
+> Los estados por los que pasa, de la idea a la historia cerrada (el significado completo está en el [diccionario](README.md#estados-de-una-historia-o-un-habilitador)):
+>
+> **Estados de una historia o un habilitador**
+>
+> | Valor | Icono | Qué significa | Cuándo se pone |
+> |---|---|---|---|
+> | `idea` | 💡 | Un pendiente anotado, sin desglosar | Al crear el archivo desde [`idea.md`](idea.md) |
+> | `propuesta` | 📝 | Desglosada y a la espera de aprobación | Al desglosarla (`/hu`) o al promover una idea |
+> | `aprobada` | ⬜ | Aprobada por el usuario: puede ejecutarse | Cuando el usuario la aprueba |
+> | `en-curso` | 🔄 | Alguna de sus tareas ya empezó | Al pasar su primera tarea a `en-curso` |
+> | `cerrada` | ✅ | Todas sus tareas están hechas y su «Listo cuando…» se ejecutó | Al terminar la última tarea (en una historia, tras su `[E2E]`) |
 
 **Qué:** una o dos frases de lo que haría falta.
 **Origen:** de dónde sale (un problema abierto, un hallazgo, algo que pidió el usuario) y, si lo hay, el enlace.

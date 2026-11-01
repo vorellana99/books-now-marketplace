@@ -121,7 +121,21 @@ DICCIONARIO = (
     ("Estados del impacto en el producto", ESTADOS_IMPACTO, None),
     ("Épicas de las historias", EPICAS, None),
     ("Campos del encabezado", CAMPOS_ENCABEZADO, None),
+    ("Columnas de la tabla de tareas", ("#",) + COLUMNAS_TAREA, None),
 )
+
+# Las tablas que lleva cada plantilla en su nota inicial (bajo un título en negrita, dentro de una cita): las que salen de los valores del script
+# (las del DICCIONARIO, con los mismos valores e iconos) y, en una historia o un habilitador, dos que salen del propio archivo: los campos de su
+# encabezado y los títulos `## ` de sus secciones. check() las compara; una idea solo lleva la de los estados de la historia
+_ESTADOS = "Estados de una historia o un habilitador"
+_DE_TAREAS = ("Estados de una tarea", "Capas de una tarea", "Rigor de una tarea", "Columnas de la tabla de tareas",
+              "Acciones del impacto en el producto", "Estados del impacto en el producto")
+TABLAS_EN_PLANTILLAS = {
+    "HU": (_ESTADOS,) + _DE_TAREAS + ("Épicas de las historias",),
+    "EN": (_ESTADOS,) + _DE_TAREAS,
+    "idea": (_ESTADOS,),
+}
+TABLAS_DEL_ARCHIVO = ("Campos del encabezado", "Secciones de la plantilla")  # en HU.md y EN.md
 
 
 class HistoriaError(Exception):
@@ -294,16 +308,21 @@ def render_types(text):
 
 
 def parse_value_table(text, heading):
-    """[(valor, icono)] de la tabla que sigue a «### <heading>» (None si ese título no está): la primera columna, sin comillas, y la segunda."""
-    lines = text.splitlines()
-    inicio = next((k for k, l in enumerate(lines) if l.strip() == f"### {heading}"), None)
+    """[(valor, icono)] de la tabla que sigue a «### <heading>» o a una línea en negrita «**<heading>**», sola o dentro de una cita (None si
+    ese título no está): la primera columna, sin comillas, y la segunda. Termina en el siguiente título o en el primer texto que no es tabla."""
+    lines = [re.sub(r"^\s*>\s?", "", l) for l in text.splitlines()]
+    inicio = next((k for k, l in enumerate(lines) if l.strip() in (f"### {heading}", f"**{heading}**")), None)
     if inicio is None:
         return None
     filas, tabla = [], 0
     for line in lines[inicio + 1:]:
         if line.startswith("#"):
             break
-        if not line.startswith("|") or set(line) <= set("|-: "):
+        if not line.startswith("|"):
+            if tabla and line.strip():
+                break  # un texto después de la tabla: la tabla terminó
+            continue
+        if set(line) <= set("|-: "):
             continue
         tabla += 1
         if tabla == 1:
@@ -313,22 +332,47 @@ def parse_value_table(text, heading):
     return filas
 
 
+def _errores_de_tabla(archivo, titulo, filas, valores, iconos):
+    """Los errores de una tabla de valores leída de `archivo`: faltan, sobran o llevan otro icono que el del script."""
+    if filas is None:
+        return [f"{archivo}: falta la tabla «{titulo}» (un «### {titulo}» o un «**{titulo}**» con sus valores)"]
+    errores = []
+    vistos = [v for v, _ in filas]
+    faltan, sobran = [v for v in valores if v not in vistos], [v for v in vistos if v not in valores]
+    if faltan or sobran:
+        partes = ([f"faltan: {', '.join(faltan)}"] if faltan else []) + ([f"sobran: {', '.join(sobran)}"] if sobran else [])
+        errores.append(f"{archivo}: la tabla «{titulo}» no coincide con scripts/historias.py ({'; '.join(partes)})")
+    for valor, icono in filas:
+        if iconos and valor in iconos and _sin_variacion(icono) != _sin_variacion(iconos[valor]):
+            errores.append(f"{archivo}: en «{titulo}», «{valor}» lleva el icono «{icono}» y debe llevar {iconos[valor]}")
+    return errores
+
+
 def diccionario_errors(text):
     """Los errores del diccionario: cada tabla de DICCIONARIO existe y tiene exactamente los valores (y los iconos) del script."""
     errores = []
     for titulo, valores, iconos in DICCIONARIO:
-        filas = parse_value_table(text, titulo)
-        if filas is None:
-            errores.append(f"{PLANTILLA}: falta la tabla «{titulo}» (un «### {titulo}» con sus valores)")
-            continue
-        vistos = [v for v, _ in filas]
-        faltan, sobran = [v for v in valores if v not in vistos], [v for v in vistos if v not in valores]
-        if faltan or sobran:
-            partes = ([f"faltan: {', '.join(faltan)}"] if faltan else []) + ([f"sobran: {', '.join(sobran)}"] if sobran else [])
-            errores.append(f"{PLANTILLA}: la tabla «{titulo}» no coincide con scripts/historias.py ({'; '.join(partes)})")
-        for valor, icono in filas:
-            if iconos and valor in iconos and _sin_variacion(icono) != _sin_variacion(iconos[valor]):
-                errores.append(f"{PLANTILLA}: en «{titulo}», «{valor}» lleva el icono «{icono}» y debe llevar {iconos[valor]}")
+        errores += _errores_de_tabla(PLANTILLA, titulo, parse_value_table(text, titulo), valores, iconos)
+    return errores
+
+
+def plantilla_errors(nombre, text):
+    """Los errores de las tablas de la plantilla `nombre` (HU, EN o idea): están y coinciden con el script (y, en HU y EN, con su propio archivo)."""
+    archivo = f"{PLANTILLAS}/{nombre}.md"
+    errores = []
+    for titulo in TABLAS_EN_PLANTILLAS[nombre]:
+        _, valores, iconos = next(d for d in DICCIONARIO if d[0] == titulo)
+        errores += _errores_de_tabla(archivo, titulo, parse_value_table(text, titulo), valores, iconos)
+    if nombre == "idea":
+        return errores
+    try:
+        campos = tuple(parse_front_matter(text))
+    except HistoriaError as e:
+        errores.append(f"{archivo}: {e}")
+        campos = ()
+    secciones = tuple(re.findall(r"^## (.+?)\s*$", text, re.M))
+    for titulo, valores in zip(TABLAS_DEL_ARCHIVO, (campos, secciones)):
+        errores += _errores_de_tabla(archivo, titulo, parse_value_table(text, titulo), valores, None)
     return errores
 
 
@@ -1174,8 +1218,11 @@ def check(root):
             errors.append(f"{PLANTILLA}: los tipos «siempre {CRITICO}» de la tabla ({', '.join(sorted(parse_always_critical(texto)))}) no coinciden con los de scripts/historias.py ({', '.join(SIEMPRE_CRITICOS)})")
         errors += diccionario_errors(texto)
         for nombre in ("HU", "EN", "idea"):
-            if not (Path(root) / PLANTILLAS / f"{nombre}.md").exists():
+            archivo = Path(root) / PLANTILLAS / f"{nombre}.md"
+            if not archivo.exists():
                 errors.append(f"{PLANTILLAS}/{nombre}.md: falta la plantilla (una por tipo: HU.md, EN.md e idea.md, junto al diccionario)")
+            else:
+                errors += plantilla_errors(nombre, archivo.read_text(encoding="utf-8"))
     cells = matrix_cells(root)
     for n in fase_numbers(root):
         if not (Path(root) / "docs" / "historias" / f"fase-{n}" / MATRIZ_ARCHIVO).exists():

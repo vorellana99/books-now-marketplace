@@ -12,6 +12,8 @@
 
 El número (`nn`) es el siguiente libre de ese tipo: se mira en la matriz de la fase o en la carpeta. El nombre del archivo es **solo el correlativo** (`HU-12.md`, sin título) y es igual al `id` del encabezado. Los enlaces dentro del archivo se escriben con `../../../` para salir de `fase-n/HU/` o `fase-n/EN/` (por ejemplo, `../../../product/03-reglas-de-negocio.md`).
 
+Cada plantilla lleva, en su nota inicial, las **tablas** que le tocan en vez de texto corrido: los campos del encabezado, las épicas, los estados, las secciones, las columnas, capas y rigor de la tabla de tareas, las acciones y estados del impacto, y lo que lleva cada sección. `idea.md` lleva solo la de los estados de la historia; `HU.md` y `EN.md`, todas. `scripts/historias.py` compara con el script las que dependen de valores (y los campos y las secciones, con el propio archivo), igual que las tablas de este diccionario.
+
 ## Ciclo de vida de una historia o un habilitador
 
 ```mermaid
@@ -75,7 +77,20 @@ El `tipo` **debe coincidir** con el prefijo del `id`; el comprobador falla si no
 
 ## Valores de las tareas
 
-La tabla de tareas de cada historia y habilitador tiene las columnas `# | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado`. **Capa, Tipo, Rigor y Estado se escriben «icono texto»** (`⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente`): el texto es el valor (kebab-case: minúsculas, sin acentos ni símbolos, con guiones en vez de espacios) y el icono de cada valor es siempre el mismo, en todas las filas. `python3 scripts/historias.py --formato` completa y corrige los iconos.
+La tabla de tareas de cada historia y habilitador tiene las columnas de la tabla de abajo. **Capa, Tipo, Rigor y Estado se escriben «icono texto»** (`⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente`): el texto es el valor (kebab-case: minúsculas, sin acentos ni símbolos, con guiones en vez de espacios) y el icono de cada valor es siempre el mismo, en todas las filas. `python3 scripts/historias.py --formato` completa y corrige los iconos.
+
+### Columnas de la tabla de tareas
+
+| Columna | Qué lleva |
+|---|---|
+| `#` | El id de la tarea (`HU-nn.k` o `EN-nn.k`) |
+| `Capa` | Dónde se trabaja (ver «Capas de una tarea») |
+| `Tipo` | Qué cambia, y por tanto qué receta aplica (ver «Tipos de tarea») |
+| `Rigor` | Qué tan crítica es (ver «Rigor de una tarea») |
+| `Tarea` | Qué se hace, en una línea |
+| `Objetivo` | El resultado que se busca, en una frase: responde «¿para qué existe esta tarea?», no «cómo se programa» |
+| `Depende de` | Otra tarea (aunque sea de otra historia) o `—` |
+| `Estado` | Uno de los estados de una tarea |
 
 ### Estados de una tarea
 
