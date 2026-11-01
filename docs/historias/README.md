@@ -28,7 +28,7 @@ Cada fila enlaza el objetivo de la fase y su matriz (la leyenda de estados e ico
 | Fase | Historias | Habilitadores | Matriz |
 |---|---|---|---|
 | [Fase 1](fase-1/README.md) | 4 abiertas · 16 cerradas | — | [matriz](fase-1/matriz.md) |
-| [Fase 2](fase-2/README.md) | 6 abiertas · 0 cerradas | 8 abiertas · 5 cerradas | [matriz](fase-2/matriz.md) |
+| [Fase 2](fase-2/README.md) | 6 abiertas · 0 cerradas | 9 abiertas · 5 cerradas | [matriz](fase-2/matriz.md) |
 <!-- FASES:FIN -->
 
 ## Cómo se lee una matriz
