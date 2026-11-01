@@ -454,20 +454,22 @@ def slug(text):
 
 
 def story_files(root):
-    """Los archivos de historia: docs/historias/fase-n/HU-nn.md (o EN-nn.md), por fase y luego por nombre."""
+    """Los archivos de historia y de habilitador: docs/historias/fase-n/HU/HU-nn.md y docs/historias/fase-n/EN/EN-nn.md, por fase y luego por
+    nombre. Un `EN-` en `HU/` (o al revés) no se cuenta aquí: lo informa `_errores_fases`."""
     folder = Path(root) / "docs" / "historias"
-    return sorted((p for p in folder.glob("fase-*/*.md") if FASE.match(p.parent.name) and re.match(r"^(HU|EN)-", p.name)),
+    return sorted((p for tipo in ("HU", "EN") for p in folder.glob(f"fase-*/{tipo}/*.md")
+                   if FASE.match(p.parent.parent.name) and p.name.startswith(f"{tipo}-")),
                   key=lambda p: (fase_de(p), p.name))
 
 
 def fase_de(path):
-    """El número de fase de un archivo de historia: el de su carpeta (fase-2/HU-12.md → 2)."""
-    return int(FASE.match(path.parent.name).group(1))
+    """El número de fase de un archivo de historia: el de la carpeta de su carpeta (fase-2/HU/HU-12.md → 2)."""
+    return int(FASE.match(path.parent.parent.name).group(1))
 
 
 def base_de(path):
-    """La carpeta de la historia relativa a docs/ («historias/fase-2»), desde donde se resuelven sus enlaces."""
-    return f"historias/{path.parent.name}"
+    """La carpeta de la historia relativa a docs/ («historias/fase-2/HU»), desde donde se resuelven sus enlaces."""
+    return f"historias/{path.parent.parent.name}/{path.parent.name}"
 
 
 def sort_key(story_id):
@@ -517,7 +519,7 @@ def new_rows(root, commits):
             "tiempo": fmt_minutes(stats["minutos"]) if stats else "—",
             "tareas": f"{done} / {len(tasks)}",
             "producto": f"{sum(1 for f in filas if f[3] == 'hecho')} / {len(filas)}" if filas else "—",
-            "detalle": f"[{meta['id']}]({path.name})",
+            "detalle": f"[{meta['id']}]({path.parent.name}/{path.name})",  # relativo a la matriz, que vive en la carpeta de la fase
         })
     return rows
 
@@ -800,7 +802,7 @@ def render_changes(root):
         for doc, que, accion, estado in impacto["filas"]:
             hecho = estado == "hecho"
             clave = (0 if hecho else 1, (fecha if fecha != "—" else "9999") if hecho else "", sort_key(meta["id"]), len(filas))
-            filas.append((clave, f"| {fecha if hecho else '—'} | [{meta['id']}](../historias/{path.parent.name}/{path.name}) | {_enlace_documento(doc)} | {accion} | {que} | {estado} |"))
+            filas.append((clave, f"| {fecha if hecho else '—'} | [{meta['id']}](../historias/{path.parent.parent.name}/{path.parent.name}/{path.name}) | {_enlace_documento(doc)} | {accion} | {que} | {estado} |"))
     if not filas:
         return "_Todavía no hay cambios registrados._"
     cabecera = ["| Fecha | Historia | Documento | Acción | Qué cambia | Estado |", "|---|---|---|---|---|---|"]
@@ -900,16 +902,26 @@ def _comprobar_fila(nombre, tid, cells):
 
 
 def _errores_fases(root, hay_historico):
-    """Las carpetas de fase: toda historia vive en `fase-n/`, y cada fase tiene su README.md inicial que la describe."""
+    """Las carpetas: cada fase (`fase-n/`) tiene su README.md inicial, y sus historias van en `HU/` y sus habilitadores en `EN/`; nada
+    suelto en la fase ni en docs/historias, ni en una carpeta que no sea una fase. Las carpetas `HU/` y `EN/` no se exigen vacías."""
     carpeta, errores = Path(root) / "docs" / "historias", []
+    de_historia = re.compile(r"^(HU|EN)-")
     for p in sorted(carpeta.iterdir()):
-        if p.is_file() and re.match(r"^(HU|EN)-", p.name):
-            errores.append(f"{p.name}: una historia va dentro de una carpeta de fase (docs/historias/fase-n/{p.name}), no suelta en docs/historias")
+        if p.is_file() and de_historia.match(p.name):
+            errores.append(f"{p.name}: una historia o un habilitador va dentro de una carpeta de fase (docs/historias/fase-n/HU/ o EN/), no suelto en docs/historias")
         elif p.is_dir() and FASE.match(p.name):
             if not (p / "README.md").exists():
                 errores.append(f"{p.name}: la carpeta de la fase necesita su README.md inicial (qué entra y qué queda fuera de la fase)")
+            for q in sorted(p.iterdir()):
+                if q.is_file() and de_historia.match(q.name):
+                    errores.append(f"{p.name}/{q.name}: va en {p.name}/{q.name.split('-')[0]}/, no suelto en la fase")
+                elif q.is_dir() and q.name in ("HU", "EN"):
+                    errores += [f"{p.name}/{q.name}/{r.name}: un archivo `{r.name.split('-')[0]}-` no va en {q.name}/ (los {'habilitadores' if r.name.startswith('EN-') else 'historias'} van en {p.name}/{r.name.split('-')[0]}/)"
+                                for r in sorted(q.glob("*.md")) if de_historia.match(r.name) and not r.name.startswith(f"{q.name}-")]
+                elif q.is_dir():
+                    errores.append(f"{p.name}/{q.name}/: una fase solo tiene README.md, matriz.md, HU/ y EN/ (no «{q.name}/»)")
         elif p.is_dir():
-            errores += [f"{p.name}/{q.name}: una historia va dentro de una carpeta `fase-n` (fase-1, fase-2…), no en «{p.name}»" for q in sorted(p.glob("*.md")) if re.match(r"^(HU|EN)-", q.name)]
+            errores += [f"{p.name}/{q.relative_to(p)}: una historia va dentro de una carpeta `fase-n` (fase-1, fase-2…), no en «{p.name}»" for q in sorted(p.rglob("*.md")) if de_historia.match(q.name)]
     if hay_historico and not (carpeta / f"fase-{FASE_LEGADO}").is_dir():
         errores.append(f"fase-{FASE_LEGADO}: las 20 historias anteriores son de la fase {FASE_LEGADO} y falta su carpeta con el README.md que la describe")
     return errores
@@ -934,7 +946,7 @@ def check(root):
             continue
         sid = meta["id"]
         if path.stem != sid or not re.match(r"^(HU|EN)-\d+$", sid):
-            errors.append(f"{path.name}: el nombre del archivo debe ser solo su correlativo: «{sid}.md» (sin el título), dentro de su carpeta fase-n/")
+            errors.append(f"{path.name}: el nombre del archivo debe ser solo su correlativo: «{sid}.md» (sin el título), dentro de fase-n/HU/ o fase-n/EN/")
         if sid in seen:
             errors.append(f"{path.name}: id repetido ({sid})")
         seen.add(sid)

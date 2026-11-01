@@ -381,7 +381,7 @@ Hoy se despliega **una sola instancia** de la API. Antes de añadir más, hay qu
 - Los contadores **se pierden al reiniciar o desplegar**, y el `Retry-After` que recibe una persona es el de la instancia que le tocó.
 - **No dividas los `RATE_LIMIT_*` entre N** para compensarlo: el límite por cuenta (5) quedaría en menos de 1 por instancia y bloquearía a las personas legítimas.
 - **Afinidad por dirección** (`ip_hash` o equivalente) en el balanceador mantiene casi intacto el límite por dirección, pero no el de cuenta, porque el correo va en el cuerpo y el balanceador no lo ve.
-- La solución definitiva es un **almacén compartido**; la opción que no suma infraestructura es guardar los contadores en PostgreSQL. Está pendiente como la idea [`EN-07`](../../docs/historias/fase-2/EN-07.md) y se hace **antes de pasar a más de una instancia en producción**.
+- La solución definitiva es un **almacén compartido**; la opción que no suma infraestructura es guardar los contadores en PostgreSQL. Está pendiente como la idea [`EN-07`](../../docs/historias/fase-2/EN/EN-07.md) y se hace **antes de pasar a más de una instancia en producción**.
 
 ## Levantar la API
 

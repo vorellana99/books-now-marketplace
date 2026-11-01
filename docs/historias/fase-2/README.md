@@ -4,10 +4,10 @@
 
 ## Qué entra hoy
 
-**Disponibilidad de stock** (hoy la tienda solo se entera de que falta stock al pagar, y el aviso no dice cuál libro): tres historias, [HU-12](HU-12.md), [HU-23](HU-23.md) y [HU-35](HU-35.md), que comparten un mismo cambio de contrato y una misma decisión de producto (`HU-12.1`).
+**Disponibilidad de stock** (hoy la tienda solo se entera de que falta stock al pagar, y el aviso no dice cuál libro): tres historias, [HU-12](HU/HU-12.md), [HU-23](HU/HU-23.md) y [HU-35](HU/HU-35.md), que comparten un mismo cambio de contrato y una misma decisión de producto (`HU-12.1`).
 
 **El estado de todo lo de esta fase** (historias, habilitadores e ideas) está en su [matriz](matriz.md).
 
 ## Qué sigue fuera
 
-Todo lo demás que el MVP dejó fuera (cupones, devoluciones, pago real, panel de administración en la tienda…) hasta que una historia lo traiga aquí. La pasarela de pago real es la idea [HU-36](HU-36.md).
+Todo lo demás que el MVP dejó fuera (cupones, devoluciones, pago real, panel de administración en la tienda…) hasta que una historia lo traiga aquí. La pasarela de pago real es la idea [HU-36](HU/HU-36.md).

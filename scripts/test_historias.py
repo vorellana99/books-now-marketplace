@@ -343,7 +343,8 @@ class Matriz(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         self.dir = self.root / "docs" / "historias"
-        (self.dir / "fase-2").mkdir(parents=True)
+        (self.dir / "fase-2" / "HU").mkdir(parents=True)
+        (self.dir / "fase-2" / "EN").mkdir()
         (self.dir / "legado.json").write_text(
             json.dumps(
                 {
@@ -357,8 +358,9 @@ class Matriz(unittest.TestCase):
             encoding="utf-8",
         )
         self.fase = self.dir / "fase-2"
-        (self.fase / "HU-12.md").write_text(HU_OK, encoding="utf-8")
-        (self.fase / "EN-01.md").write_text(
+        self.hu, self.en = self.fase / "HU", self.fase / "EN"
+        (self.hu / "HU-12.md").write_text(HU_OK, encoding="utf-8")
+        (self.en / "EN-01.md").write_text(
             hu([("EN-01.1", "API", "refactor", "normal", "pendiente")], sid="EN-01", tipo="EN", ligado="backend/05-piezas-clave.md#convención-por-contexto"),
             encoding="utf-8",
         )
@@ -417,7 +419,7 @@ class Matriz(unittest.TestCase):
         self.assertEqual(row["inicio"], "2026-10-30")
         self.assertEqual(row["cierre"], "—")  # solo tiene cierre una HU cerrada
         self.assertEqual(row["tiempo"], "30 min")
-        self.assertEqual(row["detalle"], "[HU-12](HU-12.md)")  # el enlace es relativo a la matriz, que vive en la misma carpeta
+        self.assertEqual(row["detalle"], "[HU-12](HU/HU-12.md)")  # el enlace es relativo a la matriz, que vive en la misma carpeta
 
     def test_la_plantilla_y_los_archivos_con_guion_bajo_se_ignoran(self):
         (self.dir / "_plantilla.md").write_text("---\nid: HU-nn\n---\n", encoding="utf-8")
@@ -453,7 +455,7 @@ class Matriz(unittest.TestCase):
 
     def test_las_columnas_de_los_habilitadores_no_tienen_epica_ni_capas(self):
         cerrado = hu([("EN-09.1", "API", "refactor", "normal", "hecho")], sid="EN-09", tipo="EN", estado="cerrada", ligado="backend/05-piezas-clave.md")
-        (self.fase / "EN-09.md").write_text(cerrado, encoding="utf-8")
+        (self.en / "EN-09.md").write_text(cerrado, encoding="utf-8")
         hab = self.parte(self.matriz(2), "Habilitadores")
         self.assertIn("| ID | Habilitador | Ligado a | Estado | Tareas | Fechas y tiempo |", hab)
         self.assertIn("| ID | Habilitador | Ligado a | Estado | Cierre y tiempo |", hab)
@@ -466,7 +468,7 @@ class Matriz(unittest.TestCase):
             self.assertNotIn("Detalle", self.matriz(fase))
 
     def test_el_id_es_el_enlace(self):
-        self.assertIn("| [HU-12](HU-12.md) |", self.matriz(2))
+        self.assertIn("| [HU-12](HU/HU-12.md) |", self.matriz(2))
         self.assertIn("| [HU-01](../../product/04-historias-de-usuario.md#hu-01-registrarme) |", self.matriz(1))
 
     def test_un_habilitador_muestra_a_que_esta_ligado_con_enlace(self):
@@ -474,16 +476,16 @@ class Matriz(unittest.TestCase):
         self.assertIn("[backend/05-piezas-clave.md#convención-por-contexto](../../backend/05-piezas-clave.md#convención-por-contexto)", fila)
 
     def test_una_regla_como_ligadura_se_muestra_sin_enlace_y_sin_ligadura_es_un_guion(self):
-        (self.fase / "EN-02.md").write_text(IDEA.format(sid="EN-02", tipo="EN"), encoding="utf-8")
-        (self.fase / "EN-03.md").write_text(IDEA.format(sid="EN-03", tipo="EN").replace("reemplaza:", "ligado: RN-13\nreemplaza:"), encoding="utf-8")
+        (self.en / "EN-02.md").write_text(IDEA.format(sid="EN-02", tipo="EN"), encoding="utf-8")
+        (self.en / "EN-03.md").write_text(IDEA.format(sid="EN-03", tipo="EN").replace("reemplaza:", "ligado: RN-13\nreemplaza:"), encoding="utf-8")
         texto = self.matriz(2)
         self.assertIn("| — |", self.fila(texto, "[EN-02]"))  # una idea sin ligadura
         self.assertIn("| RN-13 |", self.fila(texto, "[EN-03]"))  # una regla, sin enlace
         self.assertNotIn("](../../RN-13)", texto)
 
     def test_las_ideas_estan_en_abiertas_de_su_tipo(self):
-        (self.fase / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU"), encoding="utf-8")
-        (self.fase / "EN-04.md").write_text(IDEA.format(sid="EN-04", tipo="EN"), encoding="utf-8")
+        (self.hu / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU"), encoding="utf-8")
+        (self.en / "EN-04.md").write_text(IDEA.format(sid="EN-04", tipo="EN"), encoding="utf-8")
         texto = self.matriz(2)
         hist_abiertas = self.parte(texto, "Historias").split("### Cerradas")[0]
         hab_abiertas = self.parte(texto, "Habilitadores").split("### Cerradas")[0]
@@ -499,7 +501,7 @@ class Matriz(unittest.TestCase):
 
     def test_una_capa_sin_tareas_dice_no_aplica(self):
         solo_doc = [("HU-12.1", "DOC", "producto", "normal", "pendiente")]
-        (self.fase / "HU-12.md").write_text(hu(solo_doc, contrato=False, pantalla=False), encoding="utf-8")
+        (self.hu / "HU-12.md").write_text(hu(solo_doc, contrato=False, pantalla=False), encoding="utf-8")
         self.assertIn("| — no aplica | — no aplica |", self.fila(self.matriz(2), "[HU-12]"))
 
     def test_fechas_y_tiempo_van_en_una_sola_columna(self):
@@ -512,18 +514,18 @@ class Matriz(unittest.TestCase):
         self.assertTrue(self.fila(self.matriz(2), "[HU-12]").rstrip().endswith("| — |"))
 
     def test_la_columna_de_cambios_de_producto_cuenta_hechos_sobre_total(self):
-        (self.fase / "HU-12.md").write_text(hu(impacto_=impacto([("RN-13", "x", "modifica", "hecho"), ("PA-02", "y", "modifica", "pendiente")])), encoding="utf-8")
+        (self.hu / "HU-12.md").write_text(hu(impacto_=impacto([("RN-13", "x", "modifica", "hecho"), ("PA-02", "y", "modifica", "pendiente")])), encoding="utf-8")
         self.assertIn("| 1 / 2 |", self.fila(self.matriz(2), "[HU-12]"))
 
     def test_una_tabla_sin_filas_lo_dice(self):
-        (self.fase / "EN-01.md").unlink()
+        (self.en / "EN-01.md").unlink()
         texto = self.matriz(2)
         self.assertIn("_No hay habilitadores abiertas._", texto)
         self.assertIn("_Todavía no hay habilitadores cerradas._", texto)
 
     def test_una_historia_cerrada_pasa_de_abiertas_a_cerradas(self):
         todas = [(t[0], t[1], t[2], t[3], "hecho") for t in TAREAS] + [("HU-12.5", "E2E", "recorrido", "normal", "hecho")]
-        (self.fase / "HU-12.md").write_text(hu(todas, estado="cerrada"), encoding="utf-8")
+        (self.hu / "HU-12.md").write_text(hu(todas, estado="cerrada"), encoding="utf-8")
         historias = self.parte(self.matriz(2), "Historias")
         abiertas, cerradas = historias.split("### Cerradas")
         self.assertNotIn("HU-12", abiertas)
@@ -591,10 +593,12 @@ class Entorno(unittest.TestCase):
         self.root = Path(self.tmp.name)
         self.dir = self.root / "docs" / "historias"
         self.fase = self.dir / "fase-2"
-        self.fase.mkdir(parents=True)
+        self.hu, self.en = self.fase / "HU", self.fase / "EN"
+        self.hu.mkdir(parents=True)
+        self.en.mkdir()
         (self.fase / "README.md").write_text("# Fase 2\n", encoding="utf-8")
         (self.dir / "legado.json").write_text(json.dumps({"tope_minutos": 60, "historias": []}), encoding="utf-8")
-        self.file = self.fase / "HU-12.md"
+        self.file = self.hu / "HU-12.md"
         self.file.write_text(HU_OK, encoding="utf-8")
         (self.dir / "README.md").write_text(f"{h.START}\n{h.END}\n", encoding="utf-8")
         h.write_matrix(self.root, [])
@@ -622,7 +626,7 @@ class Comprobacion(Entorno):
         self.assertEqual(self.errors(), [])
 
     def test_el_nombre_del_archivo_empieza_por_el_id(self):
-        self.file.rename(self.fase / "HU-13.md")
+        self.file.rename(self.hu / "HU-13.md")
         self.assertTrue(self.hay("nombre"))
 
     def test_estado_invalido(self):
@@ -663,7 +667,7 @@ class Comprobacion(Entorno):
 
     # --- carpetas de fase ---
     def test_el_archivo_lleva_solo_el_correlativo_no_el_titulo(self):
-        self.file.rename(self.fase / "HU-12-ver-si-hay-stock.md")
+        self.file.rename(self.hu / "HU-12-ver-si-hay-stock.md")
         self.assertTrue(self.hay("nombre", "HU-12.md"))
 
     def test_una_historia_suelta_fuera_de_una_carpeta_de_fase(self):
@@ -695,15 +699,15 @@ class Comprobacion(Entorno):
         self.assertEqual(self.errors(), [])
 
     def test_las_historias_se_listan_por_fase_y_luego_por_nombre(self):
-        (self.dir / "fase-1").mkdir()
-        (self.dir / "fase-1" / "HU-30.md").write_text(HU_OK.replace("HU-12", "HU-30"), encoding="utf-8")
-        (self.dir / "fase-10").mkdir()
-        (self.dir / "fase-10" / "HU-01.md").write_text(HU_OK.replace("HU-12", "HU-01"), encoding="utf-8")
-        self.assertEqual([f"{p.parent.name}/{p.name}" for p in h.story_files(self.root)], ["fase-1/HU-30.md", "fase-2/HU-12.md", "fase-10/HU-01.md"])
+        (self.dir / "fase-1" / "HU").mkdir(parents=True)
+        (self.dir / "fase-1" / "HU" / "HU-30.md").write_text(HU_OK.replace("HU-12", "HU-30"), encoding="utf-8")
+        (self.dir / "fase-10" / "HU").mkdir(parents=True)
+        (self.dir / "fase-10" / "HU" / "HU-01.md").write_text(HU_OK.replace("HU-12", "HU-01"), encoding="utf-8")
+        self.assertEqual([f"{p.parent.parent.name}/{p.name}" for p in h.story_files(self.root)], ["fase-1/HU-30.md", "fase-2/HU-12.md", "fase-10/HU-01.md"])
 
-    def test_el_enlace_de_impacto_se_resuelve_desde_la_carpeta_de_la_fase(self):
-        # desde fase-2/ el producto está en ../../product
-        self.assertEqual(h.parse_impact(hu(impacto_=impacto([("[c](../../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente")])), "historias/fase-2")["filas"][0][0],
+    def test_el_enlace_de_impacto_se_resuelve_desde_la_carpeta_del_tipo_dentro_de_la_fase(self):
+        # desde fase-2/HU/ el producto está en ../../../product
+        self.assertEqual(h.parse_impact(hu(impacto_=impacto([("[c](../../../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente")])), "historias/fase-2/HU")["filas"][0][0],
                          "product/07-contenido-y-mensajes.md")
 
     # --- contrato y pantalla ---
@@ -921,10 +925,10 @@ class MatricesPorFase(Entorno):
         self.assertTrue(self.hay("fase 2", "HU-12"))
 
     def test_una_historia_que_figura_en_la_matriz_de_otra_fase(self):
-        (self.dir / "fase-3").mkdir()
+        (self.dir / "fase-3" / "HU").mkdir(parents=True)
         (self.dir / "fase-3" / "README.md").write_text("# Fase 3\n", encoding="utf-8")
         (self.dir / "fase-3" / "matriz.md").write_text("# Matriz de la fase 3\n", encoding="utf-8")
-        self.file.rename(self.dir / "fase-3" / "HU-12.md")  # se movió de fase y las matrices quedaron como estaban
+        self.file.rename(self.dir / "fase-3" / "HU" / "HU-12.md")  # se movió de fase y las matrices quedaron como estaban
         self.assertTrue(self.hay("HU-12", "fase 2", "fase 3"))
 
     def test_el_estado_de_la_matriz_debe_ser_el_del_archivo(self):
@@ -959,11 +963,83 @@ class MatricesPorFase(Entorno):
         self.assertTrue(self.hay("HU-05", "fase 1"))
 
 
+class Carpetas(Entorno):
+    """Dentro de cada fase, las historias van en `HU/` y los habilitadores en `EN/`; la matriz y el README siguen a nivel de la fase."""
+
+    def test_con_las_carpetas_de_cada_tipo_no_hay_errores(self):
+        self.assertEqual(self.errors(), [])
+
+    def test_la_fase_es_la_de_la_carpeta_de_arriba_y_el_tipo_la_de_su_carpeta(self):
+        self.assertEqual(h.fase_de(self.hu / "HU-12.md"), 2)
+        self.assertEqual(h.base_de(self.hu / "HU-12.md"), "historias/fase-2/HU")
+        self.assertEqual(h.base_de(self.en / "EN-01.md"), "historias/fase-2/EN")
+
+    def test_se_descubren_las_historias_y_los_habilitadores_de_las_dos_carpetas(self):
+        (self.en / "EN-01.md").write_text(hu([("EN-01.1", "API", "refactor", "normal", "pendiente")], sid="EN-01", tipo="EN", ligado="guia-de-desarrollo.md"), encoding="utf-8")
+        (self.dir / "fase-1" / "HU").mkdir(parents=True)
+        (self.dir / "fase-1" / "README.md").write_text("# Fase 1\n", encoding="utf-8")
+        (self.dir / "fase-1" / "HU" / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU"), encoding="utf-8")
+        nombres = [f"{p.parent.parent.name}/{p.parent.name}/{p.name}" for p in h.story_files(self.root)]
+        self.assertEqual(nombres, ["fase-1/HU/HU-30.md", "fase-2/EN/EN-01.md", "fase-2/HU/HU-12.md"])  # por fase y luego por nombre
+
+    def test_una_historia_suelta_en_la_fase_va_en_su_carpeta(self):
+        (self.fase / "HU-14.md").write_text(HU_OK.replace("HU-12", "HU-14"), encoding="utf-8")
+        self.assertTrue(self.hay("HU-14.md", "fase-2/HU/"))
+
+    def test_un_habilitador_suelto_en_la_fase_va_en_su_carpeta(self):
+        (self.fase / "EN-14.md").write_text(IDEA.format(sid="EN-14", tipo="EN"), encoding="utf-8")
+        self.assertTrue(self.hay("EN-14.md", "fase-2/EN/"))
+
+    def test_un_habilitador_en_la_carpeta_de_historias_es_un_error(self):
+        (self.hu / "EN-14.md").write_text(IDEA.format(sid="EN-14", tipo="EN"), encoding="utf-8")
+        self.assertTrue(self.hay("EN-14.md", "HU/", "EN/"))
+
+    def test_una_historia_en_la_carpeta_de_habilitadores_es_un_error(self):
+        (self.en / "HU-14.md").write_text(IDEA.format(sid="HU-14", tipo="HU"), encoding="utf-8")
+        self.assertTrue(self.hay("HU-14.md", "EN/", "HU/"))
+
+    def test_una_carpeta_desconocida_dentro_de_la_fase(self):
+        (self.fase / "otros").mkdir()
+        (self.fase / "otros" / "HU-14.md").write_text(IDEA.format(sid="HU-14", tipo="HU"), encoding="utf-8")
+        self.assertTrue(self.hay("otros", "fase-2"))
+
+    def test_una_historia_en_una_carpeta_con_hu_pero_que_no_es_una_fase(self):
+        (self.dir / "mvp" / "HU").mkdir(parents=True)
+        (self.dir / "mvp" / "HU" / "HU-14.md").write_text(IDEA.format(sid="HU-14", tipo="HU"), encoding="utf-8")
+        self.assertTrue(self.hay("HU-14.md", "fase-"))
+
+    def test_una_fase_sin_historias_ni_habilitadores_no_necesita_las_carpetas(self):
+        (self.dir / "fase-3").mkdir()
+        (self.dir / "fase-3" / "README.md").write_text("# Fase 3\n", encoding="utf-8")
+        h.write_matrix(self.root, [])
+        self.assertEqual(self.errors(), [])
+
+    def test_los_archivos_propios_de_la_fase_estan_permitidos(self):
+        self.assertTrue((self.fase / "README.md").exists() and (self.fase / "matriz.md").exists())
+        self.assertEqual(self.errors(), [])
+
+    def test_la_matriz_enlaza_a_cada_archivo_dentro_de_su_carpeta(self):
+        (self.en / "EN-01.md").write_text(hu([("EN-01.1", "API", "refactor", "normal", "pendiente")], sid="EN-01", tipo="EN", ligado="guia-de-desarrollo.md"), encoding="utf-8")
+        h.write_matrix(self.root, [])
+        texto = (self.fase / "matriz.md").read_text(encoding="utf-8")
+        self.assertIn("[HU-12](HU/HU-12.md)", texto)
+        self.assertIn("[EN-01](EN/EN-01.md)", texto)
+
+    def test_el_registro_de_cambios_enlaza_a_la_carpeta_de_la_historia(self):
+        self.escribe(hu(impacto_=impacto([("RN-13", "x", "modifica", "pendiente")])))
+        h.write_changes(self.root)
+        self.assertIn("(../historias/fase-2/HU/HU-12.md)", (self.root / "docs" / "product" / "cambios.md").read_text(encoding="utf-8"))
+
+    def test_los_enlaces_de_impacto_se_resuelven_desde_la_carpeta_del_tipo(self):
+        impacto_ = impacto([("[c](../../../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente")])
+        self.assertEqual(h.parse_impact(hu(impacto_=impacto_), h.base_de(self.hu / "HU-12.md"))["filas"][0][0], "product/07-contenido-y-mensajes.md")
+
+
 class Ideas(Entorno):
     """El estado `idea`: un pendiente que se registra en la matriz con solo un encabezado y una frase."""
 
     def idea(self, sid="HU-30", tipo="HU", texto=None):
-        (self.fase / f"{sid}.md").write_text(texto if texto is not None else IDEA.format(sid=sid, tipo=tipo), encoding="utf-8")
+        ((self.hu if sid.startswith("HU") else self.en) / f"{sid}.md").write_text(texto if texto is not None else IDEA.format(sid=sid, tipo=tipo), encoding="utf-8")
         h.write_matrix(self.root, [])
         h.write_changes(self.root)
 
@@ -973,7 +1049,7 @@ class Ideas(Entorno):
 
     def test_una_idea_no_pide_tareas_contrato_pantalla_ni_impacto_ni_ejecucion(self):
         self.idea()
-        self.assertNotIn("## Tareas", (self.fase / "HU-30.md").read_text(encoding="utf-8"))
+        self.assertNotIn("## Tareas", (self.hu / "HU-30.md").read_text(encoding="utf-8"))
         self.assertEqual(self.errors(), [])
 
     def test_un_habilitador_idea_no_necesita_ligado(self):
@@ -989,7 +1065,7 @@ class Ideas(Entorno):
         self.assertTrue(self.hay("EN-04.md", "ligado"))
 
     def test_una_idea_conserva_el_encabezado_obligatorio(self):
-        (self.fase / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU").replace("epica: Compra\n", ""), encoding="utf-8")
+        (self.hu / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU").replace("epica: Compra\n", ""), encoding="utf-8")
         self.assertTrue(self.hay("HU-30.md", "epica"))
 
     def test_una_idea_no_puede_tener_tareas_hechas_ni_en_curso(self):
@@ -1039,7 +1115,7 @@ class Habilitadores(Entorno):
         (prod / "03-reglas-de-negocio.md").write_text("# rn\n\n| ID | Regla |\n|---|---|\n| RN-13 | **Stock** |\n", encoding="utf-8")
 
     def habilitador(self, ligado, tareas=(("EN-01.1", "API", "refactor", "normal", "pendiente"),), **kw):
-        (self.fase / "EN-01.md").write_text(hu(list(tareas), sid="EN-01", tipo="EN", ligado=ligado, **kw), encoding="utf-8")
+        (self.en / "EN-01.md").write_text(hu(list(tareas), sid="EN-01", tipo="EN", ligado=ligado, **kw), encoding="utf-8")
         h.write_matrix(self.root, [])
         h.write_changes(self.root)
 
@@ -1184,13 +1260,13 @@ class Impacto(Entorno):
         self.assertTrue(self.hay("la guía"))
 
     def test_el_documento_puede_ir_con_comillas_o_enlace(self):
-        self.con_impacto([("`RN-13`", "x", "modifica", "pendiente"), ("[PA-02](../../product/06-pantallas-y-navegacion.md)", "x", "modifica", "pendiente")])
+        self.con_impacto([("`RN-13`", "x", "modifica", "pendiente"), ("[PA-02](../../../product/06-pantallas-y-navegacion.md)", "x", "modifica", "pendiente")])
         self.assertEqual(self.errors(), [])
 
     def test_un_enlace_con_nombre_legible_se_resuelve_por_su_destino(self):
-        self.con_impacto([("[contenido](../../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente"), ("[el contrato](../../api-contrato.md)", "x", "modifica", "pendiente")])
+        self.con_impacto([("[contenido](../../../product/07-contenido-y-mensajes.md)", "x", "modifica", "pendiente"), ("[el contrato](../../../api-contrato.md)", "x", "modifica", "pendiente")])
         self.assertEqual(self.errors(), [])
-        self.con_impacto([("[contenido](../../product/no-existe.md)", "x", "modifica", "pendiente")])
+        self.con_impacto([("[contenido](../../../product/no-existe.md)", "x", "modifica", "pendiente")])
         self.assertTrue(self.hay("product/no-existe.md"))
 
     # --- la marca «Cambios» en el documento vivo ---
@@ -1248,7 +1324,7 @@ class Impacto(Entorno):
     def otra(self, sid, estado, estado_fila="pendiente", doc="RN-13"):
         nombre = f"{sid}.md"
         tareas = [(f"{sid}.1", "DOC", "producto", "normal", "pendiente")]
-        (self.fase / nombre).write_text(hu(tareas, estado=estado, sid=sid, impacto_=impacto([(doc, "x", "modifica", estado_fila)])), encoding="utf-8")
+        (self.hu / nombre).write_text(hu(tareas, estado=estado, sid=sid, impacto_=impacto([(doc, "x", "modifica", estado_fila)])), encoding="utf-8")
         h.write_matrix(self.root, [])
         h.write_changes(self.root)
 
@@ -1283,7 +1359,7 @@ class Impacto(Entorno):
         self.escribe(hu(reemplaza="HU-12"))
         self.assertTrue(self.hay("reemplaza", "HU-12"))  # no puede reemplazarse a sí misma
         self.escribe(HU_OK)
-        (self.fase / "HU-30.md").write_text(hu([("HU-30.1", "DOC", "producto", "normal", "pendiente")], sid="HU-30", reemplaza="HU-12"), encoding="utf-8")
+        (self.hu / "HU-30.md").write_text(hu([("HU-30.1", "DOC", "producto", "normal", "pendiente")], sid="HU-30", reemplaza="HU-12"), encoding="utf-8")
         h.write_matrix(self.root, [])
         h.write_changes(self.root)
         self.assertEqual(self.errors(), [])
@@ -1332,7 +1408,7 @@ class RegistroDeCambios(Entorno):
     def test_el_registro_enlaza_a_la_historia_dentro_de_su_fase(self):
         self.escribe(hu(impacto_=impacto([("RN-13", "x", "modifica", "pendiente")])))
         h.write_changes(self.root)
-        self.assertIn("[HU-12](../historias/fase-2/HU-12.md)", self.log.read_text(encoding="utf-8"))
+        self.assertIn("[HU-12](../historias/fase-2/HU/HU-12.md)", self.log.read_text(encoding="utf-8"))
 
     def test_lista_cada_fila_con_su_historia_documento_y_estado(self):
         self.escribe(hu(impacto_=impacto([("RN-13", "Disponibilidad orientativa", "modifica", "pendiente")])))
@@ -1346,7 +1422,7 @@ class RegistroDeCambios(Entorno):
 
     def test_las_hechas_van_primero_ordenadas_por_fecha_y_las_pendientes_al_final(self):
         hecho = [("HU-30.1", "DOC", "producto", "normal", "hecho")]
-        (self.fase / "HU-30.md").write_text(
+        (self.hu / "HU-30.md").write_text(
             hu(hecho, sid="HU-30", impacto_=impacto([("RN-13", "Cambio ya aplicado", "modifica", "hecho")])), encoding="utf-8")
         self.escribe(hu(impacto_=impacto([("RN-13", "Cambio por aplicar", "modifica", "pendiente")])))
         h.write_changes(self.root)

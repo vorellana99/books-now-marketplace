@@ -19,9 +19,10 @@ class Entorno(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.root = Path(self.tmp.name)
         fase = self.root / "docs" / "historias" / "fase-2"
-        fase.mkdir(parents=True)
-        (fase / "HU-12.md").write_text(hu(TAREAS), encoding="utf-8")
-        (fase / "EN-01.md").write_text(hu([("EN-01.1", "API", "configuracion", "normal", "pendiente")], sid="EN-01"), encoding="utf-8")
+        (fase / "HU").mkdir(parents=True)
+        (fase / "EN").mkdir()
+        (fase / "HU" / "HU-12.md").write_text(hu(TAREAS), encoding="utf-8")
+        (fase / "EN" / "EN-01.md").write_text(hu([("EN-01.1", "API", "configuracion", "normal", "pendiente")], sid="EN-01"), encoding="utf-8")
 
     def tearDown(self):
         self.tmp.cleanup()
