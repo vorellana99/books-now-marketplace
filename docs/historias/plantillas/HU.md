@@ -10,7 +10,15 @@ reemplaza:
 
 # HU-nn Título corto de la historia
 
-> **Dónde va:** cópiala a `docs/historias/fase-n/HU/HU-nn.md` (la carpeta de la fase en que se trabajará; el nombre es **solo el correlativo**, sin título) y escribe los enlaces relativos con `../../../` (por ejemplo `../../../product/03-reglas-de-negocio.md`). Qué valor admite cada campo y cada columna está en el [diccionario](README.md). Borra esta nota.
+> **Al copiar la plantilla**
+>
+> | Qué | Cómo |
+> |---|---|
+> | Dónde va | `docs/historias/fase-n/HU/HU-nn.md`, en la carpeta de la fase en que se trabajará |
+> | Nombre | **Solo el correlativo**, sin título; igual al `id` del encabezado |
+> | Enlaces | Relativos, con `../../../` (por ejemplo `../../../product/03-reglas-de-negocio.md`) |
+> | Valores | Qué admite cada campo y cada columna está en el [diccionario](README.md) |
+> | Esta nota | Bórrala |
 >
 > **Estado:** 📝 propuesta (cámbialo en el encabezado; los estados, su significado y sus transiciones están en el [diccionario](README.md#estados-de-una-historia-o-un-habilitador); un pendiente que aún no se desglosa es una `idea`, con la plantilla [`idea.md`](idea.md))
 >
@@ -74,7 +82,9 @@ reemplaza:
 
 ## Criterios
 
-- **Dado** …, **cuando** …, **entonces** ….
+| Dado | Cuando | Entonces |
+|---|---|---|
+| … | … | … |
 
 ## Listo cuando
 
@@ -191,7 +201,15 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 > | `hecho` | ✅ | Terminada, con todas las casillas de su bloque marcadas (el script sella su fin) | Al terminar su commit |
 > | `bloqueado` | ⛔ | No puede avanzar; se dice por qué en «Decisiones y desvíos» | Cuando algo la detiene |
 >
-> **Capa, Tipo, Rigor y Estado se escriben «icono texto»** (`⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente`). El texto es el valor (kebab-case: minúsculas, sin acentos ni símbolos, con guiones en vez de espacios) y **el icono de cada valor es siempre el mismo**, en **todas** las filas: si falta o no coincide, el comprobador lo señala, y `python3 scripts/historias.py --formato` los completa y corrige (puedes escribir solo el texto). Estados: `✏️ propuesta`, `⏳ pendiente`, `⏩ en-curso`, `✅ hecho`, `⛔ bloqueado`. Rigor: `🔴 critico` o `🟢 normal`.
+> **Cómo se escribe cada celda de la tabla de tareas**
+>
+> | Celda | Formato | Ejemplo |
+> |---|---|---|
+> | `Capa`, `Tipo`, `Rigor`, `Estado` | «icono texto»: el texto es el valor (kebab-case: minúsculas, sin acentos ni símbolos, con guiones en vez de espacios) | `⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente` |
+> | `Depende de` | El id de otra tarea (aunque sea de otra historia), varias separadas por coma, o `—` | `HU-12.1, EN-02.3` |
+> | Cualquier celda | Sin el carácter de la barra vertical, que separa las columnas | — |
+>
+> **El icono de cada valor es siempre el mismo**, en **todas** las filas: si falta o no coincide, el comprobador lo señala, y `python3 scripts/historias.py --formato` los completa y corrige (puedes escribir solo el texto).
 >
 > **Tipo** y **Rigor** se eligen por lo que cambia, no por cómo se programa: la tabla de tipos, su receta y el significado de cada valor están en el [diccionario](README.md#tipos-de-tarea) (`python3 scripts/historias.py --tipos` la imprime).
 >

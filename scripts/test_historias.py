@@ -134,10 +134,17 @@ _DE_TAREAS = (ESTADOS_TAR, "Capas de una tarea", "Rigor de una tarea", "Columnas
 # las tablas de cada plantilla que salen de los valores del script (las especiales, los campos del encabezado y las secciones, salen del propio archivo)
 TABLAS_DE_PLANTILLA = {"HU": (ESTADOS_HIST,) + _DE_TAREAS + ("Épicas de las historias",), "EN": (ESTADOS_HIST,) + _DE_TAREAS, "idea": (ESTADOS_HIST,)}
 CAMPOS_DE_PLANTILLA = {"HU": ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza"), "EN": ("id", "titulo", "tipo", "estado", "amplia", "reemplaza", "ligado"), "idea": ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza")}
-SECCIONES_DE_PLANTILLA = {"HU": ("Criterios", "Listo cuando", "Tareas"), "EN": ("Lo que hay hoy", "Listo cuando", "Tareas"), "idea": ()}
+SECCIONES_DE_PLANTILLA = {"HU": ("Criterios", "Listo cuando", "Tareas"), "EN": ("Criterios", "Lo que hay hoy", "Listo cuando", "Tareas"), "idea": ()}
 ESPECIALES = ("Campos del encabezado", "Secciones de la plantilla")
 # la tabla del resumen que abre el cuerpo de cada plantilla (la primera tabla fuera de una cita, tras el título)
 RESUMEN_DE_PLANTILLA = {"HU": ("Como", "Quiero", "Para", "Reglas", "Pantallas", "Rutas"), "EN": ("Para", "Porque", "Ligado a"), "idea": ("Qué", "Origen", "Por qué importa", "Estado de la decisión")}
+
+
+CRITERIOS_DE_PLANTILLA = ("Dado", "Cuando", "Entonces")  # las columnas de la tabla de «## Criterios» de HU.md y EN.md
+
+
+def criterios_de(columnas=CRITERIOS_DE_PLANTILLA):
+    return "| " + " | ".join(columnas) + " |\n|" + "---|" * len(columnas) + "\n| … | … | … |\n"
 
 
 def resumen_de(nombre, filas=None):
@@ -153,7 +160,7 @@ def tabla_en_plantilla(titulo, filas):
 def plantilla_de(nombre):
     """Una plantilla mínima y válida: su encabezado, sus secciones y las tablas que el script comprueba."""
     campos, secciones = CAMPOS_DE_PLANTILLA[nombre], SECCIONES_DE_PLANTILLA[nombre]
-    texto = "---\n" + "".join(f"{c}: x\n" for c in campos) + "---\n\n# x Título\n\n" + resumen_de(nombre) + "\n" + "".join(f"## {s}\n\ntexto\n\n" for s in secciones) + "\n"
+    texto = "---\n" + "".join(f"{c}: x\n" for c in campos) + "---\n\n# x Título\n\n" + resumen_de(nombre) + "\n" + "".join(f"## {s}\n\n" + (criterios_de() if s == "Criterios" else "texto\n") + "\n" for s in secciones) + "\n"
     texto += "\n".join(tabla_en_plantilla(titulo, TABLAS_DE_VALORES[titulo]) for titulo in TABLAS_DE_PLANTILLA[nombre])
     if nombre != "idea":
         texto += "\n" + tabla_en_plantilla(ESPECIALES[0], [(c, "") for c in campos]) + "\n" + tabla_en_plantilla(ESPECIALES[1], [(s, "") for s in secciones])
@@ -1185,6 +1192,16 @@ class Diccionario(Entorno):
         texto = "---\nid: x\n# un comentario\n---\n\n| Campo | Contenido |\n|---|---|\n| Qué | … |\n"
         self.assertIsNone(h.parse_body_table(texto))
         self.assertEqual(h.parse_body_table(texto.replace("---\n\n|", "---\n\n# Título\n\n|")), [("Qué", "…")])
+
+    def test_los_criterios_de_una_historia_y_de_un_habilitador_son_una_tabla(self):
+        self.assertEqual(h.CRITERIOS_EN_PLANTILLAS, CRITERIOS_DE_PLANTILLA)
+        for nombre in ("HU", "EN"):
+            sin = plantilla_de(nombre).replace(criterios_de(), "- **Dado** …, **cuando** …, **entonces** ….\n")
+            otra = plantilla_de(nombre).replace(criterios_de(), criterios_de(("Dado", "Entonces")))
+            for cambio, mal in (("falta", sin), ("columnas", otra)):
+                self.assertNotEqual(mal, plantilla_de(nombre))
+                self.escribe_diccionario(DICCIONARIO_OK, contenido={nombre: mal})
+                self.assertTrue(self.hay(f"plantillas/{nombre}.md", "Criterios", cambio), (nombre, cambio))
 
     def test_la_tabla_de_resumen_no_se_confunde_con_las_de_una_cita(self):
         # la nota de la plantilla va dentro de una cita y trae otras tablas: no cuentan como el resumen

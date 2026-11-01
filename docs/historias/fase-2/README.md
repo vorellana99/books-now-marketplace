@@ -4,7 +4,9 @@
 
 ## Qué entra hoy
 
-**Disponibilidad de stock** (hoy la tienda solo se entera de que falta stock al pagar, y el aviso no dice cuál libro): tres historias, [HU-12](HU/HU-12.md), [HU-23](HU/HU-23.md) y [HU-35](HU/HU-35.md), que comparten un mismo cambio de contrato y una misma decisión de producto (`HU-12.1`).
+| Tema | Por qué | Historias | Qué comparten |
+|---|---|---|---|
+| **Disponibilidad de stock** | Hoy la tienda solo se entera de que falta stock al pagar, y el aviso no dice cuál libro | [HU-12](HU/HU-12.md), [HU-23](HU/HU-23.md) y [HU-35](HU/HU-35.md) | Un mismo cambio de contrato y una misma decisión de producto (`HU-12.1`) |
 
 **El estado de todo lo de esta fase** (historias, habilitadores e ideas) está en su [matriz](matriz.md).
 

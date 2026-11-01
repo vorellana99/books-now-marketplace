@@ -136,6 +136,8 @@ TABLAS_EN_PLANTILLAS = {
     "idea": (_ESTADOS,),
 }
 TABLAS_DEL_ARCHIVO = ("Campos del encabezado", "Secciones de la plantilla")  # en HU.md y EN.md
+# Las columnas de la tabla de «## Criterios» de HU.md y EN.md (un escenario por fila)
+CRITERIOS_EN_PLANTILLAS = ("Dado", "Cuando", "Entonces")
 # La tabla del resumen con que abre el cuerpo de cada plantilla (la primera tabla fuera de una cita, tras el título): sus campos
 RESUMEN_EN_PLANTILLAS = {
     "HU": ("Como", "Quiero", "Para", "Reglas", "Pantallas", "Rutas"),
@@ -339,7 +341,7 @@ def parse_value_table(text, heading):
 
 
 def parse_body_table(text):
-    """[(primera celda, segunda celda)] de la primera tabla del cuerpo (la que no va dentro de una cita) tras el título `# `; None si no hay."""
+    """[(primera celda, segunda celda)] de la primera tabla del cuerpo (la que no va dentro de una cita) entre el título `# ` y la primera sección `## `; None si no hay."""
     lines = text.splitlines()
     cierre = next((k for k, l in enumerate(lines[1:], 1) if l.strip() == "---"), 0) if lines and lines[0].strip() == "---" else -1
     inicio = next((k for k, l in enumerate(lines) if k > cierre and l.startswith("# ")), None)
@@ -347,6 +349,8 @@ def parse_body_table(text):
         return None
     filas, tabla = [], 0
     for line in lines[inicio + 1:]:
+        if line.startswith("## "):
+            break
         if not line.startswith("|"):
             if tabla:
                 break
@@ -358,6 +362,15 @@ def parse_body_table(text):
             celdas = [c.strip() for c in line.strip().strip("|").split("|")]
             filas.append((celdas[0].strip("`"), celdas[1] if len(celdas) > 1 else ""))
     return filas if tabla else None
+
+
+def parse_section_header(text, titulo):
+    """Las celdas de la fila de encabezado de la primera tabla de la sección «## <titulo>» (None si la sección no tiene tabla)."""
+    cuerpo = section(text, titulo)
+    for line in (cuerpo or "").splitlines():
+        if line.startswith("|"):
+            return [c.strip() for c in line.strip().strip("|").split("|")]
+    return None
 
 
 def _errores_de_tabla(archivo, titulo, filas, valores, iconos):
@@ -404,6 +417,12 @@ def plantilla_errors(nombre, text):
     except HistoriaError as e:
         errores.append(f"{archivo}: {e}")
         campos = ()
+    criterios = parse_section_header(text, "Criterios")
+    esperado = " | ".join(CRITERIOS_EN_PLANTILLAS)
+    if criterios is None:
+        errores.append(f"{archivo}: falta la tabla de «## Criterios» (columnas: {esperado})")
+    elif criterios != list(CRITERIOS_EN_PLANTILLAS):
+        errores.append(f"{archivo}: las columnas de la tabla de «## Criterios» son {' | '.join(criterios)} y deben ser {esperado}")
     secciones = tuple(re.findall(r"^## (.+?)\s*$", text, re.M))
     for titulo, valores in zip(TABLAS_DEL_ARCHIVO, (campos, secciones)):
         errores += _errores_de_tabla(archivo, titulo, parse_value_table(text, titulo), valores, None)

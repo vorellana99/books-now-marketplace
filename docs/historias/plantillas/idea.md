@@ -10,7 +10,16 @@ reemplaza:
 
 # HU-nn Título corto de la idea
 
-> **Idea (estado `idea`).** Un pendiente que se anota sin desglosarlo. Cópiala a `docs/historias/fase-n/HU/HU-nn.md` (una historia) o a `docs/historias/fase-n/EN/EN-nn.md` (un habilitador: pon `id: EN-nn` y `tipo: EN` y quita la línea `epica`); el nombre es solo el correlativo, el siguiente libre. Borra esta nota y rellena lo de abajo. Qué admite cada campo está en el [diccionario](README.md). El comprobador solo exige el encabezado: **no** pide criterios, tareas, contrato, pantalla, impacto en el producto ni `ligado:`.
+> **Idea (estado `idea`).** Un pendiente que se anota sin desglosarlo. Qué admite cada campo está en el [diccionario](README.md). El comprobador solo exige el encabezado: **no** pide criterios, tareas, contrato, pantalla, impacto en el producto ni `ligado:`. Borra esta nota y rellena lo de abajo.
+>
+> **Al copiar la idea**
+>
+> | Si es… | Cópiala a | Cambia en el encabezado |
+> |---|---|---|
+> | Una historia | `docs/historias/fase-n/HU/HU-nn.md` | Nada: conserva `tipo: HU` y `epica` |
+> | Un habilitador | `docs/historias/fase-n/EN/EN-nn.md` | `id: EN-nn`, `tipo: EN` y quita la línea `epica` |
+>
+> El nombre es solo el correlativo: el siguiente libre de ese tipo.
 >
 > Los estados por los que pasa, de la idea a la historia cerrada (el significado completo está en el [diccionario](README.md#estados-de-una-historia-o-un-habilitador)):
 >
@@ -33,4 +42,11 @@ reemplaza:
 
 ## Para promoverla a `propuesta`
 
-Copia la plantilla de su tipo ([`HU.md`](HU.md) o [`EN.md`](EN.md)) sobre este archivo, completa sus secciones (criterios, «Listo cuando…», contrato y pantalla si hay tareas `[API]` o `[WEB]`, «Impacto en el producto», tareas con su detalle y, en un habilitador, `ligado:`), pon `estado: propuesta` y espera la aprobación del usuario, como con cualquier historia. Una idea no puede tener tareas hechas ni en curso.
+| Paso | Qué se hace |
+|---|---|
+| 1 | Copia la plantilla de su tipo ([`HU.md`](HU.md) o [`EN.md`](EN.md)) sobre este archivo |
+| 2 | Completa sus secciones: criterios, «Listo cuando…», contrato y pantalla si hay tareas `[API]` o `[WEB]`, «Impacto en el producto», tareas con su detalle y, en un habilitador, `ligado:` |
+| 3 | Pon `estado: propuesta` |
+| 4 | Espera la aprobación del usuario, como con cualquier historia |
+
+Una idea no puede tener tareas hechas ni en curso.
