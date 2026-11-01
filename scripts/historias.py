@@ -771,17 +771,15 @@ def build_rows(root, commits):
     return sorted(rows, key=lambda r: sort_key(r["id"]))
 
 
-# Cada fase tiene su matriz (docs/historias/fase-n/matriz.md), generada entera: «Historias» y «Habilitadores» en secciones propias, con las
-# columnas de cada tipo, y en cada una «Abiertas» (lo que todavía se trabaja, con todas las columnas) y «Cerradas» (lo terminado, con lo
-# mínimo). El ID es el enlace a la historia; API y Web se escriben «icono texto»; las fechas y el tiempo van en una sola columna. El README de
-# historias solo lleva un índice generado de las fases
+# Cada fase tiene su matriz (docs/historias/fase-n/matriz.md), generada entera: «Historias» y «Habilitadores», cada uno con una sola tabla (todas
+# sus filas por ID, abiertas o cerradas: el estado lo dice la columna Estado). El ID es el enlace a la historia; API y Web se escriben «icono
+# texto»; las fechas y el tiempo van en una sola columna («inicio → cierre · tiempo»). El README de historias solo lleva un índice generado de
+# las fases
 CAPA_TEXTO = {"✅": "✅ hecha", "🔄": "🔄 en curso", "⬜": "⬜ pendiente", "—": "— no aplica"}
 ID_FILA = re.compile(r"\b((?:HU|EN)-\d+)\b")
-COLUMNAS = {  # (tipo, abiertas)
-    ("HU", True): ("ID", "Historia", "Épica", "Estado", "API", "Web", "Cambios de producto", "Tareas", "Fechas y tiempo"),
-    ("HU", False): ("ID", "Historia", "Épica", "Estado", "Cierre y tiempo"),
-    ("EN", True): ("ID", "Habilitador", "Ligado a", "Estado", "Tareas", "Fechas y tiempo"),
-    ("EN", False): ("ID", "Habilitador", "Ligado a", "Estado", "Cierre y tiempo"),
+COLUMNAS = {  # una sola lista por tipo
+    "HU": ("ID", "Historia", "Épica", "Estado", "API", "Web", "Cambios de producto", "Tareas", "Fechas y tiempo"),
+    "EN": ("ID", "Habilitador", "Ligado a", "Estado", "Tareas", "Fechas y tiempo"),
 }
 TIPOS_MATRIZ = (("HU", "Historias", "historias"), ("EN", "Habilitadores", "habilitadores"))
 LEYENDA = ("**Leyenda:** estado: 💡 idea (anotada, sin desglosar) · 📝 propuesta (sin aprobar) · ⬜ aprobada · 🔄 en curso · ✅ cerrada. "
@@ -809,8 +807,6 @@ def _celda_matriz(row, columna):
         if row["inicio"] == "—":
             return "—"
         return f"{row['inicio']} → {row['cierre'] if row['cierre'] != '—' else 'en curso'} · {row['tiempo']}"
-    if columna == "Cierre y tiempo":
-        return f"{row['cierre']} · {row['tiempo']}"
     if columna == "Ligado a":
         return _celda_ligado(row.get("ligado", ""))
     if columna in ("API", "Web"):
@@ -829,17 +825,14 @@ def _tabla_matriz(rows, columnas, vacio):
 
 
 def render_phase(fase, rows):
-    """El archivo `fase-n/matriz.md` entero: historias y habilitadores de esa fase, cada uno con «Abiertas» y «Cerradas»."""
+    """El archivo `fase-n/matriz.md` entero: historias y habilitadores de esa fase, cada uno con una sola tabla ordenada por ID."""
     mias = [r for r in rows if r["fase"] == fase]
     partes = [f"# Matriz de la fase {fase}", "",
               "> La genera `python3 scripts/historias.py`: no se edita a mano. El objetivo de la fase está en su [README](README.md); las reglas del "
               "proceso y el índice de todas las fases, en el [README de historias](../README.md).", "", LEYENDA, ""]
     for tipo, titulo, plural in TIPOS_MATRIZ:
-        filas = [r for r in mias if r["tipo"] == tipo]
-        abiertas, cerradas = [r for r in filas if not is_closed(r)], [r for r in filas if is_closed(r)]
-        partes += [f"## {titulo}", "",
-                   f"### Abiertas ({len(abiertas)})", "", _tabla_matriz(abiertas, COLUMNAS[(tipo, True)], f"_No hay {plural} abiertas._"), "",
-                   f"### Cerradas ({len(cerradas)})", "", _tabla_matriz(cerradas, COLUMNAS[(tipo, False)], f"_Todavía no hay {plural} cerradas._"), ""]
+        filas = [r for r in mias if r["tipo"] == tipo]  # ya vienen ordenadas por ID (build_rows)
+        partes += [f"## {titulo}", "", _tabla_matriz(filas, COLUMNAS[tipo], f"_No hay {plural} en esta fase._"), ""]
     return "\n".join(partes)
 
 

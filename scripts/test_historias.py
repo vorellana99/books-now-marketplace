@@ -511,15 +511,17 @@ class Matriz(unittest.TestCase):
         self.assertNotIn("HU-12", self.parte(texto, "Habilitadores"))
 
     def test_las_columnas_de_las_historias(self):
-        self.assertIn("| ID | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |", self.parte(self.matriz(2), "Historias"))
-        self.assertIn("| ID | Historia | Épica | Estado | Cierre y tiempo |", self.parte(self.matriz(1), "Historias"))  # la fase 1 tiene una cerrada
+        columnas = "| ID | Historia | Épica | Estado | API | Web | Cambios de producto | Tareas | Fechas y tiempo |"
+        for fase in (1, 2):  # las dos fases, con historias abiertas y cerradas, tienen la misma tabla
+            self.assertEqual(self.parte(self.matriz(fase), "Historias").count(columnas), 1, fase)
+            self.assertNotIn("Cierre y tiempo", self.matriz(fase))
 
     def test_las_columnas_de_los_habilitadores_no_tienen_epica_ni_capas(self):
         cerrado = hu([("EN-09.1", "API", "refactor", "normal", "hecho")], sid="EN-09", tipo="EN", estado="cerrada", ligado="backend/05-piezas-clave.md")
         (self.en / "EN-09.md").write_text(cerrado, encoding="utf-8")
         hab = self.parte(self.matriz(2), "Habilitadores")
-        self.assertIn("| ID | Habilitador | Ligado a | Estado | Tareas | Fechas y tiempo |", hab)
-        self.assertIn("| ID | Habilitador | Ligado a | Estado | Cierre y tiempo |", hab)
+        self.assertEqual(hab.count("| ID | Habilitador | Ligado a | Estado | Tareas | Fechas y tiempo |"), 1)  # una sola tabla, con un habilitador cerrado y uno abierto
+        self.assertNotIn("Cierre y tiempo", hab)
         for columna in ("Épica", "API", "Web", "Cambios de producto"):
             self.assertNotIn(columna, hab)
 
@@ -544,16 +546,15 @@ class Matriz(unittest.TestCase):
         self.assertIn("| RN-13 |", self.fila(texto, "[EN-03]"))  # una regla, sin enlace
         self.assertNotIn("](../../RN-13)", texto)
 
-    def test_las_ideas_estan_en_abiertas_de_su_tipo(self):
+    def test_las_ideas_estan_en_la_tabla_de_su_tipo(self):
         (self.hu / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU"), encoding="utf-8")
         (self.en / "EN-04.md").write_text(IDEA.format(sid="EN-04", tipo="EN"), encoding="utf-8")
         texto = self.matriz(2)
-        hist_abiertas = self.parte(texto, "Historias").split("### Cerradas")[0]
-        hab_abiertas = self.parte(texto, "Habilitadores").split("### Cerradas")[0]
-        self.assertIn("HU-30", hist_abiertas)
-        self.assertIn("💡 idea", self.fila(hist_abiertas, "HU-30"))
-        self.assertIn("EN-04", hab_abiertas)
-        self.assertNotIn("EN-04", hist_abiertas)
+        historias, habilitadores = self.parte(texto, "Historias"), self.parte(texto, "Habilitadores")
+        self.assertIn("HU-30", historias)
+        self.assertIn("💡 idea", self.fila(historias, "HU-30"))
+        self.assertIn("EN-04", habilitadores)
+        self.assertNotIn("EN-04", historias)
 
     def test_api_y_web_se_escriben_icono_y_texto(self):
         texto = self.matriz(2)
@@ -568,7 +569,9 @@ class Matriz(unittest.TestCase):
     def test_fechas_y_tiempo_van_en_una_sola_columna(self):
         self.assertIn("| 2026-10-28 → en curso · ≈ 1 h 11 min |", self.matriz(1))
         self.assertIn("| 2026-10-30 → en curso · 30 min |", self.matriz(2))
-        self.assertIn("| 2026-10-30 · ≈ 1 h 56 min |", self.matriz(1))  # cerradas: «cierre · tiempo»
+        cerrada = self.fila(self.matriz(1), "[HU-01]")  # una cerrada: «inicio → cierre · tiempo», no «en curso»
+        self.assertRegex(cerrada, r"\| \d{4}-\d\d-\d\d → 2026-10-30 · ≈ 1 h 56 min \|$")
+        self.assertNotIn("en curso", cerrada.split("✅ cerrada")[1])
 
     def test_una_historia_sin_commits_no_tiene_fechas(self):
         self.commits = []
@@ -578,19 +581,49 @@ class Matriz(unittest.TestCase):
         (self.hu / "HU-12.md").write_text(hu(impacto_=impacto([("RN-13", "x", "modifica", "hecho"), ("PA-02", "y", "modifica", "pendiente")])), encoding="utf-8")
         self.assertIn("| 1 / 2 |", self.fila(self.matriz(2), "[HU-12]"))
 
-    def test_una_tabla_sin_filas_lo_dice(self):
+    def test_un_tipo_sin_filas_conserva_su_titulo_y_lo_dice(self):
         (self.en / "EN-01.md").unlink()
         texto = self.matriz(2)
-        self.assertIn("_No hay habilitadores abiertas._", texto)
-        self.assertIn("_Todavía no hay habilitadores cerradas._", texto)
+        self.assertIn("## Habilitadores\n\n_No hay habilitadores en esta fase._", texto)
+        self.assertNotIn("| ID | Habilitador", texto)
+        self.assertIn("_No hay habilitadores en esta fase._", self.matriz(1))  # la fase 1 no tiene habilitadores
+        self.assertIn("## Historias\n\n| ID | Historia", self.matriz(1))
 
-    def test_una_historia_cerrada_pasa_de_abiertas_a_cerradas(self):
+    def test_sin_historias_tambien_conserva_su_titulo(self):
+        for archivo in self.hu.glob("*.md"):
+            archivo.unlink()
+        self.assertIn("## Historias\n\n_No hay historias en esta fase._", self.matriz(2))
+
+    def test_la_matriz_no_tiene_subsecciones_ni_las_palabras_abiertas_y_cerradas(self):
+        for fase in (1, 2):
+            texto = self.matriz(fase)
+            self.assertNotIn("### ", texto)
+            self.assertNotIn("Abiertas", texto)
+            self.assertNotIn("Cerradas", texto)
+
+    def test_cada_fase_con_historias_y_habilitadores_tiene_dos_tablas(self):
+        texto = self.matriz(2)
+        self.assertEqual(sum(1 for l in texto.splitlines() if l.startswith("| ID |")), 2)
+        self.assertEqual(sum(1 for l in self.matriz(1).splitlines() if l.startswith("| ID |")), 1)  # sin habilitadores, una
+
+    def test_las_filas_van_por_id_sea_cual_sea_el_estado(self):
+        (self.hu / "HU-05.md").write_text(IDEA.format(sid="HU-05", tipo="HU"), encoding="utf-8")
+        (self.hu / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU"), encoding="utf-8")
+        ids = lambda texto: re.findall(r"^\| \[(HU-\d+)\]", self.parte(texto, "Historias"), re.M)
+        self.assertEqual(ids(self.matriz(2)), ["HU-05", "HU-12", "HU-30"])
+        self.assertEqual(ids(self.matriz(1)), ["HU-01", "HU-50"])  # una cerrada y una en curso, intercaladas por su número
+
+    def test_una_historia_cerrada_no_cambia_de_tabla_ni_de_sitio(self):
+        (self.hu / "HU-05.md").write_text(IDEA.format(sid="HU-05", tipo="HU"), encoding="utf-8")
+        (self.hu / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU"), encoding="utf-8")
+        antes = [l.split("|")[1] for l in self.parte(self.matriz(2), "Historias").splitlines() if l.startswith("| [")]
         todas = [(t[0], t[1], t[2], t[3], "hecho") for t in TAREAS] + [("HU-12.5", "E2E", "recorrido", "normal", "hecho")]
         (self.hu / "HU-12.md").write_text(hu(todas, estado="cerrada"), encoding="utf-8")
         historias = self.parte(self.matriz(2), "Historias")
-        abiertas, cerradas = historias.split("### Cerradas")
-        self.assertNotIn("HU-12", abiertas)
-        self.assertIn("HU-12", cerradas)
+        despues = [l.split("|")[1] for l in historias.splitlines() if l.startswith("| [")]
+        self.assertEqual(antes, despues)
+        self.assertIn("✅ cerrada", self.fila(historias, "[HU-12]"))
+        self.assertIn("API", historias.splitlines()[2])  # sigue la tabla de todas las columnas
 
     def test_la_leyenda_explica_los_estados_y_las_capas(self):
         texto = self.matriz(2)
@@ -1479,14 +1512,12 @@ class Ideas(Entorno):
         self.escribe(HU_OK.replace("estado: aprobada", "estado: soñada"))
         self.assertTrue(self.hay("estado", "idea"))
 
-    def test_una_idea_figura_en_abiertas_de_la_matriz_con_su_icono(self):
+    def test_una_idea_figura_en_la_matriz_con_su_icono(self):
         self.idea()
         celdas = h.matrix_cells(self.root)
         self.assertEqual(celdas["HU-30"]["Estado"], "💡 idea")
         historias = h.render_phase(2, h.build_rows(self.root, [])).split("## Habilitadores")[0]
-        abiertas, cerradas = historias.split("### Cerradas")
-        self.assertIn("HU-30", abiertas)
-        self.assertNotIn("HU-30", cerradas)
+        self.assertIn("HU-30", historias)
 
     def test_sellar_una_idea_no_le_crea_la_tabla_de_ejecucion(self):
         texto = IDEA.format(sid="HU-30", tipo="HU")
