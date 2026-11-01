@@ -23,7 +23,7 @@ _Todavía no hay historias cerradas._
 
 ## Habilitadores
 
-### Abiertas (8)
+### Abiertas (9)
 
 | ID | Habilitador | Ligado a | Estado | Tareas | Fechas y tiempo |
 |---|---|---|---|---|---|
@@ -35,6 +35,7 @@ _Todavía no hay historias cerradas._
 | [EN-09](EN-09.md) | Aclarar si la compuerta verify.sh incluye la auditoría de dependencias | — | 💡 idea | 0 / 0 | — |
 | [EN-10](EN-10.md) | Poner un tiempo máximo a cada entrega del relay del Outbox | — | 💡 idea | 0 / 0 | — |
 | [EN-11](EN-11.md) | Vigilar los fallos intermitentes de las pruebas | — | 💡 idea | 0 / 0 | — |
+| [EN-13](EN-13.md) | Carpetas HU y EN por fase, plantillas con su diccionario y legado.json ordenado | [guia-de-desarrollo.md](../../guia-de-desarrollo.md) | ⬜ aprobada | 0 / 4 | 2026-10-31 → en curso · 31 min |
 
 ### Cerradas (4)
 
