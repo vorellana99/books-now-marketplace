@@ -107,6 +107,27 @@ PLANTILLA_OK = "\n".join(
 )
 
 
+def tabla_de_valores(titulo, filas):
+    """«### título» y su tabla `| Valor | Icono | Qué significa |`, como las escribe el diccionario de plantillas/README.md."""
+    cuerpo = "\n".join(f"| `{valor}` | {icono} | …algo… |" for valor, icono in filas)
+    return f"### {titulo}\n\n| Valor | Icono | Qué significa |\n|---|---|---|\n{cuerpo}\n"
+
+
+TABLAS_DE_VALORES = {  # título de la tabla -> sus filas (valor, icono), construidas desde las constantes del script
+    "Tipo de historia": [(t, "") for t in ("HU", "EN")],
+    "Estados de una historia o un habilitador": [(k, v.split(" ")[0]) for k, v in h.ESTADOS.items()],
+    "Estados de una tarea": [(k, h.ICONOS["estado"][k]) for k in h.ESTADOS_TAREA],
+    "Capas de una tarea": [(k, h.ICONOS["capa"][k]) for k in h.CAPAS],
+    "Rigor de una tarea": [(k, h.ICONOS["rigor"][k]) for k in h.RIGORES],
+    "Acciones del impacto en el producto": [(k, "") for k in h.ACCIONES],
+    "Estados del impacto en el producto": [(k, "") for k in h.ESTADOS_IMPACTO],
+    "Épicas de las historias": [(k, "") for k in h.EPICAS],
+    "Campos del encabezado": [(k, "") for k in ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza", "ligado")],
+}
+DICCIONARIO_OK = "# Plantillas y diccionario\n\n## Tipos de tarea\n\n" + PLANTILLA_OK + "\n" + "\n".join(tabla_de_valores(t, f) for t, f in TABLAS_DE_VALORES.items())
+
+
+
 class Parseo(unittest.TestCase):
     def test_encabezado(self):
         meta = h.parse_front_matter(HU_OK)
@@ -229,7 +250,7 @@ class TablaDeTipos(unittest.TestCase):
         self.assertIn("contrato", texto)
         self.assertIn("Lo que la API ofrece", texto)
         self.assertIn("siempre critico", texto)  # base-de-datos y evento
-        self.assertIn("_plantilla.md", texto)
+        self.assertIn("plantillas/README.md", texto)
 
     def test_la_salida_de_tipos_no_lleva_marcas_de_markdown(self):
         texto = h.render_types(PLANTILLA_OK.replace("Lo que la API ofrece", "**Lo que la API ofrece**").replace("`JWT_SECRET`", "`JWT_SECRET` y `X`"))
@@ -422,7 +443,8 @@ class Matriz(unittest.TestCase):
         self.assertEqual(row["detalle"], "[HU-12](HU/HU-12.md)")  # el enlace es relativo a la matriz, que vive en la misma carpeta
 
     def test_la_plantilla_y_los_archivos_con_guion_bajo_se_ignoran(self):
-        (self.dir / "_plantilla.md").write_text("---\nid: HU-nn\n---\n", encoding="utf-8")
+        (self.dir / "plantillas").mkdir()
+        (self.dir / "plantillas" / "HU.md").write_text("---\nid: HU-nn\n---\n", encoding="utf-8")
         self.assertEqual(len(self.filas()), 4)
 
     # --- el diseño de cada matriz ---
@@ -616,6 +638,13 @@ class Entorno(unittest.TestCase):
     def con_tareas(self, tareas, **kw):
         self.escribe(hu(tareas, **kw))
 
+    def escribe_diccionario(self, texto):
+        """plantillas/README.md (el diccionario) y las tres plantillas, que el comprobador exige junto a él."""
+        (self.dir / "plantillas").mkdir(exist_ok=True)
+        (self.dir / "plantillas" / "README.md").write_text(texto, encoding="utf-8")
+        for nombre in ("HU", "EN", "idea"):
+            (self.dir / "plantillas" / f"{nombre}.md").write_text("---\nid: x\n---\n", encoding="utf-8")
+
     def hay(self, *palabras):
         return any(all(p in e for p in palabras) for e in self.errors())
 
@@ -748,7 +777,7 @@ class Comprobacion(Entorno):
 
     def test_el_error_de_tipo_apunta_a_la_plantilla(self):
         self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), "📜 cosa"))
-        self.assertTrue(self.hay("_plantilla.md"))
+        self.assertTrue(self.hay("plantillas/README.md"))
 
     def test_el_error_lista_los_tipos_validos_de_la_capa(self):
         self.escribe(HU_OK.replace(h.cell("tipo", "contrato"), "📜 cosa"))
@@ -888,18 +917,18 @@ class Comprobacion(Entorno):
 
     # --- plantilla ---
     def test_una_plantilla_que_coincide_con_el_script_no_da_error(self):
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK, encoding="utf-8")
+        self.escribe_diccionario(DICCIONARIO_OK)
         self.assertEqual(self.errors(), [])
 
     def test_una_plantilla_con_un_icono_distinto_da_error(self):
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace(h.cell("tipo", "regla"), "📏 regla"), encoding="utf-8")
-        self.assertTrue(self.hay("_plantilla.md", "icono", "regla"))
+        self.escribe_diccionario(DICCIONARIO_OK.replace(h.cell("tipo", "regla"), "📏 regla"))
+        self.assertTrue(self.hay("plantillas/README.md", "icono", "regla"))
 
     def test_una_plantilla_que_se_desincroniza_del_script_da_error(self):
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace(h.cell("tipo", "pantalla"), "🖼️ vista"), encoding="utf-8")
-        self.assertTrue(self.hay("_plantilla.md", "WEB"))
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK.replace("| Un aviso entre partes | Reaccionar a algo | sí |", "| Un aviso entre partes | Reaccionar a algo | no |"), encoding="utf-8")
-        self.assertTrue(self.hay("critico", "_plantilla.md"))
+        self.escribe_diccionario(DICCIONARIO_OK.replace(h.cell("tipo", "pantalla"), "🖼️ vista"))
+        self.assertTrue(self.hay("plantillas/README.md", "WEB"))
+        self.escribe_diccionario(DICCIONARIO_OK.replace("| Un aviso entre partes | Reaccionar a algo | sí |", "| Un aviso entre partes | Reaccionar a algo | no |"))
+        self.assertTrue(self.hay("critico", "plantillas/README.md"))
 
 
 RN_13 = "| RN-13 | **Stock** | Antes de cobrar se aparta el stock |"
@@ -1035,6 +1064,132 @@ class Carpetas(Entorno):
         self.assertEqual(h.parse_impact(hu(impacto_=impacto_), h.base_de(self.hu / "HU-12.md"))["filas"][0][0], "product/07-contenido-y-mensajes.md")
 
 
+class Diccionario(Entorno):
+    """plantillas/README.md define cada valor que admite un campo o una columna; el script lo compara con sus constantes."""
+
+    def escribe_diccionario(self, texto, plantillas=("HU", "EN", "idea")):
+        (self.dir / "plantillas").mkdir(exist_ok=True)
+        (self.dir / "plantillas" / "README.md").write_text(texto, encoding="utf-8")
+        for nombre in plantillas:
+            (self.dir / "plantillas" / f"{nombre}.md").write_text("---\nid: x\n---\n", encoding="utf-8")
+
+    def test_el_script_y_la_prueba_conocen_las_mismas_tablas(self):
+        self.assertEqual([titulo for titulo, *_ in h.DICCIONARIO], list(TABLAS_DE_VALORES))
+
+    def test_un_diccionario_completo_no_da_error(self):
+        self.escribe_diccionario(DICCIONARIO_OK)
+        self.assertEqual(self.errors(), [])
+
+    def test_sin_el_diccionario_no_se_exige_nada(self):
+        self.assertEqual(self.errors(), [])
+
+    def test_falta_una_de_las_tres_plantillas(self):
+        for faltante in ("HU", "EN", "idea"):
+            self.escribe_diccionario(DICCIONARIO_OK, plantillas=[n for n in ("HU", "EN", "idea") if n != faltante])
+            (self.dir / "plantillas" / f"{faltante}.md").unlink(missing_ok=True)
+            self.assertTrue(self.hay(f"plantillas/{faltante}.md", "falta la plantilla"), faltante)
+
+    def test_falta_una_tabla_de_valores(self):
+        for titulo in TABLAS_DE_VALORES:
+            self.escribe_diccionario(DICCIONARIO_OK.replace(f"### {titulo}", f"### {titulo} (renombrada)"))
+            self.assertTrue(self.hay("plantillas/README.md", titulo, "falta"), titulo)
+
+    def test_a_una_tabla_le_falta_un_valor_del_script(self):
+        for titulo, filas in TABLAS_DE_VALORES.items():
+            valor = filas[-1][0]
+            fila = f"| `{valor}` | {filas[-1][1]} | …algo… |\n"
+            self.assertIn(fila, DICCIONARIO_OK)
+            self.escribe_diccionario(DICCIONARIO_OK.replace(fila, "", 1) if DICCIONARIO_OK.count(fila) == 1 else self.sin_la_ultima_fila(titulo, fila))
+            self.assertTrue(self.hay("plantillas/README.md", titulo, valor), titulo)
+
+    def sin_la_ultima_fila(self, titulo, fila):
+        """Quita la fila solo dentro de la tabla de ese título (un valor, como `normal`, puede repetirse en otra)."""
+        a = DICCIONARIO_OK.index(f"### {titulo}")
+        b = DICCIONARIO_OK.find("\n### ", a + 4)
+        trozo = DICCIONARIO_OK[a:] if b == -1 else DICCIONARIO_OK[a:b]
+        return DICCIONARIO_OK.replace(trozo, trozo.replace(fila, "", 1), 1)
+
+    def test_una_tabla_tiene_un_valor_que_el_script_no_conoce(self):
+        self.escribe_diccionario(DICCIONARIO_OK.replace("| `cerrada` |", "| `archivada` | 📦 | …algo… |\n| `cerrada` |", 1))
+        self.assertTrue(self.hay("plantillas/README.md", "Estados de una historia", "archivada"))
+
+    def test_un_icono_distinto_al_del_script(self):
+        self.escribe_diccionario(DICCIONARIO_OK.replace(f"| `hecho` | {h.ICONOS['estado']['hecho']} |", "| `hecho` | 🟦 |", 1))
+        self.assertTrue(self.hay("plantillas/README.md", "Estados de una tarea", "hecho", "🟦"))
+
+    def test_el_selector_de_emoji_no_cuenta_como_un_icono_distinto(self):
+        sin = h.ICONOS["capa"]["API"].replace("\ufe0f", "")
+        self.escribe_diccionario(DICCIONARIO_OK.replace(f"| `API` | {h.ICONOS['capa']['API']} |", f"| `API` | {sin} |", 1))
+        self.assertEqual(self.errors(), [])
+
+    def test_la_tabla_de_tipos_sigue_comparandose(self):
+        self.escribe_diccionario(DICCIONARIO_OK.replace(h.cell("tipo", "regla"), "📐 norma"))
+        self.assertTrue(self.hay("plantillas/README.md", "API"))
+
+    def test_parse_value_table_lee_valores_e_iconos(self):
+        self.assertEqual(h.parse_value_table(DICCIONARIO_OK, "Estados del impacto en el producto"), [("pendiente", ""), ("hecho", "")])
+        self.assertEqual(h.parse_value_table(DICCIONARIO_OK, "Rigor de una tarea")[0], ("critico", h.ICONOS["rigor"]["critico"]))
+        self.assertIsNone(h.parse_value_table(DICCIONARIO_OK, "No existe"))
+
+
+class Encabezado(Entorno):
+    """Qué campos exige cada tipo, qué valores admiten `tipo` y `epica`, y que `tipo` coincida con el prefijo del `id`."""
+
+    def archivo(self, texto, nombre="HU-30.md", carpeta=None):
+        (carpeta or self.hu).mkdir(exist_ok=True)
+        (carpeta or self.hu).joinpath(nombre).write_text(texto, encoding="utf-8")
+        h.write_matrix(self.root, [])
+        h.write_changes(self.root)
+
+    def test_las_epicas_validas_son_las_seis_del_producto(self):
+        self.assertEqual(h.EPICAS, ("Cuenta", "Catálogo", "Carrito", "Compra", "Pedidos", "Administración"))
+
+    def test_los_campos_obligatorios_de_cada_tipo(self):
+        self.assertEqual(h.REQUERIDOS_POR_TIPO["HU"], ("id", "titulo", "tipo", "epica", "estado"))
+        self.assertEqual(h.REQUERIDOS_POR_TIPO["EN"], ("id", "titulo", "tipo", "estado"))
+
+    def test_una_historia_con_una_epica_valida(self):
+        for epica in h.EPICAS:
+            self.archivo(IDEA.format(sid="HU-30", tipo="HU").replace("epica: Compra", f"epica: {epica}"))
+            self.assertEqual(self.errors(), [], epica)
+
+    def test_una_historia_con_una_epica_que_no_esta_en_la_lista(self):
+        self.archivo(IDEA.format(sid="HU-30", tipo="HU").replace("epica: Compra", "epica: Calidad"))
+        self.assertTrue(self.hay("HU-30.md", "epica", "Calidad", "Compra"))
+
+    def test_una_historia_sin_epica_es_un_error(self):
+        (self.hu / "HU-30.md").write_text(IDEA.format(sid="HU-30", tipo="HU").replace("epica: Compra\n", ""), encoding="utf-8")
+        self.assertTrue(self.hay("HU-30.md", "epica"))
+
+    def test_un_habilitador_no_necesita_epica(self):
+        self.archivo(IDEA.format(sid="EN-30", tipo="EN").replace("epica: Compra\n", ""), "EN-30.md", self.en)
+        self.assertEqual(self.errors(), [])
+
+    def test_un_habilitador_completo_sin_epica_tampoco(self):
+        (self.root / "docs" / "guia-de-desarrollo.md").write_text("# guía\n", encoding="utf-8")
+        texto = hu([("EN-30.1", "API", "refactor", "normal", "pendiente")], sid="EN-30", tipo="EN", ligado="guia-de-desarrollo.md").replace("epica: Catálogo\n", "")
+        self.archivo(texto, "EN-30.md", self.en)
+        self.assertEqual(self.errors(), [])
+
+    def test_un_habilitador_con_epica_de_mas_no_da_error(self):
+        self.archivo(IDEA.format(sid="EN-30", tipo="EN"), "EN-30.md", self.en)  # el IDEA de prueba trae `epica: Compra`
+        self.assertEqual(self.errors(), [])
+
+    def test_la_matriz_de_un_habilitador_sin_epica_se_genera(self):
+        self.archivo(IDEA.format(sid="EN-30", tipo="EN").replace("epica: Compra\n", ""), "EN-30.md", self.en)
+        self.assertIn("EN-30", (self.fase / "matriz.md").read_text(encoding="utf-8"))
+
+    def test_el_tipo_debe_coincidir_con_el_prefijo_del_id(self):
+        self.archivo(IDEA.format(sid="HU-30", tipo="EN"))
+        self.assertTrue(self.hay("HU-30.md", "tipo", "EN", "HU-"))
+        self.archivo(IDEA.format(sid="EN-30", tipo="HU"), "EN-30.md", self.en)
+        self.assertTrue(self.hay("EN-30.md", "tipo", "HU", "EN-"))
+
+    def test_un_tipo_que_no_es_hu_ni_en(self):
+        self.archivo(IDEA.format(sid="HU-30", tipo="XX"))
+        self.assertTrue(self.hay("HU-30.md", "tipo", "XX"))
+
+
 class Ideas(Entorno):
     """El estado `idea`: un pendiente que se registra en la matriz con solo un encabezado y una frase."""
 
@@ -1142,11 +1297,11 @@ class Habilitadores(Entorno):
         self.assertTrue(self.hay("critico", "[API]"))
 
     def test_la_plantilla_debe_describir_refactor_en_api_y_en_web(self):
-        (self.dir / "_plantilla.md").write_text(PLANTILLA_OK, encoding="utf-8")
+        self.escribe_diccionario(DICCIONARIO_OK)
         self.assertEqual(self.errors(), [])
-        sin_web = "\n".join(l for l in PLANTILLA_OK.splitlines() if not (h.cell("capa", "WEB") in l and "refactor" in l))
-        (self.dir / "_plantilla.md").write_text(sin_web, encoding="utf-8")
-        self.assertTrue(self.hay("_plantilla.md", "WEB"))
+        sin_web = "\n".join(l for l in DICCIONARIO_OK.splitlines() if not (h.cell("capa", "WEB") in l and "refactor" in l))
+        self.escribe_diccionario(sin_web)
+        self.assertTrue(self.hay("plantillas/README.md", "WEB"))
 
     # --- un habilitador se liga a algo ---
     def test_un_habilitador_ligado_a_una_decision_de_arquitectura_es_valido(self):
@@ -1455,7 +1610,7 @@ class DocumentosReales(unittest.TestCase):
     """Lo que de verdad hay en docs/historias: debe cumplir las mismas reglas."""
 
     def test_la_tabla_de_tipos_de_la_plantilla_coincide_con_el_script(self):
-        plantilla = (ROOT / "docs" / "historias" / "_plantilla.md").read_text(encoding="utf-8")
+        plantilla = (ROOT / "docs" / "historias" / "plantillas" / "README.md").read_text(encoding="utf-8")
         self.assertEqual({c: tuple(t) for c, t in h.parse_types_table(plantilla).items()}, h.TIPOS)
         self.assertEqual(h.parse_always_critical(plantilla), set(h.SIEMPRE_CRITICOS))
 
@@ -1494,7 +1649,8 @@ class DocumentosReales(unittest.TestCase):
     # Los documentos vivos ya no hablan de una matriz única ni mandan a una que dejó de existir en el README de historias
     DOCUMENTOS_VIVOS = [
         "CLAUDE.md", ".claude/skills/hu/SKILL.md", ".claude/skills/tarea/SKILL.md", "docs/guia-de-desarrollo.md",
-        "docs/herramientas-de-trabajo.md", "docs/historias/_plantilla.md", "docs/historias/_idea.md", "docs/product/README.md",
+        "docs/herramientas-de-trabajo.md", "docs/historias/plantillas/HU.md", "docs/historias/plantillas/EN.md", "docs/historias/plantillas/idea.md",
+        "docs/historias/plantillas/README.md", "docs/product/README.md",
         "docs/frontend/README.md", "apps/main-api/README.md", "apps/store-web/README.md", "docs/historias/README.md",
     ]
     FRASES_DE_LA_MATRIZ_UNICA = [
@@ -1538,11 +1694,30 @@ class DocumentosReales(unittest.TestCase):
             for palabra in ("git log", "matriz de historias", "documentos vivos"):
                 self.assertIn(palabra, cabecera, f"{ruta}: {palabra}")
 
+    def test_las_epicas_de_las_veinte_historias_anteriores_estan_en_la_lista(self):
+        legado = json.loads((ROOT / "docs" / "historias" / "legado.json").read_text(encoding="utf-8"))
+        self.assertEqual({x["epica"] for x in legado["historias"]} - set(h.EPICAS), set())
+
+    def test_cada_plantilla_tiene_el_encabezado_de_su_tipo(self):
+        carpeta = ROOT / "docs" / "historias" / "plantillas"
+        hu_, en_ = (h.parse_front_matter((carpeta / f"{n}.md").read_text(encoding="utf-8")) for n in ("HU", "EN"))
+        self.assertEqual((hu_["tipo"], en_["tipo"]), ("HU", "EN"))
+        for campo in h.REQUERIDOS_POR_TIPO["HU"]:
+            self.assertIn(campo, hu_)
+        for campo in h.REQUERIDOS_POR_TIPO["EN"] + ("ligado",):
+            self.assertIn(campo, en_)
+        self.assertNotIn("epica", en_)  # un habilitador no lleva epica
+        self.assertNotIn("ligado", hu_)
+
+    def test_las_plantillas_viejas_ya_no_estan_en_la_raiz(self):
+        for nombre in ("_plantilla.md", "_idea.md"):
+            self.assertFalse((ROOT / "docs" / "historias" / nombre).exists(), nombre)
+
     def test_la_plantilla_de_una_idea_existe_y_es_una_idea(self):
-        texto = (ROOT / "docs" / "historias" / "_idea.md").read_text(encoding="utf-8")
+        texto = (ROOT / "docs" / "historias" / "plantillas" / "idea.md").read_text(encoding="utf-8")
         meta = h.parse_front_matter(texto)
         self.assertEqual(meta["estado"], "idea")
-        for campo in h.REQUERIDOS:
+        for campo in h.REQUERIDOS_POR_TIPO["HU"]:
             self.assertIn(campo, meta)
         self.assertIn("propuesta", texto)  # explica cómo se promueve
 

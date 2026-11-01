@@ -10,9 +10,9 @@ reemplaza:
 
 # HU-nn Título corto de la historia
 
-> **Dónde va:** cópiala a `docs/historias/fase-n/HU-nn.md` (la carpeta de la fase en que se trabajará; el nombre es **solo el correlativo**, sin título) y escribe los enlaces relativos con `../../` (por ejemplo `../../product/03-reglas-de-negocio.md`). Borra esta nota.
+> **Dónde va:** cópiala a `docs/historias/fase-n/HU/HU-nn.md` (la carpeta de la fase en que se trabajará; el nombre es **solo el correlativo**, sin título) y escribe los enlaces relativos con `../../../` (por ejemplo `../../../product/03-reglas-de-negocio.md`). Qué valor admite cada campo y cada columna está en el [diccionario](README.md). Borra esta nota.
 >
-> **Estado:** 📝 propuesta (cámbialo en el encabezado: `propuesta` → `aprobada` → `en-curso` → `cerrada`; un pendiente que aún no se desglosa es una `idea`, con la versión corta [`_idea.md`](_idea.md), y se promueve a `propuesta` con esta plantilla). Si amplía una historia anterior, escribe su id en `amplia:` del encabezado y dilo aquí; si la deja sin efecto (la sustituye por completo), escribe su id en `reemplaza:` y la matriz de su fase la marcará «superada por».
+> **Estado:** 📝 propuesta (cámbialo en el encabezado; los estados, su significado y sus transiciones están en el [diccionario](README.md#estados-de-una-historia-o-un-habilitador); un pendiente que aún no se desglosa es una `idea`, con la plantilla [`idea.md`](idea.md))
 
 **Como** …, **quiero** …, **para** ….
 **Reglas:** RN-… · **Pantallas:** PA-… · **Rutas:** …
@@ -59,28 +59,7 @@ El escenario de punta a punta que prueba la tarea `[E2E]`, contra el backend rea
 >
 > **Capa, Tipo, Rigor y Estado se escriben «icono texto»** (`⚙️ API`, `📜 contrato`, `🔴 critico`, `⏳ pendiente`). El texto es el valor (kebab-case: minúsculas, sin acentos ni símbolos, con guiones en vez de espacios) y **el icono de cada valor es siempre el mismo**, en **todas** las filas: si falta o no coincide, el comprobador lo señala, y `python3 scripts/historias.py --formato` los completa y corrige (puedes escribir solo el texto). Estados: `✏️ propuesta`, `⏳ pendiente`, `⏩ en-curso`, `✅ hecho`, `⛔ bloqueado`. Rigor: `🔴 critico` o `🟢 normal`.
 >
-> **Tipo** (tercera columna): dice qué receta aplica y **se elige por lo que cambia**, no por cómo se programa:
->
-> | Capa | Tipo | ¿Qué cambia? | Ejemplos | ¿Siempre critico? |
-> |---|---|---|---|---|
-> | ⚙️ API | 📜 contrato | **Lo que la API le ofrece a la tienda** | Un endpoint nuevo, **un campo más en una respuesta**, un error nuevo, quién puede llamarlo | no |
-> | ⚙️ API | 📐 regla | **Cómo decide el negocio** | Un cálculo, un límite («máximo 10»), una condición | no |
-> | ⚙️ API | ⚡ evento | Un aviso entre partes del sistema (Outbox) | Reaccionar a «se registró un usuario» | sí |
-> | ⚙️ API | 🧊 base-de-datos | Las tablas, columnas, índices o restricciones | Una columna nueva | sí |
-> | ⚙️ API | 🛠️ configuracion | Una variable de entorno | `JWT_SECRET` | no |
-> | ⚙️ API | ♻️ refactor | **La estructura del código, no su comportamiento** | Renombrar o mover un archivo, extraer una clase, ajustar una regla de estructura | no |
-> | 🌐 WEB | 🖼️ pantalla | **Lo que se ve** | Mover un botón, un texto nuevo, un aviso | no |
-> | 🌐 WEB | 🔀 comportamiento | **Lo que la tienda hace**, sin cambiar lo que se ve | Pedir el campo nuevo a la API, el estado del carrito, validar un formulario | no |
-> | 🌐 WEB | ♻️ refactor | **La estructura del código de la tienda, no su comportamiento ni lo que se ve** | Mover un componente, dividir un módulo, renombrar un hook | no |
-> | 📄 DOC | 📦 producto | Reglas, decisiones, historias, mensajes, diseño | `RN-13`, un `DP` | no |
-> | 📄 DOC | 📘 guia | Guías técnicas, README, comandos | `CLAUDE.md` | no |
-> | 🧪 E2E | 🔁 recorrido | El recorrido de punta a punta | — | no |
->
-> **Esta es la única tabla de tipos** (la guía, los comandos y los índices la enlazan; `python3 scripts/historias.py --tipos` la imprime y el comprobador exige que coincida con `scripts/historias.py`). La columna «¿Siempre critico?» la lee el script: no la cambies sin cambiarlo.
->
-> **Receta por tipo** (qué comando o documento seguir al ejecutar la tarea): `contrato` → `/nueva-ruta` si es un endpoint nuevo y, en la primera tarea `[WEB]` que lo use, `/cambio-de-contrato`; `regla` → pruebas primero y, si toca dinero, seguridad o concurrencia, rigor `critico`; `evento` → `/nuevo-evento`; `base-de-datos` → `/nueva-migracion`; `configuracion` → `/nueva-variable-entorno`; `pantalla` → la sección «Pantalla» de la HU y la revisión en un navegador real; `comportamiento` → la compuerta de la tienda (y `/cambio-de-contrato` si consume un contrato nuevo); `refactor` → las pruebas existentes pasan **sin cambiar lo que esperan** (solo imports y rutas de lo movido; si hay que cambiar una expectativa, no es un refactor sino una regla o un contrato), pruebas nuevas solo si se añade una regla de estructura, la compuerta completa, la historia con «Sin cambios en el contrato», «Sin cambios visuales» y «Sin impacto en el producto», y rigor `critico` (con mutaciones) únicamente si toca dominio, seguridad, dinero o concurrencia; `producto` y `guia` → los documentos que toque; `recorrido` → Playwright contra el backend real.
->
-> Un endpoint nuevo con lógica nueva son **dos tareas**: la `regla` y el `contrato`. **Rigor** (escrito en todas las filas): `critico` marca una tarea **crítica** (mutaciones obligatorias y plan corto antes de codificar) y `normal` es el resto. Solo una tarea `[API]` puede ser `critico`, y `base-de-datos` y `evento` siempre lo son (el comprobador lo exige). Se marca `critico` cuando la tarea toca dinero y precios, seguridad (tokens, contraseñas, guards, roles, CORS, límites), concurrencia y transacciones (outbox, reservas, idempotencia), restricciones de la base o reglas del dominio críticas.
+> **Tipo** y **Rigor** se eligen por lo que cambia, no por cómo se programa: la tabla de tipos, su receta y el significado de cada valor están en el [diccionario](README.md#tipos-de-tarea) (`python3 scripts/historias.py --tipos` la imprime).
 >
 > **Diagrama opcional: de flujo** con las dependencias entre tareas, solo si son más de 5 o cruzan varias historias.
 

@@ -38,7 +38,11 @@ FASE_LEGADO = 1
 # impacto ni ligadura hasta que se promueve a `propuesta` completando la plantilla
 ESTADOS = {"idea": "💡 idea", "propuesta": "📝 propuesta", "aprobada": "⬜ aprobada", "en-curso": "🔄 en curso", "cerrada": "✅ cerrada"}
 CAPAS = ("DOC", "API", "WEB", "E2E")
-REQUERIDOS = ("id", "titulo", "tipo", "epica", "estado")
+TIPOS_HISTORIA = ("HU", "EN")  # el tipo del encabezado: coincide con el prefijo del id (HU-nn, EN-nn)
+EPICAS = ("Cuenta", "Catálogo", "Carrito", "Compra", "Pedidos", "Administración")  # las de las historias; un habilitador no lleva épica
+# Qué campos exige el encabezado de cada tipo (`ligado:` de un habilitador se exige aparte, cuando deja de ser una idea)
+REQUERIDOS_POR_TIPO = {"HU": ("id", "titulo", "tipo", "epica", "estado"), "EN": ("id", "titulo", "tipo", "estado")}
+CAMPOS_ENCABEZADO = ("id", "titulo", "tipo", "epica", "estado", "amplia", "reemplaza", "ligado")
 # Una fila de la tabla de tareas: `| # | Capa | Tipo | Rigor | Tarea | Objetivo | Depende de | Estado |`
 FILA = re.compile(r"^\|\s*((?:HU|EN)-\d+\.\d+)\s*\|(.*)\|\s*$")
 COLUMNAS_TAREA = ("Capa", "Tipo", "Rigor", "Tarea", "Objetivo", "Depende de", "Estado")
@@ -49,7 +53,8 @@ RIGORES = (CRITICO, NORMAL)
 # Tipo de cada capa: dice qué receta aplica. Siempre en kebab-case (minúsculas, sin acentos ni símbolos, con guiones en vez de espacios).
 # La DESCRIPCIÓN de cada tipo (qué cambia, ejemplos, receta) vive en docs/historias/_plantilla.md: si cambias esta lista, cambia
 # también esa tabla (parse_types_table y check() las comparan y `python3 scripts/historias.py --check` falla si difieren)
-PLANTILLA = "docs/historias/_plantilla.md"
+PLANTILLAS = "docs/historias/plantillas"  # una plantilla por tipo (HU.md, EN.md, idea.md) y el diccionario de valores (README.md)
+PLANTILLA = f"{PLANTILLAS}/README.md"  # el diccionario: la tabla de tipos de tarea y la de cada valor, que el script compara con sus constantes
 TIPOS = {
     "API": ("contrato", "regla", "evento", "base-de-datos", "configuracion", "refactor"),
     "WEB": ("pantalla", "comportamiento", "refactor"),
@@ -101,6 +106,21 @@ CAMBIOS_ENCABEZADO = (
     "este registro dice qué historia cambió cada uno y cuándo. Lo genera `python3 scripts/historias.py` desde la sección «Impacto en el "
     "producto» de cada historia (`docs/historias/`): no se edita a mano. Una fila *pendiente* es un cambio aprobado o propuesto que "
     "todavía no está escrito en el documento vivo.\n\n"
+)
+
+
+# El diccionario de plantillas/README.md: cada tabla «### título» lista los valores que admite un campo o una columna (la primera columna, entre
+# comillas) y, si lo lleva, su icono (la segunda). check() compara cada una con esta lista: si cambias un valor aquí, cámbialo allí
+DICCIONARIO = (
+    ("Tipo de historia", TIPOS_HISTORIA, None),
+    ("Estados de una historia o un habilitador", tuple(ESTADOS), {k: v.split(" ")[0] for k, v in ESTADOS.items()}),
+    ("Estados de una tarea", ESTADOS_TAREA, ICONOS["estado"]),
+    ("Capas de una tarea", CAPAS, ICONOS["capa"]),
+    ("Rigor de una tarea", RIGORES, ICONOS["rigor"]),
+    ("Acciones del impacto en el producto", ACCIONES, None),
+    ("Estados del impacto en el producto", ESTADOS_IMPACTO, None),
+    ("Épicas de las historias", EPICAS, None),
+    ("Campos del encabezado", CAMPOS_ENCABEZADO, None),
 )
 
 
@@ -217,7 +237,7 @@ def format_text(text):
 
 
 # `> | 🔌 API | 📜 contrato | Qué cambia | Ejemplos | no |` (la tabla de tipos de la plantilla)
-FILA_TIPO = re.compile(r"^>\s*\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|\s*(sí|no)\s*\|\s*$")
+FILA_TIPO = re.compile(r"^(?:>\s*)?\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|\s*(sí|no)\s*\|\s*$")
 
 
 def _filas_tipo(text):
@@ -271,6 +291,45 @@ def render_types(text):
         lines.append(f"  {cell('capa', capa)}  {cell('tipo', tipo)} — {cambia} (ej.: {ejemplos}){extra}")
     lines += ["", f"Fuente: {PLANTILLA}. Rigor «{CRITICO}» = tarea crítica (mutaciones obligatorias y plan corto; solo [API]); «{NORMAL}» = el resto."]
     return "\n".join(lines)
+
+
+def parse_value_table(text, heading):
+    """[(valor, icono)] de la tabla que sigue a «### <heading>» (None si ese título no está): la primera columna, sin comillas, y la segunda."""
+    lines = text.splitlines()
+    inicio = next((k for k, l in enumerate(lines) if l.strip() == f"### {heading}"), None)
+    if inicio is None:
+        return None
+    filas, tabla = [], 0
+    for line in lines[inicio + 1:]:
+        if line.startswith("#"):
+            break
+        if not line.startswith("|") or set(line) <= set("|-: "):
+            continue
+        tabla += 1
+        if tabla == 1:
+            continue  # la fila de encabezado de la tabla
+        celdas = [c.strip() for c in line.strip().strip("|").split("|")]
+        filas.append((celdas[0].strip("`"), celdas[1] if len(celdas) > 1 else ""))
+    return filas
+
+
+def diccionario_errors(text):
+    """Los errores del diccionario: cada tabla de DICCIONARIO existe y tiene exactamente los valores (y los iconos) del script."""
+    errores = []
+    for titulo, valores, iconos in DICCIONARIO:
+        filas = parse_value_table(text, titulo)
+        if filas is None:
+            errores.append(f"{PLANTILLA}: falta la tabla «{titulo}» (un «### {titulo}» con sus valores)")
+            continue
+        vistos = [v for v, _ in filas]
+        faltan, sobran = [v for v in valores if v not in vistos], [v for v in vistos if v not in valores]
+        if faltan or sobran:
+            partes = ([f"faltan: {', '.join(faltan)}"] if faltan else []) + ([f"sobran: {', '.join(sobran)}"] if sobran else [])
+            errores.append(f"{PLANTILLA}: la tabla «{titulo}» no coincide con scripts/historias.py ({'; '.join(partes)})")
+        for valor, icono in filas:
+            if iconos and valor in iconos and _sin_variacion(icono) != _sin_variacion(iconos[valor]):
+                errores.append(f"{PLANTILLA}: en «{titulo}», «{valor}» lleva el icono «{icono}» y debe llevar {iconos[valor]}")
+    return errores
 
 
 def section(text, title):
@@ -494,6 +553,11 @@ def legacy_rows(root):
     return rows
 
 
+def _requeridos(meta):
+    """Los campos que exige el encabezado según su tipo (si el tipo no es HU ni EN, los de una historia: check() informa del tipo)."""
+    return REQUERIDOS_POR_TIPO.get(meta.get("tipo") or meta.get("id", "").split("-")[0], REQUERIDOS_POR_TIPO["HU"])
+
+
 def new_rows(root, commits):
     rows = []
     for path in story_files(root):
@@ -502,7 +566,7 @@ def new_rows(root, commits):
             meta = parse_front_matter(text)
         except HistoriaError:
             continue  # sin encabezado: lo informa check(), no rompe la matriz
-        if any(not meta.get(k) for k in REQUERIDOS):
+        if any(not meta.get(k) for k in _requeridos(meta)):
             continue  # encabezado incompleto: lo informa check()
         tasks = parse_tasks(text)
         stats = story_stats(meta["id"], commits)
@@ -511,7 +575,7 @@ def new_rows(root, commits):
         filas = (parse_impact(text, base_de(path)) or {"filas": []})["filas"]
         rows.append({
             "id": meta["id"], "fase": fase_de(path), "tipo": meta["id"].split("-")[0], "ligado": meta.get("ligado", ""),
-            "titulo": meta["titulo"], "epica": meta["epica"],
+            "titulo": meta["titulo"], "epica": meta.get("epica", ""),
             "estado": ESTADOS.get(meta["estado"], meta["estado"]),
             "api": layer_status(tasks, "API"), "web": layer_status(tasks, "WEB"),
             "inicio": stats["inicio"].date().isoformat() if stats else "—",
@@ -940,7 +1004,7 @@ def check(root):
         except HistoriaError as e:
             errors.append(f"{path.name}: {e}")
             continue
-        missing = [k for k in REQUERIDOS if not meta.get(k)]
+        missing = [k for k in _requeridos(meta) if not meta.get(k)]
         if missing:
             errors.append(f"{path.name}: faltan en el encabezado {', '.join(missing)}")
             continue
@@ -950,6 +1014,12 @@ def check(root):
         if sid in seen:
             errors.append(f"{path.name}: id repetido ({sid})")
         seen.add(sid)
+        if meta["tipo"] not in TIPOS_HISTORIA:
+            errors.append(f"{path.name}: el tipo «{meta['tipo']}» no es válido (usa {', '.join(TIPOS_HISTORIA)})")
+        elif not sid.startswith(f"{meta['tipo']}-"):
+            errors.append(f"{path.name}: el tipo «{meta['tipo']}» no coincide con el prefijo de su id («{sid.split('-')[0]}-»)")
+        elif meta["tipo"] == "HU" and meta["epica"] not in EPICAS:
+            errors.append(f"{path.name}: la epica «{meta['epica']}» no es válida para una historia (usa {', '.join(EPICAS)}); un habilitador no lleva epica")
         if meta["estado"] not in ESTADOS:
             errors.append(f"{path.name}: estado «{meta['estado']}» no válido (usa {', '.join(ESTADOS)})")
             continue
@@ -1022,6 +1092,10 @@ def check(root):
                 errors.append(f"{PLANTILLA}: los tipos de [{capa}] de la tabla ({', '.join(tabla.get(capa, [])) or 'ninguno'}) no coinciden con los de scripts/historias.py ({', '.join(tipos)})")
         if parse_always_critical(texto) != set(SIEMPRE_CRITICOS):
             errors.append(f"{PLANTILLA}: los tipos «siempre {CRITICO}» de la tabla ({', '.join(sorted(parse_always_critical(texto)))}) no coinciden con los de scripts/historias.py ({', '.join(SIEMPRE_CRITICOS)})")
+        errors += diccionario_errors(texto)
+        for nombre in ("HU", "EN", "idea"):
+            if not (Path(root) / PLANTILLAS / f"{nombre}.md").exists():
+                errors.append(f"{PLANTILLAS}/{nombre}.md: falta la plantilla (una por tipo: HU.md, EN.md e idea.md, junto al diccionario)")
     cells = matrix_cells(root)
     for n in fase_numbers(root):
         if not (Path(root) / "docs" / "historias" / f"fase-{n}" / MATRIZ_ARCHIVO).exists():
