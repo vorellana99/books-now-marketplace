@@ -1895,7 +1895,17 @@ class FormatoDeDocumentos(unittest.TestCase):
         (".claude/skills/hu/SKILL.md", "## 2. Repartir en tareas", ("Regla", "Qué significa")),
         (".claude/skills/hu/SKILL.md", "## 3. Dejarlo en el tablero", ("Qué dejar", "Dónde y cómo")),
     ]
+    # las skills de comprobación enteras (sin secciones `## `): una tabla de pasos numerados en orden, sin viñetas ni listas numeradas
+    SKILLS_DE_PASOS = [".claude/skills/nueva-ruta/SKILL.md", ".claude/skills/nueva-variable-entorno/SKILL.md", ".claude/skills/nuevo-evento/SKILL.md"]
+    COLUMNAS_DE_PASOS = ["Paso", "Qué se hace", "Se comprueba con"]
     VINETA = re.compile(r"^\s*(?:[-*] |\d+\. )", re.M)
+
+    @staticmethod
+    def cuerpo(texto):
+        """El texto de un documento sin su encabezado `---` y sin bloques de código."""
+        partes = texto.split("---", 2)
+        resto = partes[2] if texto.startswith("---") and len(partes) == 3 else texto
+        return re.sub(r"```.*?```", "", resto, flags=re.S)
 
     @staticmethod
     def seccion(texto, comienzo):
@@ -1944,6 +1954,24 @@ class FormatoDeDocumentos(unittest.TestCase):
             for tabla in self.tablas(cuerpo):
                 for fila in tabla:
                     self.assertEqual(len(fila), len(tabla[0]), f"{ruta}, «{comienzo}»: una fila tiene {len(fila)} celdas y no {len(tabla[0])}: {fila[0][:40]}")
+
+    def test_las_skills_de_comprobacion_son_una_tabla_de_pasos_en_orden(self):
+        for ruta in self.SKILLS_DE_PASOS:
+            cuerpo = self.cuerpo((ROOT / ruta).read_text(encoding="utf-8"))
+            tablas = [tabla for tabla in self.tablas(cuerpo) if tabla and tabla[0] == self.COLUMNAS_DE_PASOS]
+            self.assertEqual(len(tablas), 1, f"{ruta}: debe tener una tabla {' | '.join(self.COLUMNAS_DE_PASOS)}")
+            filas = tablas[0][1:]
+            self.assertEqual([f[0] for f in filas], [str(n) for n in range(1, len(filas) + 1)], f"{ruta}: los pasos van 1, 2, 3… en orden")
+            for fila in filas:
+                self.assertEqual(len(fila), 3, f"{ruta}: el paso {fila[0]} no tiene tres celdas")
+            vineta = self.VINETA.search(cuerpo)
+            self.assertIsNone(vineta, f"{ruta}: tiene una viñeta o una lista numerada: «{vineta and cuerpo[vineta.start():vineta.start() + 50].strip()}»")
+
+    def test_las_skills_con_comandos_siguen_numeradas_sin_saltos(self):
+        esperadas = {"nueva-migracion": list(range(1, 9)), "cambio-de-contrato": list(range(0, 8)), "mutar": [1, 2, 3]}
+        for nombre, numeros in esperadas.items():
+            texto = (ROOT / ".claude" / "skills" / nombre / "SKILL.md").read_text(encoding="utf-8")
+            self.assertEqual([int(n) for n in re.findall(r"(?m)^(\d+)\. ", texto)], numeros, nombre)
 
     def test_las_trampas_de_la_skill_y_de_la_guia_son_la_misma_tabla(self):
         skill = self.tablas(self.seccion((ROOT / ".claude/skills/tarea/SKILL.md").read_text(encoding="utf-8"), "## 5. Trampas aprendidas"))[0]
